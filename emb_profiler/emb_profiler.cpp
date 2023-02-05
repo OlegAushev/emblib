@@ -1,4 +1,4 @@
-#include <emb_c28x/emb_profiler/emb_profiler.h>
+#include <c28x_emb/emb_profiler/emb_profiler.h>
 
 
 namespace emb {

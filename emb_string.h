@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <assert.h>
-#include <emb_c28x/emb_algorithm.h>
+#include <c28x_emb/emb_algorithm.h>
 #include <cstring>
 
 

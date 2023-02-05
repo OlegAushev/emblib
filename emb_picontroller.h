@@ -1,8 +1,8 @@
 #pragma once
 
 
-#include <emb_c28x/emb_algorithm.h>
-#include <emb_c28x/emb_core.h>
+#include <c28x_emb/emb_algorithm.h>
+#include <c28x_emb/emb_core.h>
 #include <stdint.h>
 #include <stddef.h>
 #include "float.h"

@@ -1,7 +1,7 @@
 #pragma once
 
 
-#include <emb_c28x/emb_pair.h>
+#include <c28x_emb/emb_pair.h>
 #include <stdint.h>
 #include <stddef.h>
 

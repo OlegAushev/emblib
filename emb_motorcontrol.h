@@ -1,8 +1,8 @@
 #pragma once
 
 
-#include <emb_c28x/emb_array.h>
-#include <emb_c28x/emb_math.h>
+#include <c28x_emb/emb_array.h>
+#include <c28x_emb/emb_math.h>
 #include <stdint.h>
 #include <stddef.h>
 

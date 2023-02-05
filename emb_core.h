@@ -5,10 +5,10 @@
 #include <stddef.h>
 #include <assert.h>
 
-#include <emb_c28x/emb_core/emb_c28x.h>
-#include <emb_c28x/emb_core/emb_monostate.h>
-#include <emb_c28x/emb_core/emb_noncopyable.h>
-#include <emb_c28x/emb_core/emb_scopedenum.h>
+#include <c28x_emb/emb_core/emb_c28x.h>
+#include <c28x_emb/emb_core/emb_monostate.h>
+#include <c28x_emb/emb_core/emb_noncopyable.h>
+#include <c28x_emb/emb_core/emb_scopedenum.h>
 
 
 #define EMB_UNUSED(arg) (void)arg;

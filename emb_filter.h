@@ -4,10 +4,10 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <assert.h>
-#include <emb_c28x/emb_algorithm.h>
-#include <emb_c28x/emb_array.h>
-#include <emb_c28x/emb_circularbuffer.h>
-#include <emb_c28x/emb_core.h>
+#include <c28x_emb/emb_algorithm.h>
+#include <c28x_emb/emb_array.h>
+#include <c28x_emb/emb_circularbuffer.h>
+#include <c28x_emb/emb_core.h>
 #include <algorithm>
 
 

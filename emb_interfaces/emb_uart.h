@@ -1,7 +1,7 @@
 #pragma once
 
 
-#include <emb_c28x/emb_core.h>
+#include <c28x_emb/emb_core.h>
 
 
 namespace emb {

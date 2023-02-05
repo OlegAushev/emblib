@@ -1,4 +1,4 @@
-#include <emb_c28x/tests/emb_test.h>
+#include <c28x_emb/tests/emb_test.h>
 
 
 void EmbTest::ArrayTest()
