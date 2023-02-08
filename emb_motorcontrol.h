@@ -15,6 +15,13 @@
 
 namespace emb {
 
+
+namespace traits {
+struct from_rpm{};
+struct from_radps{};
+}
+
+
 class motorspeed_t
 {
 public:
@@ -27,10 +34,17 @@ public:
 		, _radps_elec(0)
 	{}
 
-	motorspeed_t(float radps_elec_, int pole_pairs_)
+	motorspeed_t(int pole_pairs_, float radps_elec_, traits::from_radps)
 		: pole_pairs(pole_pairs_)
-		, _radps_elec(radps_elec_)
-	{}
+	{
+		from_radps(radps_elec_);
+	}
+
+	motorspeed_t(int pole_pairs_, float rpm_, traits::from_rpm)
+			: pole_pairs(pole_pairs_)
+	{
+		from_rpm(rpm_);
+	}
 
 	float to_radps() const { return _radps_elec; }
 	float to_rpm() const { return 60 * _radps_elec / (numbers::two_pi * pole_pairs); }
