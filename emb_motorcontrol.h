@@ -22,25 +22,25 @@ struct from_radps{};
 }
 
 
-class motorspeed_t
+class motorspeed
 {
 public:
 	const int pole_pairs;
 private:
 	float _radps_elec;
 public:
-	explicit motorspeed_t(int pole_pairs_)
+	explicit motorspeed(int pole_pairs_)
 		: pole_pairs(pole_pairs_)
 		, _radps_elec(0)
 	{}
 
-	motorspeed_t(int pole_pairs_, float radps_elec_, traits::from_radps)
+	motorspeed(int pole_pairs_, float radps_elec_, traits::from_radps)
 		: pole_pairs(pole_pairs_)
 	{
 		from_radps(radps_elec_);
 	}
 
-	motorspeed_t(int pole_pairs_, float rpm_, traits::from_rpm)
+	motorspeed(int pole_pairs_, float rpm_, traits::from_rpm)
 			: pole_pairs(pole_pairs_)
 	{
 		from_rpm(rpm_);
