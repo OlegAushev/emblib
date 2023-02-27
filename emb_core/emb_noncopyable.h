@@ -8,14 +8,14 @@
 
 namespace emb {
 
-class noncopyable
+class NonCopyable
 {
 protected:
-	noncopyable() {}
-	~noncopyable() {}
+	NonCopyable() {}
+	~NonCopyable() {}
 private:
-	noncopyable(const noncopyable&);
-	const noncopyable& operator=(const noncopyable&);
+	NonCopyable(const NonCopyable&);
+	const NonCopyable& operator=(const NonCopyable&);
 };
 
 } // namespace emb

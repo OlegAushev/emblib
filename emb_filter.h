@@ -15,7 +15,7 @@
 namespace emb {
 
 template <typename T>
-class IFilter : public emb::noncopyable
+class IFilter : public emb::NonCopyable
 {
 public:
 	IFilter() {}

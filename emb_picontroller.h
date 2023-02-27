@@ -19,7 +19,7 @@ SCOPED_ENUM_DECLARE_END(ControllerLogic)
 
 
 template <ControllerLogic::enum_type Logic>
-class IPiController : public emb::noncopyable
+class IPiController : public emb::NonCopyable
 {
 protected:
 	float _kp;		// proportional gain

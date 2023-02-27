@@ -6,6 +6,8 @@
 
 namespace emb {
 
+namespace uart {
+
 class IUart
 {
 private:
@@ -29,6 +31,8 @@ public:
 	virtual void disable_rx_interrupts() = 0;
 	virtual void acknowledge_rx_interrupt() = 0;
 };
+
+} // namespace uart
 
 } // namespace emb
 
