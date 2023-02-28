@@ -1,7 +1,7 @@
-#include <c28x_emb/tests/emb_test.h>
+#include "emb_tests.h"
 
 
-void EmbTest::StringTest()
+void emb::tests::string()
 {
 	emb::String<16> str1 = "Hello, world!";
 	EMB_ASSERT_EQUAL(str1.lenght(), 13);

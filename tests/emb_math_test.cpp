@@ -1,8 +1,8 @@
-#include <c28x_emb/tests/emb_test.h>
+#include "emb_tests.h"
 #include "float.h"
 
 
-void EmbTest::MathTest()
+void emb::tests::math()
 {
 	EMB_ASSERT_EQUAL(emb::sgn(100), 1);
 	EMB_ASSERT_EQUAL(emb::sgn(-100), -1);

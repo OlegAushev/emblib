@@ -1,7 +1,7 @@
-#include <c28x_emb/tests/emb_test.h>
+#include "emb_tests.h"
 
 
-void EmbTest::BitsetTest()
+void emb::tests::bitset()
 {
 	// sizeof
 	emb::Bitset<1> bs;

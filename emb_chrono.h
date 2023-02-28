@@ -16,18 +16,18 @@ class Duration
 public:
 	static const int64_t divider = Divider;
 private:
-	int64_t _nanoseconds;
+	int64_t _ticks;
 public:
-	Duration() : _nanoseconds(0) {}
-	explicit Duration(int64_t value) : _nanoseconds(value * Divider) {}
-	Duration(const Duration& other) { this->_nanoseconds = other._nanoseconds; }
-	Duration(const volatile Duration& other) { this->_nanoseconds = other._nanoseconds; }
+	Duration() : _ticks(0) {}
+	explicit Duration(int64_t tick_count) : _ticks(tick_count) {}
+	Duration(const Duration& other) { this->_ticks = other._ticks; }
+	Duration(const volatile Duration& other) { this->_ticks = other._ticks; }
 
 	Duration& operator=(const Duration& other)
 	{
 		if (this != &other)
 		{
-			this->_nanoseconds = other._nanoseconds;
+			this->_ticks = other._ticks;
 		}
 		return *this;
 	}
@@ -36,34 +36,41 @@ public:
 	{
 		if (this != &other)
 		{
-			this->_nanoseconds = other._nanoseconds;
+			this->_ticks = other._ticks;
 		}
 		return *this;
 	}
 
 	Duration& operator+(const Duration& other)
 	{
-		this->_nanoseconds += other._nanoseconds;
+		this->_ticks += other._ticks;
 		return *this;
 	}
 
 	Duration& operator-(const Duration& other)
 	{
-		this->_nanoseconds -= other._nanoseconds;
+		this->_ticks -= other._ticks;
 		return *this;
 	}
 
-	bool operator>(const Duration& other) const { return this->_nanoseconds > other._nanoseconds; }
-	bool operator>=(const Duration& other) const { return this->_nanoseconds >= other._nanoseconds; }
-	bool operator<(const Duration& other) const { return this->_nanoseconds < other._nanoseconds; }
-	bool operator<=(const Duration& other) const { return this->_nanoseconds <= other._nanoseconds; }
-	bool operator==(const Duration& other) const { return this->_nanoseconds == other._nanoseconds; }
-	bool operator!=(const Duration& other) const { return this->_nanoseconds != other._nanoseconds; }
+	bool operator>(const Duration& other) const { return this->_ticks > other._ticks; }
+	bool operator>=(const Duration& other) const { return this->_ticks >= other._ticks; }
+	bool operator<(const Duration& other) const { return this->_ticks < other._ticks; }
+	bool operator<=(const Duration& other) const { return this->_ticks <= other._ticks; }
+	bool operator==(const Duration& other) const { return this->_ticks == other._ticks; }
+	bool operator!=(const Duration& other) const { return this->_ticks != other._ticks; }
 
-	int64_t get() const { return _nanoseconds / Divider; }
+	int64_t count() const { return _ticks; }
 };
 
 } // namespace impl
+
+
+template<typename ToDuration, int64_t Divider>
+ToDuration duration_cast(const impl::Duration<Divider> duration)
+{
+	return impl::Duration<ToDuration::divider>(duration.count() * Divider / ToDuration::divider);
+}
 
 
 typedef impl::Duration<1> nanoseconds;

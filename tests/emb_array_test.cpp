@@ -1,7 +1,7 @@
-#include <c28x_emb/tests/emb_test.h>
+#include "emb_tests.h"
 
 
-void EmbTest::ArrayTest()
+void emb::tests::array()
 {
 	emb::Array<float, 5> arr1 = {0, 1, 2, 3, 4};
 	EMB_ASSERT_EQUAL(arr1[0], 0);

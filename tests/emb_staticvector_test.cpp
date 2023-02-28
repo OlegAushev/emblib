@@ -1,7 +1,7 @@
-#include <c28x_emb/tests/emb_test.h>
+#include "emb_tests.h"
 
 
-void EmbTest::StaticVectorTest()
+void emb::tests::static_vector()
 {
 	emb::StaticVector<unsigned int, 5> vec1;
 	EMB_ASSERT_EQUAL(vec1.size(), 0);

@@ -1,7 +1,7 @@
-#include <c28x_emb/tests/emb_test.h>
+#include "emb_tests.h"
 
 
-void EmbTest::FilterTest()
+void emb::tests::filter()
 {
 	/* MovingAvgFilter */
 	emb::MovingAvgFilter<int, 5> mvavg_filter_i16;

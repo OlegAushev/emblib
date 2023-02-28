@@ -1,4 +1,4 @@
-#include <c28x_emb/tests/emb_test.h>
+#include "emb_tests.h"
 
 
 class SingletonTest : public emb::c28x::InterruptInvoker<SingletonTest>
@@ -8,7 +8,7 @@ public:
 };
 
 
-void EmbTest::CommonTest()
+void emb::tests::common()
 {
 	SingletonTest singletonObject;
 	SingletonTest* pSingletonObject = &singletonObject;

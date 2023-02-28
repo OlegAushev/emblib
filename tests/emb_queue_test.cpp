@@ -1,7 +1,7 @@
-#include <c28x_emb/tests/emb_test.h>
+#include "emb_tests.h"
 
 
-void EmbTest::QueueTest()
+void emb::tests::queue()
 {
 	emb::Queue<int, 10> queue;
 	EMB_ASSERT_TRUE(queue.empty());

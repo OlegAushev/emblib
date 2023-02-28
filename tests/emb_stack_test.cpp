@@ -1,7 +1,7 @@
-#include <c28x_emb/tests/emb_test.h>
+#include "emb_tests.h"
 
 
-void EmbTest::StackTest()
+void emb::tests::stack()
 {
 	emb::Stack<int, 3> stack;
 

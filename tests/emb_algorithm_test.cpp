@@ -1,4 +1,4 @@
-#include <c28x_emb/tests/emb_test.h>
+#include "emb_tests.h"
 #include <algorithm>
 #include "float.h"
 
@@ -23,7 +23,7 @@ bool operator<(const StructTest& lhs, const StructTest& rhs)
 }
 
 
-void EmbTest::AlgorithmTest()
+void emb::tests::algorithm()
 {
 	// find
 	int arr1[10] = {3, 6, 2, 7, 8, 9, 0, 1, 5, 4};

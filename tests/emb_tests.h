@@ -4,6 +4,7 @@
 #include <c28x_emb/emb_algorithm.h>
 #include <c28x_emb/emb_array.h>
 #include <c28x_emb/emb_bitset.h>
+#include <c28x_emb/emb_chrono.h>
 #include <c28x_emb/emb_circularbuffer.h>
 #include <c28x_emb/emb_core.h>
 #include <c28x_emb/emb_filter.h>
@@ -16,20 +17,23 @@
 #include <algorithm>
 
 
+namespace emb {
 
-class EmbTest
+class tests
 {
 public:
-	static void CommonTest();
-	static void MathTest();
-	static void AlgorithmTest();
-	static void ArrayTest();
-	static void QueueTest();
-	static void CircularBufferTest();
-	static void FilterTest();
-	static void StackTest();
-	static void BitsetTest();
-	static void StaticVectorTest();
-	static void StringTest();
+	static void common();
+	static void math();
+	static void algorithm();
+	static void array();
+	static void queue();
+	static void circular_buffer();
+	static void filter();
+	static void stack();
+	static void bitset();
+	static void static_vector();
+	static void string();
+	static void chrono();
 };
 
+} // namespace emb
