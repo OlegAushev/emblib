@@ -7,6 +7,7 @@
 #include <cstring>
 
 #include "../emb_core.h"
+#include "../emb_chrono.h"
 
 
 namespace emb {
@@ -14,7 +15,7 @@ namespace emb {
 class DurationLogger_us
 {
 private:
-	static uint64_t (*_time_now_func)();
+	static emb::chrono::nanoseconds (*_time_now_func)();
 	static const size_t _message_len_max = 32;
 	char _message[_message_len_max];
 	volatile uint64_t _start;
@@ -23,12 +24,12 @@ public:
 	{
 		strncpy(_message, message, _message_len_max-1);
 		_message[_message_len_max-1] = '\0';
-		_start = _time_now_func();
+		_start = _time_now_func().count();
 	}
 
 	~DurationLogger_us()
 	{
-		volatile uint64_t finish = _time_now_func();
+		volatile uint64_t finish = _time_now_func().count();
 		if (finish < _start)
 		{
 			printf("%s: timer overflow\n", _message);
@@ -39,9 +40,9 @@ public:
 		}
 	}
 
-	static void init(uint64_t (*time_now_func_ns)(void))
+	static void init(emb::chrono::nanoseconds (*time_now_func)(void))
 	{
-		_time_now_func = time_now_func_ns;
+		_time_now_func = time_now_func;
 	}
 };
 
@@ -92,7 +93,7 @@ public:
 class DurationLoggerAsync_us
 {
 private:
-	static uint64_t (*_time_now_func)();
+	static emb::chrono::nanoseconds (*_time_now_func)();
 	static const size_t _capacity = 10;
 
 	struct DurationData
@@ -110,12 +111,12 @@ public:
 		: _channel(channel)
 	{
 		_durations_us[_channel].message = message;
-		_start = _time_now_func();
+		_start = _time_now_func().count();
 	}
 
 	~DurationLoggerAsync_us()
 	{
-		volatile uint64_t finish = _time_now_func();
+		volatile uint64_t finish = _time_now_func().count();
 		if (finish < _start)
 		{
 			_durations_us[_channel].value = 0;
@@ -126,9 +127,9 @@ public:
 		}
 	}
 
-	static void init(uint64_t (*time_now_func_us)(void))
+	static void init(emb::chrono::nanoseconds (*time_now_func)(void))
 	{
-		_time_now_func = time_now_func_us;
+		_time_now_func = time_now_func;
 	}
 
 	static void print()

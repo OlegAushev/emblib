@@ -3,11 +3,11 @@
 
 namespace emb {
 
-uint64_t time_now_func_none_us()
+emb::chrono::nanoseconds time_now_func_none()
 {
-	return 0;
+	return emb::chrono::nanoseconds(0);
 }
-uint64_t (*DurationLogger_us::_time_now_func)() = time_now_func_none_us;
+emb::chrono::nanoseconds (*DurationLogger_us::_time_now_func)() = time_now_func_none;
 
 
 uint32_t time_now_func_none_clk()
@@ -17,7 +17,7 @@ uint32_t time_now_func_none_clk()
 uint32_t (*DurationLogger_clk::_time_now_func)() = time_now_func_none_clk;
 
 
-uint64_t (*DurationLoggerAsync_us::_time_now_func)() = time_now_func_none_us;
+emb::chrono::nanoseconds (*DurationLoggerAsync_us::_time_now_func)() = time_now_func_none;
 DurationLoggerAsync_us::DurationData DurationLoggerAsync_us::_durations_us[_capacity];
 
 }
