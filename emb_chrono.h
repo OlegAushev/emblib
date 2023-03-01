@@ -21,7 +21,7 @@ public:
 	Duration() : _ticks(0) {}
 	explicit Duration(int64_t tick_count) : _ticks(tick_count) {}
 	Duration(const Duration& other) { this->_ticks = other._ticks; }
-	Duration(const volatile Duration& other) { this->_ticks = other._ticks; }
+//	Duration(const volatile Duration& other) { this->_ticks = other._ticks; }
 
 	Duration& operator=(const Duration& other)
 	{
@@ -32,14 +32,14 @@ public:
 		return *this;
 	}
 
-	volatile Duration& operator=(const Duration& other) volatile
-	{
-		if (this != &other)
-		{
-			this->_ticks = other._ticks;
-		}
-		return *this;
-	}
+//	volatile Duration& operator=(const Duration& other) volatile
+//	{
+//		if (this != &other)
+//		{
+//			this->_ticks = other._ticks;
+//		}
+//		return *this;
+//	}
 
 	int64_t count() const { return _ticks; }
 

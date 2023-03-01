@@ -44,8 +44,5 @@ void emb::tests::chrono()
 	emb::chrono::seconds sec5 = sec--;
 	EMB_ASSERT_EQUAL(sec.count(), 10);
 	EMB_ASSERT_EQUAL(sec5.count(), 11);
-
-	volatile emb::chrono::seconds sec6 = sec;
-	sec6++;
 }
 
