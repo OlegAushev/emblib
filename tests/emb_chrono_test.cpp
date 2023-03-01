@@ -21,6 +21,31 @@ void emb::tests::chrono()
 	EMB_ASSERT_EQUAL(msec2.count(), 10001);
 
 	EMB_ASSERT_TRUE(msec2 > msec);
+
+	EMB_ASSERT_TRUE(emb::chrono::microseconds(2) > emb::chrono::microseconds(1));
+	EMB_ASSERT_TRUE(emb::chrono::microseconds(2) >= emb::chrono::microseconds(2));
 	EMB_ASSERT_TRUE(emb::chrono::microseconds(1) < emb::chrono::microseconds(2));
+	EMB_ASSERT_TRUE(emb::chrono::microseconds(2) <= emb::chrono::microseconds(2));
+	EMB_ASSERT_TRUE(emb::chrono::microseconds(1) == emb::chrono::microseconds(1));
+	EMB_ASSERT_TRUE(emb::chrono::microseconds(1) != emb::chrono::microseconds(2));
+
+	emb::chrono::seconds sec2 = ++sec;
+	EMB_ASSERT_EQUAL(sec.count(), 11);
+	EMB_ASSERT_EQUAL(sec2.count(), 11);
+
+	emb::chrono::seconds sec3 = sec++;
+	EMB_ASSERT_EQUAL(sec.count(), 12);
+	EMB_ASSERT_EQUAL(sec3.count(), 11);
+
+	emb::chrono::seconds sec4 = --sec;
+	EMB_ASSERT_EQUAL(sec.count(), 11);
+	EMB_ASSERT_EQUAL(sec4.count(), 11);
+
+	emb::chrono::seconds sec5 = sec--;
+	EMB_ASSERT_EQUAL(sec.count(), 10);
+	EMB_ASSERT_EQUAL(sec5.count(), 11);
+
+	volatile emb::chrono::seconds sec6 = sec;
+	sec6++;
 }
 

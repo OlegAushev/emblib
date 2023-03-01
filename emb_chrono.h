@@ -41,27 +41,59 @@ public:
 		return *this;
 	}
 
-	Duration& operator+(const Duration& other)
-	{
-		this->_ticks += other._ticks;
-		return *this;
-	}
-
-	Duration& operator-(const Duration& other)
-	{
-		this->_ticks -= other._ticks;
-		return *this;
-	}
-
-	bool operator>(const Duration& other) const { return this->_ticks > other._ticks; }
-	bool operator>=(const Duration& other) const { return this->_ticks >= other._ticks; }
-	bool operator<(const Duration& other) const { return this->_ticks < other._ticks; }
-	bool operator<=(const Duration& other) const { return this->_ticks <= other._ticks; }
-	bool operator==(const Duration& other) const { return this->_ticks == other._ticks; }
-	bool operator!=(const Duration& other) const { return this->_ticks != other._ticks; }
-
 	int64_t count() const { return _ticks; }
+
+	Duration& operator++() {
+		++_ticks;
+		return *this;
+	}
+
+	Duration& operator--() {
+		--_ticks;
+		return *this;
+	}
+
+	Duration operator++(int)
+	{
+		Duration tmp(*this);
+		++_ticks;
+		return tmp;
+	}
+
+	Duration operator--(int)
+	{
+		Duration tmp(*this);
+		--_ticks;
+		return tmp;
+	}
 };
+
+
+template <int64_t Divider>
+Duration<Divider> operator+(const Duration<Divider>& lhs, const Duration<Divider>& rhs)
+{
+	return Duration<Divider>(lhs.count() + rhs.count());
+}
+
+
+template <int64_t Divider>
+Duration<Divider> operator-(const Duration<Divider>& lhs, const Duration<Divider>& rhs)
+{
+	return Duration<Divider>(lhs.count() - rhs.count());
+}
+
+template <int64_t Divider>
+bool operator>(const Duration<Divider>& lhs, const Duration<Divider>& rhs) { return lhs.count() > rhs.count(); }
+template <int64_t Divider>
+bool operator>=(const Duration<Divider>& lhs, const Duration<Divider>& rhs) { return lhs.count() >= rhs.count(); }
+template <int64_t Divider>
+bool operator<(const Duration<Divider>& lhs, const Duration<Divider>& rhs) { return lhs.count() < rhs.count(); }
+template <int64_t Divider>
+bool operator<=(const Duration<Divider>& lhs, const Duration<Divider>& rhs) { return lhs.count() <= rhs.count(); }
+template <int64_t Divider>
+bool operator==(const Duration<Divider>& lhs, const Duration<Divider>& rhs) { return lhs.count() == rhs.count(); }
+template <int64_t Divider>
+bool operator!=(const Duration<Divider>& lhs, const Duration<Divider>& rhs) { return lhs.count() != rhs.count(); }
 
 } // namespace impl
 
