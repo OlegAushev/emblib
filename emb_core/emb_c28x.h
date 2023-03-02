@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <assert.h>
+#include <driverlib.h>
 
 
 namespace emb {
@@ -96,26 +97,26 @@ bool InterruptInvokerArray<T, Size>::_constructed = false;
 
 
 template <typename T>
-void from_bytes(T& dest, const uint16_t* src)
+void from_bytes(T& dest, const uint8_t* src)
 {
-	uint16_t c28_byte[sizeof(T)];
+	uint16_t c28_bytes[sizeof(T)];
 	for (size_t i = 0; i < sizeof(T); ++i)
 	{
-		c28_byte[i] = src[2*i] | src[2*i+1] << 8;
+		c28_bytes[i] = src[2*i] | src[2*i+1] << 8;
 	}
-	memcpy (&dest, &c28_byte, sizeof(T));
+	memcpy (&dest, &c28_bytes, sizeof(T));
 }
 
 
 template <typename T>
-void to_bytes(uint16_t* dest, const T& src)
+void to_bytes(uint8_t* dest, const T& src)
 {
-	uint16_t c28_byte[sizeof(T)];
-	memcpy(&c28_byte, &src, sizeof(T));
+	uint16_t c28_bytes[sizeof(T)];
+	memcpy(&c28_bytes, &src, sizeof(T));
 	for (size_t i = 0; i < sizeof(T); ++i)
 	{
-		dest[2*i] = c28_byte[i] & 0x00FF;
-		dest[2*i+1] = c28_byte[i] >> 8;
+		dest[2*i] = c28_bytes[i] & 0x00FF;
+		dest[2*i+1] = c28_bytes[i] >> 8;
 	}
 }
 
@@ -123,15 +124,15 @@ void to_bytes(uint16_t* dest, const T& src)
 template <typename T>
 bool is_equal(const T& obj1, const T& obj2)
 {
-	uint16_t obj1_byte8[sizeof(T)*2];
-	uint16_t obj2_byte8[sizeof(T)*2];
+	uint8_t obj1_bytes[sizeof(T)*2];
+	uint8_t obj2_bytes[sizeof(T)*2];
 
-	to_bytes<T>(obj1_byte8, obj1);
-	to_bytes<T>(obj2_byte8, obj2);
+	to_bytes<T>(obj1_bytes, obj1);
+	to_bytes<T>(obj2_bytes, obj2);
 
 	for(size_t i = 0; i < sizeof(T)*2; ++i)
 	{
-		if (obj1_byte8[i] != obj2_byte8[i])
+		if (obj1_bytes[i] != obj2_bytes[i])
 		{
 			return false;
 		}
