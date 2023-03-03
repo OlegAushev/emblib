@@ -15,6 +15,7 @@
 #include <c28x_emb/emb_string.h>
 #include <c28x_emb/emb_testrunner/emb_testrunner.h>
 #include <algorithm>
+#include <c28x_emb/emb_eeprom/emb_eeprom.h>
 
 
 namespace emb {
@@ -34,6 +35,7 @@ public:
 	static void static_vector();
 	static void string();
 	static void chrono();
+	static void eeprom();
 };
 
 } // namespace emb

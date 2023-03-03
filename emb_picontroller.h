@@ -19,7 +19,7 @@ SCOPED_ENUM_DECLARE_END(ControllerLogic)
 
 
 template <ControllerLogic::enum_type Logic>
-class IPiController : public emb::NonCopyable
+class AbstractPiController : public emb::NonCopyable
 {
 protected:
 	float _kp;		// proportional gain
@@ -32,7 +32,7 @@ protected:
 
 	static float _error(float ref, float meas);
 public:
-	IPiController(float kp, float ki, float dt, float out_min, float out_max)
+	AbstractPiController(float kp, float ki, float dt, float out_min, float out_max)
 		: _kp(kp)
 		, _ki(ki)
 		, _dt(dt)
@@ -42,7 +42,7 @@ public:
 		, _out(0)
 	{}
 
-	virtual ~IPiController() {}
+	virtual ~AbstractPiController() {}
 	virtual void update(float ref, float meas) = 0;
 	virtual void reset()
 	{
@@ -63,24 +63,24 @@ public:
 };
 
 
-inline float IPiController<ControllerLogic::direct>::_error(float ref, float meas) { return ref - meas; }
-inline float IPiController<ControllerLogic::inverse>::_error(float ref, float meas) { return meas - ref; }
+inline float AbstractPiController<ControllerLogic::direct>::_error(float ref, float meas) { return ref - meas; }
+inline float AbstractPiController<ControllerLogic::inverse>::_error(float ref, float meas) { return meas - ref; }
 
 
 template <ControllerLogic::enum_type Logic>
-class PiControllerBC : public IPiController<Logic>
+class BackCalcPiController : public AbstractPiController<Logic>
 {
 protected:
 	float _kc;	// anti-windup gain
 public:
-	PiControllerBC(float kp, float ki, float dt, float kc, float out_min, float out_max)
-		: IPiController<Logic>(kp, ki, dt, out_min, out_max)
+	BackCalcPiController(float kp, float ki, float dt, float kc, float out_min, float out_max)
+		: AbstractPiController<Logic>(kp, ki, dt, out_min, out_max)
 		, _kc(kc)
 	{}
 
 	virtual void update(float ref, float meas)
 	{
-		float error = IPiController<Logic>::_error(ref, meas);
+		float error = AbstractPiController<Logic>::_error(ref, meas);
 		float out = emb::clamp(error * this->_kp + this->_integrator_sum, -FLT_MAX, FLT_MAX);
 
 		if (out > this->_out_max)
@@ -103,19 +103,19 @@ public:
 
 
 template <ControllerLogic::enum_type Logic>
-class PiControllerCl : public IPiController<Logic>
+class ClampingPiController : public AbstractPiController<Logic>
 {
 protected:
 	float _error;
 public:
-	PiControllerCl(float kp, float ki, float dt, float out_min, float out_max)
-		: IPiController<Logic>(kp, ki, dt, out_min, out_max)
+	ClampingPiController(float kp, float ki, float dt, float out_min, float out_max)
+		: AbstractPiController<Logic>(kp, ki, dt, out_min, out_max)
 		, _error(0)
 	{}
 
 	virtual void update(float ref, float meas)
 	{
-		float error = IPiController<Logic>::_error(ref, meas);
+		float error = AbstractPiController<Logic>::_error(ref, meas);
 		float outp = error * this->_kp;
 		float sum_i = (error + _error) * 0.5f * this->_ki * this->_dt + this->_integrator_sum;
 		_error = error;
