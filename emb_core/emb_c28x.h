@@ -122,7 +122,7 @@ void to_bytes(uint8_t* dest, const T& src)
 
 
 template <typename T>
-bool is_equal(const T& obj1, const T& obj2)
+bool are_equal(const T& obj1, const T& obj2)
 {
 	uint8_t obj1_bytes[sizeof(T)*2];
 	uint8_t obj2_bytes[sizeof(T)*2];
