@@ -121,7 +121,7 @@ public:
 		reset();
 	}
 
-	void integrate(const T& value)
+	void update(const T& value)
 	{
 		_sum = clamp(_sum + value * _dt, range.lo(), range.hi());
 	}
@@ -131,7 +131,7 @@ public:
 		_sum = clamp(_sum + value, range.lo(), range.hi());
 	}
 
-	const T& value() const { return _sum; }
+	const T& result() const { return _sum; }
 	void reset()
 	{
 		_sum = clamp(_init, range.lo(), range.hi());
