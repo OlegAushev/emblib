@@ -1,4 +1,4 @@
-#include <c28x_emblib/tests/tests.h>
+#include <emblib_c28x/tests/tests.h>
 
 
 void emb::tests::string()

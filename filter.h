@@ -1,10 +1,10 @@
 #pragma once
 
 
-#include <c28x_emblib/core.h>
-#include <c28x_emblib/algorithm.h>
-#include <c28x_emblib/array.h>
-#include <c28x_emblib/circularbuffer.h>
+#include <emblib_c28x/core.h>
+#include <emblib_c28x/algorithm.h>
+#include <emblib_c28x/array.h>
+#include <emblib_c28x/circularbuffer.h>
 #include <algorithm>
 
 

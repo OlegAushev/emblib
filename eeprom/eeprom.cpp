@@ -1,4 +1,4 @@
-#include <c28x_emblib/eeprom/eeprom.h>
+#include <emblib_c28x/eeprom/eeprom.h>
 
 
 namespace emb {

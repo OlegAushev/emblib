@@ -1,8 +1,8 @@
 #pragma once
 
 
-#include <c28x_emblib/core.h>
-#include <c28x_emblib/array.h>
+#include <emblib_c28x/core.h>
+#include <emblib_c28x/array.h>
 #include <bitset>
 
 

@@ -1,8 +1,8 @@
 #pragma once
 
 
-#include <c28x_emblib/core.h>
-#include <c28x_emblib/chrono.h>
+#include <emblib_c28x/core.h>
+#include <emblib_c28x/chrono.h>
 #include <cstdio>
 #include <cstring>
 

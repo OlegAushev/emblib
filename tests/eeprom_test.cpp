@@ -1,5 +1,5 @@
-#include <c28x_emblib/tests/tests.h>
-#include <c28x_mcu_drivers/f2837xd/crc/crc.h>
+#include <emblib_c28x/tests/tests.h>
+#include <mculib_c28x/f2837xd/crc/crc.h>
 
 
 class TestingEepromDriver : public emb::eeprom::DriverInterface

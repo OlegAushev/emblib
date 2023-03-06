@@ -1,4 +1,4 @@
-#include <c28x_emblib/profiler/profiler.h>
+#include <emblib_c28x/profiler/profiler.h>
 
 
 namespace emb {

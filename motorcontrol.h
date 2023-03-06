@@ -1,9 +1,9 @@
 #pragma once
 
 
-#include <c28x_emblib/core.h>
-#include <c28x_emblib/array.h>
-#include <c28x_emblib/math.h>
+#include <emblib_c28x/core.h>
+#include <emblib_c28x/array.h>
+#include <emblib_c28x/math.h>
 
 #include "motorcontrol/math.h"
 #include "motorcontrol/clarke.h"
