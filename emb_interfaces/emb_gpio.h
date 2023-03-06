@@ -24,21 +24,21 @@ SCOPED_ENUM_DECLARE_BEGIN(State)
 SCOPED_ENUM_DECLARE_END(State)
 
 
-class IInput
+class InputInterface
 {
 public:
-	IInput() {}
-	virtual ~IInput() {}
+	InputInterface() {}
+	virtual ~InputInterface() {}
 
 	virtual State read() const = 0;
 };
 
 
-class IOutput
+class OutputInterface
 {
 public:
-	IOutput() {}
-	virtual ~IOutput() {}
+	OutputInterface() {}
+	virtual ~OutputInterface() {}
 
 	virtual State read() const = 0;
 	virtual void set(State state = State::active) = 0;

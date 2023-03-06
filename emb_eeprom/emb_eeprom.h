@@ -23,7 +23,7 @@ SCOPED_ENUM_DECLARE_BEGIN(Error)
 SCOPED_ENUM_DECLARE_END(Error)
 
 
-class IController
+class DriverInterface
 {
 public:
 	virtual Error read(uint16_t page, uint16_t addr, uint8_t* buf, size_t len, emb::chrono::milliseconds timeout) = 0;
@@ -34,7 +34,7 @@ public:
 class Storage
 {
 private:
-	IController* _controller;
+	DriverInterface* _driver;
 	const size_t page_bytes;
 	const size_t page_count;
 	uint32_t (*_calc_crc32)(const uint8_t*, size_t);
@@ -53,7 +53,7 @@ private:
 		uint32_t fatal;
 	} _errors;
 public:
-	Storage(IController* controller_, size_t page_bytes_, size_t page_count_, uint32_t (*calc_crc32_func_)(const uint8_t*, size_t));
+	Storage(DriverInterface* driver_, size_t page_bytes_, size_t page_count_, uint32_t (*calc_crc32_func_)(const uint8_t*, size_t));
 	Error read(uint16_t page, uint8_t* buf, size_t len, emb::chrono::milliseconds timeout);
 	Error write(uint16_t page, const uint8_t* buf, size_t len, emb::chrono::milliseconds timeout);
 

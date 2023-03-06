@@ -8,14 +8,14 @@ namespace emb {
 
 namespace uart {
 
-class IUart
+class UartInterface
 {
 private:
-	IUart(const IUart& other);		// no copy constructor
-	IUart& operator=(const IUart& other);	// no copy assignment operator
+	UartInterface(const UartInterface& other);		// no copy constructor
+	UartInterface& operator=(const UartInterface& other);	// no copy assignment operator
 public:
-	IUart() {}
-	virtual ~IUart() {}
+	UartInterface() {}
+	virtual ~UartInterface() {}
 
 	virtual void reset() = 0;
 	virtual bool has_rx_error() const = 0;

@@ -15,11 +15,11 @@
 namespace emb {
 
 template <typename T>
-class IFilter : public emb::NonCopyable
+class FilterInterface
 {
 public:
-	IFilter() {}
-	virtual ~IFilter() {}
+	FilterInterface() {}
+	virtual ~FilterInterface() {}
 
 	virtual void update(T value) = 0;
 	virtual T output() const = 0;
@@ -29,7 +29,7 @@ public:
 
 
 template <typename T, size_t WindowSize>
-class MovingAvgFilter : public IFilter<T>
+class MovingAvgFilter : public FilterInterface<T>, public emb::NonCopyable
 {
 private:
 	size_t _size;
@@ -108,7 +108,7 @@ public:
 
 
 template <typename T, size_t WindowSize>
-class MedianFilter : public IFilter<T>
+class MedianFilter : public FilterInterface<T>
 {
 private:
 	CircularBuffer<T, WindowSize> _window;
@@ -142,7 +142,7 @@ public:
 
 
 template <typename T>
-class ExponentialFilter : public IFilter<T>
+class ExponentialFilter : public FilterInterface<T>
 {
 private:
 	float _smooth_factor;
@@ -182,7 +182,7 @@ public:
 
 
 template <typename T, size_t WindowSize>
-class ExponentialMedianFilter : public IFilter<T>
+class ExponentialMedianFilter : public FilterInterface<T>
 {
 private:
 	CircularBuffer<T, WindowSize> _window;

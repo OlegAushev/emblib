@@ -5,8 +5,8 @@ namespace emb {
 
 namespace eeprom {
 
-Storage::Storage(IController* controller_, size_t page_bytes_, size_t page_count_, uint32_t (*calc_crc32_func_)(const uint8_t*, size_t))
-	: _controller(controller_)
+Storage::Storage(DriverInterface* driver_, size_t page_bytes_, size_t page_count_, uint32_t (*calc_crc32_func_)(const uint8_t*, size_t))
+	: _driver(driver_)
 	, page_bytes(page_bytes_)
 	, page_count(page_count_)
 	, _calc_crc32(calc_crc32_func_)
@@ -37,28 +37,28 @@ Error Storage::write(uint16_t page, const uint8_t* buf, size_t len, emb::chrono:
 	uint8_t crc_bytes[4];
 	emb::c28x::to_bytes<uint32_t>(crc_bytes, crc);
 
-	Error error = _controller->write(page, 0, buf, len, timeout);
+	Error error = _driver->write(page, 0, buf, len, timeout);
 	if (error != Error::no_error)
 	{
 		++_errors.write;
 		goto write_end;
 	}
 
-	error = _controller->write(page, len, crc_bytes, 4, timeout);
+	error = _driver->write(page, len, crc_bytes, 4, timeout);
 	if (error != Error::no_error)
 	{
 		++_errors.write;
 		goto write_end;
 	}
 
-	error = _controller->write(page+available_page_count, 0, buf, len, timeout);
+	error = _driver->write(page+available_page_count, 0, buf, len, timeout);
 	if (error != Error::no_error)
 	{
 		++_errors.write;
 		goto write_end;
 	}
 
-	error = _controller->write(page+available_page_count, len, crc_bytes, 4, timeout);
+	error = _driver->write(page+available_page_count, len, crc_bytes, 4, timeout);
 	if (error != Error::no_error)
 	{
 		++_errors.write;
@@ -89,14 +89,14 @@ Error Storage::read(uint16_t page, uint8_t* buf, size_t len, emb::chrono::millis
 	bool primary_ok = false;
 	bool secondary_ok = false;
 
-	Error error = _controller->read(page, 0, buf, len, timeout);
+	Error error = _driver->read(page, 0, buf, len, timeout);
 	if (error != Error::no_error)
 	{
 		++_errors.read;
 		goto read_backup;
 	}
 
-	error = _controller->read(page, len, crc_bytes, 4, timeout);
+	error = _driver->read(page, len, crc_bytes, 4, timeout);
 	if (error != Error::no_error)
 	{
 		++_errors.read;
@@ -117,14 +117,14 @@ Error Storage::read(uint16_t page, uint8_t* buf, size_t len, emb::chrono::millis
 read_backup:
 	uint8_t buf_backup[available_page_bytes];
 
-	error = _controller->read(page+available_page_count, 0, buf_backup, len, timeout);
+	error = _driver->read(page+available_page_count, 0, buf_backup, len, timeout);
 	if (error != Error::no_error)
 	{
 		++_errors.read;
 		goto read_end;
 	}
 
-	error = _controller->read(page+available_page_count, len, crc_bytes, 4, timeout);
+	error = _driver->read(page+available_page_count, len, crc_bytes, 4, timeout);
 	if (error != Error::no_error)
 	{
 		++_errors.read;
@@ -152,9 +152,9 @@ read_end:
 	{
 		// backup is corrupted or outdated
 		++_errors.secondary_data_corrupted;
-		_controller->write(page+available_page_count, 0, buf, len, timeout);
+		_driver->write(page+available_page_count, 0, buf, len, timeout);
 		emb::c28x::to_bytes<uint32_t>(crc_bytes, primary_crc);
-		_controller->write(page+available_page_count, len, crc_bytes, 4, timeout);
+		_driver->write(page+available_page_count, len, crc_bytes, 4, timeout);
 		return Error::no_error;
 	}
 	else if (!primary_ok && secondary_ok)
@@ -162,9 +162,9 @@ read_end:
 		// restore backup
 		++_errors.primary_data_corrupted;
 		memcpy(buf, buf_backup, len); // update output buffer
-		_controller->write(page, 0, buf_backup, len, timeout);
+		_driver->write(page, 0, buf_backup, len, timeout);
 		emb::c28x::to_bytes<uint32_t>(crc_bytes, secondary_crc);
-		_controller->write(page, len, crc_bytes, 4, timeout);
+		_driver->write(page, len, crc_bytes, 4, timeout);
 		return Error::no_error;
 	}
 	else if (error == Error::no_error)
