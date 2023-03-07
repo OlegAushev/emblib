@@ -111,7 +111,7 @@ public:
 #define EMB_RUN_TEST(func) emb::TestRunner::run_test(func, #func)
 
 
-#ifdef ON_TARGET_TEST_BUILD
+#ifdef ON_TARGET_TEST
 #define EMB_ASSERT_EQUAL(x, y) \
 { \
 	const char* hint = "[  WARN  ] Assertion failed: " #x " != " #y ", file: " __FILE__ ", line: " _STR(__LINE__); \
@@ -122,7 +122,7 @@ public:
 #endif
 
 
-#ifdef ON_TARGET_TEST_BUILD
+#ifdef ON_TARGET_TEST
 #define EMB_ASSERT_TRUE(x) \
 { \
 	const char* hint = "[  WARN  ] Assertion failed: " #x " is false, file: " __FILE__ ", line: " _STR(__LINE__); \
