@@ -11,9 +11,7 @@
 #include "motorcontrol/ipark.h"
 
 
-
 namespace emb {
-
 
 namespace traits {
 struct from_rpm{};

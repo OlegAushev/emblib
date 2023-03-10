@@ -23,7 +23,7 @@ public:
 				buf[i] = _data[page][(addr + i)/2] >> 8;
 			}
 		}
-		return emb::eeprom::Error::no_error;
+		return emb::eeprom::Error::none;
 	}
 
 	virtual emb::eeprom::Error write(uint16_t page, uint16_t addr, const uint8_t* buf, size_t len, emb::chrono::milliseconds timeout)
@@ -39,7 +39,7 @@ public:
 				_data[page][(addr + i)/2] = (_data[page][(addr + i)/2] & 0x00FF) | (buf[i] << 8);
 			}
 		}
-		return emb::eeprom::Error::no_error;
+		return emb::eeprom::Error::none;
 	}
 };
 

@@ -38,28 +38,28 @@ Error Storage::write(uint16_t page, const uint8_t* buf, size_t len, emb::chrono:
 	emb::c28x::to_bytes<uint32_t>(crc_bytes, crc);
 
 	Error error = _driver->write(page, 0, buf, len, timeout);
-	if (error != Error::no_error)
+	if (error != Error::none)
 	{
 		++_errors.write;
 		goto write_end;
 	}
 
 	error = _driver->write(page, len, crc_bytes, 4, timeout);
-	if (error != Error::no_error)
+	if (error != Error::none)
 	{
 		++_errors.write;
 		goto write_end;
 	}
 
 	error = _driver->write(page+available_page_count, 0, buf, len, timeout);
-	if (error != Error::no_error)
+	if (error != Error::none)
 	{
 		++_errors.write;
 		goto write_end;
 	}
 
 	error = _driver->write(page+available_page_count, len, crc_bytes, 4, timeout);
-	if (error != Error::no_error)
+	if (error != Error::none)
 	{
 		++_errors.write;
 		goto write_end;
@@ -90,14 +90,14 @@ Error Storage::read(uint16_t page, uint8_t* buf, size_t len, emb::chrono::millis
 	bool secondary_ok = false;
 
 	Error error = _driver->read(page, 0, buf, len, timeout);
-	if (error != Error::no_error)
+	if (error != Error::none)
 	{
 		++_errors.read;
 		goto read_backup;
 	}
 
 	error = _driver->read(page, len, crc_bytes, 4, timeout);
-	if (error != Error::no_error)
+	if (error != Error::none)
 	{
 		++_errors.read;
 		goto read_backup;
@@ -118,14 +118,14 @@ read_backup:
 	uint8_t buf_backup[available_page_bytes];
 
 	error = _driver->read(page+available_page_count, 0, buf_backup, len, timeout);
-	if (error != Error::no_error)
+	if (error != Error::none)
 	{
 		++_errors.read;
 		goto read_end;
 	}
 
 	error = _driver->read(page+available_page_count, len, crc_bytes, 4, timeout);
-	if (error != Error::no_error)
+	if (error != Error::none)
 	{
 		++_errors.read;
 		goto read_end;
@@ -145,7 +145,7 @@ read_backup:
 read_end:
 	if (primary_ok && secondary_ok && (primary_crc == secondary_crc))
 	{
-		return Error::no_error;
+		return Error::none;
 	}
 	else if ((primary_ok && !secondary_ok)
 			|| (primary_ok && secondary_ok && (primary_crc != secondary_crc)))
@@ -155,7 +155,7 @@ read_end:
 		_driver->write(page+available_page_count, 0, buf, len, timeout);
 		emb::c28x::to_bytes<uint32_t>(crc_bytes, primary_crc);
 		_driver->write(page+available_page_count, len, crc_bytes, 4, timeout);
-		return Error::no_error;
+		return Error::none;
 	}
 	else if (!primary_ok && secondary_ok)
 	{
@@ -165,9 +165,9 @@ read_end:
 		_driver->write(page, 0, buf_backup, len, timeout);
 		emb::c28x::to_bytes<uint32_t>(crc_bytes, secondary_crc);
 		_driver->write(page, len, crc_bytes, 4, timeout);
-		return Error::no_error;
+		return Error::none;
 	}
-	else if (error == Error::no_error)
+	else if (error == Error::none)
 	{
 		++_errors.fatal;
 		return Error::data_corrupted;

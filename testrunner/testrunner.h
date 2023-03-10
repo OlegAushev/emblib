@@ -13,7 +13,7 @@ namespace emb {
 void run_tests();
 
 
-class TestRunner
+class test_runner
 {
 public:
 	static void (*print)(const char* str);
@@ -108,14 +108,14 @@ public:
 } // namespace emb
 
 
-#define EMB_RUN_TEST(func) emb::TestRunner::run_test(func, #func)
+#define EMB_RUN_TEST(func) emb::test_runner::run_test(func, #func)
 
 
 #ifdef ON_TARGET_TEST
 #define EMB_ASSERT_EQUAL(x, y) \
 { \
 	const char* hint = "[  WARN  ] Assertion failed: " #x " != " #y ", file: " __FILE__ ", line: " _STR(__LINE__); \
-	emb::TestRunner::assert_equal(x, y, hint); \
+	emb::test_runner::assert_equal(x, y, hint); \
 }
 #else
 #define EMB_ASSERT_EQUAL(x, y) ((void)0)
@@ -126,7 +126,7 @@ public:
 #define EMB_ASSERT_TRUE(x) \
 { \
 	const char* hint = "[  WARN  ] Assertion failed: " #x " is false, file: " __FILE__ ", line: " _STR(__LINE__); \
-	emb::TestRunner::assert_true(x, hint); \
+	emb::test_runner::assert_true(x, hint); \
 }
 #else
 #define EMB_ASSERT_TRUE(x) ((void)0)

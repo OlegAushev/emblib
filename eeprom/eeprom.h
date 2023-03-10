@@ -11,7 +11,7 @@ namespace eeprom {
 
 SCOPED_ENUM_DECLARE_BEGIN(Error)
 {
-	no_error,
+	none,
 	read_failed,
 	write_failed,
 	read_timeout,

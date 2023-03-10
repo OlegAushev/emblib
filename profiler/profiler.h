@@ -9,7 +9,7 @@
 
 namespace emb {
 
-class DurationLogger_us
+class duration_logger
 {
 private:
 	static emb::chrono::nanoseconds (*_time_now_func)();
@@ -17,14 +17,14 @@ private:
 	char _message[_message_len_max];
 	volatile uint64_t _start;
 public:
-	explicit DurationLogger_us(const char* message)
+	explicit duration_logger(const char* message)
 	{
 		strncpy(_message, message, _message_len_max-1);
 		_message[_message_len_max-1] = '\0';
 		_start = _time_now_func().count();
 	}
 
-	~DurationLogger_us()
+	~duration_logger()
 	{
 		volatile uint64_t finish = _time_now_func().count();
 		if (finish < _start)
@@ -45,10 +45,10 @@ public:
 
 
 #define EMB_LOG_DURATION_us(message) \
-		volatile emb::DurationLogger_us EMB_UNIQ_ID(__LINE__)(message);
+		volatile emb::duration_logger EMB_UNIQ_ID(__LINE__)(message);
 
 
-class DurationLogger_clk
+class duration_logger_clk
 {
 private:
 	static uint32_t (*_time_now_func)();
@@ -56,14 +56,14 @@ private:
 	char _message[_message_len_max];
 	volatile uint32_t _start;
 public:
-	explicit DurationLogger_clk(const char* message)
+	explicit duration_logger_clk(const char* message)
 	{
 		strncpy(_message, message, _message_len_max-1);
 		_message[_message_len_max-1] = '\0';
 		_start = _time_now_func();
 	}
 
-	~DurationLogger_clk()
+	~duration_logger_clk()
 	{
 		volatile uint32_t finish = _time_now_func();
 		if (finish > _start)
@@ -84,10 +84,10 @@ public:
 
 
 #define EMB_LOG_DURATION_clk(message) \
-		volatile emb::DurationLogger_clk EMB_UNIQ_ID(__LINE__)(message);
+		volatile emb::duration_logger_clk EMB_UNIQ_ID(__LINE__)(message);
 
 
-class DurationLoggerAsync_us
+class duration_logger_async
 {
 private:
 	static emb::chrono::nanoseconds (*_time_now_func)();
@@ -104,14 +104,14 @@ private:
 	const size_t _channel;
 	volatile uint64_t _start;
 public:
-	DurationLoggerAsync_us(const char* message, size_t channel)
+	duration_logger_async(const char* message, size_t channel)
 		: _channel(channel)
 	{
 		_durations_us[_channel].message = message;
 		_start = _time_now_func().count();
 	}
 
-	~DurationLoggerAsync_us()
+	~duration_logger_async()
 	{
 		volatile uint64_t finish = _time_now_func().count();
 		if (finish < _start)
@@ -143,7 +143,7 @@ public:
 
 
 #define EMB_LOG_DURATION_ASYNC_us(message, channel) \
-		volatile emb::DurationLoggerAsync_us EMB_UNIQ_ID(__LINE__)(message, channel);
+		volatile emb::duration_logger_async EMB_UNIQ_ID(__LINE__)(message, channel);
 
 } // namespace emb
 

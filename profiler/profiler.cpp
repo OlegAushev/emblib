@@ -7,18 +7,18 @@ emb::chrono::nanoseconds time_now_func_none()
 {
 	return emb::chrono::nanoseconds(0);
 }
-emb::chrono::nanoseconds (*DurationLogger_us::_time_now_func)() = time_now_func_none;
+emb::chrono::nanoseconds (*duration_logger::_time_now_func)() = time_now_func_none;
 
 
 uint32_t time_now_func_none_clk()
 {
 	return 0;
 }
-uint32_t (*DurationLogger_clk::_time_now_func)() = time_now_func_none_clk;
+uint32_t (*duration_logger_clk::_time_now_func)() = time_now_func_none_clk;
 
 
-emb::chrono::nanoseconds (*DurationLoggerAsync_us::_time_now_func)() = time_now_func_none;
-DurationLoggerAsync_us::DurationData DurationLoggerAsync_us::_durations_us[_capacity];
+emb::chrono::nanoseconds (*duration_logger_async::_time_now_func)() = time_now_func_none;
+duration_logger_async::DurationData duration_logger_async::_durations_us[_capacity];
 
 }
 

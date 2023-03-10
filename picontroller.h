@@ -8,16 +8,16 @@
 
 namespace emb {
 
-SCOPED_ENUM_DECLARE_BEGIN(ControllerLogic)
+SCOPED_ENUM_DECLARE_BEGIN(controller_logic)
 {
 	direct,
 	inverse
 }
-SCOPED_ENUM_DECLARE_END(ControllerLogic)
+SCOPED_ENUM_DECLARE_END(controller_logic)
 
 
-template <ControllerLogic::enum_type Logic>
-class AbstractPiController : public emb::noncopyable
+template <controller_logic::enum_type Logic>
+class abstract_pi_controller : public emb::noncopyable
 {
 protected:
 	float _kp;		// proportional gain
@@ -30,7 +30,7 @@ protected:
 
 	static float _error(float ref, float meas);
 public:
-	AbstractPiController(float kp, float ki, float dt, float out_min, float out_max)
+	abstract_pi_controller(float kp, float ki, float dt, float out_min, float out_max)
 		: _kp(kp)
 		, _ki(ki)
 		, _dt(dt)
@@ -40,7 +40,7 @@ public:
 		, _out(0)
 	{}
 
-	virtual ~AbstractPiController() {}
+	virtual ~abstract_pi_controller() {}
 	virtual void update(float ref, float meas) = 0;
 	virtual void reset()
 	{
@@ -61,24 +61,24 @@ public:
 };
 
 
-inline float AbstractPiController<ControllerLogic::direct>::_error(float ref, float meas) { return ref - meas; }
-inline float AbstractPiController<ControllerLogic::inverse>::_error(float ref, float meas) { return meas - ref; }
+inline float abstract_pi_controller<controller_logic::direct>::_error(float ref, float meas) { return ref - meas; }
+inline float abstract_pi_controller<controller_logic::inverse>::_error(float ref, float meas) { return meas - ref; }
 
 
-template <ControllerLogic::enum_type Logic>
-class BackCalcPiController : public AbstractPiController<Logic>
+template <controller_logic::enum_type Logic>
+class backcalc_pi_controller : public abstract_pi_controller<Logic>
 {
 protected:
 	float _kc;	// anti-windup gain
 public:
-	BackCalcPiController(float kp, float ki, float dt, float kc, float out_min, float out_max)
+	backcalc_pi_controller(float kp, float ki, float dt, float kc, float out_min, float out_max)
 		: AbstractPiController<Logic>(kp, ki, dt, out_min, out_max)
 		, _kc(kc)
 	{}
 
 	virtual void update(float ref, float meas)
 	{
-		float error = AbstractPiController<Logic>::_error(ref, meas);
+		float error = abstract_pi_controller<Logic>::_error(ref, meas);
 		float out = emb::clamp(error * this->_kp + this->_integrator_sum, -FLT_MAX, FLT_MAX);
 
 		if (out > this->_out_max)
@@ -100,20 +100,20 @@ public:
 };
 
 
-template <ControllerLogic::enum_type Logic>
-class ClampingPiController : public AbstractPiController<Logic>
+template <controller_logic::enum_type Logic>
+class clamping_pi_controller : public abstract_pi_controller<Logic>
 {
 protected:
 	float _error;
 public:
-	ClampingPiController(float kp, float ki, float dt, float out_min, float out_max)
+	clamping_pi_controller(float kp, float ki, float dt, float out_min, float out_max)
 		: AbstractPiController<Logic>(kp, ki, dt, out_min, out_max)
 		, _error(0)
 	{}
 
 	virtual void update(float ref, float meas)
 	{
-		float error = AbstractPiController<Logic>::_error(ref, meas);
+		float error = abstract_pi_controller<Logic>::_error(ref, meas);
 		float outp = error * this->_kp;
 		float sum_i = (error + _error) * 0.5f * this->_ki * this->_dt + this->_integrator_sum;
 		_error = error;
