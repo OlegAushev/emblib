@@ -72,7 +72,7 @@ protected:
 	float _kc;	// anti-windup gain
 public:
 	backcalc_pi_controller(float kp, float ki, float dt, float kc, float out_min, float out_max)
-		: AbstractPiController<Logic>(kp, ki, dt, out_min, out_max)
+		: abstract_pi_controller<Logic>(kp, ki, dt, out_min, out_max)
 		, _kc(kc)
 	{}
 
@@ -107,7 +107,7 @@ protected:
 	float _error;
 public:
 	clamping_pi_controller(float kp, float ki, float dt, float out_min, float out_max)
-		: AbstractPiController<Logic>(kp, ki, dt, out_min, out_max)
+		: abstract_pi_controller<Logic>(kp, ki, dt, out_min, out_max)
 		, _error(0)
 	{}
 
