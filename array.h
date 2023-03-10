@@ -7,7 +7,7 @@
 namespace emb {
 
 template <typename T, size_t Size>
-class Array
+class array
 {
 public:
 	T data[Size];

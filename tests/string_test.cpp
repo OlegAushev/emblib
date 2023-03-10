@@ -1,9 +1,9 @@
 #include <emblib_c28x/tests/tests.h>
 
 
-void emb::tests::string()
+void emb::tests::string_test()
 {
-	emb::String<16> str1 = "Hello, world!";
+	emb::string<16> str1 = "Hello, world!";
 	EMB_ASSERT_EQUAL(str1.lenght(), 13);
 	EMB_ASSERT_EQUAL(strlen(str1.data()), 13);
 	EMB_ASSERT_EQUAL(str1.front(), 'H');

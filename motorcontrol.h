@@ -21,25 +21,25 @@ struct from_radps{};
 }
 
 
-class motorspeed
+class motor_speed
 {
 public:
 	const int pole_pairs;
 private:
 	float _radps_elec;
 public:
-	explicit motorspeed(int pole_pairs_)
+	explicit motor_speed(int pole_pairs_)
 		: pole_pairs(pole_pairs_)
 		, _radps_elec(0)
 	{}
 
-	motorspeed(int pole_pairs_, float radps_elec_, traits::from_radps)
+	motor_speed(int pole_pairs_, float radps_elec_, traits::from_radps)
 		: pole_pairs(pole_pairs_)
 	{
 		from_radps(radps_elec_);
 	}
 
-	motorspeed(int pole_pairs_, float rpm_, traits::from_rpm)
+	motor_speed(int pole_pairs_, float rpm_, traits::from_rpm)
 			: pole_pairs(pole_pairs_)
 	{
 		from_rpm(rpm_);
@@ -63,7 +63,7 @@ inline float to_radps(float speed_rpm) { return numbers::two_pi * speed_rpm / 60
 inline float to_rpm(float speed_radps, int pole_pairs) { return 60 * speed_radps / (numbers::two_pi * pole_pairs); }
 
 
-inline emb::Array<float, 3> calculate_svpwm(float voltage_mag, float voltage_angle, float voltage_dc)
+inline emb::array<float, 3> calculate_svpwm(float voltage_mag, float voltage_angle, float voltage_dc)
 {
 	voltage_angle = normalize_2pi(voltage_angle);
 	voltage_mag = clamp<float>(voltage_mag, 0, voltage_dc / numbers::sqrt_3);
@@ -76,7 +76,7 @@ inline emb::Array<float, 3> calculate_svpwm(float voltage_mag, float voltage_ang
 	float tb2 = numbers::sqrt_3 * (voltage_mag / voltage_dc) * sinf(theta);
 	float tb0 = (1.f - tb1 - tb2) / 2.f;
 
-	emb::Array<float, 3> pulseTimes;
+	emb::array<float, 3> pulseTimes;
 	switch (sector)
 	{
 		case 0:
@@ -121,25 +121,25 @@ inline emb::Array<float, 3> calculate_svpwm(float voltage_mag, float voltage_ang
 }
 
 
-struct DQPair
+struct dq_pair
 {
 	float d;
 	float q;
-	DQPair() {}
-	DQPair(float d_, float q_) : d(d_), q(q_) {}
+	dq_pair() {}
+	dq_pair(float d_, float q_) : d(d_), q(q_) {}
 };
 
 
-struct AlphaBetaPair
+struct alphabeta_pair
 {
 	float alpha;
 	float beta;
-	AlphaBetaPair() {}
-	AlphaBetaPair(float alpha_, float beta_) : alpha(alpha_), beta(beta_) {}
+	alphabeta_pair() {}
+	alphabeta_pair(float alpha_, float beta_) : alpha(alpha_), beta(beta_) {}
 };
 
 
-inline DQPair park_transform(float alpha, float beta, float sine, float cosine)
+inline dq_pair park_transform(float alpha, float beta, float sine, float cosine)
 {
 	PARK parkStruct =
 	{
@@ -149,11 +149,11 @@ inline DQPair park_transform(float alpha, float beta, float sine, float cosine)
 		.Cosine = cosine
 	};
 	runPark(&parkStruct);
-	return DQPair(parkStruct.Ds, parkStruct.Qs);
+	return dq_pair(parkStruct.Ds, parkStruct.Qs);
 }
 
 
-inline AlphaBetaPair invpark_transform(float d, float q, float sine, float cosine)
+inline alphabeta_pair invpark_transform(float d, float q, float sine, float cosine)
 {
 	IPARK iparkStruct =
 	{
@@ -163,11 +163,11 @@ inline AlphaBetaPair invpark_transform(float d, float q, float sine, float cosin
 		.Cosine = cosine
 	};
 	runIPark(&iparkStruct);
-	return AlphaBetaPair(iparkStruct.Alpha, iparkStruct.Beta);
+	return alphabeta_pair(iparkStruct.Alpha, iparkStruct.Beta);
 }
 
 
-inline AlphaBetaPair clarke_transform(float a, float b, float c)
+inline alphabeta_pair clarke_transform(float a, float b, float c)
 {
 	CLARKE clarkeStruct =
 	{
@@ -176,7 +176,7 @@ inline AlphaBetaPair clarke_transform(float a, float b, float c)
 		.Cs = c
 	};
 	runClarke1(&clarkeStruct);
-	return AlphaBetaPair(clarkeStruct.Alpha, clarkeStruct.Beta);
+	return alphabeta_pair(clarkeStruct.Alpha, clarkeStruct.Beta);
 }
 
 } // namespace emb

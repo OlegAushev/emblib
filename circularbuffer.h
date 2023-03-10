@@ -7,7 +7,7 @@
 namespace emb {
 
 template <typename T, size_t Capacity>
-class CircularBuffer
+class circular_buffer
 {
 private:
 	T _data[Capacity];
@@ -15,7 +15,7 @@ private:
 	size_t _back;
 	bool _full;
 public:
-	CircularBuffer()
+	circular_buffer()
 		: _front(0)
 		, _back(0)
 		, _full(false)

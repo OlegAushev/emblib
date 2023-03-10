@@ -1,10 +1,10 @@
 #include <emblib_c28x/tests/tests.h>
 
 
-void emb::tests::filter()
+void emb::tests::filter_test()
 {
 	/* MovingAvgFilter */
-	emb::MovingAvgFilter<int, 5> mvavg_filter_i16;
+	emb::moving_avg_filter<int, 5> mvavg_filter_i16;
 	for (size_t i = 1; i <= 5; ++i)
 	{
 		mvavg_filter_i16.update(i);
@@ -18,8 +18,8 @@ void emb::tests::filter()
 	mvavg_filter_i16.resize(6);
 	EMB_ASSERT_EQUAL(mvavg_filter_i16.size(), 5);
 
-	emb::Array<float, 10> filter_array;
-	emb::MovingAvgFilter<float, 10> mvavg_filter_f32(filter_array);
+	emb::array<float, 10> filter_array;
+	emb::moving_avg_filter<float, 10> mvavg_filter_f32(filter_array);
 	for (size_t i = 0; i < mvavg_filter_f32.size(); ++i)
 	{
 		mvavg_filter_f32.update(emb::numbers::pi * (1 + (i % 2)));
@@ -29,7 +29,7 @@ void emb::tests::filter()
 	EMB_ASSERT_EQUAL(mvavg_filter_f32.output(), emb::numbers::pi);
 
 	/* MedianFilter */
-	emb::MedianFilter<int, 5> med_filter;
+	emb::median_filter<int, 5> med_filter;
 	med_filter.update(-10);
 	EMB_ASSERT_EQUAL(med_filter.output(), 0);
 	med_filter.update(10);
@@ -48,7 +48,7 @@ void emb::tests::filter()
 	EMB_ASSERT_EQUAL(med_filter.output(), 50);
 
 	/* ExponentialMedianFilter */
-	emb::ExponentialMedianFilter<float, 3> expmed_filter;
+	emb::exponential_median_filter<float, 3> expmed_filter;
 	expmed_filter.set_smooth_factor(0.5);
 	expmed_filter.update(16);
 	EMB_ASSERT_EQUAL(expmed_filter.output(), 0);

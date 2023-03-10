@@ -8,24 +8,24 @@
 namespace emb {
 
 template <typename T, size_t Capacity>
-class StaticVector
+class static_vector
 {
 private:
 	T _data[Capacity];
 	size_t _size;
 public:
-	StaticVector()
+	static_vector()
 		: _size(0)
 	{}
 
-	explicit StaticVector(size_t size)
+	explicit static_vector(size_t size)
 		: _size(size)
 	{
 		assert(size <= Capacity);
 		emb::fill(begin(), end(), T());
 	}
 
-	StaticVector(size_t size, const T& value)
+	static_vector(size_t size, const T& value)
 		: _size(size)
 	{
 		assert(size <= Capacity);
@@ -33,7 +33,7 @@ public:
 	}
 
 	template <class V>
-	StaticVector(V* first, V* last)
+	static_vector(V* first, V* last)
 		: _size(last - first)
 	{
 		assert(first <= last);
@@ -150,7 +150,7 @@ public:
 		assert(!full());
 		assert(pos <= end());
 
-		StaticVector<T, Capacity> buf(pos, end());
+		static_vector<T, Capacity> buf(pos, end());
 		*pos++ = value;
 		emb::copy(buf.begin(), buf.end(), pos);
 		++_size;
@@ -161,7 +161,7 @@ public:
 		assert((_size + count) <= Capacity);
 		assert(pos <= end());
 
-		StaticVector<T, Capacity> buf(pos, end());
+		static_vector<T, Capacity> buf(pos, end());
 		for (size_t i = 0; i < count; ++i)
 		{
 			*pos++ = value;
@@ -177,7 +177,7 @@ public:
 		assert((_size + last - first) <= Capacity);
 		assert(pos <= end());
 
-		StaticVector<T, Capacity> buf(pos, end());
+		static_vector<T, Capacity> buf(pos, end());
 		pos = emb::copy(first, last, pos);
 		emb::copy(buf.begin(), buf.end(), pos);
 		_size = _size + last - first;
@@ -188,7 +188,7 @@ public:
 		assert(!empty());
 		assert(pos < end());
 
-		StaticVector<T, Capacity> buf(pos + 1, end());
+		static_vector<T, Capacity> buf(pos + 1, end());
 		--_size;
 		return emb::copy(buf.begin(), buf.end(), pos);
 	}
@@ -200,7 +200,7 @@ public:
 		assert(first <= last);
 		assert(last <= end());
 
-		StaticVector<T, Capacity> buf(last, end());
+		static_vector<T, Capacity> buf(last, end());
 		_size = _size - (last - first);
 		return emb::copy(buf.begin(), buf.end(), first);
 	}

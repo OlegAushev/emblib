@@ -12,20 +12,20 @@ namespace emb {
 namespace c28x {
 
 template <class T>
-class InterruptInvoker
+class interrupt_invoker
 {
 private:
 	static T* _instance;
 	static bool _initialized;
 protected:
-	InterruptInvoker(T* self)
+	interrupt_invoker(T* self)
 	{
 		assert(!_initialized);
 		_instance = self;
 		_initialized = true;
 	}
 
-	~InterruptInvoker()
+	~interrupt_invoker()
 	{
 		_initialized = false;
 		_instance = static_cast<T*>(NULL);
@@ -41,20 +41,20 @@ public:
 };
 
 template <class T>
-T* InterruptInvoker<T>::_instance = static_cast<T*>(NULL);
+T* interrupt_invoker<T>::_instance = static_cast<T*>(NULL);
 template <class T>
-bool InterruptInvoker<T>::_initialized = false;
+bool interrupt_invoker<T>::_initialized = false;
 
 
 template <class T, size_t Size>
-class InterruptInvokerArray
+class interrupt_invoker_array
 {
 private:
 	static T* _instance[Size];
 	static bool _initialized[Size];
 	static bool _constructed;
 protected:
-	InterruptInvokerArray(T* self, size_t instance_num)
+	interrupt_invoker_array(T* self, size_t instance_num)
 	{
 		assert(instance_num < Size);
 		assert(!_initialized[instance_num]);
@@ -89,11 +89,11 @@ public:
 };
 
 template <class T, size_t Size>
-T* InterruptInvokerArray<T, Size>::_instance[Size];
+T* interrupt_invoker_array<T, Size>::_instance[Size];
 template <class T, size_t Size>
-bool InterruptInvokerArray<T, Size>::_initialized[Size];
+bool interrupt_invoker_array<T, Size>::_initialized[Size];
 template <class T, size_t Size>
-bool InterruptInvokerArray<T, Size>::_constructed = false;
+bool interrupt_invoker_array<T, Size>::_constructed = false;
 
 
 template <typename T>

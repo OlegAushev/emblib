@@ -60,13 +60,13 @@ inline float normalize_pi(float value)
 
 
 template <typename T>
-class Range
+class range
 {
 private:
 	T _lo;
 	T _hi;
 public:
-	Range(const T& val1, const T& val2)
+	range(const T& val1, const T& val2)
 	{
 		if (val1 < val2)
 		{
@@ -103,17 +103,17 @@ public:
 
 
 template <typename T, typename Time>
-class Integrator
+class integrator
 {
 private:
 	T _sum;
 	Time _dt;
 	T _init;
 public:
-	Range<T> range;
+	range<T> output_range;
 
-	Integrator(const Range<T>& range_, const Time& dt_, const T& init_)
-		: range(range_)
+	integrator(const range<T>& output_range_, const Time& dt_, const T& init_)
+		: output_range(output_range_)
 		, _dt(dt_)
 		, _init(init_)
 	{
@@ -122,18 +122,18 @@ public:
 
 	void update(const T& value)
 	{
-		_sum = clamp(_sum + value * _dt, range.lo(), range.hi());
+		_sum = clamp(_sum + value * _dt, output_range.lo(), output_range.hi());
 	}
 
 	void add(const T& value)
 	{
-		_sum = clamp(_sum + value, range.lo(), range.hi());
+		_sum = clamp(_sum + value, output_range.lo(), output_range.hi());
 	}
 
-	const T& result() const { return _sum; }
+	const T& output() const { return _sum; }
 	void reset()
 	{
-		_sum = clamp(_init, range.lo(), range.hi());
+		_sum = clamp(_init, output_range.lo(), output_range.hi());
 	}
 };
 

@@ -8,13 +8,13 @@ namespace emb {
 
 
 template <typename T, size_t Capacity>
-class Stack
+class stack
 {
 private:
 	T _data[Capacity];
 	size_t _size;
 public:
-	Stack()
+	stack()
 		: _size(0)
 	{}
 

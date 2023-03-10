@@ -9,20 +9,20 @@
 namespace emb {
 
 template <size_t Capacity>
-class String
+class string
 {
 private:
 	static const size_t _data_len = Capacity + 1;
 	char _data[_data_len];
 	size_t _len;
 public:
-	String()
+	string()
 	{
 		memset(_data, 0, _data_len);
 		_len = 0;
 	}
 
-	String(const char str[])
+	string(const char str[])
 	{
 		memset(_data, 0, _data_len);
 		strncpy(_data, str, Capacity);
@@ -162,14 +162,14 @@ public:
 
 
 template <size_t Capacity>
-inline bool operator==(const String<Capacity>& lhs, const String<Capacity>& rhs)
+inline bool operator==(const string<Capacity>& lhs, const string<Capacity>& rhs)
 {
 	return strcmp(lhs.data(), rhs.data()) == 0;
 }
 
 
 template <size_t Capacity>
-inline bool operator!=(const String<Capacity>& lhs, const String<Capacity>& rhs)
+inline bool operator!=(const string<Capacity>& lhs, const string<Capacity>& rhs)
 {
 	return !(lhs == rhs);
 }

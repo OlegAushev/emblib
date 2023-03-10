@@ -11,11 +11,11 @@
 namespace emb {
 
 template <typename T>
-class FilterInterface
+class filter_interface
 {
 public:
-	FilterInterface() {}
-	virtual ~FilterInterface() {}
+	filter_interface() {}
+	virtual ~filter_interface() {}
 
 	virtual void update(T value) = 0;
 	virtual T output() const = 0;
@@ -25,7 +25,7 @@ public:
 
 
 template <typename T, size_t WindowSize>
-class MovingAvgFilter : public FilterInterface<T>, public emb::NonCopyable
+class moving_avg_filter : public filter_interface<T>, public emb::noncopyable
 {
 private:
 	size_t _size;
@@ -34,7 +34,7 @@ private:
 	T _sum;
 	bool _heap_used;
 public:
-	MovingAvgFilter()
+	moving_avg_filter()
 		: _size(WindowSize)
 		, _window(new T[WindowSize])
 		, _index(0)
@@ -44,7 +44,7 @@ public:
 		reset();
 	}
 
-	MovingAvgFilter(emb::Array<T, WindowSize>& data_array)
+	moving_avg_filter(emb::array<T, WindowSize>& data_array)
 		: _size(WindowSize)
 		, _window(data_array.data)
 		, _index(0)
@@ -54,7 +54,7 @@ public:
 		reset();
 	}
 
-	~MovingAvgFilter()
+	~moving_avg_filter()
 	{
 		if (_heap_used == true)
 		{
@@ -104,13 +104,13 @@ public:
 
 
 template <typename T, size_t WindowSize>
-class MedianFilter : public FilterInterface<T>
+class median_filter : public filter_interface<T>
 {
 private:
-	CircularBuffer<T, WindowSize> _window;
+	circular_buffer<T, WindowSize> _window;
 	T _out;
 public:
-	MedianFilter()
+	median_filter()
 	{
 		EMB_STATIC_ASSERT((WindowSize % 2) == 1);
 		reset();
@@ -119,7 +119,7 @@ public:
 	virtual void update(T value)
 	{
 		_window.push(value);
-		Array<T, WindowSize> window_sorted;
+		emb::array<T, WindowSize> window_sorted;
 		emb::copy(_window.begin(), _window.end(), window_sorted.begin());
 		std::sort(window_sorted.begin(), window_sorted.end());
 		_out = window_sorted[WindowSize/2];
@@ -138,20 +138,20 @@ public:
 
 
 template <typename T>
-class ExponentialFilter : public FilterInterface<T>
+class exponential_filter : public filter_interface<T>
 {
 private:
 	float _smooth_factor;
 	T _out;
 	T _outPrev;
 public:
-	ExponentialFilter()
+	exponential_filter()
 		: _smooth_factor(0)
 	{
 		reset();
 	}
 
-	ExponentialFilter(float smooth_factor)
+	exponential_filter(float smooth_factor)
 		: _smooth_factor(smooth_factor)
 	{
 		reset();
@@ -178,22 +178,22 @@ public:
 
 
 template <typename T, size_t WindowSize>
-class ExponentialMedianFilter : public FilterInterface<T>
+class exponential_median_filter : public filter_interface<T>
 {
 private:
-	CircularBuffer<T, WindowSize> _window;
+	circular_buffer<T, WindowSize> _window;
 	float _smooth_factor;
 	T _out;
 	T _out_prev;
 public:
-	ExponentialMedianFilter()
+	exponential_median_filter()
 		: _smooth_factor(0)
 	{
 		EMB_STATIC_ASSERT((WindowSize % 2) == 1);
 		reset();
 	}
 
-	ExponentialMedianFilter(float smooth_factor)
+	exponential_median_filter(float smooth_factor)
 		: _smooth_factor(smooth_factor)
 	{
 		EMB_STATIC_ASSERT((WindowSize % 2) == 1);
@@ -203,7 +203,7 @@ public:
 	virtual void update(T value)
 	{
 		_window.push(value);
-		Array<T, WindowSize> window_sorted;
+		emb::array<T, WindowSize> window_sorted;
 		emb::copy(_window.begin(), _window.end(), window_sorted.begin());
 		std::sort(window_sorted.begin(), window_sorted.end());
 		value = window_sorted[WindowSize/2];

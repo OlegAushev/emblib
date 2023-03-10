@@ -150,13 +150,13 @@ inline It min_element(It first, It last)
 
 
 template <class It>
-inline Pair<It, It> minmax_element(It first, It last)
+inline pair<It, It> minmax_element(It first, It last)
 {
 	It min = first, max = first;
 
 	if ((first == last) || (++first == last))
 	{
-		return Pair<It, It>(min, max);
+		return pair<It, It>(min, max);
 	}
 
 	if (*first < *min)
@@ -191,7 +191,7 @@ inline Pair<It, It> minmax_element(It first, It last)
 			}
 		}
 	}
-	return Pair<It, It>(min, max);
+	return pair<It, It>(min, max);
 }
 
 } // namespace emb

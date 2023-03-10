@@ -1,7 +1,7 @@
 #include <emblib_c28x/tests/tests.h>
 
 
-void emb::tests::chrono()
+void emb::tests::chrono_test()
 {
 	emb::chrono::seconds sec(10);
 	EMB_ASSERT_EQUAL(sec.count(), 10);

@@ -7,17 +7,17 @@
 namespace emb {
 
 template <typename T1, typename T2>
-class Pair
+class pair
 {
 public:
 	T1 first;
 	T2 second;
-	Pair() {}
-	Pair(const T1& first_, const T2& second_)
+	pair() {}
+	pair(const T1& first_, const T2& second_)
 		: first(first_)
 		, second(second_) {}
 
-	Pair& operator=(const Pair& other)
+	pair& operator=(const pair& other)
 	{
 		if (this != &other)	// not a self-assignment
 		{

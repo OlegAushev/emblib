@@ -9,7 +9,7 @@
 namespace emb {
 
 template <size_t BitCount>
-class Bitset
+class bitset
 {
 	EMB_STATIC_ASSERT(BitCount > 0);
 private:
@@ -26,7 +26,7 @@ private:
 public:
 	class Reference;
 
-	Bitset()
+	bitset()
 	{
 		for (size_t i = 0; i < _byte_count; ++i)
 		{
@@ -34,7 +34,7 @@ public:
 		}
 	}
 
-	Bitset(const emb::Array<unsigned int, _byte_count>& words)
+	bitset(const emb::array<unsigned int, _byte_count>& words)
 	{
 		for (size_t i = 0; i < _byte_count; ++i)
 		{
@@ -43,7 +43,7 @@ public:
 		_reset_unused_bits(_hi_byte());
 	}
 
-	Bitset(uint64_t value)
+	bitset(uint64_t value)
 	{
 		EMB_STATIC_ASSERT(_byte_count <= 4);
 		uint64_t val = value;	// protection against implicit conversion and wrong memcpy()
@@ -163,7 +163,7 @@ public:
 		_data[_which_byte(pos)] ^= 1U << _which_bit(pos);
 	}
 
-	bool operator==(const Bitset& rhs) const
+	bool operator==(const bitset& rhs) const
 	{
 		for (size_t i = 0; i < _byte_count; ++i)
 		{
@@ -172,16 +172,16 @@ public:
 		return true;
 	}
 
-	bool operator!=(const Bitset& rhs) const
+	bool operator!=(const bitset& rhs) const
 	{
 		return !((*this) == rhs);
 	}
 
 	struct Reference
 	{
-		Bitset* self;
+		bitset* self;
 		size_t pos;
-		Reference(Bitset* self_, size_t pos_) : self(self_), pos(pos_) {}
+		Reference(bitset* self_, size_t pos_) : self(self_), pos(pos_) {}
 		operator bool() const { return self->test(pos); }
 		Reference& operator=(bool value)
 		{

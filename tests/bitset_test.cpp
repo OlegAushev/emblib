@@ -1,27 +1,27 @@
 #include <emblib_c28x/tests/tests.h>
 
 
-void emb::tests::bitset()
+void emb::tests::bitset_test()
 {
 	// sizeof
-	emb::Bitset<1> bs;
+	emb::bitset<1> bs;
 	EMB_ASSERT_EQUAL(sizeof(bs), 1);
-	emb::Bitset<16> bs16;
+	emb::bitset<16> bs16;
 	EMB_ASSERT_EQUAL(sizeof(bs16), 1);
 
-	emb::Bitset<17> bs17;
+	emb::bitset<17> bs17;
 	EMB_ASSERT_EQUAL(sizeof(bs17), 2);
-	emb::Bitset<32> bs32;
+	emb::bitset<32> bs32;
 	EMB_ASSERT_EQUAL(sizeof(bs32), 2);
 
-	emb::Bitset<33> bs33;
+	emb::bitset<33> bs33;
 	EMB_ASSERT_EQUAL(sizeof(bs33), 3);
-	emb::Bitset<48> bs48;
+	emb::bitset<48> bs48;
 	EMB_ASSERT_EQUAL(sizeof(bs48), 3);
 
 	// ctor, operator[]
-	emb::Array<unsigned int, 2> arr1 = {0xAAAA, 0xFF00};
-	emb::Bitset<32> bs1(arr1);
+	emb::array<unsigned int, 2> arr1 = {0xAAAA, 0xFF00};
+	emb::bitset<32> bs1(arr1);
 
 	for (size_t i = 0; i < 15; ++i)
 	{
@@ -39,14 +39,14 @@ void emb::tests::bitset()
 	}
 
 	uint64_t u64 = 0x8888888888888888;
-	emb::Bitset<64> bs2(u64);
+	emb::bitset<64> bs2(u64);
 	for (size_t i = 0; i < 64; ++i)
 	{
 		EMB_ASSERT_EQUAL(bs2[i], (((i+1)%4) == 0));
 	}
 
 	uint16_t u16 = 0x0001;
-	emb::Bitset<32> bs3(u16);
+	emb::bitset<32> bs3(u16);
 	EMB_ASSERT_TRUE(bs3[0]);
 	for (size_t i = 1; i < 32; ++i)
 	{
@@ -54,24 +54,24 @@ void emb::tests::bitset()
 	}
 
 	// all, any, none, count
-	EMB_ASSERT_TRUE(emb::Bitset<16>(0xFFFF).all());
-	EMB_ASSERT_TRUE(!emb::Bitset<16>(0xFFCF).all());
-	EMB_ASSERT_TRUE(emb::Bitset<32>(0xFFFFFFFF).all());
-	EMB_ASSERT_TRUE(!emb::Bitset<32>(0xFFEFFFFF).all());
-	EMB_ASSERT_EQUAL(emb::Bitset<16>(0xFFFF).count(), 16);
-	EMB_ASSERT_EQUAL(emb::Bitset<16>(0xFAFF).count(), 14);
-	EMB_ASSERT_EQUAL(emb::Bitset<32>(0xFFFFFFFF).count(), 32);
-	EMB_ASSERT_EQUAL(emb::Bitset<32>(0xFFEFFFFF).count(), 31);
+	EMB_ASSERT_TRUE(emb::bitset<16>(0xFFFF).all());
+	EMB_ASSERT_TRUE(!emb::bitset<16>(0xFFCF).all());
+	EMB_ASSERT_TRUE(emb::bitset<32>(0xFFFFFFFF).all());
+	EMB_ASSERT_TRUE(!emb::bitset<32>(0xFFEFFFFF).all());
+	EMB_ASSERT_EQUAL(emb::bitset<16>(0xFFFF).count(), 16);
+	EMB_ASSERT_EQUAL(emb::bitset<16>(0xFAFF).count(), 14);
+	EMB_ASSERT_EQUAL(emb::bitset<32>(0xFFFFFFFF).count(), 32);
+	EMB_ASSERT_EQUAL(emb::bitset<32>(0xFFEFFFFF).count(), 31);
 
-	EMB_ASSERT_TRUE(emb::Bitset<16>(0x00D0).any());
-	EMB_ASSERT_TRUE(!emb::Bitset<16>(0x0000).any());
-	EMB_ASSERT_TRUE(emb::Bitset<64>(0x0100000000000000).any());
-	EMB_ASSERT_TRUE(!emb::Bitset<64>(0x0000000000000000).any());
-	EMB_ASSERT_EQUAL(emb::Bitset<64>(0x0100000000000000).count(), 1);
-	EMB_ASSERT_EQUAL(emb::Bitset<64>(0x0000000000000000).count(), 0);
+	EMB_ASSERT_TRUE(emb::bitset<16>(0x00D0).any());
+	EMB_ASSERT_TRUE(!emb::bitset<16>(0x0000).any());
+	EMB_ASSERT_TRUE(emb::bitset<64>(0x0100000000000000).any());
+	EMB_ASSERT_TRUE(!emb::bitset<64>(0x0000000000000000).any());
+	EMB_ASSERT_EQUAL(emb::bitset<64>(0x0100000000000000).count(), 1);
+	EMB_ASSERT_EQUAL(emb::bitset<64>(0x0000000000000000).count(), 0);
 
-	EMB_ASSERT_TRUE(emb::Bitset<64>(0x0000000000000000).none());
-	EMB_ASSERT_TRUE(!emb::Bitset<64>(0x0000100000000000).none());
+	EMB_ASSERT_TRUE(emb::bitset<64>(0x0000000000000000).none());
+	EMB_ASSERT_TRUE(!emb::bitset<64>(0x0000100000000000).none());
 
 	// flip
 	bs16.set(0); bs16.set(4); bs16.set(8); bs16.set(12);
@@ -104,7 +104,7 @@ void emb::tests::bitset()
 	bs.flip();
 	EMB_ASSERT_TRUE(bs.none());
 
-	emb::Bitset<4> bs4(0xFFFA);
+	emb::bitset<4> bs4(0xFFFA);
 	EMB_ASSERT_EQUAL(bs4.count(), 2);
 	EMB_ASSERT_TRUE(!bs4.all());
 	bs4.reset(3);
@@ -123,7 +123,7 @@ void emb::tests::bitset()
 	bs17.set();
 	EMB_ASSERT_EQUAL(bs17.count(), 17);
 
-	emb::Bitset<60>bs60(0xFFFFFFFFFFFFFFFF);
+	emb::bitset<60>bs60(0xFFFFFFFFFFFFFFFF);
 	EMB_ASSERT_EQUAL(bs60.count(), 60);
 	EMB_ASSERT_TRUE(bs60.all());
 	bs60.reset(30);
@@ -159,14 +159,14 @@ void emb::tests::bitset()
 	EMB_ASSERT_TRUE(bs17[5]);
 
 	// operator==, !=, =
-	EMB_ASSERT_TRUE(emb::Bitset<16>(0xFFCF) == emb::Bitset<16>(0xFFCF));
-	EMB_ASSERT_TRUE(emb::Bitset<12>(0xFFCF) == emb::Bitset<12>(0x0FCF));
-	EMB_ASSERT_TRUE(emb::Bitset<28>(0xA1ABCDEF) == emb::Bitset<28>(0xB1ABCDEF));
+	EMB_ASSERT_TRUE(emb::bitset<16>(0xFFCF) == emb::bitset<16>(0xFFCF));
+	EMB_ASSERT_TRUE(emb::bitset<12>(0xFFCF) == emb::bitset<12>(0x0FCF));
+	EMB_ASSERT_TRUE(emb::bitset<28>(0xA1ABCDEF) == emb::bitset<28>(0xB1ABCDEF));
 
-	EMB_ASSERT_TRUE(bs60 != emb::Bitset<60>(0x1));
+	EMB_ASSERT_TRUE(bs60 != emb::bitset<60>(0x1));
 
-	emb::Bitset<60> bs60_2;
-	emb::Bitset<60> bs60_3 = bs60;
+	emb::bitset<60> bs60_2;
+	emb::bitset<60> bs60_3 = bs60;
 	bs60_2 = bs60_3;
 	EMB_ASSERT_TRUE(bs60 == bs60_2);
 	bs60_2.flip(35);

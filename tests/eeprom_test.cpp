@@ -67,7 +67,7 @@ struct TestingEepromStruct2
 };
 
 
-void emb::tests::eeprom()
+void emb::tests::eeprom_test()
 {
 	TestingEepromDriver eeprom_driver;
 	emb::eeprom::Storage eeprom(&eeprom_driver, TestingEepromDriver::page_bytes, TestingEepromDriver::page_count, mcu::crc::calc_crc32_byte8);

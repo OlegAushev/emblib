@@ -23,7 +23,7 @@ bool operator<(const StructTest& lhs, const StructTest& rhs)
 }
 
 
-void emb::tests::algorithm()
+void emb::tests::algorithm_test()
 {
 	// find
 	int arr1[10] = {3, 6, 2, 7, 8, 9, 0, 1, 5, 4};
@@ -31,12 +31,12 @@ void emb::tests::algorithm()
 	EMB_ASSERT_EQUAL(emb::find(arr1, arr1 + 10, 7), arr1 + 3);
 	EMB_ASSERT_EQUAL(emb::find(arr1, arr1 + 10, -1), arr1 + sizeof(arr1) / sizeof(arr1[0]));
 
-	emb::Array<int, 5> arr2 = {-5, 1, 4, 4, 7};
+	emb::array<int, 5> arr2 = {-5, 1, 4, 4, 7};
 	EMB_ASSERT_EQUAL(emb::find(arr2.begin(), arr2.end(), -5), arr2.begin());
 	EMB_ASSERT_EQUAL(emb::find(arr2.begin(), arr2.end(), 5), arr2.end());
 	EMB_ASSERT_EQUAL(emb::find(arr2.begin(), arr2.end(), 4), arr2.begin() + 2);
 
-	emb::Array<StructTest, 5> arr3 = {StructTest(1, 2), StructTest(5, 0),
+	emb::array<StructTest, 5> arr3 = {StructTest(1, 2), StructTest(5, 0),
 			StructTest(-4, 7), StructTest(8, 1), StructTest(5, -4)};
 	EMB_ASSERT_EQUAL(emb::find(arr3.begin(), arr3.end(), StructTest(5, 0)), arr3.begin() + 1);
 	EMB_ASSERT_EQUAL(emb::find(arr3.begin(), arr3.end(), StructTest(-4, 6)), arr3.end());
@@ -74,7 +74,7 @@ void emb::tests::algorithm()
 	EMB_ASSERT_EQUAL(emb::binary_find(arr3.begin(), arr3.end(), StructTest(-4, 6)), arr3.end());
 	EMB_ASSERT_EQUAL(emb::binary_find(arr3.begin(), arr3.end(), StructTest(8, 0)), arr3.end());
 
-	emb::Array<int, 9> arr4;
+	emb::array<int, 9> arr4;
 	emb::copy(arr1, arr1+9, arr4.data);
 	EMB_ASSERT_EQUAL(emb::binary_find(arr4.begin(), arr4.end(), 0), arr4.begin());
 	EMB_ASSERT_EQUAL(emb::binary_find(arr4.begin(), arr4.end(), 1), arr4.begin() + 1);
@@ -89,7 +89,7 @@ void emb::tests::algorithm()
 	EMB_ASSERT_EQUAL(emb::binary_find(arr4.begin(), arr4.end(), -1), arr4.end());
 
 	// fill, count
-	emb::Array<int, 10> arr5;
+	emb::array<int, 10> arr5;
 	arr5.fill(0);
 	EMB_ASSERT_EQUAL(emb::count(arr5.begin(), arr5.end(), 0), 10);
 	arr5[5] = 5;
@@ -105,7 +105,7 @@ void emb::tests::algorithm()
 
 	// copy, equal
 	int arr6[5] = {-2, 1, 0, 1, 2};
-	emb::Array<int, 5> arr7;
+	emb::array<int, 5> arr7;
 	arr7.fill(0);
 	emb::copy(arr6, arr6 + 5, arr7.begin());
 	EMB_ASSERT_TRUE(emb::equal(arr7.begin(), arr7.end(), arr6));
@@ -124,13 +124,13 @@ void emb::tests::algorithm()
 	EMB_ASSERT_TRUE(emb::equal(arr7.begin(), arr7.end(), arr8));
 
 	// copy, equal, count, fill
-	emb::Array<StructTest, 5> arr9;
+	emb::array<StructTest, 5> arr9;
 	arr9[0] = StructTest(1, 2);
 	arr9[1] = StructTest(8, 1);
 	arr9[2] = StructTest(-4, 7);
 	arr9[3] = StructTest(8, 1);
 	arr9[4] = StructTest(5, -4);
-	emb::Array<StructTest, 5> arr10;
+	emb::array<StructTest, 5> arr10;
 	emb::copy(arr9.begin(), arr9.end(), arr10.begin());
 	EMB_ASSERT_TRUE(emb::equal(arr10.begin(), arr10.end(), arr9.begin()));
 	EMB_ASSERT_EQUAL(emb::count(arr10.begin(), arr10.end(), StructTest(-4, 7)), 1);
@@ -160,12 +160,12 @@ void emb::tests::algorithm()
 	EMB_ASSERT_EQUAL(emb::clamp(1.1f, 0.f, 1.f), 1.f);
 
 	// minmax
-	emb::Array<int, 10> arr11 = {3, 6, 2, 7, 8, 9, 0, 1, 5, 4};
+	emb::array<int, 10> arr11 = {3, 6, 2, 7, 8, 9, 0, 1, 5, 4};
 	EMB_ASSERT_EQUAL(*(emb::max_element(arr11.begin(), arr11.end())), 9);
 	EMB_ASSERT_EQUAL(*(emb::min_element(arr11.begin(), arr11.end())), 0);
 	EMB_ASSERT_EQUAL(*(emb::minmax_element(arr11.begin(), arr11.end()).first), 0);
 	EMB_ASSERT_EQUAL(*(emb::minmax_element(arr11.begin(), arr11.end()).second), 9);
-	emb::Array<StructTest, 5> arr12 = {StructTest(1, 2), StructTest(8, 1), StructTest(-4, 7), StructTest(8, 1), StructTest(5, -4)};
+	emb::array<StructTest, 5> arr12 = {StructTest(1, 2), StructTest(8, 1), StructTest(-4, 7), StructTest(8, 1), StructTest(5, -4)};
 	EMB_ASSERT_EQUAL(*(emb::max_element(arr12.begin(), arr12.end())), StructTest(8, 1));
 	EMB_ASSERT_EQUAL(*(emb::min_element(arr12.begin(), arr12.end())), StructTest(-4, 7));
 	EMB_ASSERT_EQUAL(*(emb::minmax_element(arr12.begin(), arr12.end()).first), StructTest(-4, 7));

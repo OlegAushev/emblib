@@ -1,9 +1,9 @@
 #include <emblib_c28x/tests/tests.h>
 
 
-void emb::tests::stack()
+void emb::tests::stack_test()
 {
-	emb::Stack<int, 3> stack;
+	emb::stack<int, 3> stack;
 
 	EMB_ASSERT_TRUE(stack.empty());
 	EMB_ASSERT_TRUE(!stack.full());

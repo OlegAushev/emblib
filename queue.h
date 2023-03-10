@@ -7,7 +7,7 @@
 namespace emb {
 
 template <typename T, size_t Capacity>
-class Queue
+class queue
 {
 private:
 	T _data[Capacity];
@@ -15,7 +15,7 @@ private:
 	size_t _back;
 	size_t _size;
 public:
-	Queue()
+	queue()
 		: _front(0)
 		, _back(0)
 		, _size(0)
