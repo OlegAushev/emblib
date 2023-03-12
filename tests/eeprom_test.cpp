@@ -4,11 +4,10 @@
 
 class TestingEepromDriver : public emb::eeprom::DriverInterface
 {
-public:
-	static const size_t page_bytes = 64;
-	static const size_t page_count = 8;
 private:
-	static uint16_t _data[page_count][page_bytes/2];
+	static const size_t _page_bytes = 64;
+	static const size_t _page_count = 8;
+	static uint16_t _data[_page_count][_page_bytes/2];
 public:
 	virtual emb::eeprom::Error read(uint16_t page, uint16_t addr, uint8_t* buf, size_t len, emb::chrono::milliseconds timeout)
 	{
@@ -41,10 +40,13 @@ public:
 		}
 		return emb::eeprom::Error::none;
 	}
+
+	virtual size_t page_bytes() const { return _page_bytes; }
+	virtual size_t page_count() const { return _page_count; }
 };
 
 
-uint16_t TestingEepromDriver::_data[TestingEepromDriver::page_count][TestingEepromDriver::page_bytes/2] = {0};
+uint16_t TestingEepromDriver::_data[TestingEepromDriver::_page_count][TestingEepromDriver::_page_bytes/2] = {0};
 
 
 struct TestingEepromStruct1
@@ -70,7 +72,7 @@ struct TestingEepromStruct2
 void emb::tests::eeprom_test()
 {
 	TestingEepromDriver eeprom_driver;
-	emb::eeprom::Storage eeprom(&eeprom_driver, TestingEepromDriver::page_bytes, TestingEepromDriver::page_count, mcu::crc::calc_crc32_byte8);
+	emb::eeprom::Storage eeprom(&eeprom_driver, mcu::crc::calc_crc32_byte8);
 
 	TestingEepromStruct1 s1_src = {42, emb::numbers::pi, 12, -100, true};
 	TestingEepromStruct2 s2_src = {1.f, -2.f, 3.f, -4.f, 5.f};

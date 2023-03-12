@@ -5,13 +5,11 @@ namespace emb {
 
 namespace eeprom {
 
-Storage::Storage(DriverInterface* driver_, size_t page_bytes_, size_t page_count_, uint32_t (*calc_crc32_func_)(const uint8_t*, size_t))
+Storage::Storage(DriverInterface* driver_, uint32_t (*calc_crc32_func_)(const uint8_t*, size_t))
 	: _driver(driver_)
-	, page_bytes(page_bytes_)
-	, page_count(page_count_)
 	, _calc_crc32(calc_crc32_func_)
-	, available_page_bytes(page_bytes_-4)
-	, available_page_count((page_count_-2)/2)
+	, available_page_bytes(_driver->page_bytes()-4)
+	, available_page_count((_driver->page_count()-2)/2)
 {
 	_errors.read = 0;
 	_errors.write= 0;
