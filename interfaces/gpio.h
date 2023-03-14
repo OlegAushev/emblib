@@ -8,24 +8,19 @@ namespace emb {
 
 namespace gpio {
 
-SCOPED_ENUM_DECLARE_BEGIN(ActiveState)
-{
+SCOPED_ENUM_DECLARE_BEGIN(ActiveState) {
 	low = 0,
 	high = 1
-}
-SCOPED_ENUM_DECLARE_END(ActiveState)
+} SCOPED_ENUM_DECLARE_END(ActiveState)
 
 
-SCOPED_ENUM_DECLARE_BEGIN(State)
-{
+SCOPED_ENUM_DECLARE_BEGIN(State) {
 	inactive = 0,
 	active = 1
-}
-SCOPED_ENUM_DECLARE_END(State)
+} SCOPED_ENUM_DECLARE_END(State)
 
 
-class InputInterface
-{
+class InputInterface {
 public:
 	InputInterface() {}
 	virtual ~InputInterface() {}
@@ -34,8 +29,7 @@ public:
 };
 
 
-class OutputInterface
-{
+class OutputInterface {
 public:
 	OutputInterface() {}
 	virtual ~OutputInterface() {}

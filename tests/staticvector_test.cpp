@@ -1,8 +1,7 @@
 #include <emblib_c28x/tests/tests.h>
 
 
-void emb::tests::static_vector_test()
-{
+void emb::tests::static_vector_test() {
 	emb::static_vector<unsigned int, 5> vec1;
 	EMB_ASSERT_EQUAL(vec1.size(), 0);
 	EMB_ASSERT_EQUAL(vec1.capacity(), 5);

@@ -3,8 +3,7 @@
 #include "float.h"
 
 
-struct StructTest
-{
+struct StructTest {
 	int key;
 	int value;
 
@@ -12,19 +11,16 @@ struct StructTest
 	StructTest(int k, int v) : key(k), value(v) {}
 };
 
-bool operator==(const StructTest& lhs, const StructTest& rhs)
-{
+bool operator==(const StructTest& lhs, const StructTest& rhs) {
 	return (lhs.key == rhs.key) && (lhs.value == rhs.value);
 }
 
-bool operator<(const StructTest& lhs, const StructTest& rhs)
-{
+bool operator<(const StructTest& lhs, const StructTest& rhs) {
 	return (lhs.key < rhs.key) || ((lhs.key == rhs.key) && (lhs.value < rhs.value));
 }
 
 
-void emb::tests::algorithm_test()
-{
+void emb::tests::algorithm_test() {
 	// find
 	int arr1[10] = {3, 6, 2, 7, 8, 9, 0, 1, 5, 4};
 	EMB_ASSERT_EQUAL(*emb::find(arr1, arr1 + 10, 9), 9);
@@ -109,8 +105,7 @@ void emb::tests::algorithm_test()
 	arr7.fill(0);
 	emb::copy(arr6, arr6 + 5, arr7.begin());
 	EMB_ASSERT_TRUE(emb::equal(arr7.begin(), arr7.end(), arr6));
-	for (size_t i = 0; i < arr7.size(); ++i)
-	{
+	for (size_t i = 0; i < arr7.size(); ++i) {
 		EMB_ASSERT_EQUAL(arr6[i], arr7[i]);
 	}
 

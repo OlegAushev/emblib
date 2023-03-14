@@ -8,17 +8,14 @@
 
 namespace emb {
 
-SCOPED_ENUM_DECLARE_BEGIN(controller_logic)
-{
+SCOPED_ENUM_DECLARE_BEGIN(controller_logic) {
 	direct,
 	inverse
-}
-SCOPED_ENUM_DECLARE_END(controller_logic)
+} SCOPED_ENUM_DECLARE_END(controller_logic)
 
 
 template <controller_logic::enum_type Logic>
-class abstract_pi_controller : public emb::noncopyable
-{
+class abstract_pi_controller : public emb::noncopyable {
 protected:
 	float _kp;		// proportional gain
 	float _ki;		// integral gain
@@ -31,19 +28,18 @@ protected:
 	static float _error(float ref, float meas);
 public:
 	abstract_pi_controller(float kp, float ki, float dt, float out_min, float out_max)
-		: _kp(kp)
-		, _ki(ki)
-		, _dt(dt)
-		, _integrator_sum(0)
-		, _out_min(out_min)
-		, _out_max(out_max)
-		, _out(0)
-	{}
+			: _kp(kp)
+			, _ki(ki)
+			, _dt(dt)
+			, _integrator_sum(0)
+			, _out_min(out_min)
+			, _out_max(out_max)
+			, _out(0) {
+	}
 
 	virtual ~abstract_pi_controller() {}
 	virtual void update(float ref, float meas) = 0;
-	virtual void reset()
-	{
+	virtual void reset() {
 		_integrator_sum = 0;
 		_out = 0;
 	}
@@ -66,31 +62,24 @@ inline float abstract_pi_controller<controller_logic::inverse>::_error(float ref
 
 
 template <controller_logic::enum_type Logic>
-class backcalc_pi_controller : public abstract_pi_controller<Logic>
-{
+class backcalc_pi_controller : public abstract_pi_controller<Logic> {
 protected:
 	float _kc;	// anti-windup gain
 public:
 	backcalc_pi_controller(float kp, float ki, float dt, float kc, float out_min, float out_max)
-		: abstract_pi_controller<Logic>(kp, ki, dt, out_min, out_max)
-		, _kc(kc)
-	{}
+			: abstract_pi_controller<Logic>(kp, ki, dt, out_min, out_max)
+			, _kc(kc) {
+	}
 
-	virtual void update(float ref, float meas)
-	{
+	virtual void update(float ref, float meas) {
 		float error = abstract_pi_controller<Logic>::_error(ref, meas);
 		float out = emb::clamp(error * this->_kp + this->_integrator_sum, -FLT_MAX, FLT_MAX);
 
-		if (out > this->_out_max)
-		{
+		if (out > this->_out_max) {
 			this->_out = this->_out_max;
-		}
-		else if (out < this->_out_min)
-		{
+		} else if (out < this->_out_min) {
 			this->_out = this->_out_min;
-		}
-		else
-		{
+		} else {
 			this->_out = out;
 		}
 
@@ -101,49 +90,39 @@ public:
 
 
 template <controller_logic::enum_type Logic>
-class clamping_pi_controller : public abstract_pi_controller<Logic>
-{
+class clamping_pi_controller : public abstract_pi_controller<Logic> {
 protected:
 	float _error;
 public:
 	clamping_pi_controller(float kp, float ki, float dt, float out_min, float out_max)
 		: abstract_pi_controller<Logic>(kp, ki, dt, out_min, out_max)
-		, _error(0)
-	{}
+		, _error(0) {
+	}
 
-	virtual void update(float ref, float meas)
-	{
+	virtual void update(float ref, float meas) {
 		float error = abstract_pi_controller<Logic>::_error(ref, meas);
 		float outp = error * this->_kp;
 		float sum_i = (error + _error) * 0.5f * this->_ki * this->_dt + this->_integrator_sum;
 		_error = error;
 		float out = outp + sum_i;
 
-		if (out > this->_out_max)
-		{
+		if (out > this->_out_max) {
 			this->_out = this->_out_max;
-			if (outp < this->_out_max)
-			{
+			if (outp < this->_out_max) {
 				this->_integrator_sum = this->_out_max - outp;
 			}
-		}
-		else if (out < this->_out_min)
-		{
+		} else if (out < this->_out_min) {
 			this->_out = this->_out_min;
-			if (outp > this->_out_min)
-			{
+			if (outp > this->_out_min) {
 				this->_integrator_sum = this->_out_min - outp;
 			}
-		}
-		else
-		{
+		} else {
 			this->_out = out;
 			this->_integrator_sum = sum_i;
 		}
 	}
 
-	virtual void reset()
-	{
+	virtual void reset() {
 		this->_integrator_sum = 0;
 		_error = 0;
 		this->_out = 0;

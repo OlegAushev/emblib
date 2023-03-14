@@ -7,8 +7,7 @@
 namespace emb {
 
 template <typename T, size_t Capacity>
-class circular_buffer
-{
+class circular_buffer {
 private:
 	T _data[Capacity];
 	size_t _front;
@@ -16,13 +15,12 @@ private:
 	bool _full;
 public:
 	circular_buffer()
-		: _front(0)
-		, _back(0)
-		, _full(false)
-	{}
+			: _front(0)
+			, _back(0)
+			, _full(false) {
+	}
 
-	void clear()
-	{
+	void clear() {
 		_front = 0;
 		_back = 0;
 		_full = false;
@@ -32,49 +30,38 @@ public:
 	bool full() const { return _full; }
 	size_t capacity() const { return Capacity; }
 
-	size_t size() const
-	{
+	size_t size() const {
 		size_t size = Capacity;
-		if (!_full)
-		{
-			if (_back >= _front)
-			{
+		if (!_full) {
+			if (_back >= _front) {
 				size = _back - _front;
-			}
-			else
-			{
+			} else {
 				size = Capacity + _back - _front;
 			}
 		}
-
 		return size;
 	}
 
-	void push(const T& value)
-	{
+	void push(const T& value) {
 		_data[_back] = value;
-		if (_full)
-		{
+		if (_full) {
 			_front = (_front + 1) % Capacity;
 		}
 		_back = (_back + 1) % Capacity;
 		_full = (_front == _back);
 	}
 
-	const T& front() const
-	{
+	const T& front() const {
 		assert(!empty());
 		return _data[_front];
 	}
 
-	const T& back() const
-	{
+	const T& back() const {
 		assert(!empty());
 		return _data[(_back + Capacity - 1) % Capacity];
 	}
 
-	void pop()
-	{
+	void pop() {
 		assert(!empty());
 		_full = false;
 		_front = (_front + 1) % Capacity;
@@ -84,10 +71,8 @@ public:
 	const T* begin() const { return _data; }
 	const T* end() const { return _data + Capacity; }
 
-	void fill(const T& value)
-	{
-		for (size_t i = 0; i < Capacity; ++i)
-		{
+	void fill(const T& value) {
+		for (size_t i = 0; i < Capacity; ++i) {
 			_data[i] = value;
 		}
 	}

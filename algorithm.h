@@ -7,14 +7,10 @@
 
 namespace emb {
 
-
 template <class It, class T>
-inline It find(It first, It last, const T& value)
-{
-	for (; first != last; ++first)
-	{
-		if (*first == value)
-		{
+inline It find(It first, It last, const T& value) {
+	for (; first != last; ++first) {
+		if (*first == value) {
 			return first;
 		}
 	}
@@ -23,25 +19,19 @@ inline It find(It first, It last, const T& value)
 
 
 template <class It, class T>
-inline It binary_find(It first, It last, const T& value)
-{
+inline It binary_find(It first, It last, const T& value) {
 	It not_found = last;
 
-	while (first < last)
-	{
+	while (first < last) {
 		It mid = first + (last - first) / 2;
 
-		if (value == *mid)
-		{
+		if (value == *mid) {
 			return mid;
 		}
 
-		if (value < *mid)
-		{
+		if (value < *mid) {
 			last = mid;
-		}
-		else
-		{
+		} else {
 			first = mid + 1;
 		}
 	}
@@ -51,23 +41,18 @@ inline It binary_find(It first, It last, const T& value)
 
 
 template <class It, class T>
-inline void fill(It first, It last, const T& value)
-{
-	for (; first != last; ++first)
-	{
+inline void fill(It first, It last, const T& value) {
+	for (; first != last; ++first) {
 		*first = value;
 	}
 }
 
 
 template <class It, class T>
-inline size_t count(It first, It last, const T& value)
-{
+inline size_t count(It first, It last, const T& value) {
 	size_t ret = 0;
-	for (; first != last; ++first)
-	{
-		if (*first == value)
-		{
+	for (; first != last; ++first) {
+		if (*first == value) {
 			++ret;
 		}
 	}
@@ -76,10 +61,8 @@ inline size_t count(It first, It last, const T& value)
 
 
 template <class InputIt, class OutputIt>
-inline OutputIt copy(InputIt first, InputIt last, OutputIt d_first)
-{
-	for (; first != last; ++first, ++d_first)
-	{
+inline OutputIt copy(InputIt first, InputIt last, OutputIt d_first) {
+	for (; first != last; ++first, ++d_first) {
 		*d_first = *first;
 	}
 	return d_first;
@@ -89,10 +72,8 @@ inline OutputIt copy(InputIt first, InputIt last, OutputIt d_first)
 template <class It>
 inline bool equal(It first1, It last1, It first2)
 {
-	for (; first1 != last1; ++first1, ++first2)
-	{
-		if (!(*first1 == *first2))
-		{
+	for (; first1 != last1; ++first1, ++first2) {
+		if (!(*first1 == *first2)) {
 			return false;
 		}
 	}
@@ -101,26 +82,21 @@ inline bool equal(It first1, It last1, It first2)
 
 
 template <class T>
-inline const T& clamp(const T& value, const T& lo, const T& hi)
-{
+inline const T& clamp(const T& value, const T& lo, const T& hi) {
 	return (value < lo) ? lo : (hi < value) ? hi : value;
 }
 
 
 template <class It>
-inline It max_element(It first, It last)
-{
-	if (first == last)
-	{
+inline It max_element(It first, It last) {
+	if (first == last) {
 		return last;
 	}
 
 	It largest = first;
 	++first;
-	for(; first != last; ++first)
-	{
-		if (*largest < *first)
-		{
+	for(; first != last; ++first) {
+		if (*largest < *first) {
 			largest = first;
 		}
 	}
@@ -129,19 +105,15 @@ inline It max_element(It first, It last)
 
 
 template <class It>
-inline It min_element(It first, It last)
-{
-	if (first == last)
-	{
+inline It min_element(It first, It last) {
+	if (first == last) {
 		return  last;
 	}
 
 	It smallest = first;
 	++first;
-	for (; first != last; ++first)
-	{
-		if (*first < *smallest)
-		{
+	for (; first != last; ++first) {
+		if (*first < *smallest) {
 			smallest = first;
 		}
 	}
@@ -150,44 +122,45 @@ inline It min_element(It first, It last)
 
 
 template <class It>
-inline pair<It, It> minmax_element(It first, It last)
-{
+inline pair<It, It> minmax_element(It first, It last) {
 	It min = first, max = first;
 
-	if ((first == last) || (++first == last))
-	{
+	if ((first == last) || (++first == last)) {
 		return pair<It, It>(min, max);
 	}
 
-	if (*first < *min)
-	{
+	if (*first < *min) {
 		min = first;
-	}
-	else
-	{
+	} else {
 		max = first;
 	}
 
-	while (++first != last)
-	{
+	while (++first != last) {
 		It i = first;
-		if (++first == last)
-		{
-			if (*i < *min) min = i;
-			else if (!(*i < *max)) max = i;
+		if (++first == last) {
+			if (*i < *min) {
+				min = i;
+			} else if (!(*i < *max)) {
+				max = i;
+			}
 			break;
-		}
-		else
-		{
-			if (*first < *i)
-			{
-				if (*first < *min) min = first;
-				if (!(*i < *max)) max = i;
+		} else {
+			if (*first < *i) {
+				if (*first < *min) {
+					min = first;
+				}
+				if (!(*i < *max)) {
+					max = i;
+				}
 			}
 			else
 			{
-				if (*i <  *min) min = i;
-				if (!(*first < *max)) max = first;
+				if (*i <  *min) {
+					min = i;
+				}
+				if (!(*first < *max)) {
+					max = first;
+				}
 			}
 		}
 	}

@@ -1,8 +1,7 @@
 #include <emblib_c28x/tests/tests.h>
 
 
-void emb::tests::bitset_test()
-{
+void emb::tests::bitset_test() {
 	// sizeof
 	emb::bitset<1> bs;
 	EMB_ASSERT_EQUAL(sizeof(bs), 1);
@@ -23,33 +22,28 @@ void emb::tests::bitset_test()
 	emb::array<unsigned int, 2> arr1 = {0xAAAA, 0xFF00};
 	emb::bitset<32> bs1(arr1);
 
-	for (size_t i = 0; i < 15; ++i)
-	{
+	for (size_t i = 0; i < 15; ++i) {
 		EMB_ASSERT_EQUAL(bs1[i], ((i%2) != 0));
 	}
 
-	for (size_t i = 16; i < 24; ++i)
-	{
+	for (size_t i = 16; i < 24; ++i) {
 		EMB_ASSERT_EQUAL(bs1[i], false);
 	}
 
-	for (size_t i = 24; i < 32; ++i)
-	{
+	for (size_t i = 24; i < 32; ++i) {
 		EMB_ASSERT_EQUAL(bs1[i], true);
 	}
 
 	uint64_t u64 = 0x8888888888888888;
 	emb::bitset<64> bs2(u64);
-	for (size_t i = 0; i < 64; ++i)
-	{
+	for (size_t i = 0; i < 64; ++i) {
 		EMB_ASSERT_EQUAL(bs2[i], (((i+1)%4) == 0));
 	}
 
 	uint16_t u16 = 0x0001;
 	emb::bitset<32> bs3(u16);
 	EMB_ASSERT_TRUE(bs3[0]);
-	for (size_t i = 1; i < 32; ++i)
-	{
+	for (size_t i = 1; i < 32; ++i) {
 		EMB_ASSERT_TRUE(!bs3[i]);
 	}
 

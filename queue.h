@@ -7,8 +7,7 @@
 namespace emb {
 
 template <typename T, size_t Capacity>
-class queue
-{
+class queue {
 private:
 	T _data[Capacity];
 	size_t _front;
@@ -16,13 +15,12 @@ private:
 	size_t _size;
 public:
 	queue()
-		: _front(0)
-		, _back(0)
-		, _size(0)
-	{}
+			: _front(0)
+			, _back(0)
+			, _size(0) {
+	}
 
-	void clear()
-	{
+	void clear() {
 		_front = 0;
 		_back = 0;
 		_size = 0;
@@ -33,36 +31,29 @@ public:
 	size_t capacity() const { return Capacity; }
 	size_t size() const { return _size; }
 
-	void push(const T& value)
-	{
+	void push(const T& value) {
 		assert(!full());
 
-		if (empty())
-		{
+		if (empty()) {
 			_back = _front;
-		}
-		else
-		{
+		} else {
 			_back = (_back + 1) % Capacity;
 		}
 		_data[_back] = value;
 		++_size;
 	}
 
-	const T& front() const
-	{
+	const T& front() const {
 		assert(!empty());
 		return _data[_front];
 	}
 
-	const T& back() const
-	{
+	const T& back() const {
 		assert(!empty());
 		return _data[_back];
 	}
 
-	void pop()
-	{
+	void pop() {
 		assert(!empty());
 		_front = (_front + 1) % Capacity;
 		--_size;

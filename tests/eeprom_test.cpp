@@ -2,39 +2,28 @@
 #include <mculib_c28x/f2837xd/crc/crc.h>
 
 
-class TestingEepromDriver : public emb::eeprom::DriverInterface
-{
+class TestingEepromDriver : public emb::eeprom::DriverInterface {
 private:
 	static const size_t _page_bytes = 64;
 	static const size_t _page_count = 8;
 	static uint16_t _data[_page_count][_page_bytes/2];
 public:
-	virtual emb::eeprom::Error read(uint16_t page, uint16_t addr, uint8_t* buf, size_t len, emb::chrono::milliseconds timeout)
-	{
-		for (size_t i = 0; i < len; ++i)
-		{
-			if (((addr + i) % 2) == 0)
-			{
+	virtual emb::eeprom::Error read(uint16_t page, uint16_t addr, uint8_t* buf, size_t len, emb::chrono::milliseconds timeout) {
+		for (size_t i = 0; i < len; ++i) {
+			if (((addr + i) % 2) == 0) {
 				buf[i] = _data[page][(addr + i)/2] & 0x00FF;
-			}
-			else
-			{
+			} else {
 				buf[i] = _data[page][(addr + i)/2] >> 8;
 			}
 		}
 		return emb::eeprom::Error::none;
 	}
 
-	virtual emb::eeprom::Error write(uint16_t page, uint16_t addr, const uint8_t* buf, size_t len, emb::chrono::milliseconds timeout)
-	{
-		for (size_t i = 0; i < len; ++i)
-		{
-			if (((addr + i) % 2) == 0)
-			{
+	virtual emb::eeprom::Error write(uint16_t page, uint16_t addr, const uint8_t* buf, size_t len, emb::chrono::milliseconds timeout) {
+		for (size_t i = 0; i < len; ++i) {
+			if (((addr + i) % 2) == 0) {
 				_data[page][(addr + i)/2] = (_data[page][(addr + i)/2] & 0xFF00) | buf[i];
-			}
-			else
-			{
+			} else {
 				_data[page][(addr + i)/2] = (_data[page][(addr + i)/2] & 0x00FF) | (buf[i] << 8);
 			}
 		}
@@ -69,8 +58,7 @@ struct TestingEepromStruct2
 };
 
 
-void emb::tests::eeprom_test()
-{
+void emb::tests::eeprom_test() {
 	TestingEepromDriver eeprom_driver;
 	emb::eeprom::Storage eeprom(&eeprom_driver, mcu::crc::calc_crc32_byte8);
 

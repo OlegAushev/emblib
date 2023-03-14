@@ -9,8 +9,7 @@
 namespace emb {
 
 template <size_t BitCount>
-class bitset
-{
+class bitset {
 	EMB_STATIC_ASSERT(BitCount > 0);
 private:
 	static const size_t _byte_count = (BitCount + CHAR_BIT - 1) / CHAR_BIT;
@@ -26,25 +25,20 @@ private:
 public:
 	class Reference;
 
-	bitset()
-	{
-		for (size_t i = 0; i < _byte_count; ++i)
-		{
+	bitset() {
+		for (size_t i = 0; i < _byte_count; ++i) {
 			_data[i] = 0U;
 		}
 	}
 
-	bitset(const emb::array<unsigned int, _byte_count>& words)
-	{
-		for (size_t i = 0; i < _byte_count; ++i)
-		{
+	bitset(const emb::array<unsigned int, _byte_count>& words) {
+		for (size_t i = 0; i < _byte_count; ++i) {
 			_data[i] = words[i];
 		}
 		_reset_unused_bits(_hi_byte());
 	}
 
-	bitset(uint64_t value)
-	{
+	bitset(uint64_t value) {
 		EMB_STATIC_ASSERT(_byte_count <= 4);
 		uint64_t val = value;	// protection against implicit conversion and wrong memcpy()
 		memcpy(_data, &val, _byte_count);
@@ -53,8 +47,7 @@ public:
 
 	size_t size() const { return BitCount; }
 
-	bool operator[](size_t pos) const
-	{
+	bool operator[](size_t pos) const {
 #ifdef NDEBUG
 		return _data[_which_byte(pos)] & (1U << _which_bit(pos));
 #else
@@ -62,129 +55,104 @@ public:
 #endif
 	}
 
-	Reference operator[](size_t pos)
-	{
+	Reference operator[](size_t pos) {
 		return Reference(this, pos);
 	}
 
-	bool test(size_t pos) const
-	{
+	bool test(size_t pos) const {
 		assert(pos < BitCount);
 		return _data[_which_byte(pos)] & (1U << _which_bit(pos));
 	}
 
-	bool all() const
-	{
+	bool all() const {
 		// int index is used to suppress "pointless comparison of unsigned integer with zero" warning
-		for (int i = 0; i < _byte_count-1; ++i)
-		{
-			if (_data[i] != 0xFFFF) return false;
+		for (int i = 0; i < _byte_count-1; ++i) {
+			if (_data[i] != 0xFFFF) { return false; }
 		}
 
-		if (_extra_bits)
-		{
-			if (_hi_byte() != ~(~0U << _extra_bits)) return false;
-		}
-		else
-		{
-			if (_hi_byte() != 0xFFFF) return false;
+		if (_extra_bits) {
+			if (_hi_byte() != ~(~0U << _extra_bits)) { return false; }
+		} else if (_hi_byte() != 0xFFFF) {
+			return false;
 		}
 		return true;
 	}
 
-	bool any() const
-	{
-		for (size_t i = 0; i < _byte_count; ++i)
-		{
-			if (_data[i] != 0) return true;
+	bool any() const {
+		for (size_t i = 0; i < _byte_count; ++i) {
+			if (_data[i] != 0) { return true; }
 		}
 		return false;
 	}
 
-	bool none() const
-	{
+	bool none() const {
 		return !any();
 	}
 
-	size_t count() const
-	{
+	size_t count() const {
 		size_t ret = 0;
-		for (size_t i = 0; i < BitCount; ++i)
-		{
+		for (size_t i = 0; i < BitCount; ++i) {
 			if ((*this)[i]) ++ret;
 		}
 		return ret;
 	}
 
-	void set()
-	{
-		for (size_t i = 0; i < _byte_count; ++i)
-		{
+	void set() {
+		for (size_t i = 0; i < _byte_count; ++i) {
 			_data[i] = 0xFFFF;
 		}
 		_reset_unused_bits(_hi_byte());
 	}
 
-	void set(size_t pos, bool value = true)
-	{
+	void set(size_t pos, bool value = true) {
 		assert(pos < BitCount);
-		if (value)
+		if (value) {
 			_data[_which_byte(pos)] |= 1U << _which_bit(pos);
-		else
+		} else {
 			_data[_which_byte(pos)] &= ~(1U << _which_bit(pos));
+		}
 	}
 
-	void reset()
-	{
-		for (size_t i = 0; i < _byte_count; ++i)
-		{
+	void reset() {
+		for (size_t i = 0; i < _byte_count; ++i) {
 			_data[i] = 0U;
 		}
 	}
 
-	void reset(size_t pos)
-	{
+	void reset(size_t pos) {
 		assert(pos < BitCount);
 		_data[_which_byte(pos)] &= ~(1U << _which_bit(pos));
 	}
 
-	void flip()
-	{
-		for (size_t i = 0; i < _byte_count; ++i)
-		{
+	void flip() {
+		for (size_t i = 0; i < _byte_count; ++i) {
 			_data[i] = ~_data[i];
 		}
 		_reset_unused_bits(_hi_byte());
 	}
 
-	void flip(size_t pos)
-	{
+	void flip(size_t pos) {
 		assert(pos < BitCount);
 		_data[_which_byte(pos)] ^= 1U << _which_bit(pos);
 	}
 
-	bool operator==(const bitset& rhs) const
-	{
-		for (size_t i = 0; i < _byte_count; ++i)
-		{
-			if (_data[i] != rhs._data[i]) return false;
+	bool operator==(const bitset& rhs) const {
+		for (size_t i = 0; i < _byte_count; ++i) {
+			if (_data[i] != rhs._data[i]) { return false; }
 		}
 		return true;
 	}
 
-	bool operator!=(const bitset& rhs) const
-	{
+	bool operator!=(const bitset& rhs) const {
 		return !((*this) == rhs);
 	}
 
-	struct Reference
-	{
+	struct Reference {
 		bitset* self;
 		size_t pos;
 		Reference(bitset* self_, size_t pos_) : self(self_), pos(pos_) {}
 		operator bool() const { return self->test(pos); }
-		Reference& operator=(bool value)
-		{
+		Reference& operator=(bool value) {
 			self->set(pos, value);
 			return *this;
 		}

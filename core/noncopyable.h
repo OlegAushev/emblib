@@ -8,8 +8,7 @@
 
 namespace emb {
 
-class noncopyable
-{
+class noncopyable {
 protected:
 	noncopyable() {}
 	~noncopyable() {}

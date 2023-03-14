@@ -11,8 +11,7 @@ namespace chrono {
 namespace impl {
 
 template <int64_t Divider>
-class duration
-{
+class duration {
 public:
 	static const int64_t divider = Divider;
 private:
@@ -21,10 +20,8 @@ public:
 	duration() : _ticks(0) {}
 	explicit duration(int64_t tick_count) : _ticks(tick_count) {}
 	duration(const duration& other) { this->_ticks = other._ticks; }
-	duration& operator=(const duration& other)
-	{
-		if (this != &other)
-		{
+	duration& operator=(const duration& other) {
+		if (this != &other) {
 			this->_ticks = other._ticks;
 		}
 		return *this;
@@ -42,15 +39,13 @@ public:
 		return *this;
 	}
 
-	duration operator++(int)
-	{
+	duration operator++(int) {
 		duration tmp(*this);
 		++_ticks;
 		return tmp;
 	}
 
-	duration operator--(int)
-	{
+	duration operator--(int) {
 		duration tmp(*this);
 		--_ticks;
 		return tmp;
@@ -59,15 +54,13 @@ public:
 
 
 template <int64_t Divider>
-duration<Divider> operator+(const duration<Divider>& lhs, const duration<Divider>& rhs)
-{
+duration<Divider> operator+(const duration<Divider>& lhs, const duration<Divider>& rhs) {
 	return duration<Divider>(lhs.count() + rhs.count());
 }
 
 
 template <int64_t Divider>
-duration<Divider> operator-(const duration<Divider>& lhs, const duration<Divider>& rhs)
-{
+duration<Divider> operator-(const duration<Divider>& lhs, const duration<Divider>& rhs) {
 	return duration<Divider>(lhs.count() - rhs.count());
 }
 
@@ -88,8 +81,7 @@ bool operator!=(const duration<Divider>& lhs, const duration<Divider>& rhs) { re
 
 
 template<typename ToDuration, int64_t Divider>
-ToDuration duration_cast(const impl::duration<Divider> duration)
-{
+ToDuration duration_cast(const impl::duration<Divider> duration) {
 	return impl::duration<ToDuration::divider>(duration.count() * Divider / ToDuration::divider);
 }
 

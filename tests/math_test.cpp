@@ -2,8 +2,7 @@
 #include "float.h"
 
 
-void emb::tests::math_test()
-{
+void emb::tests::math_test() {
 	EMB_ASSERT_EQUAL(emb::sgn(100), 1);
 	EMB_ASSERT_EQUAL(emb::sgn(-100), -1);
 	EMB_ASSERT_EQUAL(emb::sgn(3.14f), 1);
@@ -38,8 +37,7 @@ void emb::tests::math_test()
 
 	emb::integrator<float, float> integ(emb::range<float>(-10.f, 10.f), 0.1f, -20.f);
 	EMB_ASSERT_EQUAL(integ.output(), -10.f);
-	for (size_t i = 0; i < 50; ++i)
-	{
+	for (size_t i = 0; i < 50; ++i) {
 		integ.update(3);
 	}
 	EMB_ASSERT_TRUE(emb::range<float>(4.999f, 5.001f).contains(integ.output()));
@@ -47,8 +45,7 @@ void emb::tests::math_test()
 	EMB_ASSERT_TRUE(emb::range<float>(-4.999f, -5.001f).contains(integ.output()));
 	integ.reset();
 	EMB_ASSERT_EQUAL(integ.output(), -10.f);
-	for (size_t i = 0; i < 5000; ++i)
-	{
+	for (size_t i = 0; i < 5000; ++i) {
 		integ.update(1000);
 	}
 	EMB_ASSERT_EQUAL(integ.output(), 10.f);

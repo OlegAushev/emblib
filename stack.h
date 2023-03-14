@@ -6,17 +6,13 @@
 
 namespace emb {
 
-
 template <typename T, size_t Capacity>
-class stack
-{
+class stack {
 private:
 	T _data[Capacity];
 	size_t _size;
 public:
-	stack()
-		: _size(0)
-	{}
+	stack() : _size(0) {}
 
 	void clear() { _size = 0; }
 	bool empty() const { return _size == 0; }
@@ -24,21 +20,18 @@ public:
 	size_t capacity() const { return Capacity; }
 	size_t size() const { return _size; }
 
-	void push(const T& value)
-	{
+	void push(const T& value) {
 		assert(!full());
 		_data[_size] = value;
 		++_size;
 	}
 
-	const T& top() const
-	{
+	const T& top() const {
 		assert(!empty());
 		return _data[_size-1];
 	}
 
-	void pop()
-	{
+	void pop() {
 		assert(!empty());
 		--_size;
 	}

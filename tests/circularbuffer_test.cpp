@@ -1,8 +1,7 @@
 #include <emblib_c28x/tests/tests.h>
 
 
-void emb::tests::circular_buffer_test()
-{
+void emb::tests::circular_buffer_test() {
 	emb::circular_buffer<int, 4> buf;
 	EMB_ASSERT_TRUE(buf.empty());
 

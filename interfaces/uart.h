@@ -8,8 +8,7 @@ namespace emb {
 
 namespace uart {
 
-class UartInterface
-{
+class UartInterface {
 private:
 	UartInterface(const UartInterface& other);		// no copy constructor
 	UartInterface& operator=(const UartInterface& other);	// no copy assignment operator

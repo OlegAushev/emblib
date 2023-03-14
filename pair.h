@@ -7,8 +7,7 @@
 namespace emb {
 
 template <typename T1, typename T2>
-class pair
-{
+class pair {
 public:
 	T1 first;
 	T2 second;
@@ -17,10 +16,9 @@ public:
 		: first(first_)
 		, second(second_) {}
 
-	pair& operator=(const pair& other)
-	{
-		if (this != &other)	// not a self-assignment
-		{
+	pair& operator=(const pair& other) {
+		if (this != &other)	{
+			// not a self-assignment
 			this->first = other.first;
 			this->second = other.second;
 		}

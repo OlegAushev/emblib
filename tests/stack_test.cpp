@@ -1,8 +1,7 @@
 #include <emblib_c28x/tests/tests.h>
 
 
-void emb::tests::stack_test()
-{
+void emb::tests::stack_test() {
 	emb::stack<int, 3> stack;
 
 	EMB_ASSERT_TRUE(stack.empty());
@@ -25,7 +24,9 @@ void emb::tests::stack_test()
 	EMB_ASSERT_EQUAL(stack.size(), 3);
 	EMB_ASSERT_EQUAL(stack.top(), 4);
 
-	if (!stack.full()) stack.push(5);
+	if (!stack.full()) {
+		stack.push(5);
+	}
 	EMB_ASSERT_TRUE(stack.full());
 	EMB_ASSERT_EQUAL(stack.size(), 3);
 	EMB_ASSERT_EQUAL(stack.top(), 4);

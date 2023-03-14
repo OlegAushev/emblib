@@ -20,8 +20,7 @@
 
 namespace emb {
 
-class tests
-{
+class tests {
 public:
 	static void common_test();
 	static void math_test();
@@ -39,3 +38,4 @@ public:
 };
 
 } // namespace emb
+

@@ -9,21 +9,18 @@
 namespace emb {
 
 template <size_t Capacity>
-class string
-{
+class string {
 private:
 	static const size_t _data_len = Capacity + 1;
 	char _data[_data_len];
 	size_t _len;
 public:
-	string()
-	{
+	string() {
 		memset(_data, 0, _data_len);
 		_len = 0;
 	}
 
-	string(const char str[])
-	{
+	string(const char str[]) {
 		memset(_data, 0, _data_len);
 		strncpy(_data, str, Capacity);
 		_len = strlen(str);
@@ -35,8 +32,7 @@ public:
 	bool empty() const { return _len == 0; }
 	bool full() const { return _len == Capacity; }
 
-	char& operator[] (size_t pos)
-	{
+	char& operator[] (size_t pos) {
 #ifdef NDEBUG
 		return _data[pos];
 #else
@@ -44,8 +40,7 @@ public:
 #endif
 	}
 
-	const char& operator[](size_t pos) const
-	{
+	const char& operator[](size_t pos) const {
 #ifdef NDEBUG
 		return _data[pos];
 #else
@@ -53,14 +48,12 @@ public:
 #endif
 	}
 
-	char& at(size_t pos)
-	{
+	char& at(size_t pos) {
 		assert(pos < _len);
 		return _data[pos];
 	}
 
-	const char& at(size_t pos) const
-	{
+	const char& at(size_t pos) const {
 		assert(pos < _len);
 		return _data[pos];
 	}
@@ -73,83 +66,66 @@ public:
 	char* data() { return _data; }
 	const char* data() const { return _data; }
 
-	char& front()
-	{
+	char& front() {
 		assert(!empty());
 		return _data[0];
 	}
 
-	const char& front() const
-	{
+	const char& front() const {
 		assert(!empty());
 		return _data[0];
 	}
 
-	char& back()
-	{
+	char& back() {
 		assert(!empty());
 		return _data[_len - 1];
 	}
 
-	const char& back() const
-	{
+	const char& back() const {
 		assert(!empty());
 		return _data[_len - 1];
 	}
 public:
-	void resize(size_t len)
-	{
+	void resize(size_t len) {
 		assert(len <= Capacity);
-		if (len > _len)
-		{
+		if (len > _len) {
 			emb::fill(_data + _len, _data + len, 0);
-		}
-		else
-		{
+		} else {
 			emb::fill(_data + len, _data + _len, 0);
 		}
 		_len = len;
 	}
 
-	void resize(size_t len, char ch)
-	{
+	void resize(size_t len, char ch) {
 		assert(len <= Capacity);
-		if (len > _len)
-		{
+		if (len > _len) {
 			emb::fill(_data + _len, _data + len, ch);
-		}
-		else
-		{
+		} else {
 			emb::fill(_data + len, _data + _len, ch);
 		}
 		_len = len;
 	}
 
-	void clear()
-	{
+	void clear() {
 		memset(_data, 0, _data_len);
 		_len = 0;
 	}
 public:
-	void push_back(char ch)
-	{
+	void push_back(char ch) {
 		assert(!full());
 		_data[_len++] = ch;
 	}
 
-	void pop_back()
-	{
+	void pop_back() {
 		assert(!empty());
 		_data[--_len] = 0;
 	}
 public:
-	void insert(size_t index, char ch)
-	{
+	void insert(size_t index, char ch) {
 		assert(!full());
 		assert(index <= lenght());
 
-		if (index == _len)
-		{
+		if (index == _len) {
 			push_back(ch);
 			return;
 		}
@@ -162,15 +138,13 @@ public:
 
 
 template <size_t Capacity>
-inline bool operator==(const string<Capacity>& lhs, const string<Capacity>& rhs)
-{
+inline bool operator==(const string<Capacity>& lhs, const string<Capacity>& rhs) {
 	return strcmp(lhs.data(), rhs.data()) == 0;
 }
 
 
 template <size_t Capacity>
-inline bool operator!=(const string<Capacity>& lhs, const string<Capacity>& rhs)
-{
+inline bool operator!=(const string<Capacity>& lhs, const string<Capacity>& rhs) {
 	return !(lhs == rhs);
 }
 

@@ -37,22 +37,18 @@ inline float to_rad(float deg) { return numbers::pi * deg / 180; }
 inline float to_deg(float rad) { return 180 * rad / numbers::pi; }
 
 
-inline float normalize_2pi(float value)
-{
+inline float normalize_2pi(float value) {
 	value = fmodf(value, numbers::two_pi);
-	if (value < 0)
-	{
+	if (value < 0) {
 		value += numbers::two_pi;
 	}
 	return value;
 }
 
 
-inline float normalize_pi(float value)
-{
+inline float normalize_pi(float value) {
 	value = fmodf(value + numbers::pi, numbers::two_pi);
-	if (value < 0)
-	{
+	if (value < 0) {
 		value += numbers::two_pi;
 	}
 	return value - numbers::pi;
@@ -60,21 +56,16 @@ inline float normalize_pi(float value)
 
 
 template <typename T>
-class range
-{
+class range {
 private:
 	T _lo;
 	T _hi;
 public:
-	range(const T& val1, const T& val2)
-	{
-		if (val1 < val2)
-		{
+	range(const T& val1, const T& val2) {
+		if (val1 < val2) {
 			_lo = val1;
 			_hi = val2;
-		}
-		else
-		{
+		} else {
 			_lo = val2;
 			_hi = val1;
 		}
@@ -83,19 +74,15 @@ public:
 	bool contains(const T& val) const { return (_lo <= val) && (val <= _hi); }
 
 	const T& lo() const { return _lo; }
-	void set_lo(const T& value)
-	{
-		if (value <= _hi)
-		{
+	void set_lo(const T& value) {
+		if (value <= _hi) {
 			_lo = value;
 		}
 	}
 
 	const T& hi() const { return _hi; }
-	void set_hi(const T& value)
-	{
-		if (value >= _lo)
-		{
+	void set_hi(const T& value) {
+		if (value >= _lo) {
 			_hi = value;
 		}
 	}
@@ -103,8 +90,7 @@ public:
 
 
 template <typename T, typename Time>
-class integrator
-{
+class integrator {
 private:
 	T _sum;
 	Time _dt;
@@ -113,26 +99,22 @@ public:
 	range<T> output_range;
 
 	integrator(const range<T>& output_range_, const Time& dt_, const T& init_)
-		: output_range(output_range_)
-		, _dt(dt_)
-		, _init(init_)
-	{
+			: output_range(output_range_)
+			, _dt(dt_)
+			, _init(init_) {
 		reset();
 	}
 
-	void update(const T& value)
-	{
+	void update(const T& value) {
 		_sum = clamp(_sum + value * _dt, output_range.lo(), output_range.hi());
 	}
 
-	void add(const T& value)
-	{
+	void add(const T& value) {
 		_sum = clamp(_sum + value, output_range.lo(), output_range.hi());
 	}
 
 	const T& output() const { return _sum; }
-	void reset()
-	{
+	void reset() {
 		_sum = clamp(_init, output_range.lo(), output_range.hi());
 	}
 };

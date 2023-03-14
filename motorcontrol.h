@@ -19,27 +19,24 @@ struct from_radps{};
 }
 
 
-class motor_speed
-{
+class motor_speed {
 public:
 	const int pole_pairs;
 private:
 	float _radps_elec;
 public:
 	explicit motor_speed(int pole_pairs_)
-		: pole_pairs(pole_pairs_)
-		, _radps_elec(0)
-	{}
+			: pole_pairs(pole_pairs_)
+			, _radps_elec(0) {
+	}
 
 	motor_speed(int pole_pairs_, float radps_elec_, traits::from_radps)
-		: pole_pairs(pole_pairs_)
-	{
+			: pole_pairs(pole_pairs_) {
 		from_radps(radps_elec_);
 	}
 
 	motor_speed(int pole_pairs_, float rpm_, traits::from_rpm)
-			: pole_pairs(pole_pairs_)
-	{
+			: pole_pairs(pole_pairs_) {
 		from_rpm(rpm_);
 	}
 
@@ -61,8 +58,7 @@ inline float to_radps(float speed_rpm) { return numbers::two_pi * speed_rpm / 60
 inline float to_rpm(float speed_radps, int pole_pairs) { return 60 * speed_radps / (numbers::two_pi * pole_pairs); }
 
 
-inline emb::array<float, 3> calculate_svpwm(float voltage_mag, float voltage_angle, float voltage_dc)
-{
+inline emb::array<float, 3> calculate_svpwm(float voltage_mag, float voltage_angle, float voltage_dc) {
 	voltage_angle = normalize_2pi(voltage_angle);
 	voltage_mag = clamp<float>(voltage_mag, 0, voltage_dc / numbers::sqrt_3);
 
@@ -75,52 +71,49 @@ inline emb::array<float, 3> calculate_svpwm(float voltage_mag, float voltage_ang
 	float tb0 = (1.f - tb1 - tb2) / 2.f;
 
 	emb::array<float, 3> pulseTimes;
-	switch (sector)
-	{
-		case 0:
-			pulseTimes[0] = tb1 + tb2 + tb0;
-			pulseTimes[1] = tb2 + tb0;
-			pulseTimes[2] = tb0;
-			break;
-		case 1:
-			pulseTimes[0] = tb1 + tb0;
-			pulseTimes[1] = tb1 + tb2 + tb0;
-			pulseTimes[2] = tb0;
-			break;
-		case 2:
-			pulseTimes[0] = tb0;
-			pulseTimes[1] = tb1 + tb2 + tb0;
-			pulseTimes[2] = tb2 + tb0;
-			break;
-		case 3:
-			pulseTimes[0] = tb0;
-			pulseTimes[1] = tb1 + tb0;
-			pulseTimes[2] = tb1 + tb2 + tb0;
-			break;
-		case 4:
-			pulseTimes[0] = tb2 + tb0;
-			pulseTimes[1] = tb0;
-			pulseTimes[2] = tb1 + tb2 + tb0;
-			break;
-		case 5:
-			pulseTimes[0] = tb1 + tb2 + tb0;
-			pulseTimes[1] = tb0;
-			pulseTimes[2] = tb1 + tb0;
-			break;
-		default:
-			break;
+	switch (sector) {
+	case 0:
+		pulseTimes[0] = tb1 + tb2 + tb0;
+		pulseTimes[1] = tb2 + tb0;
+		pulseTimes[2] = tb0;
+		break;
+	case 1:
+		pulseTimes[0] = tb1 + tb0;
+		pulseTimes[1] = tb1 + tb2 + tb0;
+		pulseTimes[2] = tb0;
+		break;
+	case 2:
+		pulseTimes[0] = tb0;
+		pulseTimes[1] = tb1 + tb2 + tb0;
+		pulseTimes[2] = tb2 + tb0;
+		break;
+	case 3:
+		pulseTimes[0] = tb0;
+		pulseTimes[1] = tb1 + tb0;
+		pulseTimes[2] = tb1 + tb2 + tb0;
+		break;
+	case 4:
+		pulseTimes[0] = tb2 + tb0;
+		pulseTimes[1] = tb0;
+		pulseTimes[2] = tb1 + tb2 + tb0;
+		break;
+	case 5:
+		pulseTimes[0] = tb1 + tb2 + tb0;
+		pulseTimes[1] = tb0;
+		pulseTimes[2] = tb1 + tb0;
+		break;
+	default:
+		break;
 	}
 
-	for(uint32_t i = 0; i < 3; ++i)
-	{
+	for(uint32_t i = 0; i < 3; ++i) {
 		pulseTimes[i] = clamp<float>(pulseTimes[i], 0.f, 1.f);
 	}
 	return pulseTimes;
 }
 
 
-struct dq_pair
-{
+struct dq_pair {
 	float d;
 	float q;
 	dq_pair() {}
@@ -128,8 +121,7 @@ struct dq_pair
 };
 
 
-struct alphabeta_pair
-{
+struct alphabeta_pair {
 	float alpha;
 	float beta;
 	alphabeta_pair() {}
@@ -137,10 +129,8 @@ struct alphabeta_pair
 };
 
 
-inline dq_pair park_transform(float alpha, float beta, float sine, float cosine)
-{
-	PARK parkStruct =
-	{
+inline dq_pair park_transform(float alpha, float beta, float sine, float cosine) {
+	PARK parkStruct = {
 		.Alpha = alpha,
 		.Beta = beta,
 		.Sine = sine,
@@ -151,10 +141,8 @@ inline dq_pair park_transform(float alpha, float beta, float sine, float cosine)
 }
 
 
-inline alphabeta_pair invpark_transform(float d, float q, float sine, float cosine)
-{
-	IPARK iparkStruct =
-	{
+inline alphabeta_pair invpark_transform(float d, float q, float sine, float cosine) {
+	IPARK iparkStruct = {
 		.Ds = d,
 		.Qs = q,
 		.Sine = sine,
@@ -165,10 +153,8 @@ inline alphabeta_pair invpark_transform(float d, float q, float sine, float cosi
 }
 
 
-inline alphabeta_pair clarke_transform(float a, float b, float c)
-{
-	CLARKE clarkeStruct =
-	{
+inline alphabeta_pair clarke_transform(float a, float b, float c) {
+	CLARKE clarkeStruct = {
 		.As = a,
 		.Bs = b,
 		.Cs = c
