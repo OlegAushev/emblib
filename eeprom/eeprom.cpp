@@ -26,10 +26,8 @@ Error Storage::write(uint16_t page, const uint8_t* buf, size_t len, emb::chrono:
 	assert(page < available_page_count);
 	assert(len < available_page_bytes);
 
-	if (page >= available_page_count || len >= available_page_bytes)
-	{
-		return Error::invalid_address;
-	}
+	if (page >= available_page_count) return Error::invalid_address;
+	if (len >= available_page_bytes) return Error::invalid_data_size;
 
 	uint32_t crc = _calc_crc32(buf, len);
 	uint8_t crc_bytes[4];
@@ -73,10 +71,8 @@ Error Storage::read(uint16_t page, uint8_t* buf, size_t len, emb::chrono::millis
 	assert(page < available_page_count);
 	assert(len < available_page_bytes);
 
-	if (page >= available_page_count || len >= available_page_bytes)
-	{
-		return Error::invalid_address;
-	}
+	if (page >= available_page_count) return Error::invalid_address;
+	if (len >= available_page_bytes) return Error::invalid_data_size;
 
 	uint8_t crc_bytes[4];
 	uint32_t primary_crc = 0;

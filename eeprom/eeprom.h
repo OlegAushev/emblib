@@ -17,8 +17,8 @@ SCOPED_ENUM_DECLARE_BEGIN(Error)
 	read_timeout,
 	write_timeout,
 	invalid_address,
+	invalid_data_size,
 	data_corrupted
-
 }
 SCOPED_ENUM_DECLARE_END(Error)
 
