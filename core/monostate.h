@@ -11,20 +11,20 @@ namespace emb {
 template <class T>
 class monostate {
 private:
-	static bool _initialized;
+    static bool _initialized;
 protected:
-	monostate() {
-		assert(_initialized);
-	}
+    monostate() {
+        assert(_initialized);
+    }
 
-	~monostate() {}
+    ~monostate() {}
 
-	static void _set_initialized() {
-		assert(!_initialized);
-		_initialized = true;
-	}
+    static void _set_initialized() {
+        assert(!_initialized);
+        _initialized = true;
+    }
 public:
-	static bool initialized() { return _initialized; }
+    static bool initialized() { return _initialized; }
 };
 
 template <class T>
