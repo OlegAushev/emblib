@@ -37,7 +37,7 @@ inline float to_rad(float deg) { return numbers::pi * deg / 180; }
 inline float to_deg(float rad) { return 180 * rad / numbers::pi; }
 
 
-inline float normalize_2pi(float value) {
+inline float rem_2pi(float value) {
     value = fmodf(value, numbers::two_pi);
     if (value < 0) {
         value += numbers::two_pi;
@@ -46,7 +46,7 @@ inline float normalize_2pi(float value) {
 }
 
 
-inline float normalize_pi(float value) {
+inline float rem_pi(float value) {
     value = fmodf(value + numbers::pi, numbers::two_pi);
     if (value < 0) {
         value += numbers::two_pi;

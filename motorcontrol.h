@@ -59,7 +59,7 @@ inline float to_rpm(float speed_radps, int pole_pairs) { return 60 * speed_radps
 
 
 inline emb::array<float, 3> calculate_svpwm(float voltage_mag, float voltage_angle, float voltage_dc) {
-    voltage_angle = normalize_2pi(voltage_angle);
+    voltage_angle = rem_2pi(voltage_angle);
     voltage_mag = clamp<float>(voltage_mag, 0, voltage_dc / numbers::sqrt_3);
 
     int32_t sector = static_cast<int32_t>(voltage_angle / numbers::pi_over_3);
