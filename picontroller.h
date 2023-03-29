@@ -15,29 +15,29 @@ SCOPED_ENUM_DECLARE_BEGIN(controller_logic) {
 
 
 template <controller_logic::enum_type Logic>
-class abstract_pi_controller : public emb::noncopyable {
+class abstract_picontroller : public emb::noncopyable {
 protected:
-    float _kp;		// proportional gain
-    float _ki;		// integral gain
-    float _dt;		// time slice
-    float _integrator_sum;	// integrator sum;
-    float _out_min;		// PI output minimum limit
-    float _out_max;		// PI output maximum limit
-    float _out;		// PI output;
+    float _kp;              // proportional gain
+    float _ki;              // integral gain
+    float _ts;              // sampling period
+    float _integrator_sum;  // integrator sum;
+    float _out_min;         // PI output minimum limit
+    float _out_max;         // PI output maximum limit
+    float _out;             // PI output;
 
     static float _error(float ref, float meas);
 public:
-    abstract_pi_controller(float kp, float ki, float dt, float out_min, float out_max)
+    abstract_picontroller(float kp, float ki, float ts, float out_min, float out_max)
             : _kp(kp)
             , _ki(ki)
-            , _dt(dt)
+            , _ts(ts)
             , _integrator_sum(0)
             , _out_min(out_min)
             , _out_max(out_max)
             , _out(0) {
     }
 
-    virtual ~abstract_pi_controller() {}
+    virtual ~abstract_picontroller() {}
     virtual void update(float ref, float meas) = 0;
     virtual void reset() {
         _integrator_sum = 0;
@@ -57,22 +57,22 @@ public:
 };
 
 
-inline float abstract_pi_controller<controller_logic::direct>::_error(float ref, float meas) { return ref - meas; }
-inline float abstract_pi_controller<controller_logic::inverse>::_error(float ref, float meas) { return meas - ref; }
+inline float abstract_picontroller<controller_logic::direct>::_error(float ref, float meas) { return ref - meas; }
+inline float abstract_picontroller<controller_logic::inverse>::_error(float ref, float meas) { return meas - ref; }
 
 
 template <controller_logic::enum_type Logic>
-class backcalc_pi_controller : public abstract_pi_controller<Logic> {
+class backcalc_picontroller : public abstract_picontroller<Logic> {
 protected:
     float _kc;	// anti-windup gain
 public:
-    backcalc_pi_controller(float kp, float ki, float dt, float kc, float out_min, float out_max)
-            : abstract_pi_controller<Logic>(kp, ki, dt, out_min, out_max)
+    backcalc_picontroller(float kp, float ki, float ts, float kc, float out_min, float out_max)
+            : abstract_picontroller<Logic>(kp, ki, ts, out_min, out_max)
             , _kc(kc) {
     }
 
     virtual void update(float ref, float meas) {
-        float error = abstract_pi_controller<Logic>::_error(ref, meas);
+        float error = abstract_picontroller<Logic>::_error(ref, meas);
         float out = emb::clamp(error * this->_kp + this->_integrator_sum, -FLT_MAX, FLT_MAX);
 
         if (out > this->_out_max) {
@@ -83,26 +83,26 @@ public:
             this->_out = out;
         }
 
-        this->_integrator_sum = emb::clamp(this->_integrator_sum + this->_ki * this->_dt * error - _kc * (out - this->_out),
+        this->_integrator_sum = emb::clamp(this->_integrator_sum + this->_ki * this->_ts * error - _kc * (out - this->_out),
                 -FLT_MAX, FLT_MAX);
     }
 };
 
 
 template <controller_logic::enum_type Logic>
-class clamping_pi_controller : public abstract_pi_controller<Logic> {
+class clamping_picontroller : public abstract_picontroller<Logic> {
 protected:
     float _error;
 public:
-    clamping_pi_controller(float kp, float ki, float dt, float out_min, float out_max)
-        : abstract_pi_controller<Logic>(kp, ki, dt, out_min, out_max)
+    clamping_picontroller(float kp, float ki, float ts, float out_min, float out_max)
+        : abstract_picontroller<Logic>(kp, ki, ts, out_min, out_max)
         , _error(0) {
     }
 
     virtual void update(float ref, float meas) {
-        float error = abstract_pi_controller<Logic>::_error(ref, meas);
+        float error = abstract_picontroller<Logic>::_error(ref, meas);
         float outp = error * this->_kp;
-        float sum_i = (error + _error) * 0.5f * this->_ki * this->_dt + this->_integrator_sum;
+        float sum_i = (error + _error) * 0.5f * this->_ki * this->_ts + this->_integrator_sum;
         _error = error;
         float out = outp + sum_i;
 
