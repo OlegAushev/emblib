@@ -24,7 +24,7 @@ public:
 
 
 template <typename T, size_t WindowSize>
-class moving_avg_filter : public filter_interface<T>, public emb::noncopyable {
+class movavg_filter : public filter_interface<T>, public emb::noncopyable {
 private:
     size_t _size;
     T* _window;
@@ -32,7 +32,7 @@ private:
     T _sum;
     bool _heap_used;
 public:
-    moving_avg_filter()
+    movavg_filter()
             : _size(WindowSize)
             , _window(new T[WindowSize])
             , _index(0)
@@ -41,7 +41,7 @@ public:
         reset();
     }
 
-    moving_avg_filter(emb::array<T, WindowSize>& data_array)
+    movavg_filter(emb::array<T, WindowSize>& data_array)
             : _size(WindowSize)
             , _window(data_array.data)
             , _index(0)
@@ -50,7 +50,7 @@ public:
         reset();
     }
 
-    ~moving_avg_filter() {
+    ~movavg_filter() {
         if (_heap_used == true) {
             delete[] _window;
         }
@@ -92,12 +92,12 @@ public:
 
 
 template <typename T, size_t WindowSize>
-class median_filter : public filter_interface<T> {
+class med_filter : public filter_interface<T> {
 private:
     circular_buffer<T, WindowSize> _window;
     T _out;
 public:
-    median_filter() {
+    med_filter() {
         EMB_STATIC_ASSERT((WindowSize % 2) == 1);
         reset();
     }
@@ -122,19 +122,19 @@ public:
 
 
 template <typename T>
-class exponential_filter : public filter_interface<T> {
+class exp_filter : public filter_interface<T> {
 private:
     float _smooth_factor;
     T _out;
     T _outPrev;
 public:
-    exponential_filter()
+    exp_filter()
             : _smooth_factor(0) {
         reset();
     }
 
-    exponential_filter(float smooth_factor)
-            : _smooth_factor(smooth_factor) {
+    exp_filter(float sampling_period, float time_constant)
+            : _smooth_factor(sampling_period / time_constant) {
         reset();
     }
 
@@ -152,26 +152,26 @@ public:
 
     virtual void reset() { set_output(0); }
 
-    void set_smooth_factor(float smooth_factor) { _smooth_factor = smooth_factor; }
+    void init(float sampling_period, float time_constant) { _smooth_factor = sampling_period / time_constant; }
 };
 
 
 template <typename T, size_t WindowSize>
-class exponential_median_filter : public filter_interface<T> {
+class expmed_filter : public filter_interface<T> {
 private:
     circular_buffer<T, WindowSize> _window;
     float _smooth_factor;
     T _out;
     T _out_prev;
 public:
-    exponential_median_filter()
+    expmed_filter()
             : _smooth_factor(0) {
         EMB_STATIC_ASSERT((WindowSize % 2) == 1);
         reset();
     }
 
-    exponential_median_filter(float smooth_factor)
-            : _smooth_factor(smooth_factor) {
+    expmed_filter(float sampling_period, float time_constant)
+            : _smooth_factor(sampling_period / time_constant) {
         EMB_STATIC_ASSERT((WindowSize % 2) == 1);
         reset();
     }
@@ -197,7 +197,7 @@ public:
 
     virtual void reset() { set_output(0); }
     
-    void set_smooth_factor(float smooth_factor) { _smooth_factor = smooth_factor; }
+    void init(float sampling_period, float time_constant) { _smooth_factor = sampling_period / time_constant; }
 };
 
 } // namespace emb

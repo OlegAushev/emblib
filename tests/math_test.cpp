@@ -35,7 +35,7 @@ void emb::tests::math_test() {
     EMB_ASSERT_TRUE(emb::range<int>(0, 5).contains(5));
 
 
-    emb::integrator<float, float> integ(emb::range<float>(-10.f, 10.f), 0.1f, -20.f);
+    emb::integrator<float, float> integ(0.1f, emb::range<float>(-10.f, 10.f), -20.f);
     EMB_ASSERT_EQUAL(integ.output(), -10.f);
     for (size_t i = 0; i < 50; ++i) {
         integ.update(3);

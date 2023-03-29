@@ -93,20 +93,20 @@ template <typename T, typename Time>
 class integrator {
 private:
     T _sum;
-    Time _dt;
-    T _init;
+    Time _ts;
+    T _initval;
 public:
     range<T> output_range;
 
-    integrator(const range<T>& output_range_, const Time& dt_, const T& init_)
-            : output_range(output_range_)
-            , _dt(dt_)
-            , _init(init_) {
+    integrator(const Time& ts_, const range<T>& output_range_, const T& initval_)
+            : _ts(ts_)
+            , output_range(output_range_)
+            , _initval(initval_) {
         reset();
     }
 
     void update(const T& value) {
-        _sum = clamp(_sum + value * _dt, output_range.lo(), output_range.hi());
+        _sum = clamp(_sum + value * _ts, output_range.lo(), output_range.hi());
     }
 
     void add(const T& value) {
@@ -115,7 +115,7 @@ public:
 
     const T& output() const { return _sum; }
     void reset() {
-        _sum = clamp(_init, output_range.lo(), output_range.hi());
+        _sum = clamp(_initval, output_range.lo(), output_range.hi());
     }
 };
 
