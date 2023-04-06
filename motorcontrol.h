@@ -70,46 +70,46 @@ inline emb::array<float, 3> calculate_svpwm(float voltage_mag, float voltage_ang
     float tb2 = numbers::sqrt_3 * (voltage_mag / voltage_dc) * sinf(theta);
     float tb0 = (1.f - tb1 - tb2) / 2.f;
 
-    emb::array<float, 3> pulseTimes;
+    emb::array<float, 3> pulse_durations;
     switch (sector) {
     case 0:
-        pulseTimes[0] = tb1 + tb2 + tb0;
-        pulseTimes[1] = tb2 + tb0;
-        pulseTimes[2] = tb0;
+        pulse_durations[0] = tb1 + tb2 + tb0;
+        pulse_durations[1] = tb2 + tb0;
+        pulse_durations[2] = tb0;
         break;
     case 1:
-        pulseTimes[0] = tb1 + tb0;
-        pulseTimes[1] = tb1 + tb2 + tb0;
-        pulseTimes[2] = tb0;
+        pulse_durations[0] = tb1 + tb0;
+        pulse_durations[1] = tb1 + tb2 + tb0;
+        pulse_durations[2] = tb0;
         break;
     case 2:
-        pulseTimes[0] = tb0;
-        pulseTimes[1] = tb1 + tb2 + tb0;
-        pulseTimes[2] = tb2 + tb0;
+        pulse_durations[0] = tb0;
+        pulse_durations[1] = tb1 + tb2 + tb0;
+        pulse_durations[2] = tb2 + tb0;
         break;
     case 3:
-        pulseTimes[0] = tb0;
-        pulseTimes[1] = tb1 + tb0;
-        pulseTimes[2] = tb1 + tb2 + tb0;
+        pulse_durations[0] = tb0;
+        pulse_durations[1] = tb1 + tb0;
+        pulse_durations[2] = tb1 + tb2 + tb0;
         break;
     case 4:
-        pulseTimes[0] = tb2 + tb0;
-        pulseTimes[1] = tb0;
-        pulseTimes[2] = tb1 + tb2 + tb0;
+        pulse_durations[0] = tb2 + tb0;
+        pulse_durations[1] = tb0;
+        pulse_durations[2] = tb1 + tb2 + tb0;
         break;
     case 5:
-        pulseTimes[0] = tb1 + tb2 + tb0;
-        pulseTimes[1] = tb0;
-        pulseTimes[2] = tb1 + tb0;
+        pulse_durations[0] = tb1 + tb2 + tb0;
+        pulse_durations[1] = tb0;
+        pulse_durations[2] = tb1 + tb0;
         break;
     default:
         break;
     }
 
     for(uint32_t i = 0; i < 3; ++i) {
-        pulseTimes[i] = clamp<float>(pulseTimes[i], 0.f, 1.f);
+        pulse_durations[i] = clamp<float>(pulse_durations[i], 0.f, 1.f);
     }
-    return pulseTimes;
+    return pulse_durations;
 }
 
 
