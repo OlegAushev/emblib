@@ -133,8 +133,8 @@ public:
         reset();
     }
 
-    exp_filter(float sampling_period, float time_constant)
-            : _smooth_factor(sampling_period / time_constant) {
+    exp_filter(float sampling_period, float time_constant) {
+        _smooth_factor = emb::clamp(sampling_period/time_constant, 0.f, 1.f);
         reset();
     }
 
@@ -152,7 +152,9 @@ public:
 
     virtual void reset() { set_output(0); }
 
-    void init(float sampling_period, float time_constant) { _smooth_factor = sampling_period / time_constant; }
+    void init(float sampling_period, float time_constant) {
+        _smooth_factor = emb::clamp(sampling_period/time_constant, 0.f, 1.f);
+    }
 };
 
 
@@ -170,9 +172,9 @@ public:
         reset();
     }
 
-    expmed_filter(float sampling_period, float time_constant)
-            : _smooth_factor(sampling_period / time_constant) {
+    expmed_filter(float sampling_period, float time_constant) {
         EMB_STATIC_ASSERT((WindowSize % 2) == 1);
+        _smooth_factor = emb::clamp(sampling_period/time_constant, 0.f, 1.f);
         reset();
     }
 
@@ -197,7 +199,9 @@ public:
 
     virtual void reset() { set_output(0); }
     
-    void init(float sampling_period, float time_constant) { _smooth_factor = sampling_period / time_constant; }
+    void init(float sampling_period, float time_constant) {
+        _smooth_factor = emb::clamp(sampling_period/time_constant, 0.f, 1.f);
+    }
 };
 
 } // namespace emb
