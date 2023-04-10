@@ -11,7 +11,7 @@ Storage::Storage(DriverInterface* driver_, uint32_t (*calc_crc32_func_)(const ui
         , available_page_bytes(_driver->page_bytes()-4)
         , available_page_count((_driver->page_count()-2)/2) {
     _errors.read = 0;
-    _errors.write= 0;
+    _errors.write = 0;
     _errors.crc_mismatch = 0;
 
     _errors.primary_data_corrupted = 0;
