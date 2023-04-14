@@ -5,7 +5,7 @@ namespace emb {
 
 namespace eeprom {
 
-Storage::Storage(DriverInterface* driver_, uint32_t (*calc_crc32_func_)(const uint8_t*, size_t))
+Storage::Storage(DriverInterface* driver_, uint32_t (*calc_crc32_func_)(const uint8_t*, int))
         : _driver(driver_)
         , _calc_crc32(calc_crc32_func_)
         , available_page_bytes(_driver->page_bytes()-4)
@@ -20,7 +20,7 @@ Storage::Storage(DriverInterface* driver_, uint32_t (*calc_crc32_func_)(const ui
 }
 
 
-Error Storage::write(uint16_t page, const uint8_t* buf, size_t len, emb::chrono::milliseconds timeout) {
+Error Storage::write(uint16_t page, const uint8_t* buf, int len, emb::chrono::milliseconds timeout) {
     assert(page < available_page_count);
     assert(len < available_page_bytes);
 
@@ -60,7 +60,7 @@ write_end:
 }
 
 
-Error Storage::read(uint16_t page, uint8_t* buf, size_t len, emb::chrono::milliseconds timeout) {
+Error Storage::read(uint16_t page, uint8_t* buf, int len, emb::chrono::milliseconds timeout) {
     assert(page < available_page_count);
     assert(len < available_page_bytes);
 

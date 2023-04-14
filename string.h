@@ -8,12 +8,12 @@
 
 namespace emb {
 
-template <size_t Capacity>
+template <int Capacity>
 class string {
 private:
-    static const size_t _data_len = Capacity + 1;
+    static const int _data_len = Capacity + 1;
     char _data[_data_len];
-    size_t _len;
+    int _len;
 public:
     string() {
         memset(_data, 0, _data_len);
@@ -26,13 +26,13 @@ public:
         _len = strlen(str);
     }
 public:
-    size_t capacity() const { return Capacity; }
-    size_t lenght() const { return _len; }
-    size_t size() const { return _len; }
+    int capacity() const { return Capacity; }
+    int lenght() const { return _len; }
+    int size() const { return _len; }
     bool empty() const { return _len == 0; }
     bool full() const { return _len == Capacity; }
 
-    char& operator[] (size_t pos) {
+    char& operator[] (int pos) {
 #ifdef NDEBUG
         return _data[pos];
 #else
@@ -40,7 +40,7 @@ public:
 #endif
     }
 
-    const char& operator[](size_t pos) const {
+    const char& operator[](int pos) const {
 #ifdef NDEBUG
         return _data[pos];
 #else
@@ -48,12 +48,12 @@ public:
 #endif
     }
 
-    char& at(size_t pos) {
+    char& at(int pos) {
         assert(pos < _len);
         return _data[pos];
     }
 
-    const char& at(size_t pos) const {
+    const char& at(int pos) const {
         assert(pos < _len);
         return _data[pos];
     }
@@ -86,7 +86,7 @@ public:
         return _data[_len - 1];
     }
 public:
-    void resize(size_t len) {
+    void resize(int len) {
         assert(len <= Capacity);
         if (len > _len) {
             emb::fill(_data + _len, _data + len, 0);
@@ -96,7 +96,7 @@ public:
         _len = len;
     }
 
-    void resize(size_t len, char ch) {
+    void resize(int len, char ch) {
         assert(len <= Capacity);
         if (len > _len) {
             emb::fill(_data + _len, _data + len, ch);
@@ -121,7 +121,7 @@ public:
         _data[--_len] = 0;
     }
 public:
-    void insert(size_t index, char ch) {
+    void insert(int index, char ch) {
         assert(!full());
         assert(index <= lenght());
 
@@ -137,13 +137,13 @@ public:
 };
 
 
-template <size_t Capacity>
+template <int Capacity>
 inline bool operator==(const string<Capacity>& lhs, const string<Capacity>& rhs) {
     return strcmp(lhs.data(), rhs.data()) == 0;
 }
 
 
-template <size_t Capacity>
+template <int Capacity>
 inline bool operator!=(const string<Capacity>& lhs, const string<Capacity>& rhs) {
     return !(lhs == rhs);
 }

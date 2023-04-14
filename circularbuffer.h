@@ -6,12 +6,12 @@
 
 namespace emb {
 
-template <typename T, size_t Capacity>
+template <typename T, int Capacity>
 class circular_buffer {
 private:
     T _data[Capacity];
-    size_t _front;
-    size_t _back;
+    int _front;
+    int _back;
     bool _full;
 public:
     circular_buffer()
@@ -28,10 +28,10 @@ public:
 
     bool empty() const { return (!_full && (_front == _back)); }
     bool full() const { return _full; }
-    size_t capacity() const { return Capacity; }
+    int capacity() const { return Capacity; }
 
-    size_t size() const {
-        size_t size = Capacity;
+    int size() const {
+        int size = Capacity;
         if (!_full) {
             if (_back >= _front) {
                 size = _back - _front;
@@ -72,7 +72,7 @@ public:
     const T* end() const { return _data + Capacity; }
 
     void fill(const T& value) {
-        for (size_t i = 0; i < Capacity; ++i) {
+        for (int i = 0; i < Capacity; ++i) {
             _data[i] = value;
         }
     }

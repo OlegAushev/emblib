@@ -12,7 +12,7 @@ namespace emb {
 class duration_logger {
 private:
     static emb::chrono::nanoseconds (*_time_now_func)();
-    static const size_t _message_len_max = 32;
+    static const int _message_len_max = 32;
     char _message[_message_len_max];
     volatile uint64_t _start;
 public:
@@ -44,7 +44,7 @@ public:
 class duration_logger_clk {
 private:
     static uint32_t (*_time_now_func)();
-    static const size_t _message_len_max = 32;
+    static const int _message_len_max = 32;
     char _message[_message_len_max];
     volatile uint32_t _start;
 public:
@@ -76,7 +76,7 @@ public:
 class duration_logger_async {
 private:
     static emb::chrono::nanoseconds (*_time_now_func)();
-    static const size_t _capacity = 10;
+    static const int _capacity = 10;
 
     struct DurationData {
         const char* message;
@@ -85,10 +85,10 @@ private:
     };
 
     static DurationData _durations_us[_capacity];
-    const size_t _channel;
+    const int _channel;
     volatile uint64_t _start;
 public:
-    duration_logger_async(const char* message, size_t channel) : _channel(channel) {
+    duration_logger_async(const char* message, int channel) : _channel(channel) {
         _durations_us[_channel].message = message;
         _start = _time_now_func().count();
     }
@@ -107,7 +107,7 @@ public:
     }
 
     static void print() {
-        for (size_t i = 0; i < _capacity; ++i) {
+        for (int i = 0; i < _capacity; ++i) {
             if (_durations_us[i].value != 0) {
                 printf("%s: %.3f us\n", _durations_us[i].message, _durations_us[i].value);
             }

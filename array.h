@@ -6,14 +6,14 @@
 
 namespace emb {
 
-template <typename T, size_t Size>
+template <typename T, int Size>
 class array {
 public:
     T data[Size];
 
-    size_t size() const { return Size; }
+    int size() const { return Size; }
 
-    T& operator[] (size_t pos) {
+    T& operator[] (int pos) {
 #ifdef NDEBUG
         return data[pos];
 #else
@@ -21,7 +21,7 @@ public:
 #endif
     }
 
-    const T& operator[](size_t pos) const {
+    const T& operator[](int pos) const {
 #ifdef NDEBUG
         return data[pos];
 #else
@@ -29,13 +29,13 @@ public:
 #endif
     }
 
-    T& at(size_t pos) {
-        assert(pos < Size);
+    T& at(int pos) {
+        assert((pos >= 0) && (pos < Size));
         return data[pos];
     }
 
-    const T& at(size_t pos) const {
-        assert(pos < Size);
+    const T& at(int pos) const {
+        assert((pos >= 0) && (pos < Size));
         return data[pos];
     }
 
@@ -45,7 +45,7 @@ public:
     const T* end() const { return data + Size; }
 
     void fill(const T& value) {
-        for (size_t i = 0; i < Size; ++i) {
+        for (int i = 0; i < Size; ++i) {
             data[i] = value;
         }
     }

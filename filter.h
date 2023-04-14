@@ -23,12 +23,12 @@ public:
 };
 
 
-template <typename T, size_t WindowSize>
+template <typename T, int WindowSize>
 class movavg_filter : public filter_interface<T>, public emb::noncopyable {
 private:
-    size_t _size;
+    int _size;
     T* _window;
-    size_t _index;
+    int _index;
     T _sum;
     bool _heap_used;
 public:
@@ -65,7 +65,7 @@ public:
     virtual T output() const { return _sum / _size; }
 
     virtual void set_output(T value) {
-        for (size_t i = 0; i < _size; ++i) {
+        for (int i = 0; i < _size; ++i) {
             _window[i] = value;
         }
         _index = 0;
@@ -76,7 +76,7 @@ public:
 
     int size() const { return _size; }
 
-    void resize(size_t size) {
+    void resize(int size) {
         if (size == 0) {
             return;
         }
@@ -91,7 +91,7 @@ public:
 };
 
 
-template <typename T, size_t WindowSize>
+template <typename T, int WindowSize>
 class med_filter : public filter_interface<T> {
 private:
     circular_buffer<T, WindowSize> _window;
@@ -158,7 +158,7 @@ public:
 };
 
 
-template <typename T, size_t WindowSize>
+template <typename T, int WindowSize>
 class expmed_filter : public filter_interface<T> {
 private:
     circular_buffer<T, WindowSize> _window;

@@ -49,8 +49,8 @@ inline void fill(It first, It last, const T& value) {
 
 
 template <class It, class T>
-inline size_t count(It first, It last, const T& value) {
-    size_t ret = 0;
+inline int count(It first, It last, const T& value) {
+    int ret = 0;
     for (; first != last; ++first) {
         if (*first == value) {
             ++ret;
