@@ -59,6 +59,7 @@ struct TestingEepromStruct2
 
 
 void emb::tests::eeprom_test() {
+#ifdef EMB_TESTS_ENABLED
     TestingEepromDriver eeprom_driver;
     emb::eeprom::Storage eeprom(&eeprom_driver, mcu::crc::calc_crc32_byte8);
 
@@ -75,25 +76,6 @@ void emb::tests::eeprom_test() {
 
     EMB_ASSERT_TRUE(emb::c28x::are_equal(s1_src, s1_dest));
     EMB_ASSERT_TRUE(emb::c28x::are_equal(s2_src, s2_dest));
+#endif
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

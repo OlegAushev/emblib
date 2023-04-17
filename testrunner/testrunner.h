@@ -21,15 +21,18 @@ private:
     static void print_dbg(const char* str) { printf(str); }
     static void print_nextline_dbg() { printf("\n"); }
 private:
+    static int _asserts_in_test;
     static int _asserts;
     static int _asserts_failed_in_test;
     static int _asserts_failed;
     static int _tests;
     static int _tests_failed;
     static int _tests_passed;
+    static int _tests_skipped;
 public:
     template <typename T, typename U>
     static void assert_equal(const T& t, const U& u, const char* hint) {
+        ++_asserts_in_test;
         ++_asserts;
         if (!(t == u)) {
             ++_asserts_failed_in_test;
@@ -46,9 +49,15 @@ public:
     template <class TestFunc>
     static void run_test(TestFunc test_func, const char* test_name) {
         ++_tests;
+        _asserts_in_test = 0;
         _asserts_failed_in_test = 0;
         test_func();
-        if (_asserts_failed_in_test == 0) {
+        if (_asserts_in_test == 0) {
+            ++_tests_skipped;
+            print("[  SKIP  ] ");
+            print(test_name);
+            print_nextline();
+        } else if (_asserts_failed_in_test == 0) {
             ++_tests_passed;
             print("[ PASSED ] ");
             print(test_name);
@@ -70,7 +79,7 @@ public:
         print_nextline();
 
         memset(str, 0, 64);
-        snprintf(str, 63, "Tests:   %d failed, %d passed", _tests_failed, _tests_passed);
+        snprintf(str, 63, "Tests:   %d failed, %d passed, %d skipped", _tests_failed, _tests_passed, _tests_skipped);
         print(str);
         print_nextline();
 

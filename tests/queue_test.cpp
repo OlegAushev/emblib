@@ -2,6 +2,7 @@
 
 
 void emb::tests::queue_test() {
+#ifdef EMB_TESTS_ENABLED
     emb::queue<int, 10> queue;
     EMB_ASSERT_TRUE(queue.empty());
 
@@ -78,5 +79,6 @@ void emb::tests::queue_test() {
         queue.pop();
     }
     EMB_ASSERT_TRUE(queue.empty());
+#endif
 }
 

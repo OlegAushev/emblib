@@ -2,6 +2,7 @@
 
 
 void emb::tests::bitset_test() {
+#ifdef EMB_TESTS_ENABLED
     // sizeof
     emb::bitset<1> bs;
     EMB_ASSERT_EQUAL(sizeof(bs), 1);
@@ -165,5 +166,6 @@ void emb::tests::bitset_test() {
     EMB_ASSERT_TRUE(bs60 == bs60_2);
     bs60_2.flip(35);
     EMB_ASSERT_TRUE(bs60 != bs60_2);
+#endif
 }
 

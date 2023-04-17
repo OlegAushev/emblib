@@ -2,6 +2,7 @@
 
 
 void emb::tests::filter_test() {
+#ifdef EMB_TESTS_ENABLED
     /* MovingAvgFilter */
     emb::movavg_filter<int, 5> mvavg_filter_i16;
     for (int i = 1; i <= 5; ++i) {
@@ -65,5 +66,6 @@ void emb::tests::filter_test() {
     EMB_ASSERT_EQUAL(expmed_filter_1.output(), 5);
     expmed_filter_1.reset();
     EMB_ASSERT_EQUAL(expmed_filter_1.output(), 0);
+#endif
 }
 

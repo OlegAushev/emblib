@@ -2,6 +2,7 @@
 
 
 void emb::tests::stack_test() {
+#ifdef EMB_TESTS_ENABLED
     emb::stack<int, 3> stack;
 
     EMB_ASSERT_TRUE(stack.empty());
@@ -53,5 +54,6 @@ void emb::tests::stack_test() {
 
     stack.clear();
     EMB_ASSERT_TRUE(stack.empty());
+#endif
 }
 

@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include <tests/tests_config.h>
 #include "../algorithm.h"
 #include "../array.h"
 #include "../bitset.h"

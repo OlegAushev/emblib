@@ -2,6 +2,7 @@
 
 
 void emb::tests::circular_buffer_test() {
+#ifdef EMB_TESTS_ENABLED
     emb::circular_buffer<int, 4> buf;
     EMB_ASSERT_TRUE(buf.empty());
 
@@ -59,5 +60,6 @@ void emb::tests::circular_buffer_test() {
     EMB_ASSERT_TRUE(buf.full());
     EMB_ASSERT_EQUAL(buf.front(), 8);
     EMB_ASSERT_EQUAL(buf.back(), 11);
+#endif
 }
 

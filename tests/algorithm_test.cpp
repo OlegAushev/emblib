@@ -21,6 +21,7 @@ bool operator<(const StructTest& lhs, const StructTest& rhs) {
 
 
 void emb::tests::algorithm_test() {
+#ifdef EMB_TESTS_ENABLED
     // find
     int arr1[10] = {3, 6, 2, 7, 8, 9, 0, 1, 5, 4};
     EMB_ASSERT_EQUAL(*emb::find(arr1, arr1 + 10, 9), 9);
@@ -165,5 +166,6 @@ void emb::tests::algorithm_test() {
     EMB_ASSERT_EQUAL(*(emb::min_element(arr12.begin(), arr12.end())), StructTest(-4, 7));
     EMB_ASSERT_EQUAL(*(emb::minmax_element(arr12.begin(), arr12.end()).first), StructTest(-4, 7));
     EMB_ASSERT_EQUAL(*(emb::minmax_element(arr12.begin(), arr12.end()).second), StructTest(8, 1));
+#endif
 }
 

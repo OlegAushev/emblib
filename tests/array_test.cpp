@@ -2,6 +2,7 @@
 
 
 void emb::tests::array_test() {
+#ifdef EMB_TESTS_ENABLED
     emb::array<float, 5> arr1 = {0, 1, 2, 3, 4};
     EMB_ASSERT_EQUAL(arr1[0], 0);
     EMB_ASSERT_EQUAL(arr1[1], 1);
@@ -24,5 +25,6 @@ void emb::tests::array_test() {
     for (int i = 0; i < arr3.size(); ++i) {
         EMB_ASSERT_EQUAL(arr3[i], 0);
     }
+#endif
 }
 

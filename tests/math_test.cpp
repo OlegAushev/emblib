@@ -3,6 +3,7 @@
 
 
 void emb::tests::math_test() {
+#ifdef EMB_TESTS_ENABLED
     EMB_ASSERT_EQUAL(emb::sgn(100), 1);
     EMB_ASSERT_EQUAL(emb::sgn(-100), -1);
     EMB_ASSERT_EQUAL(emb::sgn(3.14f), 1);
@@ -76,5 +77,6 @@ void emb::tests::math_test() {
     EMB_ASSERT_EQUAL(integ.output_range.lo(), 20.f);
     integ.update(-3);
     EMB_ASSERT_EQUAL(integ.output(), 20.f);
+#endif
 }
 

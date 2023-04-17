@@ -2,6 +2,7 @@
 
 
 void emb::tests::static_vector_test() {
+#ifdef EMB_TESTS_ENABLED
     emb::static_vector<unsigned int, 5> vec1;
     EMB_ASSERT_EQUAL(vec1.size(), 0);
     EMB_ASSERT_EQUAL(vec1.capacity(), 5);
@@ -45,5 +46,6 @@ void emb::tests::static_vector_test() {
     EMB_ASSERT_EQUAL(vec2.size(), 2);
     EMB_ASSERT_EQUAL(vec2[0], 3);
     EMB_ASSERT_EQUAL(vec2[1], 2);
+#endif
 }
 

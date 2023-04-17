@@ -8,8 +8,10 @@ public:
 
 
 void emb::tests::common_test() {
+#ifdef EMB_TESTS_ENABLED
     SingletonTest singletonObject;
     SingletonTest* pSingletonObject = &singletonObject;
     EMB_ASSERT_EQUAL(SingletonTest::instance(), pSingletonObject);
+#endif
 }
 

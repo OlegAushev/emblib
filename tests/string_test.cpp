@@ -2,6 +2,7 @@
 
 
 void emb::tests::string_test() {
+#ifdef EMB_TESTS_ENABLED
     emb::string<16> str1 = "Hello, world!";
     EMB_ASSERT_EQUAL(str1.lenght(), 13);
     EMB_ASSERT_EQUAL(strlen(str1.data()), 13);
@@ -31,5 +32,6 @@ void emb::tests::string_test() {
     str1.clear();
     EMB_ASSERT_EQUAL(str1.lenght(), 0);
     EMB_ASSERT_EQUAL(strlen(str1.begin()), 0);
+#endif
 }
 
