@@ -15,7 +15,7 @@ SCOPED_ENUM_DECLARE_BEGIN(controller_logic) {
 
 
 template <controller_logic::enum_type Logic>
-class abstract_picontroller : public emb::noncopyable {
+class abstract_picontroller : private emb::noncopyable {
 protected:
     float _kp;              // proportional gain
     float _ki;              // integral gain

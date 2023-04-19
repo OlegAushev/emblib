@@ -24,7 +24,7 @@ public:
 
 
 template <typename T, int WindowSize>
-class movavg_filter : public filter_interface<T>, public emb::noncopyable {
+class movavg_filter : public filter_interface<T>, private emb::noncopyable {
 private:
     int _size;
     T* _window;
