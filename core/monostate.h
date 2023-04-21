@@ -19,7 +19,7 @@ protected:
 
     ~monostate() {}
 
-    static void _set_initialized() {
+    static void set_initialized() {
         assert(!_initialized);
         _initialized = true;
     }
