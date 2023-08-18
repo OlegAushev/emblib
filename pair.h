@@ -24,6 +24,14 @@ public:
         }
         return *this;
     }
+
+    bool operator==(const pair& other) const {
+        return (this->first == other.first) && (this->second == other.second);
+    }
+
+    bool operator!=(const pair& other) const {
+        return !(*this == other);
+    }
 };
 
 } // namespace emb
