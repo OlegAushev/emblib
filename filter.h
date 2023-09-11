@@ -124,16 +124,22 @@ public:
 template <typename T>
 class exp_filter : public filter_interface<T> {
 private:
+    float _sampling_period;
+    float _time_constant;
     float _smooth_factor;
     T _out;
     T _out_prev;
 public:
     exp_filter()
-            : _smooth_factor(0) {
+            : _sampling_period(0)
+            , _time_constant(float(INFINITY))
+            , _smooth_factor(0) {
         reset();
     }
 
-    exp_filter(float sampling_period, float time_constant) {
+    exp_filter(float sampling_period, float time_constant)
+            : _sampling_period(sampling_period)
+            , _time_constant(time_constant) {
         _smooth_factor = emb::clamp(sampling_period/time_constant, 0.f, 1.f);
         reset();
     }
@@ -153,11 +159,14 @@ public:
     virtual void reset() { set_output(0); }
 
     void init(float sampling_period, float time_constant) {
+        _sampling_period = sampling_period;
+        _time_constant = time_constant;
         _smooth_factor = emb::clamp(sampling_period/time_constant, 0.f, 1.f);
     }
 
     void set_sampling_period(float val) {
-        _smooth_factor = emb::clamp(val/time_constant, 0.f, 1.f);
+        _sampling_period = val;
+        _smooth_factor = emb::clamp(_sampling_period/_time_constant, 0.f, 1.f);
     }
 };
 
@@ -166,17 +175,23 @@ template <typename T, int WindowSize>
 class expmed_filter : public filter_interface<T> {
 private:
     circular_buffer<T, WindowSize> _window;
+    float _sampling_period;
+    float _time_constant;
     float _smooth_factor;
     T _out;
     T _out_prev;
 public:
     expmed_filter()
-            : _smooth_factor(0) {
+            : _sampling_period(0)
+            , _time_constant(float(INFINITY))
+            , _smooth_factor(0) {
         EMB_STATIC_ASSERT((WindowSize % 2) == 1);
         reset();
     }
 
-    expmed_filter(float sampling_period, float time_constant) {
+    expmed_filter(float sampling_period, float time_constant)
+            : _sampling_period(sampling_period)
+            , _time_constant(time_constant) {
         EMB_STATIC_ASSERT((WindowSize % 2) == 1);
         _smooth_factor = emb::clamp(sampling_period/time_constant, 0.f, 1.f);
         reset();
@@ -204,11 +219,14 @@ public:
     virtual void reset() { set_output(0); }
     
     void init(float sampling_period, float time_constant) {
+        _sampling_period = sampling_period;
+        _time_constant = time_constant;
         _smooth_factor = emb::clamp(sampling_period/time_constant, 0.f, 1.f);
     }
 
     void set_sampling_period(float val) {
-        _smooth_factor = emb::clamp(val/time_constant, 0.f, 1.f);
+        _sampling_period = val;
+        _smooth_factor = emb::clamp(_sampling_period/time_constant, 0.f, 1.f);
     }
 };
 
