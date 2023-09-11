@@ -16,9 +16,9 @@ public:
     filter_interface() {}
     virtual ~filter_interface() {}
 
-    virtual void update(T value) = 0;
+    virtual void update(T input_val) = 0;
     virtual T output() const = 0;
-    virtual void set_output(T value) = 0;
+    virtual void set_output(T val) = 0;
     virtual void reset() = 0;
 };
 
@@ -56,20 +56,20 @@ public:
         }
     }
 
-    virtual void update(T value) {
-        _sum = _sum + value - _window[_index];
-        _window[_index] = value;
+    virtual void update(T input_val) {
+        _sum = _sum + input_val - _window[_index];
+        _window[_index] = input_val;
         _index = (_index + 1) % _size;
     }
 
     virtual T output() const { return _sum / _size; }
 
-    virtual void set_output(T value) {
+    virtual void set_output(T val) {
         for (int i = 0; i < _size; ++i) {
-            _window[i] = value;
+            _window[i] = val;
         }
         _index = 0;
-        _sum = value * _size;
+        _sum = val * _size;
     }
 
     virtual void reset() { set_output(0); }
@@ -102,8 +102,8 @@ public:
         reset();
     }
 
-    virtual void update(T value) {
-        _window.push(value);
+    virtual void update(T input_val) {
+        _window.push(input_val);
         emb::array<T, WindowSize> window_sorted;
         emb::copy(_window.begin(), _window.end(), window_sorted.begin());
         std::sort(window_sorted.begin(), window_sorted.end());
@@ -112,9 +112,9 @@ public:
 
     virtual T output() const { return _out; }
 
-    virtual void set_output(T value) {
-        _window.fill(value);
-        _out = value;
+    virtual void set_output(T val) {
+        _window.fill(val);
+        _out = val;
     }
 
     virtual void reset() { set_output(0); }
@@ -126,7 +126,7 @@ class exp_filter : public filter_interface<T> {
 private:
     float _smooth_factor;
     T _out;
-    T _outPrev;
+    T _out_prev;
 public:
     exp_filter()
             : _smooth_factor(0) {
@@ -138,22 +138,26 @@ public:
         reset();
     }
 
-    virtual void update(T value) {
-        _out = _outPrev + _smooth_factor * (value - _outPrev);
-        _outPrev = _out;
+    virtual void update(T input_val) {
+        _out = _out_prev + _smooth_factor * (input_val - _out_prev);
+        _out_prev = _out;
     }
 
     virtual T output() const { return _out; }
 
-    virtual void set_output(T value) {
-        _out = value;
-        _outPrev = value;
+    virtual void set_output(T val) {
+        _out = val;
+        _out_prev = val;
     }
 
     virtual void reset() { set_output(0); }
 
     void init(float sampling_period, float time_constant) {
         _smooth_factor = emb::clamp(sampling_period/time_constant, 0.f, 1.f);
+    }
+
+    void set_sampling_period(float val) {
+        _smooth_factor = emb::clamp(val/time_constant, 0.f, 1.f);
     }
 };
 
@@ -178,29 +182,33 @@ public:
         reset();
     }
 
-    virtual void update(T value) {
-        _window.push(value);
+    virtual void update(T input_val) {
+        _window.push(input_val);
         emb::array<T, WindowSize> window_sorted;
         emb::copy(_window.begin(), _window.end(), window_sorted.begin());
         std::sort(window_sorted.begin(), window_sorted.end());
-        value = window_sorted[WindowSize/2];
+        input_val = window_sorted[WindowSize/2];
 
-        _out = _out_prev + _smooth_factor * (value - _out_prev);
+        _out = _out_prev + _smooth_factor * (input_val - _out_prev);
         _out_prev = _out;
     }
 
     virtual T output() const { return _out; }
 
-    virtual void set_output(T value) {
-        _window.fill(value);
-        _out = value;
-        _out_prev = value;
+    virtual void set_output(T val) {
+        _window.fill(val);
+        _out = val;
+        _out_prev = val;
     }
 
     virtual void reset() { set_output(0); }
     
     void init(float sampling_period, float time_constant) {
         _smooth_factor = emb::clamp(sampling_period/time_constant, 0.f, 1.f);
+    }
+
+    void set_sampling_period(float val) {
+        _smooth_factor = emb::clamp(val/time_constant, 0.f, 1.f);
     }
 };
 
