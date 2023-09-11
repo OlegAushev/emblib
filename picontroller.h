@@ -54,6 +54,7 @@ public:
     float kp() const { return _kp; }
     float ki() const { return _ki; }
     float sum() const { return _integrator_sum; }
+    void set_ts(float value) { _ts = value; }
 };
 
 
