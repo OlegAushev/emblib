@@ -61,7 +61,7 @@ struct TestingEepromStruct2
 void emb::tests::eeprom_test() {
 #ifdef EMB_TESTS_ENABLED
     TestingEepromDriver eeprom_driver;
-    emb::eeprom::Storage eeprom(&eeprom_driver, mcu::crc::calc_crc32_byte8);
+    emb::eeprom::Storage eeprom(eeprom_driver, mcu::crc::calc_crc32_byte8);
 
     TestingEepromStruct1 s1_src = {42, emb::numbers::pi, 12, -100, true};
     TestingEepromStruct2 s2_src = {1.f, -2.f, 3.f, -4.f, 5.f};
