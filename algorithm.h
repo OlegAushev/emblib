@@ -1,8 +1,8 @@
 #pragma once
 
 
-#include <emblib_c28x/core.h>
-#include <emblib_c28x/pair.h>
+#include <emblib/core.h>
+#include <emblib/pair.h>
 
 
 namespace emb {

@@ -1,10 +1,10 @@
 #pragma once
 
 
-#include <emblib_c28x/core.h>
+#include <emblib/core.h>
 
 #if defined(EMBLIB_C28X)
-#include <emblib_c28x/algorithm.h>
+#include <emblib/algorithm.h>
 #include <motorcontrol/math.h>
 #include <math.h>
 #include <float.h>

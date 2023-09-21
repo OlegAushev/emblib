@@ -1,8 +1,8 @@
 #pragma once
 
 
-#include <emblib_c28x/core.h>
-#include <emblib_c28x/array.h>
+#include <emblib/core.h>
+#include <emblib/array.h>
 #include <bitset>
 #if defined(EMBLIB_STM32)
 #include <climits>

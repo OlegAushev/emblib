@@ -1,4 +1,4 @@
-#include <emblib_c28x/tests/tests.h>
+#include <emblib/tests/tests.h>
 
 
 class SingletonTest : public emb::interrupt_invoker<SingletonTest> {

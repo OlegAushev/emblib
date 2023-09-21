@@ -1,8 +1,8 @@
 #pragma once
 
 
-#include <emblib_c28x/core.h>
-#include <emblib_c28x/algorithm.h>
+#include <emblib/core.h>
+#include <emblib/algorithm.h>
 #include "float.h"
 
 

@@ -1,4 +1,4 @@
-#include <emblib_c28x/tests/tests.h>
+#include <emblib/tests/tests.h>
 #include <mculib_c28x/f2837xd/crc/crc.h>
 
 

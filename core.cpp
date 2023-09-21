@@ -1,4 +1,4 @@
-#include <emblib_c28x/core.h>
+#include <emblib/core.h>
 
 
 #if defined(EMBLIB_STM32)

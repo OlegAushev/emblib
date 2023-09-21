@@ -1,4 +1,4 @@
-#include <emblib_c28x/tests/tests.h>
+#include <emblib/tests/tests.h>
 
 
 void emb::tests::circular_buffer_test() {
