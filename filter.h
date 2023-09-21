@@ -6,9 +6,11 @@
 #include <emblib/array.h>
 #include <emblib/circularbuffer.h>
 #include <algorithm>
+#include <float.h>
 
 
 namespace emb {
+
 
 template <typename T>
 class filter_interface {
@@ -62,9 +64,9 @@ public:
         _index = (_index + 1) % _size;
     }
 
-    virtual T output() const { return _sum / _size; }
+    virtual T output() const EMB_OVERRIDE { return _sum / _size; }
 
-    virtual void set_output(T val) {
+    virtual void set_output(T val) EMB_OVERRIDE {
         for (int i = 0; i < _size; ++i) {
             _window[i] = val;
         }
@@ -72,7 +74,7 @@ public:
         _sum = val * _size;
     }
 
-    virtual void reset() { set_output(0); }
+    virtual void reset() EMB_OVERRIDE { set_output(0); }
 
     int size() const { return _size; }
 
@@ -102,7 +104,7 @@ public:
         reset();
     }
 
-    virtual void update(T input_val) {
+    virtual void update(T input_val) EMB_OVERRIDE {
         _window.push(input_val);
         emb::array<T, WindowSize> window_sorted;
         emb::copy(_window.begin(), _window.end(), window_sorted.begin());
@@ -110,14 +112,14 @@ public:
         _out = window_sorted[WindowSize/2];
     }
 
-    virtual T output() const { return _out; }
+    virtual T output() const EMB_OVERRIDE { return _out; }
 
-    virtual void set_output(T val) {
+    virtual void set_output(T val) EMB_OVERRIDE {
         _window.fill(val);
         _out = val;
     }
 
-    virtual void reset() { set_output(0); }
+    virtual void reset() EMB_OVERRIDE { set_output(0); }
 };
 
 
@@ -132,7 +134,11 @@ private:
 public:
     exp_filter()
             : _sampling_period(0)
+#if defined(EMBLIB_C28X)
             , _time_constant(float(INFINITY))
+#elif defined(EMBLIB_STM32)
+            , _time_constant(FLT_MAX)
+#endif
             , _smooth_factor(0) {
         reset();
     }
@@ -183,7 +189,11 @@ private:
 public:
     expmed_filter()
             : _sampling_period(0)
+#if defined(EMBLIB_C28X)
             , _time_constant(float(INFINITY))
+#elif defined(EMBLIB_STM32)
+            , _time_constant(FLT_MAX)
+#endif
             , _smooth_factor(0) {
         EMB_STATIC_ASSERT((WindowSize % 2) == 1);
         reset();
@@ -197,7 +207,7 @@ public:
         reset();
     }
 
-    virtual void update(T input_val) {
+    virtual void update(T input_val) EMB_OVERRIDE {
         _window.push(input_val);
         emb::array<T, WindowSize> window_sorted;
         emb::copy(_window.begin(), _window.end(), window_sorted.begin());
@@ -208,15 +218,15 @@ public:
         _out_prev = _out;
     }
 
-    virtual T output() const { return _out; }
+    virtual T output() const EMB_OVERRIDE { return _out; }
 
-    virtual void set_output(T val) {
+    virtual void set_output(T val) EMB_OVERRIDE {
         _window.fill(val);
         _out = val;
         _out_prev = val;
     }
 
-    virtual void reset() { set_output(0); }
+    virtual void reset() EMB_OVERRIDE { set_output(0); }
     
     void init(float sampling_period, float time_constant) {
         _sampling_period = sampling_period;
@@ -230,5 +240,5 @@ public:
     }
 };
 
-} // namespace emb
 
+} // namespace emb

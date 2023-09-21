@@ -1,4 +1,9 @@
 #include <emblib/tests/tests.h>
+
+
+#if defined(EMBLIB_C28X)
+
+
 #include <mculib_c28x/f2837xd/crc/crc.h>
 
 
@@ -79,3 +84,5 @@ void emb::tests::eeprom_test() {
 #endif
 }
 
+
+#endif

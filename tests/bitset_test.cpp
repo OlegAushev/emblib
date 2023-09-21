@@ -1,6 +1,9 @@
 #include <emblib/tests/tests.h>
 
 
+#if defined(EMBLIB_C28X)
+
+
 void emb::tests::bitset_test() {
 #ifdef EMB_TESTS_ENABLED
     // sizeof
@@ -169,3 +172,5 @@ void emb::tests::bitset_test() {
 #endif
 }
 
+
+#endif
