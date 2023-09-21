@@ -134,11 +134,7 @@ private:
 public:
     exp_filter()
             : _sampling_period(0)
-#if defined(EMBLIB_C28X)
-            , _time_constant(float(INFINITY))
-#elif defined(EMBLIB_STM32)
             , _time_constant(FLT_MAX)
-#endif
             , _smooth_factor(0) {
         reset();
     }
@@ -189,11 +185,7 @@ private:
 public:
     expmed_filter()
             : _sampling_period(0)
-#if defined(EMBLIB_C28X)
-            , _time_constant(float(INFINITY))
-#elif defined(EMBLIB_STM32)
             , _time_constant(FLT_MAX)
-#endif
             , _smooth_factor(0) {
         EMB_STATIC_ASSERT((WindowSize % 2) == 1);
         reset();
