@@ -1,11 +1,9 @@
 #pragma once
 
 
-#include <stdint.h>
-#include <stddef.h>
+#include <emblib_c28x/core.h>
 #include <cstdio>
 #include <cstring>
-#include <assert.h>
 
 
 namespace emb {
@@ -14,12 +12,23 @@ void run_tests();
 
 
 class test_runner {
+#if defined(EMBLIB_C28X)
 public:
     static void (*print)(const char* str);
     static void (*print_nextline)();
 private:
     static void print_dbg(const char* str) { printf(str); }
     static void print_nextline_dbg() { printf("\n"); }
+#elif defined(EMBLIB_STM32)
+public:
+    static inline void (*print)(const char* str) = [](const char* str) {
+        fatal_error("emb::test_runner print function not defined");
+    };
+
+    static inline void (*print_nextline)() = []() {
+        fatal_error("emb::test_runner print_nextline function not defined");
+    };
+#endif
 private:
     static int _asserts_in_test;
     static int _asserts;
@@ -106,6 +115,9 @@ public:
 #define EMB_RUN_TEST(func) emb::test_runner::run_test(func, #func)
 
 
+#if defined(EMBLIB_C28X)
+
+
 #ifdef UNIT_TESTS_ENABLED
 #define EMB_ASSERT_EQUAL(x, y) \
 { \
@@ -127,3 +139,30 @@ public:
 #define EMB_ASSERT_TRUE(x) ((void)0)
 #endif
 
+
+#elif defined(EMBLIB_STM32)
+
+
+#ifdef UNIT_TESTS_ENABLED
+#define EMB_ASSERT_EQUAL(x, y) \
+{ \
+    const char* hint = "[  WARN  ] Assertion failed: " #x " != " #y ", file: " __FILE__ ", line: " EMB_STRINGIZE(__LINE__); \
+    emb::test_runner::assert_equal(x, y, hint); \
+}
+#else
+#define EMB_ASSERT_EQUAL(x, y) ((void)0)
+#endif
+
+
+#ifdef UNIT_TESTS_ENABLED
+#define EMB_ASSERT_TRUE(x) \
+{ \
+    const char* hint = "[  WARN  ] Assertion failed: " #x " is false, file: " __FILE__ ", line: " EMB_STRINGIZE(__LINE__); \
+    emb::test_runner::assert_true(x, hint); \
+}
+#else
+#define EMB_ASSERT_TRUE(x) ((void)0)
+#endif
+
+
+#endif

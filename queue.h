@@ -6,6 +6,7 @@
 
 namespace emb {
 
+
 template <typename T, int Capacity>
 class queue {
 private:
@@ -60,5 +61,5 @@ public:
     }
 };
 
-} // namespace emb
 
+} // namespace emb

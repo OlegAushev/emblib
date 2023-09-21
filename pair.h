@@ -6,6 +6,7 @@
 
 namespace emb {
 
+
 template <typename T1, typename T2>
 class pair {
 public:
@@ -34,5 +35,5 @@ public:
     }
 };
 
-} // namespace emb
 
+} // namespace emb

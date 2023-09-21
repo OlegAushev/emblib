@@ -6,6 +6,7 @@
 
 namespace emb {
 
+
 template <typename T, int Capacity>
 class stack {
 private:
@@ -37,5 +38,5 @@ public:
     }
 };
 
-} // namespace emb
 
+} // namespace emb

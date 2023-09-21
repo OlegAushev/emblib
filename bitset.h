@@ -4,9 +4,14 @@
 #include <emblib_c28x/core.h>
 #include <emblib_c28x/array.h>
 #include <bitset>
+#if defined(EMBLIB_STM32)
+#include <climits>
+#include <cstring>
+#endif
 
 
 namespace emb {
+
 
 template <size_t BitCount>
 class bitset {
@@ -39,7 +44,7 @@ public:
     }
 
     bitset(uint64_t value) {
-        EMB_STATIC_ASSERT(_byte_count <= 4);
+        EMB_STATIC_ASSERT(_byte_count <= 64/CHAR_BIT);
         uint64_t val = value;	// protection against implicit conversion and wrong memcpy()
         memcpy(_data, &val, _byte_count);
         _reset_unused_bits(_hi_byte());
@@ -159,5 +164,5 @@ public:
     };
 };
 
-} // namespace emb
 
+} // namespace emb

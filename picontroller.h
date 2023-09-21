@@ -8,6 +8,7 @@
 
 namespace emb {
 
+
 SCOPED_ENUM_DECLARE_BEGIN(controller_logic) {
     direct,
     inverse
@@ -130,5 +131,5 @@ public:
     }
 };
 
-} // namespace emb
 
+} // namespace emb

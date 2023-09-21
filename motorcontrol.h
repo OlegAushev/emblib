@@ -13,6 +13,7 @@
 
 namespace emb {
 
+
 namespace traits {
 struct from_rpm{};
 struct from_radps{};
@@ -162,6 +163,7 @@ inline alphabeta_pair clarke_transform(float a, float b, float c) {
     runClarke1(&clarkeStruct);
     return alphabeta_pair(clarkeStruct.Alpha, clarkeStruct.Beta);
 }
+
 
 } // namespace emb
 

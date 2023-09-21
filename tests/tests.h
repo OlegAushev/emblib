@@ -31,11 +31,15 @@ public:
     static void circular_buffer_test();
     static void filter_test();
     static void stack_test();
+#if defined(EMBLIB_C28X)
     static void bitset_test();
+#endif
     static void static_vector_test();
     static void string_test();
     static void chrono_test();
+#if defined(EMBLIB_C28X)
     static void eeprom_test();
+#endif
 };
 
 } // namespace emb

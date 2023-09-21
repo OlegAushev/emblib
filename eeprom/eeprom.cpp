@@ -5,6 +5,10 @@ namespace emb {
 
 namespace eeprom {
 
+
+#if defined(EMBLIB_C28X)
+
+
 Storage::Storage(DriverInterface& driver_, uint32_t (*calc_crc32_func_)(const uint8_t*, int))
         : _driver(driver_)
         , _calc_crc32(calc_crc32_func_)
@@ -145,7 +149,10 @@ read_end:
     return error;
 }
 
+
+#endif
+
+
 } // namespace eeprom
 
 } // namespace emb
-

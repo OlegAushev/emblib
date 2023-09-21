@@ -8,6 +8,7 @@
 
 namespace emb {
 
+
 template <int Capacity>
 class string {
 private:
@@ -148,5 +149,5 @@ inline bool operator!=(const string<Capacity>& lhs, const string<Capacity>& rhs)
     return !(lhs == rhs);
 }
 
-} // namespace emb
 
+} // namespace emb

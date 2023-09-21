@@ -1,12 +1,22 @@
 #pragma once
 
 
+#if defined(EMBLIB_C28X)
 #include <stdint.h>
 #include <stddef.h>
 #include <assert.h>
+#elif defined(EMBLIB_STM32)
+#include <cstdint>
+#include <cstddef>
+#include <cassert>
+#endif
 
 
 namespace emb {
+
+
+#if defined(EMBLIB_C28X)
+
 
 class noncopyable {
 protected:
@@ -17,5 +27,20 @@ private:
     const noncopyable& operator=(const noncopyable&);
 };
 
-} // namespace emb
 
+#elif defined(EMBLIB_STM32)
+
+
+class noncopyable {
+public:
+    noncopyable() = default;
+    noncopyable(const noncopyable& other) = delete;
+    noncopyable& operator=(const noncopyable& other) = delete;
+    virtual ~noncopyable() = default;
+};
+
+
+#endif
+
+
+} // namespace emb

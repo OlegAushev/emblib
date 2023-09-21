@@ -8,6 +8,10 @@ namespace emb {
 
 namespace gpio {
 
+
+#if defined(EMBLIB_C28X)
+
+
 SCOPED_ENUM_DECLARE_BEGIN(ActiveState) {
     low = 0,
     high = 1
@@ -20,10 +24,28 @@ SCOPED_ENUM_DECLARE_BEGIN(State) {
 } SCOPED_ENUM_DECLARE_END(State)
 
 
+#elif defined(EMBLIB_STM32)
+
+
+enum class ActiveState {
+    low = 0,
+    high = 1
+};
+
+
+enum class State {
+    inactive = 0,
+    active = 1
+};
+
+
+#endif
+
+
 class InputInterface {
 public:
-    InputInterface() {}
-    virtual ~InputInterface() {}
+    InputInterface() EMB_DEFAULT
+    virtual ~InputInterface() EMB_DEFAULT
 
     virtual State read() const = 0;
     virtual int read_level() const = 0;
@@ -32,8 +54,8 @@ public:
 
 class OutputInterface {
 public:
-    OutputInterface() {}
-    virtual ~OutputInterface() {}
+    OutputInterface() EMB_DEFAULT
+    virtual ~OutputInterface() EMB_DEFAULT
 
     virtual State read() const = 0;
     virtual void set(State state = State::active) = 0;
@@ -43,7 +65,7 @@ public:
     virtual void set_level(int level) = 0;
 };
 
+
 } // namespace gpio
 
 } // namespace emb
-

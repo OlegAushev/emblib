@@ -8,6 +8,10 @@ namespace emb {
 
 namespace uart {
 
+
+#if defined(EMBLIB_C28X)
+
+
 class UartInterface {
 private:
     UartInterface(const UartInterface& other);              // no copy constructor
@@ -31,7 +35,37 @@ public:
     virtual void acknowledge_rx_interrupt() = 0;
 };
 
+
+#elif defined(EMBLIB_STM32)
+
+
+class UartInterface {
+public:
+    UartInterface() = default;
+    virtual ~UartInterface() = default;
+
+    UartInterface(const UartInterface& other) = delete;
+    UartInterface& operator=(const UartInterface& other) = delete;
+
+    //virtual void reset() = 0;
+    //virtual bool hasRxError() const = 0;
+
+    virtual int getchar(char& ch) = 0;
+    virtual int recv(char* buf, int len) = 0;
+
+    virtual int putchar(char ch) = 0;
+    virtual int send(const char* buf, int len) = 0;
+
+    //virtual void registerRxInterruptHandler(void (*handler)(void)) = 0;
+    //virtual void enableRxInterrupts() = 0;
+    //virtual void disableRxInterrupts() = 0;
+    //virtual void acknowledgeRxInterrupt() = 0;
+};
+
+
+#endif
+
+
 } // namespace uart
 
 } // namespace emb
-

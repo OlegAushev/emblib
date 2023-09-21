@@ -7,6 +7,7 @@
 
 namespace emb {
 
+
 template <typename T, int Capacity>
 class static_vector {
 private:
@@ -176,5 +177,5 @@ public:
     }
 };
 
-} // namespace emb
 
+} // namespace emb

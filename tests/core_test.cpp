@@ -1,7 +1,7 @@
 #include <emblib_c28x/tests/tests.h>
 
 
-class SingletonTest : public emb::c28x::interrupt_invoker<SingletonTest> {
+class SingletonTest : public emb::interrupt_invoker<SingletonTest> {
 public:
     SingletonTest() : interrupt_invoker(this) {}
 };

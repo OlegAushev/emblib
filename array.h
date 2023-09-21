@@ -6,6 +6,7 @@
 
 namespace emb {
 
+
 template <typename T, int Size>
 class array {
 public:
@@ -51,5 +52,5 @@ public:
     }
 };
 
-} // namespace emb
 
+} // namespace emb

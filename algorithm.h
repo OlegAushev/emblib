@@ -7,6 +7,7 @@
 
 namespace emb {
 
+
 template <class It, class T>
 inline It find(It first, It last, const T& value) {
     for (; first != last; ++first) {
@@ -167,5 +168,5 @@ inline pair<It, It> minmax_element(It first, It last) {
     return pair<It, It>(min, max);
 }
 
-} // namespace emb
 
+} // namespace emb

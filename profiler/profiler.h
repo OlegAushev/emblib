@@ -9,6 +9,10 @@
 
 namespace emb {
 
+
+#if defined(EMBLIB_C28X)
+
+
 class duration_logger {
 private:
     static emb::chrono::nanoseconds (*_time_now_func)();
@@ -119,5 +123,8 @@ public:
 #define EMB_LOG_DURATION_ASYNC_us(message, channel) \
         volatile emb::duration_logger_async EMB_UNIQ_ID(__LINE__)(message, channel);
 
-} // namespace emb
 
+#endif
+
+
+} // namespace emb

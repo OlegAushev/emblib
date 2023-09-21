@@ -56,7 +56,7 @@ public:
         }
     }
 
-    virtual void update(T input_val) {
+    virtual void update(T input_val) EMB_OVERRIDE {
         _sum = _sum + input_val - _window[_index];
         _window[_index] = input_val;
         _index = (_index + 1) % _size;

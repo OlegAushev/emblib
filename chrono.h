@@ -10,6 +10,7 @@ namespace chrono {
 
 namespace impl {
 
+
 template <int64_t Divider>
 class duration {
 public:
@@ -77,6 +78,7 @@ bool operator==(const duration<Divider>& lhs, const duration<Divider>& rhs) { re
 template <int64_t Divider>
 bool operator!=(const duration<Divider>& lhs, const duration<Divider>& rhs) { return lhs.count() != rhs.count(); }
 
+
 } // namespace impl
 
 
@@ -91,7 +93,7 @@ typedef impl::duration<1000> microseconds;
 typedef impl::duration<1000000> milliseconds;
 typedef impl::duration<1000000000> seconds;
 
+
 } // namespace chrono
 
 } // namespace emb
-

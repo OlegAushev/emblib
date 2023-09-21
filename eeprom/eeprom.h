@@ -9,6 +9,10 @@ namespace emb {
 
 namespace eeprom {
 
+
+#if defined(EMBLIB_C28X)
+
+
 SCOPED_ENUM_DECLARE_BEGIN(Error) {
     none,
     read_failed,
@@ -69,7 +73,10 @@ public:
     }
 };
 
+
+#endif
+
+
 } // namespace eeprom
 
 } // namespace emb
-

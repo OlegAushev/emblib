@@ -6,6 +6,7 @@
 
 namespace emb {
 
+
 template <typename T, int Capacity>
 class circular_buffer {
 private:
@@ -77,6 +78,7 @@ public:
         }
     }
 };
+
 
 } // namespace emb
 
