@@ -226,7 +226,7 @@ public:
 
     void set_sampling_period(float val) {
         _sampling_period = val;
-        _smooth_factor = emb::clamp(_sampling_period/time_constant, 0.f, 1.f);
+        _smooth_factor = emb::clamp(_sampling_period/_time_constant, 0.f, 1.f);
     }
 };
 
