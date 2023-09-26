@@ -9,13 +9,24 @@
 namespace emb {
 
 
+#if defined(EMBLIB_C28X)
 SCOPED_ENUM_DECLARE_BEGIN(controller_logic) {
     direct,
     inverse
 } SCOPED_ENUM_DECLARE_END(controller_logic)
+#elif defined(EMBLIB_STM32)
+enum class controller_logic {
+    direct,
+    inverse
+};
+#endif
 
 
+#if defined(EMBLIB_C28X)
 template <controller_logic::enum_type Logic>
+#elif defined(EMBLIB_STM32)
+template <controller_logic Logic>
+#endif
 class abstract_picontroller : private emb::noncopyable {
 protected:
     float _kp;              // proportional gain
@@ -59,11 +70,18 @@ public:
 };
 
 
+template<>
 inline float abstract_picontroller<controller_logic::direct>::_error(float ref, float meas) { return ref - meas; }
+
+template<>
 inline float abstract_picontroller<controller_logic::inverse>::_error(float ref, float meas) { return meas - ref; }
 
 
+#if defined(EMBLIB_C28X)
 template <controller_logic::enum_type Logic>
+#elif defined(EMBLIB_STM32)
+template <controller_logic Logic>
+#endif
 class backcalc_picontroller : public abstract_picontroller<Logic> {
 protected:
     float _kc;	// anti-windup gain
@@ -73,7 +91,7 @@ public:
             , _kc(kc) {
     }
 
-    virtual void update(float ref, float meas) {
+    virtual void update(float ref, float meas) EMB_OVERRIDE {
         float error = abstract_picontroller<Logic>::_error(ref, meas);
         float out = emb::clamp(error * this->_kp + this->_integrator_sum, -FLT_MAX, FLT_MAX);
 
@@ -91,7 +109,11 @@ public:
 };
 
 
+#if defined(EMBLIB_C28X)
 template <controller_logic::enum_type Logic>
+#elif defined(EMBLIB_STM32)
+template <controller_logic Logic>
+#endif
 class clamping_picontroller : public abstract_picontroller<Logic> {
 protected:
     float _error;
@@ -101,7 +123,7 @@ public:
         , _error(0) {
     }
 
-    virtual void update(float ref, float meas) {
+    virtual void update(float ref, float meas) EMB_OVERRIDE {
         float error = abstract_picontroller<Logic>::_error(ref, meas);
         float outp = error * this->_kp;
         float sum_i = (error + _error) * 0.5f * this->_ki * this->_ts + this->_integrator_sum;
@@ -124,7 +146,7 @@ public:
         }
     }
 
-    virtual void reset() {
+    virtual void reset() EMB_OVERRIDE {
         this->_integrator_sum = 0;
         _error = 0;
         this->_out = 0;
