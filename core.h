@@ -37,9 +37,11 @@
 #if defined(EMBLIB_C28X)
 #define EMB_OVERRIDE
 #define EMB_DEFAULT {}
+#define EMB_MAYBE_UNUSED
 #elif defined(EMBLIB_STM32)
 #define EMB_OVERRIDE override
 #define EMB_DEFAULT = default;
+#define EMB_MAYBE_UNUSED [[maybe_unused]] 
 #endif
 
 #if defined(EMBLIB_C28X)

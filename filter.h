@@ -146,19 +146,19 @@ public:
         reset();
     }
 
-    virtual void update(T input_val) {
+    virtual void update(T input_val) EMB_OVERRIDE {
         _out = _out_prev + _smooth_factor * (input_val - _out_prev);
         _out_prev = _out;
     }
 
-    virtual T output() const { return _out; }
+    virtual T output() const EMB_OVERRIDE { return _out; }
 
-    virtual void set_output(T val) {
+    virtual void set_output(T val) EMB_OVERRIDE {
         _out = val;
         _out_prev = val;
     }
 
-    virtual void reset() { set_output(0); }
+    virtual void reset() EMB_OVERRIDE { set_output(0); }
 
     void init(float sampling_period, float time_constant) {
         _sampling_period = sampling_period;
