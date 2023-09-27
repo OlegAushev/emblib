@@ -50,7 +50,7 @@ public:
     }
 
     virtual ~abstract_picontroller() {}
-    virtual void update(float ref, float meas) = 0;
+    virtual void push(float ref, float meas) = 0;
     virtual void reset() {
         _integrator_sum = 0;
         _out = 0;
@@ -91,7 +91,7 @@ public:
             , _kc(kc) {
     }
 
-    virtual void update(float ref, float meas) EMB_OVERRIDE {
+    virtual void push(float ref, float meas) EMB_OVERRIDE {
         float error = abstract_picontroller<Logic>::_error(ref, meas);
         float out = emb::clamp(error * this->_kp + this->_integrator_sum, -FLT_MAX, FLT_MAX);
 
@@ -123,7 +123,7 @@ public:
         , _error(0) {
     }
 
-    virtual void update(float ref, float meas) EMB_OVERRIDE {
+    virtual void push(float ref, float meas) EMB_OVERRIDE {
         float error = abstract_picontroller<Logic>::_error(ref, meas);
         float outp = error * this->_kp;
         float sum_i = (error + _error) * 0.5f * this->_ki * this->_ts + this->_integrator_sum;

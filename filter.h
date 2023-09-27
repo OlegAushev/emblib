@@ -18,7 +18,7 @@ public:
     filter_interface() {}
     virtual ~filter_interface() {}
 
-    virtual void update(T input_val) = 0;
+    virtual void push(T input_val) = 0;
     virtual T output() const = 0;
     virtual void set_output(T val) = 0;
     virtual void reset() = 0;
@@ -58,7 +58,7 @@ public:
         }
     }
 
-    virtual void update(T input_val) EMB_OVERRIDE {
+    virtual void push(T input_val) EMB_OVERRIDE {
         _sum = _sum + input_val - _window[_index];
         _window[_index] = input_val;
         _index = (_index + 1) % _size;
@@ -104,7 +104,7 @@ public:
         reset();
     }
 
-    virtual void update(T input_val) EMB_OVERRIDE {
+    virtual void push(T input_val) EMB_OVERRIDE {
         _window.push(input_val);
         emb::array<T, WindowSize> window_sorted;
         emb::copy(_window.begin(), _window.end(), window_sorted.begin());
@@ -146,7 +146,7 @@ public:
         reset();
     }
 
-    virtual void update(T input_val) EMB_OVERRIDE {
+    virtual void push(T input_val) EMB_OVERRIDE {
         _out = _out_prev + _smooth_factor * (input_val - _out_prev);
         _out_prev = _out;
     }
@@ -199,7 +199,7 @@ public:
         reset();
     }
 
-    virtual void update(T input_val) EMB_OVERRIDE {
+    virtual void push(T input_val) EMB_OVERRIDE {
         _window.push(input_val);
         emb::array<T, WindowSize> window_sorted;
         emb::copy(_window.begin(), _window.end(), window_sorted.begin());
