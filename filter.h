@@ -18,9 +18,9 @@ public:
     filter_interface() {}
     virtual ~filter_interface() {}
 
-    virtual void push(T input_val) = 0;
+    virtual void push(T input_value) = 0;
     virtual T output() const = 0;
-    virtual void set_output(T val) = 0;
+    virtual void set_output(T value) = 0;
     virtual void reset() = 0;
 };
 
@@ -58,20 +58,20 @@ public:
         }
     }
 
-    virtual void push(T input_val) EMB_OVERRIDE {
-        _sum = _sum + input_val - _window[_index];
-        _window[_index] = input_val;
+    virtual void push(T input_value) EMB_OVERRIDE {
+        _sum = _sum + input_value - _window[_index];
+        _window[_index] = input_value;
         _index = (_index + 1) % _size;
     }
 
     virtual T output() const EMB_OVERRIDE { return _sum / _size; }
 
-    virtual void set_output(T val) EMB_OVERRIDE {
+    virtual void set_output(T value) EMB_OVERRIDE {
         for (int i = 0; i < _size; ++i) {
-            _window[i] = val;
+            _window[i] = value;
         }
         _index = 0;
-        _sum = val * _size;
+        _sum = value * _size;
     }
 
     virtual void reset() EMB_OVERRIDE { set_output(0); }
@@ -104,8 +104,8 @@ public:
         reset();
     }
 
-    virtual void push(T input_val) EMB_OVERRIDE {
-        _window.push(input_val);
+    virtual void push(T input_value) EMB_OVERRIDE {
+        _window.push(input_value);
         emb::array<T, WindowSize> window_sorted;
         emb::copy(_window.begin(), _window.end(), window_sorted.begin());
         std::sort(window_sorted.begin(), window_sorted.end());
@@ -114,9 +114,9 @@ public:
 
     virtual T output() const EMB_OVERRIDE { return _out; }
 
-    virtual void set_output(T val) EMB_OVERRIDE {
-        _window.fill(val);
-        _out = val;
+    virtual void set_output(T value) EMB_OVERRIDE {
+        _window.fill(value);
+        _out = value;
     }
 
     virtual void reset() EMB_OVERRIDE { set_output(0); }
@@ -146,16 +146,16 @@ public:
         reset();
     }
 
-    virtual void push(T input_val) EMB_OVERRIDE {
-        _out = _out_prev + _smooth_factor * (input_val - _out_prev);
+    virtual void push(T input_value) EMB_OVERRIDE {
+        _out = _out_prev + _smooth_factor * (input_value - _out_prev);
         _out_prev = _out;
     }
 
     virtual T output() const EMB_OVERRIDE { return _out; }
 
-    virtual void set_output(T val) EMB_OVERRIDE {
-        _out = val;
-        _out_prev = val;
+    virtual void set_output(T value) EMB_OVERRIDE {
+        _out = value;
+        _out_prev = value;
     }
 
     virtual void reset() EMB_OVERRIDE { set_output(0); }
@@ -166,8 +166,8 @@ public:
         _smooth_factor = emb::clamp(sampling_period/time_constant, 0.f, 1.f);
     }
 
-    void set_sampling_period(float val) {
-        _sampling_period = val;
+    void set_sampling_period(float value) {
+        _sampling_period = value;
         _smooth_factor = emb::clamp(_sampling_period/_time_constant, 0.f, 1.f);
     }
 };
@@ -199,23 +199,23 @@ public:
         reset();
     }
 
-    virtual void push(T input_val) EMB_OVERRIDE {
-        _window.push(input_val);
+    virtual void push(T input_value) EMB_OVERRIDE {
+        _window.push(input_value);
         emb::array<T, WindowSize> window_sorted;
         emb::copy(_window.begin(), _window.end(), window_sorted.begin());
         std::sort(window_sorted.begin(), window_sorted.end());
-        input_val = window_sorted[WindowSize/2];
+        input_value = window_sorted[WindowSize/2];
 
-        _out = _out_prev + _smooth_factor * (input_val - _out_prev);
+        _out = _out_prev + _smooth_factor * (input_value - _out_prev);
         _out_prev = _out;
     }
 
     virtual T output() const EMB_OVERRIDE { return _out; }
 
-    virtual void set_output(T val) EMB_OVERRIDE {
-        _window.fill(val);
-        _out = val;
-        _out_prev = val;
+    virtual void set_output(T value) EMB_OVERRIDE {
+        _window.fill(value);
+        _out = value;
+        _out_prev = value;
     }
 
     virtual void reset() EMB_OVERRIDE { set_output(0); }
@@ -226,8 +226,8 @@ public:
         _smooth_factor = emb::clamp(sampling_period/time_constant, 0.f, 1.f);
     }
 
-    void set_sampling_period(float val) {
-        _sampling_period = val;
+    void set_sampling_period(float value) {
+        _sampling_period = value;
         _smooth_factor = emb::clamp(_sampling_period/_time_constant, 0.f, 1.f);
     }
 };

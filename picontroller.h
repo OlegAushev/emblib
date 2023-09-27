@@ -56,17 +56,17 @@ public:
         _out = 0;
     }
     float output() const { return _out; }
-    void set_output_min(float val) { _out_min = val; }
-    void set_output_max(float val) { _out_max = val; }
+    void set_output_min(float value) { _out_min = value; }
+    void set_output_max(float value) { _out_max = value; }
     float output_min() const { return _out_min; }
     float output_max() const { return _out_max; }
 
-    void set_kp(float val) { _kp = val; }
-    void set_ki(float val) { _ki = val; }
+    void set_kp(float value) { _kp = value; }
+    void set_ki(float value) { _ki = value; }
     float kp() const { return _kp; }
     float ki() const { return _ki; }
     float sum() const { return _integrator_sum; }
-    void set_sampling_period(float val) { _ts = val; }
+    void set_sampling_period(float value) { _ts = value; }
 };
 
 

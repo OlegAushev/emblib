@@ -2,9 +2,9 @@
 
 
 #include <emblib/core.h>
+#include <emblib/algorithm.h>
 
 #if defined(EMBLIB_C28X)
-#include <emblib/algorithm.h>
 #include <motorcontrol/math.h>
 #include <math.h>
 #include <float.h>
@@ -114,17 +114,17 @@ private:
     T _lo;
     T _hi;
 public:
-    range(const T& val1, const T& val2) {
-        if (val1 < val2) {
-            _lo = val1;
-            _hi = val2;
+    range(const T& value1, const T& value2) {
+        if (value1 < value2) {
+            _lo = value1;
+            _hi = value2;
         } else {
-            _lo = val2;
-            _hi = val1;
+            _lo = value2;
+            _hi = value1;
         }
     }
 
-    bool contains(const T& val) const { return (_lo <= val) && (val <= _hi); }
+    bool contains(const T& value) const { return (_lo <= value) && (value <= _hi); }
 
     const T& lo() const { return _lo; }
     void set_lo(const T& value) {
@@ -151,9 +151,9 @@ private:
 public:
     range<T> output_range;
 
-    integrator(const Time& ts_, const range<T>& output_range_, const T& initval_)
+    integrator(const Time& ts_, const range<T>& output_range_, const T& initvalue_)
             : _ts(ts_)
-            , _initval(initval_)
+            , _initval(initvalue_)
             , output_range(output_range_) {
         reset();
     }
@@ -170,6 +170,8 @@ public:
     void reset() {
         _sum = clamp(_initval, output_range.lo(), output_range.hi());
     }
+
+    void set_sampling_period(float value) { _ts = value; }
 };
 
 
