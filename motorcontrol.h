@@ -78,8 +78,13 @@ inline emb::vec3 calculate_svpwm(float voltage_mag, float voltage_angle, float v
     float theta = voltage_angle - float(sector) * numbers::pi_over_3;
 
     // base vector times calculation
+#if defined(EMBLIB_C28X)
     float tb1 = numbers::sqrt_3 * (voltage_mag / voltage_dc) * sinf(numbers::pi_over_3 - theta);
     float tb2 = numbers::sqrt_3 * (voltage_mag / voltage_dc) * sinf(theta);
+#elif defined(EMBLIB_STM32)
+    float tb1 = numbers::sqrt_3 * (voltage_mag / voltage_dc) * arm_sin_f32(numbers::pi_over_3 - theta);
+    float tb2 = numbers::sqrt_3 * (voltage_mag / voltage_dc) * arm_sin_f32(theta);
+#endif
     float tb0 = (1.f - tb1 - tb2) / 2.f;
 
     emb::vec3 pulse_durations;
