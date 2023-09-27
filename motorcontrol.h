@@ -2,16 +2,27 @@
 
 
 #include <emblib/core.h>
-#include <emblib/array.h>
 #include <emblib/math.h>
 
-#include "motorcontrol/math.h"
-#include "motorcontrol/clarke.h"
-#include "motorcontrol/park.h"
-#include "motorcontrol/ipark.h"
+#if defined(EMBLIB_C28X)
+#include <emblib/array.h>
+#include <motorcontrol/math.h>
+#include <motorcontrol/clarke.h>
+#include <motorcontrol/park.h>
+#include <motorcontrol/ipark.h>
+#elif defined(EMBLIB_STM32)
+#include <array>
+#endif
 
 
 namespace emb {
+
+
+#if defined(EMBLIB_C28X)
+typedef emb::array<float, 3> vec3;
+#elif defined(EMBLIB_STM32)
+typedef std::array<float, 3> vec3;
+#endif
 
 
 namespace traits {
@@ -59,7 +70,7 @@ inline float to_radps(float speed_rpm) { return numbers::two_pi * speed_rpm / 60
 inline float to_rpm(float speed_radps, int pole_pairs) { return 60 * speed_radps / (numbers::two_pi * pole_pairs); }
 
 
-inline emb::array<float, 3> calculate_svpwm(float voltage_mag, float voltage_angle, float voltage_dc) {
+inline emb::vec3 calculate_svpwm(float voltage_mag, float voltage_angle, float voltage_dc) {
     voltage_angle = rem_2pi(voltage_angle);
     voltage_mag = clamp<float>(voltage_mag, 0, voltage_dc / numbers::sqrt_3);
 
@@ -71,7 +82,7 @@ inline emb::array<float, 3> calculate_svpwm(float voltage_mag, float voltage_ang
     float tb2 = numbers::sqrt_3 * (voltage_mag / voltage_dc) * sinf(theta);
     float tb0 = (1.f - tb1 - tb2) / 2.f;
 
-    emb::array<float, 3> pulse_durations;
+    emb::vec3 pulse_durations;
     switch (sector) {
     case 0:
         pulse_durations[0] = tb1 + tb2 + tb0;
@@ -108,7 +119,7 @@ inline emb::array<float, 3> calculate_svpwm(float voltage_mag, float voltage_ang
     }
 
     for(uint32_t i = 0; i < 3; ++i) {
-        pulse_durations[i] = clamp<float>(pulse_durations[i], 0.f, 1.f);
+        pulse_durations[i] = emb::clamp<float>(pulse_durations[i], 0.f, 1.f);
     }
     return pulse_durations;
 }
@@ -131,37 +142,30 @@ struct alphabeta_pair {
 
 
 inline dq_pair park_transform(float alpha, float beta, float sine, float cosine) {
-    PARK parkStruct = {
-        .Alpha = alpha,
-        .Beta = beta,
-        .Sine = sine,
-        .Cosine = cosine
-    };
-    runPark(&parkStruct);
-    return dq_pair(parkStruct.Ds, parkStruct.Qs);
+    float d = (alpha * cosine) + (beta * sine);
+    float q = (beta * cosine) - (alpha * sine);
+    return dq_pair(d, q);
 }
 
 
 inline alphabeta_pair invpark_transform(float d, float q, float sine, float cosine) {
-    IPARK iparkStruct = {
-        .Ds = d,
-        .Qs = q,
-        .Sine = sine,
-        .Cosine = cosine
-    };
-    runIPark(&iparkStruct);
-    return alphabeta_pair(iparkStruct.Alpha, iparkStruct.Beta);
+    float alpha = (d * cosine) - (q * sine);
+    float beta = (q * cosine) + (d * sine);
+    return alphabeta_pair(alpha, beta);
 }
 
 
 inline alphabeta_pair clarke_transform(float a, float b, float c) {
-    CLARKE clarkeStruct = {
-        .As = a,
-        .Bs = b,
-        .Cs = c
-    };
-    runClarke1(&clarkeStruct);
-    return alphabeta_pair(clarkeStruct.Alpha, clarkeStruct.Beta);
+    float alpha = a;
+    float beta = (b - c) * numbers::inv_sqrt3;
+    return alphabeta_pair(alpha, beta);
+}
+
+
+inline alphabeta_pair clarke_transform(float a, float b) {
+    float alpha = a;
+    float beta = (a + 2*b) * numbers::inv_sqrt3;
+    return alphabeta_pair(alpha, beta);
 }
 
 

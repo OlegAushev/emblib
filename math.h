@@ -36,6 +36,8 @@ const float two_pi = MATH_TWO_PI;
 const float sqrt_2 = sqrtf(2.f);
 const float sqrt_3 = sqrtf(3.f);
 
+const float inv_sqrt3 = 0.57735026918963;
+
 
 #elif defined(EMBLIB_STM32)
 
@@ -49,6 +51,8 @@ inline constexpr float two_pi = 2 * pi;
 
 inline float sqrt_2 = std::sqrt(2.f);
 inline float sqrt_3 = std::sqrt(3.f);
+
+inline constexpr float inv_sqrt3 = 0.57735026918963;
 
 
 #endif
