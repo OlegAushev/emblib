@@ -53,21 +53,21 @@ public:
     }
 
     float to_radps() const { return _radps_elec; }
-    float to_rpm() const { return 60 * _radps_elec / (numbers::two_pi * pole_pairs); }
-    float to_radps_mech() const { return _radps_elec / pole_pairs; }
+    float to_rpm() const { return 60 * _radps_elec / (numbers::two_pi * float(pole_pairs)); }
+    float to_radps_mech() const { return _radps_elec / float(pole_pairs); }
 
     void from_radps(float value) { _radps_elec = value; }
-    void from_rpm(float value) { _radps_elec = numbers::two_pi * pole_pairs * value / 60; }
+    void from_rpm(float value) { _radps_elec = numbers::two_pi * float(pole_pairs) * value / 60; }
 };
 
 
-inline float to_radps(float speed_rpm, int pole_pairs) { return numbers::two_pi * pole_pairs * speed_rpm / 60; }
+inline float to_radps(float speed_rpm, int pole_pairs) { return numbers::two_pi * float(pole_pairs) * speed_rpm / 60; }
 
 
 inline float to_radps(float speed_rpm) { return numbers::two_pi * speed_rpm / 60; }
 
 
-inline float to_rpm(float speed_radps, int pole_pairs) { return 60 * speed_radps / (numbers::two_pi * pole_pairs); }
+inline float to_rpm(float speed_radps, int pole_pairs) { return 60 * speed_radps / (numbers::two_pi * float(pole_pairs)); }
 
 
 inline emb::vec3 calculate_svpwm(float voltage_mag, float voltage_angle, float voltage_dc) {
@@ -158,6 +158,13 @@ inline alphabeta_pair invpark_transform(float d, float q, float sine, float cosi
 inline alphabeta_pair clarke_transform(float a, float b, float c) {
     float alpha = a;
     float beta = (b - c) * numbers::inv_sqrt3;
+    return alphabeta_pair(alpha, beta);
+}
+
+
+inline alphabeta_pair clarke_transform(const emb::vec3& vec3_) {
+    float alpha = vec3_[0];
+    float beta = (vec3_[1] - vec3_[2]) * numbers::inv_sqrt3;
     return alphabeta_pair(alpha, beta);
 }
 
