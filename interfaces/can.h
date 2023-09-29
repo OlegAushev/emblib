@@ -1,7 +1,16 @@
 #pragma once
 
 
-#if defined(EMBLIB_STM32)
+#if defined(EMBLIB_C28X)
+
+
+#include <emblib/array.h>
+
+
+typedef emb::array<uint8_t, 8> can_payload;
+
+
+#elif defined(EMBLIB_STM32)
 
 
 #include <array>
