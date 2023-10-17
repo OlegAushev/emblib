@@ -3,6 +3,7 @@
 
 #include <emblib/core.h>
 #include <emblib/pair.h>
+#include <algorithm>
 
 
 namespace emb {
@@ -166,6 +167,15 @@ inline pair<It, It> minmax_element(It first, It last) {
         }
     }
     return pair<It, It>(min, max);
+}
+
+
+template <class T>
+inline T median_of_three(T a, T b, T c) {
+    if (a > c) { std::swap(a, c); }
+    if (a > b) { std::swap(a, b); }
+    if (b > c) { std::swap(b, c); }
+    return b;
 }
 
 
