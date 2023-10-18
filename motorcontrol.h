@@ -19,6 +19,21 @@ namespace emb {
 
 
 #if defined(EMBLIB_C28X)
+SCOPED_ENUM_UT_DECLARE_BEGIN(phase3, uint32_t) {
+    a,
+    b,
+    c
+} SCOPED_ENUM_DECLARE_END(phase3)
+#elif defined(EMBLIB_STM32)
+enum class phase3 {
+    a,
+    b,
+    c
+};
+#endif
+
+
+#if defined(EMBLIB_C28X)
 typedef emb::array<float, 3> vec3;
 #elif defined(EMBLIB_STM32)
 typedef std::array<float, 3> vec3;
