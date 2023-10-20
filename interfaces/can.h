@@ -23,7 +23,7 @@ using can_id = uint32_t;
 
 struct can_frame {
     can_id id;
-    unsigned int len;
+    uint8_t len;
     can_payload payload;
 };
 
