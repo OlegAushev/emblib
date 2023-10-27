@@ -6,7 +6,7 @@ void emb::tests::filter_test() {
     /* MovingAvgFilter */
     emb::movavg_filter<int, 5> mvavg_filter_i16;
     for (int i = 1; i <= 5; ++i) {
-        mvavg_filter_i16.update(i);
+        mvavg_filter_i16.push(i);
     }
     EMB_ASSERT_EQUAL(mvavg_filter_i16.output(), 3);
     mvavg_filter_i16.reset();
@@ -20,7 +20,7 @@ void emb::tests::filter_test() {
     emb::array<float, 10> filter_array;
     emb::movavg_filter<float, 10> mvavg_filter_f32(filter_array);
     for (int i = 0; i < mvavg_filter_f32.size(); ++i) {
-        mvavg_filter_f32.update(emb::numbers::pi * (1 + (i % 2)));
+        mvavg_filter_f32.push(emb::numbers::pi * (1 + (i % 2)));
     }
     EMB_ASSERT_EQUAL(mvavg_filter_f32.output(), emb::numbers::pi * 1.5f);
     mvavg_filter_f32.set_output(emb::numbers::pi);
@@ -28,17 +28,17 @@ void emb::tests::filter_test() {
 
     /* MedianFilter */
     emb::med_filter<int, 5> med_filter_1;
-    med_filter_1.update(-10);
+    med_filter_1.push(-10);
     EMB_ASSERT_EQUAL(med_filter_1.output(), 0);
-    med_filter_1.update(10);
+    med_filter_1.push(10);
     EMB_ASSERT_EQUAL(med_filter_1.output(), 0);
-    med_filter_1.update(100);
-    med_filter_1.update(100);
-    med_filter_1.update(5);
+    med_filter_1.push(100);
+    med_filter_1.push(100);
+    med_filter_1.push(5);
     EMB_ASSERT_EQUAL(med_filter_1.output(), 10);
-    med_filter_1.update(20);
+    med_filter_1.push(20);
     EMB_ASSERT_EQUAL(med_filter_1.output(), 20);
-    med_filter_1.update(105);
+    med_filter_1.push(105);
     EMB_ASSERT_EQUAL(med_filter_1.output(), 100);
     med_filter_1.reset();
     EMB_ASSERT_EQUAL(med_filter_1.output(), 0);
@@ -48,21 +48,21 @@ void emb::tests::filter_test() {
     /* ExponentialMedianFilter */
     emb::expmed_filter<float, 3> expmed_filter_1;
     expmed_filter_1.init(0.5, 1);
-    expmed_filter_1.update(16);
+    expmed_filter_1.push(16);
     EMB_ASSERT_EQUAL(expmed_filter_1.output(), 0);
-    expmed_filter_1.update(8);
+    expmed_filter_1.push(8);
     EMB_ASSERT_EQUAL(expmed_filter_1.output(), 4);
-    expmed_filter_1.update(32);
+    expmed_filter_1.push(32);
     EMB_ASSERT_EQUAL(expmed_filter_1.output(), 10);
-    expmed_filter_1.update(8);
+    expmed_filter_1.push(8);
     EMB_ASSERT_EQUAL(expmed_filter_1.output(), 9);
     expmed_filter_1.init(1, 1);
-    expmed_filter_1.update(19);
+    expmed_filter_1.push(19);
     EMB_ASSERT_EQUAL(expmed_filter_1.output(), 19);
     expmed_filter_1.set_output(10);
     EMB_ASSERT_EQUAL(expmed_filter_1.output(), 10);
-    expmed_filter_1.update(5);
-    expmed_filter_1.update(0);
+    expmed_filter_1.push(5);
+    expmed_filter_1.push(0);
     EMB_ASSERT_EQUAL(expmed_filter_1.output(), 5);
     expmed_filter_1.reset();
     EMB_ASSERT_EQUAL(expmed_filter_1.output(), 0);
