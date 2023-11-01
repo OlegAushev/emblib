@@ -24,10 +24,10 @@ public:
     virtual bool has_rx_error() const = 0;
 
     virtual int getchar(char& ch) = 0;
-    virtual int recv(char* buf, int buf_len) = 0;
+    virtual int recv(char* buf, size_t buf_len) = 0;
 
     virtual int putchar(char ch) = 0;
-    virtual int send(const char* buf, uint16_t len) = 0;
+    virtual int send(const char* buf, size_t len) = 0;
 
     virtual void register_rx_interrupt_handler(void (*handler)(void)) = 0;
     virtual void enable_rx_interrupts() = 0;
@@ -51,10 +51,10 @@ public:
     //virtual bool hasRxError() const = 0;
 
     virtual int getchar(char& ch) = 0;
-    virtual int recv(char* buf, int len) = 0;
+    virtual int recv(char* buf, size_t len) = 0;
 
     virtual int putchar(char ch) = 0;
-    virtual int send(const char* buf, int len) = 0;
+    virtual int send(const char* buf, size_t len) = 0;
 
     //virtual void registerRxInterruptHandler(void (*handler)(void)) = 0;
     //virtual void enableRxInterrupts() = 0;
