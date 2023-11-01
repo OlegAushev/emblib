@@ -48,7 +48,7 @@ public:
     virtual ~InputInterface() EMB_DEFAULT
 
     virtual State read() const = 0;
-    virtual int read_level() const = 0;
+    virtual unsigned int read_level() const = 0;
 };
 
 
@@ -61,8 +61,8 @@ public:
     virtual void set(State state = State::active) = 0;
     virtual void reset() = 0;
     virtual void toggle() = 0;
-    virtual int read_level() const = 0;
-    virtual void set_level(int level) = 0;
+    virtual unsigned int read_level() const = 0;
+    virtual void set_level(unsigned int level) = 0;
 };
 
 

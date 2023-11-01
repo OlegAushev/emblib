@@ -38,7 +38,7 @@ public:
 class Storage {
 private:
     DriverInterface& _driver;
-    uint32_t (*_calc_crc32)(const uint8_t*, int);
+    uint32_t (*_calc_crc32)(const uint8_t*, size_t);
 
     const size_t available_page_bytes;
     const size_t available_page_count;
@@ -53,7 +53,7 @@ private:
         uint32_t fatal;
     } _errors;
 public:
-    Storage(DriverInterface& driver_, uint32_t (*calc_crc32_func_)(const uint8_t*, int));
+    Storage(DriverInterface& driver_, uint32_t (*calc_crc32_func_)(const uint8_t*, size_t));
     Error read(size_t page, uint8_t* buf, size_t len, emb::chrono::milliseconds timeout);
     Error write(size_t page, const uint8_t* buf, size_t len, emb::chrono::milliseconds timeout);
 

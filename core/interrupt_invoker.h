@@ -56,9 +56,9 @@ private:
     static bool _initialized[Size];
     static bool _constructed;
 protected:
-    interrupt_invoker_array(T* self, size_t instance_num) {
-        assert(instance_num < Size);
-        assert(!_initialized[instance_num]);
+    interrupt_invoker_array(T* self, size_t instance_idx) {
+        assert(instance_idx < Size);
+        assert(!_initialized[instance_idx]);
         if (!_constructed) {
             for (size_t i = 0; i < Size; ++i) {
                 _instance[i] = static_cast<T*>(NULL);
@@ -67,21 +67,21 @@ protected:
             _constructed = true;
         }
 
-        _instance[instance_num] = self;
-        _initialized[instance_num] = true;
+        _instance[instance_idx] = self;
+        _initialized[instance_idx] = true;
     }
 public:
-    static T* instance(size_t instance_num) {
+    static T* instance(size_t instance_idx) {
         assert(_constructed);
-        assert(instance_num < Size);
-        assert(_initialized[instance_num]);
-        return _instance[instance_num];
+        assert(instance_idx < Size);
+        assert(_initialized[instance_idx]);
+        return _instance[instance_idx];
     }
 
-    static bool initialized(size_t instance_num) {
-        assert(instance_num < Size);
+    static bool initialized(size_t instance_idx) {
+        assert(instance_idx < Size);
         if (!_constructed) { return false; }
-        return _initialized[instance_num];
+        return _initialized[instance_idx];
     }
 };
 
@@ -130,9 +130,9 @@ private:
     static inline bool _initialized[Size];
     static inline bool _constructed = false;
 protected:
-    interrupt_invoker_array(T* self, size_t instance_num) {
-        assert(instance_num < Size);
-        assert(!_initialized[instance_num]);
+    interrupt_invoker_array(T* self, size_t instance_idx) {
+        assert(instance_idx < Size);
+        assert(!_initialized[instance_idx]);
         if (!_constructed) {
             for (size_t i = 0; i < Size; ++i) {
                 _instance[i] = nullptr;
@@ -141,21 +141,21 @@ protected:
             _constructed = true;
         }
 
-        _instance[instance_num] = self;
-        _initialized[instance_num] = true;
+        _instance[instance_idx] = self;
+        _initialized[instance_idx] = true;
     }
 public:
-    static T* instance(size_t instance_num) {
+    static T* instance(size_t instance_idx) {
         assert(_constructed);
-        assert(instance_num < Size);
-        assert(_initialized[instance_num]);
-        return _instance[instance_num];
+        assert(instance_idx < Size);
+        assert(_initialized[instance_idx]);
+        return _instance[instance_idx];
     }
 
-    static bool initialized(size_t instance_num) {
-        assert(instance_num < Size);
+    static bool initialized(size_t instance_idx) {
+        assert(instance_idx < Size);
         if (!_constructed) return false;
-        return _initialized[instance_num];
+        return _initialized[instance_idx];
     }
 };
 

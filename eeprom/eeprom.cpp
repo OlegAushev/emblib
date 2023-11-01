@@ -9,7 +9,7 @@ namespace eeprom {
 #if defined(EMBLIB_C28X)
 
 
-Storage::Storage(DriverInterface& driver_, uint32_t (*calc_crc32_func_)(const uint8_t*, int))
+Storage::Storage(DriverInterface& driver_, uint32_t (*calc_crc32_func_)(const uint8_t*, size_t))
         : _driver(driver_)
         , _calc_crc32(calc_crc32_func_)
         , available_page_bytes(_driver.page_bytes()-4)
