@@ -7,19 +7,19 @@
 namespace emb {
 
 
-template <typename T, int Capacity>
+template <typename T, size_t Capacity>
 class stack {
 private:
     T _data[Capacity];
-    int _size;
+    size_t _size;
 public:
     stack() : _size(0) {}
 
     void clear() { _size = 0; }
     bool empty() const { return _size == 0; }
     bool full() const { return _size == Capacity; }
-    int capacity() const { return Capacity; }
-    int size() const { return _size; }
+    size_t capacity() const { return Capacity; }
+    size_t size() const { return _size; }
 
     void push(const T& value) {
         assert(!full());

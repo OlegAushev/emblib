@@ -7,13 +7,13 @@
 namespace emb {
 
 
-template <typename T, int Capacity>
+template <typename T, size_t Capacity>
 class queue {
 private:
     T _data[Capacity];
-    int _front;
-    int _back;
-    int _size;
+    size_t _front;
+    size_t _back;
+    size_t _size;
 public:
     queue()
             : _front(0)
@@ -29,8 +29,8 @@ public:
 
     bool empty() const { return _size == 0; }
     bool full() const { return _size == Capacity; }
-    int capacity() const { return Capacity; }
-    int size() const { return _size; }
+    size_t capacity() const { return Capacity; }
+    size_t size() const { return _size; }
 
     void push(const T& value) {
         assert(!full());

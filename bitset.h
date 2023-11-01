@@ -71,7 +71,7 @@ public:
 
     bool all() const {
         // int index is used to suppress "pointless comparison of unsigned integer with zero" warning
-        for (int i = 0; i < _byte_count-1; ++i) {
+        for (size_t i = 0; i < _byte_count-1; ++i) {
             if (_data[i] != 0xFFFF) { return false; }
         }
 

@@ -49,18 +49,18 @@ template <class T>
 bool interrupt_invoker<T>::_initialized = false;
 
 
-template <class T, int Size>
+template <class T, size_t Size>
 class interrupt_invoker_array {
 private:
     static T* _instance[Size];
     static bool _initialized[Size];
     static bool _constructed;
 protected:
-    interrupt_invoker_array(T* self, int instance_num) {
+    interrupt_invoker_array(T* self, size_t instance_num) {
         assert(instance_num < Size);
         assert(!_initialized[instance_num]);
         if (!_constructed) {
-            for (int i = 0; i < Size; ++i) {
+            for (size_t i = 0; i < Size; ++i) {
                 _instance[i] = static_cast<T*>(NULL);
                 _initialized[i] = false;
             }
@@ -71,25 +71,25 @@ protected:
         _initialized[instance_num] = true;
     }
 public:
-    static T* instance(int instance_num) {
+    static T* instance(size_t instance_num) {
         assert(_constructed);
         assert(instance_num < Size);
         assert(_initialized[instance_num]);
         return _instance[instance_num];
     }
 
-    static bool initialized(int instance_num) {
+    static bool initialized(size_t instance_num) {
         assert(instance_num < Size);
         if (!_constructed) { return false; }
         return _initialized[instance_num];
     }
 };
 
-template <class T, int Size>
+template <class T, size_t Size>
 T* interrupt_invoker_array<T, Size>::_instance[Size];
-template <class T, int Size>
+template <class T, size_t Size>
 bool interrupt_invoker_array<T, Size>::_initialized[Size];
-template <class T, int Size>
+template <class T, size_t Size>
 bool interrupt_invoker_array<T, Size>::_constructed = false;
 
 
@@ -122,7 +122,7 @@ public:
 };
 
 
-template <class T, int Size>
+template <class T, size_t Size>
 class interrupt_invoker_array
 {
 private:
@@ -130,11 +130,11 @@ private:
     static inline bool _initialized[Size];
     static inline bool _constructed = false;
 protected:
-    interrupt_invoker_array(T* self, int instance_num) {
+    interrupt_invoker_array(T* self, size_t instance_num) {
         assert(instance_num < Size);
         assert(!_initialized[instance_num]);
         if (!_constructed) {
-            for (int i = 0; i < Size; ++i) {
+            for (size_t i = 0; i < Size; ++i) {
                 _instance[i] = nullptr;
                 _initialized[i] = false;
             }
@@ -145,14 +145,14 @@ protected:
         _initialized[instance_num] = true;
     }
 public:
-    static T* instance(int instance_num) {
+    static T* instance(size_t instance_num) {
         assert(_constructed);
         assert(instance_num < Size);
         assert(_initialized[instance_num]);
         return _instance[instance_num];
     }
 
-    static bool initialized(int instance_num) {
+    static bool initialized(size_t instance_num) {
         assert(instance_num < Size);
         if (!_constructed) return false;
         return _initialized[instance_num];

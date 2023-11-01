@@ -8,20 +8,20 @@
 namespace emb {
 
 
-template <typename T, int Capacity>
+template <typename T, size_t Capacity>
 class static_vector {
 private:
     T _data[Capacity];
-    int _size;
+    size_t _size;
 public:
     static_vector() : _size(0) {}
 
-    explicit static_vector(int size) : _size(size) {
+    explicit static_vector(size_t size) : _size(size) {
         assert(size <= Capacity);
         emb::fill(begin(), end(), T());
     }
 
-    static_vector(int size, const T& value) : _size(size) {
+    static_vector(size_t size, const T& value) : _size(size) {
         assert(size <= Capacity);
         emb::fill(begin(), end(), value);
     }
@@ -33,12 +33,12 @@ public:
         emb::copy(first, last, begin());
     }
 public:
-    int capacity() const { return Capacity; }
-    int size() const { return _size; }
+    size_t capacity() const { return Capacity; }
+    size_t size() const { return _size; }
     bool empty() const { return _size == 0; }
     bool full() const { return _size == Capacity; }
 
-    T& operator[] (int pos) {
+    T& operator[] (size_t pos) {
 #ifdef NDEBUG
         return _data[pos];
 #else
@@ -46,7 +46,7 @@ public:
 #endif
     }
 
-    const T& operator[](int pos) const {
+    const T& operator[](size_t pos) const {
 #ifdef NDEBUG
         return _data[pos];
 #else
@@ -54,12 +54,12 @@ public:
 #endif
     }
 
-    T& at(int pos) {
-        assert((pos >= 0) && (pos < _size));
+    T& at(size_t pos) {
+        assert(pos < _size);
         return _data[pos];
     }
 
-    const T& at(int pos) const {
+    const T& at(size_t pos) const {
         assert((pos >= 0) && (pos < _size));
         return _data[pos];
     }
@@ -92,7 +92,7 @@ public:
         return _data[_size - 1];
     }
 public:
-    void resize(int size) {
+    void resize(size_t size) {
         assert(size <= Capacity);
         if (size > _size) {
             emb::fill(_data + _size, _data + size, T());
@@ -100,7 +100,7 @@ public:
         _size = size;
     }
 
-    void resize(int size, const T& value) {
+    void resize(size_t size, const T& value) {
         assert(size <= Capacity);
         if (size > _size) {
             emb::fill(_data + _size, _data + size, value);
@@ -132,12 +132,12 @@ public:
         ++_size;
     }
 
-    void insert(T* pos, int count, const T& value) {
+    void insert(T* pos, size_t count, const T& value) {
         assert((_size + count) <= Capacity);
         assert(pos <= end());
 
         static_vector<T, Capacity> buf(pos, end());
-        for (int i = 0; i < count; ++i) {
+        for (size_t i = 0; i < count; ++i) {
             *pos++ = value;
         }
         emb::copy(buf.begin(), buf.end(), pos);

@@ -9,11 +9,11 @@
 
 class TestingEepromDriver : public emb::eeprom::DriverInterface {
 private:
-    static const int _page_bytes = 64;
-    static const int _page_count = 8;
+    static const size_t _page_bytes = 64;
+    static const size_t _page_count = 8;
     static uint16_t _data[_page_count][_page_bytes/2];
 public:
-    virtual emb::eeprom::Error read(uint16_t page, uint16_t addr, uint8_t* buf, int len, emb::chrono::milliseconds timeout) {
+    virtual emb::eeprom::Error read(size_t page, size_t addr, uint8_t* buf, size_t len, emb::chrono::milliseconds timeout) {
         for (int i = 0; i < len; ++i) {
             if (((addr + i) % 2) == 0) {
                 buf[i] = _data[page][(addr + i)/2] & 0x00FF;
@@ -24,7 +24,7 @@ public:
         return emb::eeprom::Error::none;
     }
 
-    virtual emb::eeprom::Error write(uint16_t page, uint16_t addr, const uint8_t* buf, int len, emb::chrono::milliseconds timeout) {
+    virtual emb::eeprom::Error write(size_t page, size_t addr, const uint8_t* buf, size_t len, emb::chrono::milliseconds timeout) {
         for (int i = 0; i < len; ++i) {
             if (((addr + i) % 2) == 0) {
                 _data[page][(addr + i)/2] = (_data[page][(addr + i)/2] & 0xFF00) | buf[i];
@@ -35,8 +35,8 @@ public:
         return emb::eeprom::Error::none;
     }
 
-    virtual int page_bytes() const { return _page_bytes; }
-    virtual int page_count() const { return _page_count; }
+    virtual size_t page_bytes() const { return _page_bytes; }
+    virtual size_t page_count() const { return _page_count; }
 };
 
 

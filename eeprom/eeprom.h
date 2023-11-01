@@ -28,10 +28,10 @@ SCOPED_ENUM_DECLARE_BEGIN(Error) {
 
 class DriverInterface {
 public:
-    virtual Error read(uint16_t page, uint16_t offset, uint8_t* buf, int len, emb::chrono::milliseconds timeout) = 0;
-    virtual Error write(uint16_t page, uint16_t offset, const uint8_t* buf, int len, emb::chrono::milliseconds timeout) = 0;
-    virtual int page_bytes() const = 0;
-    virtual int page_count() const = 0;
+    virtual Error read(size_t page, size_t offset, uint8_t* buf, size_t len, emb::chrono::milliseconds timeout) = 0;
+    virtual Error write(size_t page, size_t offset, const uint8_t* buf, size_t len, emb::chrono::milliseconds timeout) = 0;
+    virtual size_t page_bytes() const = 0;
+    virtual size_t page_count() const = 0;
 };
 
 
@@ -40,8 +40,8 @@ private:
     DriverInterface& _driver;
     uint32_t (*_calc_crc32)(const uint8_t*, int);
 
-    const int available_page_bytes;
-    const int available_page_count;
+    const size_t available_page_bytes;
+    const size_t available_page_count;
 
     struct {
         uint32_t read;
@@ -54,11 +54,11 @@ private:
     } _errors;
 public:
     Storage(DriverInterface& driver_, uint32_t (*calc_crc32_func_)(const uint8_t*, int));
-    Error read(uint16_t page, uint8_t* buf, int len, emb::chrono::milliseconds timeout);
-    Error write(uint16_t page, const uint8_t* buf, int len, emb::chrono::milliseconds timeout);
+    Error read(size_t page, uint8_t* buf, size_t len, emb::chrono::milliseconds timeout);
+    Error write(size_t page, const uint8_t* buf, size_t len, emb::chrono::milliseconds timeout);
 
     template <typename T>
-    Error read(uint16_t page, T& data, emb::chrono::milliseconds timeout) {
+    Error read(size_t page, T& data, emb::chrono::milliseconds timeout) {
         uint8_t data_bytes[2*sizeof(T)];
         Error error = read(page, data_bytes, 2*sizeof(T), timeout);
         emb::c28x::from_bytes<T>(data, data_bytes);
@@ -66,7 +66,7 @@ public:
     }
 
     template <typename T>
-    Error write(uint16_t page, const T& data, emb::chrono::milliseconds timeout) {
+    Error write(size_t page, const T& data, emb::chrono::milliseconds timeout) {
         uint8_t data_bytes[2*sizeof(T)];
         emb::c28x::to_bytes<T>(data_bytes, data);
         return write(page, data_bytes, 2*sizeof(T), timeout);

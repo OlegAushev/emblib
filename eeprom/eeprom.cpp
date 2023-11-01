@@ -24,7 +24,7 @@ Storage::Storage(DriverInterface& driver_, uint32_t (*calc_crc32_func_)(const ui
 }
 
 
-Error Storage::write(uint16_t page, const uint8_t* buf, int len, emb::chrono::milliseconds timeout) {
+Error Storage::write(size_t page, const uint8_t* buf, size_t len, emb::chrono::milliseconds timeout) {
     assert(page < available_page_count);
     assert(len < available_page_bytes);
 
@@ -64,7 +64,7 @@ write_end:
 }
 
 
-Error Storage::read(uint16_t page, uint8_t* buf, int len, emb::chrono::milliseconds timeout) {
+Error Storage::read(size_t page, uint8_t* buf, size_t len, emb::chrono::milliseconds timeout) {
     assert(page < available_page_count);
     assert(len < available_page_bytes);
 
