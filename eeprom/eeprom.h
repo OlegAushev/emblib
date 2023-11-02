@@ -2,7 +2,12 @@
 
 
 #include "../core.h"
+#if defined(EMBLIB_C28X)
 #include "../chrono.h"
+#else
+#include <chrono>
+#endif
+#include <cstring>
 
 
 namespace emb {
@@ -26,10 +31,34 @@ SCOPED_ENUM_DECLARE_BEGIN(Error) {
 } SCOPED_ENUM_DECLARE_END(Error)
 
 
+#else
+
+
+enum class Error {
+    none,
+    read_failed,
+    write_failed,
+    read_timeout,
+    write_timeout,
+    invalid_address,
+    invalid_data_size,
+    data_corrupted,
+    no_device,
+};
+
+
+#endif
+
+
 class DriverInterface {
 public:
+#if defined(EMBLIB_C28X)
     virtual Error read(size_t page, size_t offset, uint8_t* buf, size_t len, emb::chrono::milliseconds timeout) = 0;
     virtual Error write(size_t page, size_t offset, const uint8_t* buf, size_t len, emb::chrono::milliseconds timeout) = 0;
+#else
+    virtual Error read(size_t page, size_t offset, uint8_t* buf, size_t len, std::chrono::milliseconds timeout) = 0;
+    virtual Error write(size_t page, size_t offset, const uint8_t* buf, size_t len, std::chrono::milliseconds timeout) = 0;
+#endif
     virtual size_t page_bytes() const = 0;
     virtual size_t page_count() const = 0;
 };
@@ -54,6 +83,7 @@ private:
     } _errors;
 public:
     Storage(DriverInterface& driver_, uint32_t (*calc_crc32_func_)(const uint8_t*, size_t));
+#if defined(EMBLIB_C28X)
     Error read(size_t page, uint8_t* buf, size_t len, emb::chrono::milliseconds timeout);
     Error write(size_t page, const uint8_t* buf, size_t len, emb::chrono::milliseconds timeout);
 
@@ -71,10 +101,26 @@ public:
         emb::c28x::to_bytes<T>(data_bytes, data);
         return write(page, data_bytes, 2*sizeof(T), timeout);
     }
-};
+#else
+    Error read(size_t page, uint8_t* buf, size_t len, std::chrono::milliseconds timeout);
+    Error write(size_t page, const uint8_t* buf, size_t len, std::chrono::milliseconds timeout);
 
+    template <typename T>
+    Error read(size_t page, T& data, std::chrono::milliseconds timeout) {
+        uint8_t data_bytes[sizeof(T)];
+        Error error = read(page, data_bytes, sizeof(T), timeout);
+        memcpy(&data, data_bytes, sizeof(T));
+        return error;
+    }
 
+    template <typename T>
+    Error write(size_t page, const T& data, std::chrono::milliseconds timeout) {
+        uint8_t data_bytes[sizeof(T)];
+        memcpy(data_bytes, &data, sizeof(T));
+        return write(page, data_bytes, 2*sizeof(T), timeout);
+    }
 #endif
+};
 
 
 } // namespace eeprom
