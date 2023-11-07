@@ -25,7 +25,7 @@ SCOPED_ENUM_UT_DECLARE_BEGIN(phase3, uint32_t) {
     c
 } SCOPED_ENUM_DECLARE_END(phase3)
 #elif defined(EMBLIB_STM32)
-enum class phase3 {
+enum class phase3 : uint32_t {
     a,
     b,
     c

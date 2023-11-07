@@ -27,13 +27,13 @@ SCOPED_ENUM_DECLARE_BEGIN(State) {
 #elif defined(EMBLIB_STM32)
 
 
-enum class ActiveState {
+enum class ActiveState : unsigned int {
     low = 0,
     high = 1
 };
 
 
-enum class State {
+enum class State : unsigned int {
     inactive = 0,
     active = 1
 };
