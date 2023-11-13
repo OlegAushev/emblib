@@ -4,7 +4,7 @@
 #if defined(EMBLIB_C28X)
 
 
-#include <mculib_c28x/f2837xd/crc/crc.h>
+#include <mcudrv/c28x/f2837xd/crc/crc.h>
 
 
 class TestingEepromDriver : public emb::eeprom::DriverInterface {
