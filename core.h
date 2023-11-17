@@ -35,31 +35,45 @@
 
 
 #if defined(EMBLIB_C28X)
+
 #define EMB_OVERRIDE
 #define EMB_DEFAULT {}
 #define EMB_MAYBE_UNUSED
+
 #elif defined(EMBLIB_STM32)
+
 #define EMB_OVERRIDE override
 #define EMB_DEFAULT = default;
 #define EMB_MAYBE_UNUSED [[maybe_unused]] 
+
 #endif
 
+
 #if defined(EMBLIB_C28X)
+
 #define EMB_CAT_(a, b) a ## b
 #define EMB_CAT(a, b) EMB_CAT_(a, b)
 #define EMB_STATIC_ASSERT(cond) typedef int EMB_CAT(assert, __LINE__)[(cond) ? 1 : -1]
+#define EMB_MILLISECONDS emb::chrono::milliseconds
+
 #elif defined(EMBLIB_STM32)
+
 #define EMB_STATIC_ASSERT(cond) static_assert(cond)
+#define EMB_MILLISECONDS std::chrono::milliseconds
+
 #endif
 
 
 #if defined(EMBLIB_STM32)
+
 #define EMB_STRINGIZE_IMPL(x) #x
 #define EMB_STRINGIZE(x) EMB_STRINGIZE_IMPL(x)
+
 #endif
 
 
 #if defined(EMBLIB_STM32)
+
 namespace emb {
 
 
@@ -87,4 +101,5 @@ inline void empty_function()
 
 
 } // namespace emb
+
 #endif

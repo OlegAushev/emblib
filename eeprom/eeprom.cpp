@@ -3,10 +3,8 @@
 
 namespace emb {
 
+
 namespace eeprom {
-
-
-//#if defined(EMBLIB_C28X)
 
 
 Storage::Storage(DriverInterface& driver_, uint32_t (*calc_crc32_func_)(const uint8_t*, size_t))
@@ -21,14 +19,17 @@ Storage::Storage(DriverInterface& driver_, uint32_t (*calc_crc32_func_)(const ui
     _errors.primary_data_corrupted = 0;
     _errors.secondary_data_corrupted = 0;
     _errors.fatal = 0;
+
+    _backup_buf = new uint8_t[available_page_bytes];
 }
 
 
-#if defined(EMBLIB_C28X)
-Error Storage::write(size_t page, const uint8_t* buf, size_t len, emb::chrono::milliseconds timeout) {
-#else
-Error Storage::write(size_t page, const uint8_t* buf, size_t len, std::chrono::milliseconds timeout) {
-#endif
+Storage::~Storage() {
+    delete[] _backup_buf;
+}
+
+
+Error Storage::write(size_t page, const uint8_t* buf, size_t len, EMB_MILLISECONDS timeout) {
     assert(page < available_page_count);
     assert(len < available_page_bytes);
 
@@ -72,11 +73,7 @@ write_end:
 }
 
 
-#if defined(EMBLIB_C28X)
-Error Storage::read(size_t page, uint8_t* buf, size_t len, emb::chrono::milliseconds timeout) {
-#else
-Error Storage::read(size_t page, uint8_t* buf, size_t len, std::chrono::milliseconds timeout) {
-#endif
+Error Storage::read(size_t page, uint8_t* buf, size_t len, EMB_MILLISECONDS timeout) {
     assert(page < available_page_count);
     assert(len < available_page_bytes);
 
@@ -117,9 +114,7 @@ Error Storage::read(size_t page, uint8_t* buf, size_t len, std::chrono::millisec
     }
 
 read_backup:
-    uint8_t buf_backup[available_page_bytes];
-
-    error = _driver.read(page+available_page_count, 0, buf_backup, len, timeout);
+    error = _driver.read(page+available_page_count, 0, _backup_buf, len, timeout);
     if (error != Error::none) {
         ++_errors.read;
         goto read_end;
@@ -136,7 +131,7 @@ read_backup:
 #else
     memcpy(&secondary_stored_crc, crc_bytes, 4);
 #endif
-    secondary_crc = _calc_crc32(buf_backup, len);
+    secondary_crc = _calc_crc32(_backup_buf, len);
     if (secondary_crc == secondary_stored_crc) {
         secondary_ok = true;
     } else {
@@ -160,8 +155,8 @@ read_end:
     } else if (!primary_ok && secondary_ok) {
         // restore backup
         ++_errors.primary_data_corrupted;
-        memcpy(buf, buf_backup, len); // update output buffer
-        _driver.write(page, 0, buf_backup, len, timeout);
+        memcpy(buf, _backup_buf, len); // update output buffer
+        _driver.write(page, 0, _backup_buf, len, timeout);
 #if defined(EMBLIB_C28X)
         emb::c28x::to_bytes<uint32_t>(crc_bytes, secondary_crc);
 #else
@@ -182,5 +177,6 @@ read_end:
 
 
 } // namespace eeprom
+
 
 } // namespace emb

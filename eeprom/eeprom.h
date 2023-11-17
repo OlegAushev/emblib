@@ -52,13 +52,8 @@ enum class Error {
 
 class DriverInterface {
 public:
-#if defined(EMBLIB_C28X)
-    virtual Error read(size_t page, size_t offset, uint8_t* buf, size_t len, emb::chrono::milliseconds timeout) = 0;
-    virtual Error write(size_t page, size_t offset, const uint8_t* buf, size_t len, emb::chrono::milliseconds timeout) = 0;
-#else
-    virtual Error read(size_t page, size_t offset, uint8_t* buf, size_t len, std::chrono::milliseconds timeout) = 0;
-    virtual Error write(size_t page, size_t offset, const uint8_t* buf, size_t len, std::chrono::milliseconds timeout) = 0;
-#endif
+    virtual Error read(size_t page, size_t offset, uint8_t* buf, size_t len, EMB_MILLISECONDS timeout) = 0;
+    virtual Error write(size_t page, size_t offset, const uint8_t* buf, size_t len, EMB_MILLISECONDS timeout) = 0;
     virtual size_t page_bytes() const = 0;
     virtual size_t page_count() const = 0;
 };
@@ -72,6 +67,8 @@ private:
     const size_t available_page_bytes;
     const size_t available_page_count;
 
+    uint8_t* _backup_buf;
+
     struct {
         uint32_t read;
         uint32_t write;
@@ -83,43 +80,36 @@ private:
     } _errors;
 public:
     Storage(DriverInterface& driver_, uint32_t (*calc_crc32_func_)(const uint8_t*, size_t));
-#if defined(EMBLIB_C28X)
-    Error read(size_t page, uint8_t* buf, size_t len, emb::chrono::milliseconds timeout);
-    Error write(size_t page, const uint8_t* buf, size_t len, emb::chrono::milliseconds timeout);
+    ~Storage();
+    Error read(size_t page, uint8_t* buf, size_t len, EMB_MILLISECONDS timeout);
+    Error write(size_t page, const uint8_t* buf, size_t len, EMB_MILLISECONDS timeout);
 
     template <typename T>
-    Error read(size_t page, T& data, emb::chrono::milliseconds timeout) {
+    Error read(size_t page, T& data, EMB_MILLISECONDS timeout) {
+#if defined(EMBLIB_C28X)
         uint8_t data_bytes[2*sizeof(T)];
         Error error = read(page, data_bytes, 2*sizeof(T), timeout);
         emb::c28x::from_bytes<T>(data, data_bytes);
-        return error;
-    }
-
-    template <typename T>
-    Error write(size_t page, const T& data, emb::chrono::milliseconds timeout) {
-        uint8_t data_bytes[2*sizeof(T)];
-        emb::c28x::to_bytes<T>(data_bytes, data);
-        return write(page, data_bytes, 2*sizeof(T), timeout);
-    }
 #else
-    Error read(size_t page, uint8_t* buf, size_t len, std::chrono::milliseconds timeout);
-    Error write(size_t page, const uint8_t* buf, size_t len, std::chrono::milliseconds timeout);
-
-    template <typename T>
-    Error read(size_t page, T& data, std::chrono::milliseconds timeout) {
         uint8_t data_bytes[sizeof(T)];
         Error error = read(page, data_bytes, sizeof(T), timeout);
         memcpy(&data, data_bytes, sizeof(T));
+#endif
         return error;
     }
 
     template <typename T>
-    Error write(size_t page, const T& data, std::chrono::milliseconds timeout) {
+    Error write(size_t page, const T& data, EMB_MILLISECONDS timeout) {
+#if defined(EMBLIB_C28X)
+        uint8_t data_bytes[2*sizeof(T)];
+        emb::c28x::to_bytes<T>(data_bytes, data);
+        return write(page, data_bytes, 2*sizeof(T), timeout);
+#else
         uint8_t data_bytes[sizeof(T)];
         memcpy(data_bytes, &data, sizeof(T));
-        return write(page, data_bytes, 2*sizeof(T), timeout);
-    }
+        return write(page, data_bytes, sizeof(T), timeout);
 #endif
+    }
 };
 
 

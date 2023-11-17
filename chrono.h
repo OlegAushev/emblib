@@ -6,7 +6,9 @@
 
 namespace emb {
 
+
 namespace chrono {
+
 
 namespace impl {
 
@@ -95,5 +97,6 @@ typedef impl::duration<1000000000> seconds;
 
 
 } // namespace chrono
+
 
 } // namespace emb

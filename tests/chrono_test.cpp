@@ -46,4 +46,3 @@ void emb::tests::chrono_test() {
     EMB_ASSERT_EQUAL(sec5.count(), 11);
 #endif
 }
-
