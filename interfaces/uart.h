@@ -12,13 +12,13 @@ namespace uart {
 #if defined(EMBLIB_C28X)
 
 
-class UartInterface {
+class Uart {
 private:
-    UartInterface(const UartInterface& other);              // no copy constructor
-    UartInterface& operator=(const UartInterface& other);   // no copy assignment operator
+    Uart(const Uart& other);              // no copy constructor
+    Uart& operator=(const Uart& other);   // no copy assignment operator
 public:
-    UartInterface() {}
-    virtual ~UartInterface() {}
+    Uart() {}
+    virtual ~Uart() {}
 
     virtual void reset() = 0;
     virtual bool has_rx_error() const = 0;
@@ -39,13 +39,13 @@ public:
 #elif defined(EMBLIB_STM32)
 
 
-class UartInterface {
+class Uart {
 public:
-    UartInterface() = default;
-    virtual ~UartInterface() = default;
+    Uart() = default;
+    virtual ~Uart() = default;
 
-    UartInterface(const UartInterface& other) = delete;
-    UartInterface& operator=(const UartInterface& other) = delete;
+    Uart(const Uart& other) = delete;
+    Uart& operator=(const Uart& other) = delete;
 
     //virtual void reset() = 0;
     //virtual bool hasRxError() const = 0;

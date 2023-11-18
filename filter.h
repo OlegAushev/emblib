@@ -13,10 +13,10 @@ namespace emb {
 
 
 template <typename T>
-class filter_interface {
+class filter {
 public:
-    filter_interface() {}
-    virtual ~filter_interface() {}
+    filter() {}
+    virtual ~filter() {}
 
     virtual void push(T input_value) = 0;
     virtual T output() const = 0;
@@ -26,7 +26,7 @@ public:
 
 
 template <typename T, size_t WindowSize>
-class movavg_filter : public filter_interface<T>, private emb::noncopyable {
+class movavg_filter : public filter<T>, private emb::noncopyable {
 private:
     size_t _size;
     T* _window;
@@ -94,7 +94,7 @@ public:
 
 
 template <typename T, size_t WindowSize>
-class med_filter : public filter_interface<T> {
+class med_filter : public filter<T> {
 private:
     circular_buffer<T, WindowSize> _window;
     T _out;
@@ -124,7 +124,7 @@ public:
 
 
 template <typename T>
-class exp_filter : public filter_interface<T> {
+class exp_filter : public filter<T> {
 private:
     float _sampling_period;
     float _time_constant;
@@ -174,7 +174,7 @@ public:
 
 
 template <typename T, size_t WindowSize>
-class expmed_filter : public filter_interface<T> {
+class expmed_filter : public filter<T> {
 private:
     circular_buffer<T, WindowSize> _window;
     float _sampling_period;

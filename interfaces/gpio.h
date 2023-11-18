@@ -42,20 +42,20 @@ enum class State : unsigned int {
 #endif
 
 
-class InputInterface {
+class Input {
 public:
-    InputInterface() EMB_DEFAULT
-    virtual ~InputInterface() EMB_DEFAULT
+    Input() EMB_DEFAULT
+    virtual ~Input() EMB_DEFAULT
 
     virtual State read() const = 0;
     virtual unsigned int read_level() const = 0;
 };
 
 
-class OutputInterface {
+class Output {
 public:
-    OutputInterface() EMB_DEFAULT
-    virtual ~OutputInterface() EMB_DEFAULT
+    Output() EMB_DEFAULT
+    virtual ~Output() EMB_DEFAULT
 
     virtual State read() const = 0;
     virtual void set(State state = State::active) = 0;
