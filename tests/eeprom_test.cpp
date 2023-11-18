@@ -7,7 +7,7 @@
 #include <mcudrv/c28x/f2837xd/crc/crc.h>
 
 
-class TestingEepromDriver : public emb::eeprom::DriverInterface {
+class TestingEepromDriver : public emb::eeprom::Driver {
 private:
     static const size_t _page_bytes = 64;
     static const size_t _page_count = 8;
