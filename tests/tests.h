@@ -38,8 +38,8 @@ public:
     static void queue_test();
 #if defined(EMBLIB_C28X)
     static void bitset_test();
-    static void eeprom_test();
 #endif
+    static void eeprom_test();
 };
 
 } // namespace emb
