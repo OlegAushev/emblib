@@ -3,7 +3,7 @@
 
 void emb::tests::static_vector_test() {
 #ifdef EMB_TESTS_ENABLED
-    emb::static_vector<unsigned int, 5> vec1;
+    emb::static_vector<int, 5> vec1;
     EMB_ASSERT_EQUAL(vec1.size(), 0);
     EMB_ASSERT_EQUAL(vec1.capacity(), 5);
     vec1.resize(3);

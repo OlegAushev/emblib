@@ -20,7 +20,7 @@ void emb::tests::filter_test() {
     emb::array<float, 10> filter_array;
     emb::movavg_filter<float, 10> mvavg_filter_f32(filter_array);
     for (int i = 0; i < mvavg_filter_f32.size(); ++i) {
-        mvavg_filter_f32.push(emb::numbers::pi * (1 + (i % 2)));
+        mvavg_filter_f32.push(emb::numbers::pi * float(1 + (i % 2)));
     }
     EMB_ASSERT_EQUAL(mvavg_filter_f32.output(), emb::numbers::pi * 1.5f);
     mvavg_filter_f32.set_output(emb::numbers::pi);

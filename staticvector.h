@@ -27,7 +27,7 @@ public:
     }
 
     template <class V>
-    static_vector(V* first, V* last) : _size(last - first) {
+    static_vector(V* first, V* last) : _size(size_t(last - first)) {
         assert(first <= last);
         assert((last - first) <= Capacity);
         emb::copy(first, last, begin());
@@ -153,7 +153,7 @@ public:
         static_vector<T, Capacity> buf(pos, end());
         pos = emb::copy(first, last, pos);
         emb::copy(buf.begin(), buf.end(), pos);
-        _size = _size + last - first;
+        _size = _size + size_t(last - first);
     }
 public:
     T* erase(T* pos) {
@@ -172,7 +172,7 @@ public:
         assert(last <= end());
 
         static_vector<T, Capacity> buf(last, end());
-        _size = _size - (last - first);
+        _size = _size - size_t(last - first);
         return emb::copy(buf.begin(), buf.end(), first);
     }
 };
