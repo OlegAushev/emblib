@@ -12,17 +12,17 @@ void emb::tests::array_test() {
 
     emb::array<float, 5> arr2;
     std::copy(arr1.begin(), arr1.end(), arr2.begin());
-    for (int i = 0; i < arr2.size(); ++i) {
+    for (int i = 0; i < int(arr2.size()); ++i) {
         EMB_ASSERT_EQUAL(arr1.at(i), arr2.at(i));
     }
 
     arr2.fill(5);
-    for (int i = 0; i < arr2.size(); ++i) {
+    for (int i = 0; i < int(arr2.size()); ++i) {
         EMB_ASSERT_EQUAL(arr2[i], 5);
     }
 
     emb::array<float, 5>arr3 = {0};
-    for (int i = 0; i < arr3.size(); ++i) {
+    for (int i = 0; i < int(arr3.size()); ++i) {
         EMB_ASSERT_EQUAL(arr3[i], 0);
     }
 #endif

@@ -106,7 +106,7 @@ void emb::tests::algorithm_test() {
     arr7.fill(0);
     emb::copy(arr6, arr6 + 5, arr7.begin());
     EMB_ASSERT_TRUE(emb::equal(arr7.begin(), arr7.end(), arr6));
-    for (int i = 0; i < arr7.size(); ++i) {
+    for (int i = 0; i < int(arr7.size()); ++i) {
         EMB_ASSERT_EQUAL(arr6[i], arr7[i]);
     }
 
