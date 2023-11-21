@@ -17,18 +17,18 @@ private:
     static uint16_t _data[_page_count][_page_bytes/2];
 public:
     virtual emb::eeprom::Error read(size_t page, size_t addr, uint8_t* buf, size_t len, EMB_MILLISECONDS timeout) EMB_OVERRIDE  {
-        for (int i = 0; i < len; ++i) {
+        for (size_t i = 0; i < len; ++i) {
             if (((addr + i) % 2) == 0) {
-                buf[i] = _data[page][(addr + i)/2] & 0x00FF;
+                buf[i] = uint8_t(_data[page][(addr + i)/2] & 0x00FF);
             } else {
-                buf[i] = _data[page][(addr + i)/2] >> 8;
+                buf[i] = uint8_t(_data[page][(addr + i)/2] >> 8);
             }
         }
         return emb::eeprom::Error::none;
     }
 
     virtual emb::eeprom::Error write(size_t page, size_t addr, const uint8_t* buf, size_t len, EMB_MILLISECONDS timeout) EMB_OVERRIDE {
-        for (int i = 0; i < len; ++i) {
+        for (size_t i = 0; i < len; ++i) {
             if (((addr + i) % 2) == 0) {
                 _data[page][(addr + i)/2] = (_data[page][(addr + i)/2] & 0xFF00) | buf[i];
             } else {

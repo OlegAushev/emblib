@@ -64,14 +64,14 @@ public:
         _index = (_index + 1) % _size;
     }
 
-    virtual T output() const EMB_OVERRIDE { return _sum / _size; }
+    virtual T output() const EMB_OVERRIDE { return _sum / T(_size); }
 
     virtual void set_output(T value) EMB_OVERRIDE {
         for (size_t i = 0; i < _size; ++i) {
             _window[i] = value;
         }
         _index = 0;
-        _sum = value * _size;
+        _sum = value * T(_size);
     }
 
     virtual void reset() EMB_OVERRIDE { set_output(0); }

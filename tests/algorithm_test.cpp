@@ -156,12 +156,12 @@ void emb::tests::algorithm_test() {
     EMB_ASSERT_EQUAL(emb::clamp(1.1f, 0.f, 1.f), 1.f);
 
     // minmax
-    emb::array<int, 10> arr11 = {3, 6, 2, 7, 8, 9, 0, 1, 5, 4};
+    EMB_MAYBE_UNUSED emb::array<int, 10> arr11 = {3, 6, 2, 7, 8, 9, 0, 1, 5, 4};
     EMB_ASSERT_EQUAL(*(emb::max_element(arr11.begin(), arr11.end())), 9);
     EMB_ASSERT_EQUAL(*(emb::min_element(arr11.begin(), arr11.end())), 0);
     EMB_ASSERT_EQUAL(*(emb::minmax_element(arr11.begin(), arr11.end()).first), 0);
     EMB_ASSERT_EQUAL(*(emb::minmax_element(arr11.begin(), arr11.end()).second), 9);
-    emb::array<StructTest, 5> arr12 = {StructTest(1, 2), StructTest(8, 1), StructTest(-4, 7), StructTest(8, 1), StructTest(5, -4)};
+    EMB_MAYBE_UNUSED emb::array<StructTest, 5> arr12 = {StructTest(1, 2), StructTest(8, 1), StructTest(-4, 7), StructTest(8, 1), StructTest(5, -4)};
     EMB_ASSERT_EQUAL(*(emb::max_element(arr12.begin(), arr12.end())), StructTest(8, 1));
     EMB_ASSERT_EQUAL(*(emb::min_element(arr12.begin(), arr12.end())), StructTest(-4, 7));
     EMB_ASSERT_EQUAL(*(emb::minmax_element(arr12.begin(), arr12.end()).first), StructTest(-4, 7));
