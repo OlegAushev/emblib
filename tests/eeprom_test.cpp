@@ -5,7 +5,10 @@
 #include <mcudrv/c28x/f2837xd/crc/crc.h>
 #elif defined(STM32H7xx)
 #include <mcudrv/stm32/h7/crc/crc.h>
+#elif defined(STM32F4xx)
+#include <mcudrv/stm32/f4/crc/crc.h>
 #endif
+
 
 class TestingEepromDriver : public emb::eeprom::Driver {
 private:
@@ -74,7 +77,7 @@ void emb::tests::eeprom_test() {
     TestingEepromDriver eeprom_driver;
 #if defined(EMBLIB_C28X)
     emb::eeprom::Storage eeprom(eeprom_driver, mcu::crc::calc_crc32_byte8);
-#elif defined(STM32H7xx)
+#elif defined(EMBLIB_STM32)
     emb::eeprom::Storage eeprom(eeprom_driver, mcu::crc::calc_crc32);
 #endif
 

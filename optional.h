@@ -24,9 +24,17 @@ private:
 public:
     optional() : _has_value(false) {}
     optional(nullopt_t) : _has_value(false) {}
+   
     optional(const T& value) {
         new(_storage) T(value);
         _has_value = true;
+    }
+
+    optional(const optional<T>& other) {
+        if (other._has_value) {
+            new(_storage) T(other.value());
+        }
+        _has_value = other._has_value;
     }
 
     ~optional() {
@@ -53,11 +61,10 @@ public:
         return *this;
     }
 
-    optional& operator=(const optional<T> other) {
+    optional& operator=(const optional<T>& other) {
         reset();
         if (other._has_value) {
-            T value = other.value();
-            new(_storage) T(value);
+            new(_storage) T(other.value());
         }
         _has_value = other._has_value;
         return *this;
