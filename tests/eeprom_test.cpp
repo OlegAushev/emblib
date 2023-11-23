@@ -1,13 +1,15 @@
-#include <emblib/tests/tests.h>
-
-
 #if defined(EMBLIB_C28X)
 #include <mcudrv/c28x/f2837xd/crc/crc.h>
 #elif defined(STM32H7xx)
 #include <mcudrv/stm32/h7/crc/crc.h>
 #elif defined(STM32F4xx)
 #include <mcudrv/stm32/f4/crc/crc.h>
+#elif defined(APM32F4xx)
+#include <mcudrv/apm32/f4/crc/crc.h>
 #endif
+
+
+#include <emblib/tests/tests.h>
 
 
 class TestingEepromDriver : public emb::eeprom::Driver {
