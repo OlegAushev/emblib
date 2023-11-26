@@ -10,28 +10,27 @@ namespace emb {
 
 
 template <size_t Capacity>
-class string {
+class static_string {
 private:
-    static const size_t _data_len = Capacity + 1;
-    char _data[_data_len];
-    size_t _len;
+    char _data[Capacity];
+    size_t _size; // includes terminating null
 public:
-    string() {
-        memset(_data, 0, _data_len);
-        _len = 0;
+    static_string() {
+        memset(_data, 0, Capacity);
+        _size = 1;
     }
 
-    string(const char str[]) {
-        memset(_data, 0, _data_len);
-        strncpy(_data, str, Capacity);
-        _len = strlen(str);
+    static_string(const char* str) {
+        memset(_data, 0, Capacity);
+        strncpy(_data, str, Capacity-1);
+        _size = strlen(str)+1;
     }
 public:
     size_t capacity() const { return Capacity; }
-    size_t lenght() const { return _len; }
-    size_t size() const { return _len; }
-    bool empty() const { return _len == 0; }
-    bool full() const { return _len == Capacity; }
+    size_t lenght() const { return _size - 1; }
+    size_t size() const { return _size - 1; }
+    bool empty() const { return _size == 1; }
+    bool full() const { return _size == Capacity; }
 
     char& operator[] (size_t pos) {
 #ifdef NDEBUG
@@ -50,19 +49,19 @@ public:
     }
 
     char& at(size_t pos) {
-        assert(pos < _len);
+        assert(pos < size());
         return _data[pos];
     }
 
     const char& at(size_t pos) const {
-        assert(pos < _len);
+        assert(pos < size());
         return _data[pos];
     }
 public:
     char* begin() { return _data; }
-    char* end() { return _data + _len; }
+    char* end() { return _data + size(); }
     const char* begin() const { return _data; }
-    const char* end() const { return _data + _len; }
+    const char* end() const { return _data + size(); }
 
     char* data() { return _data; }
     const char* data() const { return _data; }
@@ -79,73 +78,75 @@ public:
 
     char& back() {
         assert(!empty());
-        return _data[_len - 1];
+        return _data[size() - 1];
     }
 
     const char& back() const {
         assert(!empty());
-        return _data[_len - 1];
+        return _data[size() - 1];
     }
 public:
     void resize(size_t len) {
-        assert(len <= Capacity);
-        if (len > _len) {
-            emb::fill(_data + _len, _data + len, 0);
+        assert(len < Capacity);
+        if (len > size()) {
+            emb::fill(end(), _data + len, 0);
         } else {
-            emb::fill(_data + len, _data + _len, 0);
+            emb::fill(_data + len, end(), 0);
         }
-        _len = len;
+        _size = len + 1;
     }
 
     void resize(size_t len, char ch) {
-        assert(len <= Capacity);
-        if (len > _len) {
-            emb::fill(_data + _len, _data + len, ch);
+        assert(len < Capacity);
+        if (len > size()) {
+            emb::fill(end(), _data + len, ch);
         } else {
-            emb::fill(_data + len, _data + _len, ch);
+            emb::fill(_data + len, end(), ch);
         }
-        _len = len;
+        _size = len + 1;
     }
 
     void clear() {
-        memset(_data, 0, _data_len);
-        _len = 0;
+        memset(_data, 0, Capacity);
+        _size = 1;
     }
 public:
     void push_back(char ch) {
         assert(!full());
-        _data[_len++] = ch;
+        _data[size()] = ch;
+        ++_size;
     }
 
     void pop_back() {
         assert(!empty());
-        _data[--_len] = 0;
+        _data[size()-1] = 0;
+        --_size;
     }
 public:
     void insert(size_t index, char ch) {
         assert(!full());
-        assert(index <= lenght());
+        assert(index <= size());
 
-        if (index == _len) {
+        if (index == size()) {
             push_back(ch);
             return;
         }
 
-        memmove(_data + index + 1 , _data + index, _len - index);
+        memmove(_data + index + 1 , _data + index, size() - index);
         _data[index] = ch;
-        ++_len;
+        ++_size;
     }
 };
 
 
 template <size_t Capacity>
-inline bool operator==(const string<Capacity>& lhs, const string<Capacity>& rhs) {
+inline bool operator==(const static_string<Capacity>& lhs, const static_string<Capacity>& rhs) {
     return strcmp(lhs.data(), rhs.data()) == 0;
 }
 
 
 template <size_t Capacity>
-inline bool operator!=(const string<Capacity>& lhs, const string<Capacity>& rhs) {
+inline bool operator!=(const static_string<Capacity>& lhs, const static_string<Capacity>& rhs) {
     return !(lhs == rhs);
 }
 

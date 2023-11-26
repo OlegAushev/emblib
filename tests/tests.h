@@ -15,7 +15,7 @@
 #include "../optional.h"
 #include "../stack.h"
 #include "../staticvector.h"
-#include "../string.h"
+#include "../staticstring.h"
 #include "../queue.h"
 #include <algorithm>
 
@@ -34,7 +34,7 @@ public:
     static void optional_test();
     static void stack_test();
     static void static_vector_test();
-    static void string_test();
+    static void static_string_test();
     static void queue_test();
 #if defined(EMBLIB_C28X)
     static void bitset_test();
