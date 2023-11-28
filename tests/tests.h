@@ -7,15 +7,15 @@
 #include "../algorithm.h"
 #include "../bitset.h"
 #include "../chrono.h"
-#include "../circularbuffer.h"
+#include "../circular_buffer.h"
 #include "../core.h"
 #include "../eeprom/eeprom.h"
 #include "../filter.h"
 #include "../math.h"
 #include "../optional.h"
 #include "../stack.h"
-#include "../staticvector.h"
-#include "../staticstring.h"
+#include "../static_vector.h"
+#include "../static_string.h"
 #include "../queue.h"
 #include <algorithm>
 

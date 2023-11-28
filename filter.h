@@ -4,7 +4,7 @@
 #include <emblib/core.h>
 #include <emblib/algorithm.h>
 #include <emblib/array.h>
-#include <emblib/circularbuffer.h>
+#include <emblib/circular_buffer.h>
 #include <algorithm>
 #include <float.h>
 
