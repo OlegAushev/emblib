@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <assert.h>
-#elif defined(EMBLIB_STM32)
+#elif defined(EMBLIB_ARM)
 #include <cstdint>
 #include <cstddef>
 #include <cassert>
@@ -93,7 +93,7 @@ template <class T, size_t Size>
 bool interrupt_invoker_array<T, Size>::_constructed = false;
 
 
-#elif defined(EMBLIB_STM32)
+#elif defined(EMBLIB_ARM)
 
 
 template <class T>

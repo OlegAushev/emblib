@@ -10,7 +10,7 @@
 typedef emb::array<uint8_t, 8> can_payload;
 
 
-#elif defined(EMBLIB_STM32)
+#elif defined(EMBLIB_ARM)
 
 
 #include <array>

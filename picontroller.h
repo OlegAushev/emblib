@@ -14,7 +14,7 @@ SCOPED_ENUM_DECLARE_BEGIN(controller_logic) {
     direct,
     inverse
 } SCOPED_ENUM_DECLARE_END(controller_logic)
-#elif defined(EMBLIB_STM32)
+#elif defined(EMBLIB_ARM)
 enum class controller_logic {
     direct,
     inverse
@@ -24,7 +24,7 @@ enum class controller_logic {
 
 #if defined(EMBLIB_C28X)
 template <controller_logic::enum_type Logic>
-#elif defined(EMBLIB_STM32)
+#elif defined(EMBLIB_ARM)
 template <controller_logic Logic>
 #endif
 class abstract_picontroller : private emb::noncopyable {
@@ -79,7 +79,7 @@ inline float abstract_picontroller<controller_logic::inverse>::_error(float ref,
 
 #if defined(EMBLIB_C28X)
 template <controller_logic::enum_type Logic>
-#elif defined(EMBLIB_STM32)
+#elif defined(EMBLIB_ARM)
 template <controller_logic Logic>
 #endif
 class backcalc_picontroller : public abstract_picontroller<Logic> {
@@ -111,7 +111,7 @@ public:
 
 #if defined(EMBLIB_C28X)
 template <controller_logic::enum_type Logic>
-#elif defined(EMBLIB_STM32)
+#elif defined(EMBLIB_ARM)
 template <controller_logic Logic>
 #endif
 class clamping_picontroller : public abstract_picontroller<Logic> {

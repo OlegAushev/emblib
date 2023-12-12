@@ -8,7 +8,7 @@
 #include <motorcontrol/math.h>
 #include <math.h>
 #include <float.h>
-#elif defined(EMBLIB_STM32)
+#elif defined(EMBLIB_ARM)
 #include <algorithm>
 extern "C" {
 #include "arm_math.h"
@@ -39,7 +39,7 @@ const float sqrt_3 = sqrtf(3.f);
 const float inv_sqrt3 = 0.57735026918963f;
 
 
-#elif defined(EMBLIB_STM32)
+#elif defined(EMBLIB_ARM)
 
 
 inline constexpr float pi = PI;
@@ -74,7 +74,7 @@ inline float to_rad(float deg) { return numbers::pi * deg / 180; }
 inline float to_deg(float rad) { return 180 * rad / numbers::pi; }
 
 
-#elif defined(EMBLIB_STM32)
+#elif defined(EMBLIB_ARM)
 
 
 template <typename T>

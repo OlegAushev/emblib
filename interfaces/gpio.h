@@ -24,7 +24,7 @@ SCOPED_ENUM_DECLARE_BEGIN(State) {
 } SCOPED_ENUM_DECLARE_END(State)
 
 
-#elif defined(EMBLIB_STM32)
+#elif defined(EMBLIB_ARM)
 
 
 enum class ActiveState : unsigned int {

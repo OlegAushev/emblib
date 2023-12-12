@@ -10,7 +10,7 @@
 #include <motorcontrol/clarke.h>
 #include <motorcontrol/park.h>
 #include <motorcontrol/ipark.h>
-#elif defined(EMBLIB_STM32)
+#elif defined(EMBLIB_ARM)
 #include <array>
 #endif
 
@@ -24,7 +24,7 @@ SCOPED_ENUM_UT_DECLARE_BEGIN(phase3, uint32_t) {
     b,
     c
 } SCOPED_ENUM_DECLARE_END(phase3)
-#elif defined(EMBLIB_STM32)
+#elif defined(EMBLIB_ARM)
 enum class phase3 : uint32_t {
     a,
     b,
@@ -35,7 +35,7 @@ enum class phase3 : uint32_t {
 
 #if defined(EMBLIB_C28X)
 typedef emb::array<float, 3> vec3;
-#elif defined(EMBLIB_STM32)
+#elif defined(EMBLIB_ARM)
 typedef std::array<float, 3> vec3;
 #endif
 
@@ -96,7 +96,7 @@ inline emb::vec3 calculate_svpwm(float voltage_mag, float voltage_angle, float v
 #if defined(EMBLIB_C28X)
     float tb1 = numbers::sqrt_3 * (voltage_mag / voltage_dc) * sinf(numbers::pi_over_3 - theta);
     float tb2 = numbers::sqrt_3 * (voltage_mag / voltage_dc) * sinf(theta);
-#elif defined(EMBLIB_STM32)
+#elif defined(EMBLIB_ARM)
     float tb1 = numbers::sqrt_3 * (voltage_mag / voltage_dc) * arm_sin_f32(numbers::pi_over_3 - theta);
     float tb2 = numbers::sqrt_3 * (voltage_mag / voltage_dc) * arm_sin_f32(theta);
 #endif

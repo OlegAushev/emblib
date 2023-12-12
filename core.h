@@ -1,7 +1,7 @@
 #pragma once
 
 
-#if !defined(EMBLIB_C28X) && !defined(EMBLIB_STM32)
+#if !defined(EMBLIB_C28X) && !defined(EMBLIB_ARM)
 #error "emblib error: arch not defined!"
 #endif
 
@@ -10,7 +10,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <assert.h>
-#elif defined(EMBLIB_STM32)
+#elif defined(EMBLIB_ARM)
 #include <cstdint>
 #include <cstddef>
 #include <cassert>
@@ -40,7 +40,7 @@
 #define EMB_DEFAULT {}
 #define EMB_MAYBE_UNUSED
 
-#elif defined(EMBLIB_STM32)
+#elif defined(EMBLIB_ARM)
 
 #define EMB_OVERRIDE override
 #define EMB_DEFAULT = default;
@@ -56,7 +56,7 @@
 #define EMB_STATIC_ASSERT(cond) typedef int EMB_CAT(assert, __LINE__)[(cond) ? 1 : -1]
 #define EMB_MILLISECONDS emb::chrono::milliseconds
 
-#elif defined(EMBLIB_STM32)
+#elif defined(EMBLIB_ARM)
 
 #define EMB_STATIC_ASSERT(cond) static_assert(cond)
 #define EMB_MILLISECONDS std::chrono::milliseconds
@@ -64,7 +64,7 @@
 #endif
 
 
-#if defined(EMBLIB_STM32)
+#if defined(EMBLIB_ARM)
 
 #define EMB_STRINGIZE_IMPL(x) #x
 #define EMB_STRINGIZE(x) EMB_STRINGIZE_IMPL(x)
@@ -72,7 +72,7 @@
 #endif
 
 
-#if defined(EMBLIB_STM32)
+#if defined(EMBLIB_ARM)
 
 namespace emb {
 

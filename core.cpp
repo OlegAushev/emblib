@@ -1,7 +1,7 @@
 #include <emblib/core.h>
 
 
-#if defined(EMBLIB_STM32)
+#if defined(EMBLIB_ARM)
 namespace emb {
 
 

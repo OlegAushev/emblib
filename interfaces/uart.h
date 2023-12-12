@@ -36,7 +36,7 @@ public:
 };
 
 
-#elif defined(EMBLIB_STM32)
+#elif defined(EMBLIB_ARM)
 
 
 class Uart {

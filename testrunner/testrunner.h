@@ -19,7 +19,7 @@ public:
 private:
     static void print_dbg(const char* str) { printf(str); }
     static void print_nextline_dbg() { printf("\n"); }
-#elif defined(EMBLIB_STM32)
+#elif defined(EMBLIB_ARM)
 public:
     static inline void (*print)(const char* str) = [](const char* str) {
         fatal_error("emb::test_runner print function not defined");
@@ -140,7 +140,7 @@ public:
 #endif
 
 
-#elif defined(EMBLIB_STM32)
+#elif defined(EMBLIB_ARM)
 
 
 #ifdef UNIT_TESTS_ENABLED

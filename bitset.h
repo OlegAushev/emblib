@@ -4,7 +4,7 @@
 #include <emblib/core.h>
 #include <emblib/array.h>
 #include <bitset>
-#if defined(EMBLIB_STM32)
+#if defined(EMBLIB_ARM)
 #include <climits>
 #include <cstring>
 #endif

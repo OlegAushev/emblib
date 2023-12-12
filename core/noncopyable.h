@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <assert.h>
-#elif defined(EMBLIB_STM32)
+#elif defined(EMBLIB_ARM)
 #include <cstdint>
 #include <cstddef>
 #include <cassert>
@@ -28,7 +28,7 @@ private:
 };
 
 
-#elif defined(EMBLIB_STM32)
+#elif defined(EMBLIB_ARM)
 
 
 class noncopyable {
