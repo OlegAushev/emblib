@@ -29,12 +29,12 @@ Storage::~Storage() {
 }
 
 
-Error Storage::write(size_t page, const uint8_t* buf, size_t len, EMB_MILLISECONDS timeout) {
+Status Storage::write(size_t page, const uint8_t* buf, size_t len, EMB_MILLISECONDS timeout) {
     assert(page < available_page_count);
     assert(len < available_page_bytes);
 
-    if (page >= available_page_count) { return Error::invalid_address; }
-    if (len >= available_page_bytes) { return Error::invalid_data_size; }
+    if (page >= available_page_count) { return Status::invalid_address; }
+    if (len >= available_page_bytes) { return Status::invalid_data_size; }
 
     uint32_t crc = _calc_crc32(buf, len);
     uint8_t crc_bytes[4];
@@ -44,26 +44,26 @@ Error Storage::write(size_t page, const uint8_t* buf, size_t len, EMB_MILLISECON
     memcpy(crc_bytes, &crc, 4);
 #endif
 
-    Error error = _driver.write(page, 0, buf, len, timeout);
-    if (error != Error::none) {
+    Status error = _driver.write(page, 0, buf, len, timeout);
+    if (error != Status::ok) {
         ++_errors.write;
         goto write_end;
     }
 
     error = _driver.write(page, len, crc_bytes, 4, timeout);
-    if (error != Error::none) {
+    if (error != Status::ok) {
         ++_errors.write;
         goto write_end;
     }
 
     error = _driver.write(page+available_page_count, 0, buf, len, timeout);
-    if (error != Error::none) {
+    if (error != Status::ok) {
         ++_errors.write;
         goto write_end;
     }
 
     error = _driver.write(page+available_page_count, len, crc_bytes, 4, timeout);
-    if (error != Error::none) {
+    if (error != Status::ok) {
         ++_errors.write;
         goto write_end;
     }
@@ -73,12 +73,12 @@ write_end:
 }
 
 
-Error Storage::read(size_t page, uint8_t* buf, size_t len, EMB_MILLISECONDS timeout) {
+Status Storage::read(size_t page, uint8_t* buf, size_t len, EMB_MILLISECONDS timeout) {
     assert(page < available_page_count);
     assert(len < available_page_bytes);
 
-    if (page >= available_page_count) { return Error::invalid_address; }
-    if (len >= available_page_bytes) { return Error::invalid_data_size; }
+    if (page >= available_page_count) { return Status::invalid_address; }
+    if (len >= available_page_bytes) { return Status::invalid_data_size; }
 
     uint8_t crc_bytes[4];
     uint32_t primary_crc = 0;
@@ -89,14 +89,14 @@ Error Storage::read(size_t page, uint8_t* buf, size_t len, EMB_MILLISECONDS time
     bool primary_ok = false;
     bool secondary_ok = false;
 
-    Error error = _driver.read(page, 0, buf, len, timeout);
-    if (error != Error::none) {
+    Status error = _driver.read(page, 0, buf, len, timeout);
+    if (error != Status::ok) {
         ++_errors.read;
         goto read_backup;
     }
 
     error = _driver.read(page, len, crc_bytes, 4, timeout);
-    if (error != Error::none) {
+    if (error != Status::ok) {
         ++_errors.read;
         goto read_backup;
     }
@@ -115,13 +115,13 @@ Error Storage::read(size_t page, uint8_t* buf, size_t len, EMB_MILLISECONDS time
 
 read_backup:
     error = _driver.read(page+available_page_count, 0, _backup_buf, len, timeout);
-    if (error != Error::none) {
+    if (error != Status::ok) {
         ++_errors.read;
         goto read_end;
     }
 
     error = _driver.read(page+available_page_count, len, crc_bytes, 4, timeout);
-    if (error != Error::none) {
+    if (error != Status::ok) {
         ++_errors.read;
         goto read_end;
     }
@@ -140,7 +140,7 @@ read_backup:
 
 read_end:
     if (primary_ok && secondary_ok && (primary_crc == secondary_crc)) {
-        return Error::none;
+        return Status::ok;
     } else if ((primary_ok && !secondary_ok) || (primary_ok && secondary_ok && (primary_crc != secondary_crc))) {
         // backup is corrupted or outdated
         ++_errors.secondary_data_corrupted;
@@ -151,7 +151,7 @@ read_end:
         memcpy(crc_bytes, &primary_crc, 4);
 #endif
         _driver.write(page+available_page_count, len, crc_bytes, 4, timeout);
-        return Error::none;
+        return Status::ok;
     } else if (!primary_ok && secondary_ok) {
         // restore backup
         ++_errors.primary_data_corrupted;
@@ -163,10 +163,10 @@ read_end:
         memcpy(crc_bytes, &secondary_crc, 4);
 #endif
         _driver.write(page, len, crc_bytes, 4, timeout);
-        return Error::none;
-    } else if (error == Error::none) {
+        return Status::ok;
+    } else if (error == Status::ok) {
         ++_errors.fatal;
-        return Error::data_corrupted;
+        return Status::data_corrupted;
     }
 
     return error;
