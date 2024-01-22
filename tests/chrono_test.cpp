@@ -3,6 +3,7 @@
 
 void emb::tests::chrono_test() {
 #ifdef EMB_TESTS_ENABLED
+#if defined(EMBLIB_C28X)
     emb::chrono::seconds sec(10);
     EMB_ASSERT_EQUAL(sec.count(), 10);
     emb::chrono::milliseconds msec = emb::chrono::duration_cast<emb::chrono::milliseconds>(sec);
@@ -44,5 +45,6 @@ void emb::tests::chrono_test() {
     EMB_MAYBE_UNUSED emb::chrono::seconds sec5 = sec--;
     EMB_ASSERT_EQUAL(sec.count(), 10);
     EMB_ASSERT_EQUAL(sec5.count(), 11);
+#endif
 #endif
 }

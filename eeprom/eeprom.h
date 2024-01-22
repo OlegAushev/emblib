@@ -2,11 +2,7 @@
 
 
 #include "../core.h"
-#if defined(EMBLIB_C28X)
 #include "../chrono.h"
-#else
-#include <chrono>
-#endif
 #include <cstring>
 
 

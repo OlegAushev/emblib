@@ -6,7 +6,7 @@
 
 #include "../core.h"
 #include "../static_vector.h"
-#include <chrono>
+#include "../chrono.h"
 
 
 namespace emb {
@@ -23,8 +23,6 @@ enum class task_execsts {
 
 class basic_scheduler {
 private:
-    static inline std::chrono::milliseconds (*_now)() = [](){ return std::chrono::milliseconds(0); };
-
     static constexpr size_t max_taskcount{8};
 
     struct task {
@@ -45,11 +43,11 @@ private:
 public:
     basic_scheduler() = delete;
     static void init(std::chrono::milliseconds (*get_now_func)()) {
-        _now = get_now_func;
+        assert(emb::chrono::steady_clock::initialized());
     }
 
     static void add_task(task_execsts (*func)(size_t), std::chrono::milliseconds period) {
-        task task_ = {period, _now(), func};
+        task task_ = {period, emb::chrono::steady_clock::now(), func};
         _tasks.push_back(task_);
     }
 
@@ -62,11 +60,11 @@ public:
     static void add_delayed_task(void (*task)(), std::chrono::milliseconds delay) {
         _delayed_task = task;
         _delayed_task_delay = delay;
-        _delayed_task_start = _now();
+        _delayed_task_start = emb::chrono::steady_clock::now();
     }
 
     static void run() {
-        auto now = _now();
+        auto now = emb::chrono::steady_clock::now();
 
         for (size_t i = 0; i < _tasks.size(); ++i) {
             if (now >= (_tasks[i].timepoint + _tasks[i].period)) {
@@ -86,7 +84,7 @@ public:
 
     static void reset() {
         for (size_t i = 0; i < _tasks.size(); ++i) {
-            _tasks[i].timepoint = _now();
+            _tasks[i].timepoint = emb::chrono::steady_clock::now();
         }
     }
 };

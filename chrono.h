@@ -2,12 +2,18 @@
 
 
 #include <emblib/core.h>
+#if defined(EMBLIB_ARM)
+#include <chrono>
+#endif
 
 
 namespace emb {
 
 
 namespace chrono {
+
+
+#if defined(EMBLIB_C28X)
 
 
 namespace impl {
@@ -94,6 +100,29 @@ typedef impl::duration<1> nanoseconds;
 typedef impl::duration<1000> microseconds;
 typedef impl::duration<1000000> milliseconds;
 typedef impl::duration<1000000000> seconds;
+
+
+#endif
+
+
+class steady_clock {
+private:
+    steady_clock();
+    steady_clock(const steady_clock& other);
+    steady_clock& operator=(const steady_clock& other);
+
+    static EMB_MILLISECONDS (*_now)();
+    static EMB_MILLISECONDS _default_now_getter() { return EMB_MILLISECONDS(0); }
+
+    static bool _initialized;
+public:
+    static void init(EMB_MILLISECONDS (*now_getter)()) {
+        _now = now_getter;
+        _initialized = true;
+    }
+    static EMB_MILLISECONDS now() { return _now(); }
+    static bool initialized() { return _initialized; }
+};
 
 
 } // namespace chrono
