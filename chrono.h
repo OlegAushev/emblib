@@ -125,6 +125,35 @@ public:
 };
 
 
+class timeout {
+private:
+    EMB_MILLISECONDS _duration;
+    EMB_MILLISECONDS _start;
+public:
+    timeout(EMB_MILLISECONDS duration = EMB_MILLISECONDS(0))
+            : _duration(duration)
+            , _start(emb::chrono::steady_clock::now())
+    {}
+
+    bool expired() const {
+        if (_duration.count() < 0) {
+            return false;
+        }
+        if ((steady_clock::now() - _start) > _duration) {
+            return true;
+        }
+        return false;
+    }
+
+    void reset() { _start = steady_clock::now(); }
+
+    void reset(std::chrono::milliseconds duration) {
+        _duration = duration;
+        _start = steady_clock::now();
+    }
+};
+
+
 } // namespace chrono
 
 
