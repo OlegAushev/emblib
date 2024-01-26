@@ -13,16 +13,16 @@ namespace gpio {
 #if defined(EMBLIB_C28X)
 
 
-SCOPED_ENUM_DECLARE_BEGIN(ActiveState) {
+SCOPED_ENUM_DECLARE_BEGIN(active_state) {
     low = 0,
     high = 1
-} SCOPED_ENUM_DECLARE_END(ActiveState)
+} SCOPED_ENUM_DECLARE_END(active_state)
 
 
-SCOPED_ENUM_DECLARE_BEGIN(State) {
+SCOPED_ENUM_DECLARE_BEGIN(state) {
     inactive = 0,
     active = 1
-} SCOPED_ENUM_DECLARE_END(State)
+} SCOPED_ENUM_DECLARE_END(state)
 
 
 #elif defined(EMBLIB_ARM)

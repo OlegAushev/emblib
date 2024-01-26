@@ -147,7 +147,7 @@ public:
 
     void reset() { _start = steady_clock::now(); }
 
-    void reset(std::chrono::milliseconds duration) {
+    void reset(EMB_MILLISECONDS duration) {
         _duration = duration;
         _start = steady_clock::now();
     }
