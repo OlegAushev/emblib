@@ -6,6 +6,7 @@
 
 namespace emb {
 
+
 namespace gpio {
 
 
@@ -27,13 +28,13 @@ SCOPED_ENUM_DECLARE_BEGIN(State) {
 #elif defined(EMBLIB_ARM)
 
 
-enum class ActiveState : unsigned int {
+enum class active_state : unsigned int {
     low = 0,
     high = 1
 };
 
 
-enum class State : unsigned int {
+enum class state : unsigned int {
     inactive = 0,
     active = 1
 };
@@ -42,23 +43,23 @@ enum class State : unsigned int {
 #endif
 
 
-class Input {
+class input {
 public:
-    Input() EMB_DEFAULT
-    virtual ~Input() EMB_DEFAULT
+    input() EMB_DEFAULT
+    virtual ~input() EMB_DEFAULT
 
-    virtual State read() const = 0;
+    virtual state read() const = 0;
     virtual unsigned int read_level() const = 0;
 };
 
 
-class Output {
+class output {
 public:
-    Output() EMB_DEFAULT
-    virtual ~Output() EMB_DEFAULT
+    output() EMB_DEFAULT
+    virtual ~output() EMB_DEFAULT
 
-    virtual State read() const = 0;
-    virtual void set(State state = State::active) = 0;
+    virtual state read() const = 0;
+    virtual void set(state st = state::active) = 0;
     virtual void reset() = 0;
     virtual void toggle() = 0;
     virtual unsigned int read_level() const = 0;
@@ -67,5 +68,6 @@ public:
 
 
 } // namespace gpio
+
 
 } // namespace emb
