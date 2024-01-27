@@ -47,7 +47,7 @@ void emb::tests::filter_test() {
 
     /* ExponentialMedianFilter */
     emb::expmed_filter<float, 3> expmed_filter_1;
-    expmed_filter_1.init(0.5, 1);
+    expmed_filter_1.initialize(0.5, 1);
     expmed_filter_1.push(16);
     EMB_ASSERT_EQUAL(expmed_filter_1.output(), 0);
     expmed_filter_1.push(8);
@@ -56,7 +56,7 @@ void emb::tests::filter_test() {
     EMB_ASSERT_EQUAL(expmed_filter_1.output(), 10);
     expmed_filter_1.push(8);
     EMB_ASSERT_EQUAL(expmed_filter_1.output(), 9);
-    expmed_filter_1.init(1, 1);
+    expmed_filter_1.initialize(1, 1);
     expmed_filter_1.push(19);
     EMB_ASSERT_EQUAL(expmed_filter_1.output(), 19);
     expmed_filter_1.set_output(10);

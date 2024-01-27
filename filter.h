@@ -160,7 +160,7 @@ public:
 
     virtual void reset() EMB_OVERRIDE { set_output(0); }
 
-    void init(float sampling_period, float time_constant) {
+    void initialize(float sampling_period, float time_constant) {
         _sampling_period = sampling_period;
         _time_constant = time_constant;
         _smooth_factor = emb::clamp(sampling_period/time_constant, 0.f, 1.f);
@@ -220,7 +220,7 @@ public:
 
     virtual void reset() EMB_OVERRIDE { set_output(0); }
     
-    void init(float sampling_period, float time_constant) {
+    void initialize(float sampling_period, float time_constant) {
         _sampling_period = sampling_period;
         _time_constant = time_constant;
         _smooth_factor = emb::clamp(sampling_period/time_constant, 0.f, 1.f);
