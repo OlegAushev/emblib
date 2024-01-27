@@ -28,13 +28,13 @@ SCOPED_ENUM_DECLARE_BEGIN(state) {
 #elif defined(EMBLIB_ARM)
 
 
-enum class active_state : unsigned int {
+enum class active_pin_state : unsigned int {
     low = 0,
     high = 1
 };
 
 
-enum class state : unsigned int {
+enum class pin_state : unsigned int {
     inactive = 0,
     active = 1
 };
@@ -43,23 +43,23 @@ enum class state : unsigned int {
 #endif
 
 
-class input {
+class input_pin {
 public:
-    input() EMB_DEFAULT
-    virtual ~input() EMB_DEFAULT
+    input_pin() EMB_DEFAULT
+    virtual ~input_pin() EMB_DEFAULT
 
-    virtual state read() const = 0;
+    virtual pin_state read() const = 0;
     virtual unsigned int read_level() const = 0;
 };
 
 
-class output {
+class output_pin {
 public:
-    output() EMB_DEFAULT
-    virtual ~output() EMB_DEFAULT
+    output_pin() EMB_DEFAULT
+    virtual ~output_pin() EMB_DEFAULT
 
-    virtual state read() const = 0;
-    virtual void set(state st = state::active) = 0;
+    virtual pin_state read() const = 0;
+    virtual void set(pin_state s = pin_state::active) = 0;
     virtual void reset() = 0;
     virtual void toggle() = 0;
     virtual unsigned int read_level() const = 0;
