@@ -46,7 +46,7 @@ enum class status {
 #endif
 
 
-class Driver {
+class driver {
 public:
     virtual status read(size_t page, size_t offset, uint8_t* buf, size_t len, EMB_MILLISECONDS timeout) = 0;
     virtual status write(size_t page, size_t offset, const uint8_t* buf, size_t len, EMB_MILLISECONDS timeout) = 0;
@@ -55,9 +55,9 @@ public:
 };
 
 
-class Storage {
+class storage {
 private:
-    Driver& _driver;
+    driver& _driver;
     uint32_t (*_calc_crc32)(const uint8_t*, size_t);
 
     const size_t available_page_bytes;
@@ -75,8 +75,8 @@ private:
         uint32_t fatal;
     } _errors;
 public:
-    Storage(Driver& driver_, uint32_t (*calc_crc32_func_)(const uint8_t*, size_t));
-    ~Storage();
+    storage(driver& driver_, uint32_t (*calc_crc32_func_)(const uint8_t*, size_t));
+    ~storage();
     status read(size_t page, uint8_t* buf, size_t len, EMB_MILLISECONDS timeout);
     status write(size_t page, const uint8_t* buf, size_t len, EMB_MILLISECONDS timeout);
 

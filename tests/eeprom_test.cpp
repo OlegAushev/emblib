@@ -12,7 +12,7 @@
 #include <emblib/tests/tests.h>
 
 
-class TestingEepromDriver : public emb::eeprom::Driver {
+class TestingEepromDriver : public emb::eeprom::driver {
 private:
     static const size_t _page_bytes = 64;
     static const size_t _page_count = 8;
@@ -78,9 +78,9 @@ void emb::tests::eeprom_test() {
 #ifdef EMB_TESTS_ENABLED
     TestingEepromDriver eeprom_driver;
 #if defined(EMBLIB_C28X)
-    emb::eeprom::Storage eeprom(eeprom_driver, mcu::crc::calc_crc32_byte8);
+    emb::eeprom::storage eeprom(eeprom_driver, mcu::crc::calc_crc32_byte8);
 #elif defined(EMBLIB_ARM)
-    emb::eeprom::Storage eeprom(eeprom_driver, mcu::crc::calc_crc32);
+    emb::eeprom::storage eeprom(eeprom_driver, mcu::crc::calc_crc32);
 #endif
 
     TestingEepromStruct1 s1_src = {42, emb::numbers::pi, 12, -100, true};
