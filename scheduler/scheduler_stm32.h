@@ -15,7 +15,7 @@ namespace emb {
 namespace scheduler {
 
 
-enum class task_execsts {
+enum class task_execstatus {
     success,
     fail
 };
@@ -28,11 +28,11 @@ private:
     struct task {
         std::chrono::milliseconds period;
         std::chrono::milliseconds timepoint;
-        task_execsts (*func)(size_t);
+        task_execstatus (*func)(size_t);
     };
     static inline emb::static_vector<task, max_taskcount> _tasks;
 
-    static task_execsts empty_task(size_t) { return task_execsts::success; }
+    static task_execstatus empty_task(size_t) { return task_execstatus::success; }
 
 private:
     static inline std::chrono::milliseconds _delayed_task_start{0};
@@ -46,7 +46,7 @@ public:
         assert(emb::chrono::steady_clock::initialized());
     }
 
-    static void add_task(task_execsts (*func)(size_t), std::chrono::milliseconds period) {
+    static void add_task(task_execstatus (*func)(size_t), std::chrono::milliseconds period) {
         task task_ = {period, emb::chrono::steady_clock::now(), func};
         _tasks.push_back(task_);
     }
@@ -57,8 +57,8 @@ public:
         }
     }
 
-    static void add_delayed_task(void (*task)(), std::chrono::milliseconds delay) {
-        _delayed_task = task;
+    static void add_delayed_task(void (*func)(), std::chrono::milliseconds delay) {
+        _delayed_task = func;
         _delayed_task_delay = delay;
         _delayed_task_start = emb::chrono::steady_clock::now();
     }
@@ -68,7 +68,7 @@ public:
 
         for (size_t i = 0; i < _tasks.size(); ++i) {
             if (now >= (_tasks[i].timepoint + _tasks[i].period)) {
-                if (_tasks[i].func(i) == task_execsts::success) {
+                if (_tasks[i].func(i) == task_execstatus::success) {
                     _tasks[i].timepoint = now;
                 }
             }
