@@ -139,6 +139,8 @@ public:
             _hi = value;
         }
     }
+
+    T size() const { return _hi - _lo; }
 };
 
 
