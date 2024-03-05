@@ -138,10 +138,30 @@ inline emb::vec3 calculate_svpwm(float voltage_mag, float voltage_angle, float v
         break;
     }
 
-    for(uint32_t i = 0; i < 3; ++i) {
-        pulse_durations[i] = emb::clamp<float>(pulse_durations[i], 0.f, 1.f);
+    for (size_t i = 0; i < 3; ++i) {
+        pulse_durations[i] = emb::clamp<float>(pulse_durations[i], 0.0f, 1.0f);
     }
     return pulse_durations;
+}
+
+
+inline emb::vec3 compensate_deadtime(const emb::vec3& dutycycles, const emb::vec3& currents,
+                                     float current_threshold, float pwm_period, float deadtime) {
+    emb::vec3 dc;
+    float deadtime_dutycycle = deadtime / pwm_period;
+
+    for (size_t i = 0; i < 3; ++i) {
+        if (currents[i] > current_threshold) {
+            dc[i] = dutycycles[i] + deadtime_dutycycle;
+        } else if (currents[i] < -current_threshold) {
+            dc[i] = dutycycles[i] - deadtime_dutycycle;
+        } else {
+            dc[i] = dutycycles[i];
+        }
+        dc[i] = emb::clamp(dc[i], 0.0f, 1.0f);
+    }
+
+    return dc;
 }
 
 
