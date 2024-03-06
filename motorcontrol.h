@@ -165,6 +165,7 @@ inline emb::vec3 compensate_deadtime_v1(const emb::vec3& dutycycles, const emb::
 }
 
 
+/// @brief DOI: 10.4028/www.scientific.net/AMM.416-417.536
 inline emb::vec3 compensate_deadtime_v2(const emb::vec3& dutycycles, const emb::vec3& currents,
                                         float current_threshold, float pwm_period, float deadtime) {
 #ifdef EMBLIB_C28X
@@ -175,6 +176,7 @@ inline emb::vec3 compensate_deadtime_v2(const emb::vec3& dutycycles, const emb::
 
     const auto [min, max] = std::minmax_element(currents.begin(), currents.end());
 
+    // use Kirchhoff's current law to determine if there is one positive or one negative current
     if (*min + *max > 0) {
         const auto idx = std::distance(currents.begin(), max);
         dc[size_t(idx)] = std::clamp(dc[size_t(idx)] + 2 * deadtime_dutycycle, 0.0f, 1.0f);
