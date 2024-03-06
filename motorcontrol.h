@@ -145,10 +145,10 @@ inline emb::vec3 calculate_svpwm(float voltage_mag, float voltage_angle, float v
 }
 
 
-inline emb::vec3 compensate_deadtime(const emb::vec3& dutycycles, const emb::vec3& currents,
-                                     float current_threshold, float pwm_period, float deadtime) {
+inline emb::vec3 compensate_deadtime_v1(const emb::vec3& dutycycles, const emb::vec3& currents,
+                                        float current_threshold, float pwm_period, float deadtime) {
     emb::vec3 dc;
-    float deadtime_dutycycle = deadtime / pwm_period;
+    const float deadtime_dutycycle = deadtime / pwm_period;
 
     for (size_t i = 0; i < 3; ++i) {
         if (currents[i] > current_threshold) {
@@ -162,6 +162,35 @@ inline emb::vec3 compensate_deadtime(const emb::vec3& dutycycles, const emb::vec
     }
 
     return dc;
+}
+
+
+inline emb::vec3 compensate_deadtime_v2(const emb::vec3& dutycycles, const emb::vec3& currents,
+                                        float current_threshold, float pwm_period, float deadtime) {
+#ifdef EMBLIB_C28X
+    return dutycycles;
+#else
+    emb::vec3 dc = dutycycles;
+    const float deadtime_dutycycle = deadtime / pwm_period;
+
+    int sign_sum = emb::sgn(currents[0]) + emb::sgn(currents[1]) + emb::sgn(currents[2]);
+
+    int idx = 0;
+    float correction_sgn = 0;
+
+    if (sign_sum < 0) {
+        idx = std::distance(currents.begin(), std::max_element(currents.begin(), currents.end()));
+        correction_sgn = 1;
+    } else if (sign_sum > 0) {
+        idx = std::distance(currents.begin(), std::min_element(currents.begin(), currents.end()));
+        correction_sgn = -1;
+    } else {
+        return dutycycles;
+    }
+
+    dc[size_t(idx)] = dc[size_t(idx)] + correction_sgn * 2 * deadtime_dutycycle;
+    return dc;                                        
+#endif
 }
 
 
