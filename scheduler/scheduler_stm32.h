@@ -42,7 +42,7 @@ private:
 
 public:
     basic_scheduler() = delete;
-    static void initialize(std::chrono::milliseconds (*get_now_func)()) {
+    static void init(std::chrono::milliseconds (*get_now_func)()) {
         assert(emb::chrono::steady_clock::initialized());
     }
 

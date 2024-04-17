@@ -116,7 +116,7 @@ private:
 
     static bool _initialized;
 public:
-    static void initialize(EMB_MILLISECONDS (*now_getter)()) {
+    static void init(EMB_MILLISECONDS (*now_getter)()) {
         _now = now_getter;
         _initialized = true;
     }
