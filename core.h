@@ -80,7 +80,7 @@ namespace emb {
 void fatal_error_cb(const char* hint, int code);
 
 
-[[ noreturn ]] inline void fatal_error(const char* hint, int code = 0)
+[[noreturn]] inline void fatal_error(const char* hint, int code = 0)
 {
     fatal_error_cb(hint, code);
     while (true) {}
@@ -93,7 +93,7 @@ inline void empty_function()
 }
 
 
-[[ noreturn ]] inline void invalid_function()
+[[noreturn]] inline void invalid_function()
 {
     fatal_error("invalid function call");
     while (true) {}
