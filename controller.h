@@ -27,6 +27,51 @@ template <controller_logic::enum_type Logic>
 #elif defined(EMBLIB_ARM)
 template <controller_logic Logic>
 #endif
+class p_controller : private emb::noncopyable {
+protected:
+    float _kp;              // proportional gain
+    float _out_min;         // PI output minimum limit
+    float _out_max;         // PI output maximum limit
+    float _out;             // PI output;
+
+    static float _error(float ref, float meas);
+public:
+    p_controller(float kp, float out_min, float out_max)
+            : _kp(kp)
+            , _out_min(out_min)
+            , _out_max(out_max)
+            , _out(0) {}
+    virtual ~p_controller() {}
+    
+    virtual void push(float ref, float meas) {
+        float out = _kp * p_controller<Logic>::_error(ref, meas);
+        _out = emb::clamp(out, _out_min, _out_max);
+    }
+    
+    virtual void reset() { _out = 0; }
+    float output() const { return _out; }
+    void set_output_min(float value) { _out_min = value; }
+    void set_output_max(float value) { _out_max = value; }
+    float output_min() const { return _out_min; }
+    float output_max() const { return _out_max; }
+
+    void set_kp(float value) { _kp = value; }
+    float kp() const { return _kp; }
+};
+
+
+template<>
+inline float p_controller<controller_logic::direct>::_error(float ref, float meas) { return ref - meas; }
+
+template<>
+inline float p_controller<controller_logic::inverse>::_error(float ref, float meas) { return meas - ref; }
+
+
+#if defined(EMBLIB_C28X)
+template <controller_logic::enum_type Logic>
+#elif defined(EMBLIB_ARM)
+template <controller_logic Logic>
+#endif
 class abstract_pi_controller : private emb::noncopyable {
 protected:
     float _kp;              // proportional gain
@@ -46,8 +91,7 @@ public:
             , _integrator_sum(0)
             , _out_min(out_min)
             , _out_max(out_max)
-            , _out(0) {
-    }
+            , _out(0) {}
 
     virtual ~abstract_pi_controller() {}
     virtual void push(float ref, float meas) = 0;
@@ -88,21 +132,12 @@ protected:
 public:
     backcalc_pi_controller(float kp, float ki, float ts, float kc, float out_min, float out_max)
             : abstract_pi_controller<Logic>(kp, ki, ts, out_min, out_max)
-            , _kc(kc) {
-    }
+            , _kc(kc) {}
 
     virtual void push(float ref, float meas) EMB_OVERRIDE {
         float error = abstract_pi_controller<Logic>::_error(ref, meas);
         float out = emb::clamp(error * this->_kp + this->_integrator_sum, -FLT_MAX, FLT_MAX);
-
-        if (out > this->_out_max) {
-            this->_out = this->_out_max;
-        } else if (out < this->_out_min) {
-            this->_out = this->_out_min;
-        } else {
-            this->_out = out;
-        }
-
+        this->_out = emb::clamp(out, this->_out_min, this->_out_max);
         this->_integrator_sum = emb::clamp(this->_integrator_sum + this->_ki * this->_ts * error - _kc * (out - this->_out),
                 -FLT_MAX, FLT_MAX);
     }
@@ -120,8 +155,7 @@ protected:
 public:
     clamping_pi_controller(float kp, float ki, float ts, float out_min, float out_max)
         : abstract_pi_controller<Logic>(kp, ki, ts, out_min, out_max)
-        , _error(0) {
-    }
+        , _error(0) {}
 
     virtual void push(float ref, float meas) EMB_OVERRIDE {
         float error = abstract_pi_controller<Logic>::_error(ref, meas);
