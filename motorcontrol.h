@@ -41,38 +41,42 @@ typedef std::array<float, 3> vec3;
 
 
 namespace traits {
-struct from_rpm{};
-struct from_radps{};
+struct from_rpm_t{};
+struct from_radps_t{};
+
+const from_radps_t from_radps;
+const from_rpm_t from_rpm;
 }
 
 
 class motor_speed {
-public:
-    const int pole_pairs;
 private:
+    const int _pole_pairs;
     float _radps_elec;
 public:
     explicit motor_speed(int pole_pairs_)
-            : pole_pairs(pole_pairs_)
+            : _pole_pairs(pole_pairs_)
             , _radps_elec(0) {
     }
 
-    motor_speed(int pole_pairs_, float radps_elec_, traits::from_radps)
-            : pole_pairs(pole_pairs_) {
+    motor_speed(int pole_pairs_, float radps_elec_, traits::from_radps_t t)
+            : _pole_pairs(pole_pairs_) {
         from_radps(radps_elec_);
     }
 
-    motor_speed(int pole_pairs_, float rpm_, traits::from_rpm)
-            : pole_pairs(pole_pairs_) {
+    motor_speed(int pole_pairs_, float rpm_, traits::from_rpm_t t)
+            : _pole_pairs(pole_pairs_) {
         from_rpm(rpm_);
     }
 
+    int pole_pairs() const { return _pole_pairs; }
+
     float to_radps() const { return _radps_elec; }
-    float to_rpm() const { return 60 * _radps_elec / (numbers::two_pi * float(pole_pairs)); }
-    float to_radps_mech() const { return _radps_elec / float(pole_pairs); }
+    float to_rpm() const { return 60 * _radps_elec / (numbers::two_pi * float(_pole_pairs)); }
+    float to_radps_mech() const { return _radps_elec / float(_pole_pairs); }
 
     void from_radps(float value) { _radps_elec = value; }
-    void from_rpm(float value) { _radps_elec = numbers::two_pi * float(pole_pairs) * value / 60; }
+    void from_rpm(float value) { _radps_elec = numbers::two_pi * float(_pole_pairs) * value / 60; }
 };
 
 
