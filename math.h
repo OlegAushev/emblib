@@ -185,8 +185,8 @@ public:
     explicit signed_perunit(float value) : _value(emb::clamp(value, -1.f, 1.f)) {}
     signed_perunit(float value, float basevalue) : _value(emb::clamp(value/basevalue, -1.f, 1.f)) {}
 
-    float value() { return _value; }
-    void set_value(float value) { _value = emb::clamp(value, -1.f, 1.f); }
+    float get() { return _value; }
+    void set(float value) { _value = emb::clamp(value, -1.f, 1.f); }
 };
 
 
@@ -198,8 +198,8 @@ public:
     explicit unsigned_perunit(float value) : _value(emb::clamp(value, 0.f, 1.f)) {}
     unsigned_perunit(float value, float basevalue) : _value(emb::clamp(value/basevalue, 0.f, 1.f)) {}
 
-    float value() { return _value; }
-    void set_value(float value) { _value = emb::clamp(value, 0.f, 1.f); }
+    float get() { return _value; }
+    void set(float value) { _value = emb::clamp(value, 0.f, 1.f); }
 };
 
 
