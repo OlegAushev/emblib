@@ -61,22 +61,22 @@ public:
 
     motor_speed(int pole_pairs_, float radps_elec_, traits::from_radps_t t)
             : _pole_pairs(pole_pairs_) {
-        from_radps(radps_elec_);
+        set_from_radps(radps_elec_);
     }
 
     motor_speed(int pole_pairs_, float rpm_, traits::from_rpm_t t)
             : _pole_pairs(pole_pairs_) {
-        from_rpm(rpm_);
+        set_from_rpm(rpm_);
     }
 
     int pole_pairs() const { return _pole_pairs; }
 
-    float to_radps() const { return _radps_elec; }
-    float to_rpm() const { return 60 * _radps_elec / (numbers::two_pi * float(_pole_pairs)); }
-    float to_radps_mech() const { return _radps_elec / float(_pole_pairs); }
+    float radps() const { return _radps_elec; }
+    float rpm() const { return 60 * _radps_elec / (numbers::two_pi * float(_pole_pairs)); }
+    float radps_mech() const { return _radps_elec / float(_pole_pairs); }
 
-    void from_radps(float value) { _radps_elec = value; }
-    void from_rpm(float value) { _radps_elec = numbers::two_pi * float(_pole_pairs) * value / 60; }
+    void set_from_radps(float value) { _radps_elec = value; }
+    void set_from_rpm(float value) { _radps_elec = numbers::two_pi * float(_pole_pairs) * value / 60; }
 };
 
 
