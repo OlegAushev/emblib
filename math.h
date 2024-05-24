@@ -111,36 +111,36 @@ inline float rem_pi(float value) {
 template <typename T>
 class range {
 private:
-    T _lo;
-    T _hi;
+    T _lower;
+    T _upper;
 public:
     range(const T& value1, const T& value2) {
         if (value1 < value2) {
-            _lo = value1;
-            _hi = value2;
+            _lower = value1;
+            _upper = value2;
         } else {
-            _lo = value2;
-            _hi = value1;
+            _lower = value2;
+            _upper = value1;
         }
     }
 
-    bool contains(const T& value) const { return (_lo <= value) && (value <= _hi); }
+    bool contains(const T& value) const { return (_lower <= value) && (value <= _upper); }
 
-    const T& lo() const { return _lo; }
-    void set_lo(const T& value) {
-        if (value <= _hi) {
-            _lo = value;
+    const T& lower_bound() const { return _lower; }
+    void set_lower_bound(const T& value) {
+        if (value <= _upper) {
+            _lower = value;
         }
     }
 
-    const T& hi() const { return _hi; }
-    void set_hi(const T& value) {
-        if (value >= _lo) {
-            _hi = value;
+    const T& upper_bound() const { return _upper; }
+    void set_upper_bound(const T& value) {
+        if (value >= _lower) {
+            _upper = value;
         }
     }
 
-    T size() const { return _hi - _lo; }
+    T length() const { return _upper - _lower; }
 };
 
 
@@ -161,16 +161,16 @@ public:
     }
 
     void push(const T& value) {
-        _sum = clamp(_sum + value * _ts, output_range.lo(), output_range.hi());
+        _sum = clamp(_sum + value * _ts, output_range.lower_bound(), output_range.upper_bound());
     }
 
     void add(const T& value) {
-        _sum = clamp(_sum + value, output_range.lo(), output_range.hi());
+        _sum = clamp(_sum + value, output_range.lower_bound(), output_range.upper_bound());
     }
 
     const T& output() const { return _sum; }
     void reset() {
-        _sum = clamp(_initval, output_range.lo(), output_range.hi());
+        _sum = clamp(_initval, output_range.lower_bound(), output_range.upper_bound());
     }
 
     void set_sampling_period(float value) { _ts = value; }
