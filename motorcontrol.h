@@ -3,6 +3,7 @@
 
 #include <emblib/core.h>
 #include <emblib/math.h>
+#include <emblib/units.h>
 
 #if defined(EMBLIB_C28X)
 #include <emblib/array.h>
@@ -40,33 +41,26 @@ typedef std::array<float, 3> vec3;
 #endif
 
 
-namespace traits {
-struct from_rpm_t{};
-struct from_radps_t{};
-
-const from_radps_t from_radps;
-const from_rpm_t from_rpm;
-}
-
-
 class motor_speed {
 private:
     const int _pole_pairs;
     float _radps_elec;
 public:
-    explicit motor_speed(int pole_pairs_)
-            : _pole_pairs(pole_pairs_)
-            , _radps_elec(0) {
+    explicit motor_speed(int pole_pairs)
+            : _pole_pairs(pole_pairs)
+            , _radps_elec(0)
+    {}
+
+    motor_speed(int pole_pairs, emb::units::radps radps_elec)
+            : _pole_pairs(pole_pairs)
+    {
+        set(radps_elec);
     }
 
-    motor_speed(int pole_pairs_, float radps_elec_, traits::from_radps_t t)
-            : _pole_pairs(pole_pairs_) {
-        set_from_radps(radps_elec_);
-    }
-
-    motor_speed(int pole_pairs_, float rpm_, traits::from_rpm_t t)
-            : _pole_pairs(pole_pairs_) {
-        set_from_rpm(rpm_);
+    motor_speed(int pole_pairs, emb::units::rpm rpm)
+            : _pole_pairs(pole_pairs)
+    {
+        set(rpm);
     }
 
     int pole_pairs() const { return _pole_pairs; }
@@ -75,8 +69,8 @@ public:
     float rpm() const { return 60 * _radps_elec / (numbers::two_pi * float(_pole_pairs)); }
     float radps_mech() const { return _radps_elec / float(_pole_pairs); }
 
-    void set_from_radps(float value) { _radps_elec = value; }
-    void set_from_rpm(float value) { _radps_elec = numbers::two_pi * float(_pole_pairs) * value / 60; }
+    void set(emb::units::radps value) { _radps_elec = value.get(); }
+    void set(emb::units::rpm value) { _radps_elec = numbers::two_pi * float(_pole_pairs) * value.get() / 60; }
 };
 
 
