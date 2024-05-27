@@ -60,13 +60,13 @@ public:
 };
 
 
-inline float to_radps(float speed_rpm, int pole_pairs) { return numbers::two_pi * float(pole_pairs) * speed_rpm / 60; }
+inline float to_radps(float speed_rpm, int pole_pairs) { return numbers::two_pi * float(pole_pairs) * speed_rpm / 60.f; }
 
 
-inline float to_radps(float speed_rpm) { return numbers::two_pi * speed_rpm / 60; }
+inline float to_radps(float speed_rpm) { return numbers::two_pi * speed_rpm / 60.f; }
 
 
-inline float to_rpm(float speed_radps, int pole_pairs) { return 60 * speed_radps / (numbers::two_pi * float(pole_pairs)); }
+inline float to_rpm(float speed_radps, int pole_pairs) { return 60.f * speed_radps / (numbers::two_pi * float(pole_pairs)); }
 
 
 inline emb::vec3 calculate_svpwm(float voltage_mag, float voltage_angle, float voltage_dc) {
