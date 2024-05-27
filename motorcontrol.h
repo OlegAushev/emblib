@@ -43,34 +43,20 @@ typedef std::array<float, 3> vec3;
 
 class motor_speed {
 private:
-    const int _pole_pairs;
-    float _radps_elec;
+    const int _p;
+    float _w;
 public:
-    explicit motor_speed(int pole_pairs)
-            : _pole_pairs(pole_pairs)
-            , _radps_elec(0)
-    {}
+    explicit motor_speed(int p) : _p(p), _w(0) {}
+    motor_speed(int p, emb::units::radps w) : _p(p) { set(w); }
+    motor_speed(int p, emb::units::rpm n) : _p(p) { set(n); }
 
-    motor_speed(int pole_pairs, emb::units::radps radps_elec)
-            : _pole_pairs(pole_pairs)
-    {
-        set(radps_elec);
-    }
+    int pole_pairs() const { return _p; }
+    float radps() const { return _w; }
+    float rpm() const { return 60 * _w / (numbers::two_pi * float(_p)); }
+    float radps_mech() const { return _w / float(_p); }
 
-    motor_speed(int pole_pairs, emb::units::rpm rpm)
-            : _pole_pairs(pole_pairs)
-    {
-        set(rpm);
-    }
-
-    int pole_pairs() const { return _pole_pairs; }
-
-    float radps() const { return _radps_elec; }
-    float rpm() const { return 60 * _radps_elec / (numbers::two_pi * float(_pole_pairs)); }
-    float radps_mech() const { return _radps_elec / float(_pole_pairs); }
-
-    void set(emb::units::radps value) { _radps_elec = value.get(); }
-    void set(emb::units::rpm value) { _radps_elec = numbers::two_pi * float(_pole_pairs) * value.get() / 60; }
+    void set(emb::units::radps w) { _w = w.get(); }
+    void set(emb::units::rpm n) { _w = numbers::two_pi * float(_p) * n.get() / 60; }
 };
 
 
