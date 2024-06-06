@@ -125,30 +125,32 @@ public:
 };
 
 
-class timeout {
+class watchdog {
 private:
-    EMB_MILLISECONDS _duration;
+    EMB_MILLISECONDS _timeout;
     EMB_MILLISECONDS _start;
 public:
-    timeout(EMB_MILLISECONDS duration = EMB_MILLISECONDS(0))
-            : _duration(duration)
+    watchdog(EMB_MILLISECONDS timeout = EMB_MILLISECONDS(0))
+            : _timeout(timeout)
             , _start(emb::chrono::steady_clock::now())
     {}
 
-    bool expired() const {
-        if (_duration.count() < 0) {
-            return false;
-        }
-        if ((steady_clock::now() - _start) > _duration) {
+    bool good() const {
+        if (_timeout.count() < 0) {
             return true;
         }
-        return false;
+        if ((steady_clock::now() - _start) > _timeout) {
+            return false;
+        }
+        return true;
     }
+
+    bool bad() const { return !good(); }
 
     void reset() { _start = steady_clock::now(); }
 
-    void reset(EMB_MILLISECONDS duration) {
-        _duration = duration;
+    void reset(EMB_MILLISECONDS timeout) {
+        _timeout = timeout;
         _start = steady_clock::now();
     }
 };
