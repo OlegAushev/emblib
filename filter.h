@@ -12,7 +12,7 @@
 namespace emb {
 
 
-template <typename T>
+template<typename T>
 class filter {
 public:
     filter() {}
@@ -25,7 +25,7 @@ public:
 };
 
 
-template <typename T, size_t WindowSize>
+template<typename T, size_t WindowSize>
 class movavg_filter : public filter<T>, private emb::noncopyable {
 private:
     size_t _size;
@@ -93,7 +93,7 @@ public:
 };
 
 
-template <typename T, size_t WindowSize>
+template<typename T, size_t WindowSize>
 class med_filter : public filter<T> {
 private:
     circular_buffer<T, WindowSize> _window;
@@ -123,7 +123,7 @@ public:
 };
 
 
-template <typename T>
+template<typename T>
 class exp_filter : public filter<T> {
 private:
     float _sampling_period;
@@ -139,10 +139,8 @@ public:
         reset();
     }
 
-    exp_filter(float sampling_period, float time_constant)
-            : _sampling_period(sampling_period)
-            , _time_constant(time_constant) {
-        _smooth_factor = emb::clamp(sampling_period/time_constant, 0.f, 1.f);
+    exp_filter(float sampling_period, float time_constant) {
+        init(sampling_period, time_constant);
         reset();
     }
 
@@ -173,7 +171,7 @@ public:
 };
 
 
-template <typename T, size_t WindowSize>
+template<typename T, size_t WindowSize>
 class expmed_filter : public filter<T> {
 private:
     circular_buffer<T, WindowSize> _window;
@@ -191,11 +189,9 @@ public:
         reset();
     }
 
-    expmed_filter(float sampling_period, float time_constant)
-            : _sampling_period(sampling_period)
-            , _time_constant(time_constant) {
+    expmed_filter(float sampling_period, float time_constant) {
         EMB_STATIC_ASSERT((WindowSize % 2) == 1);
-        _smooth_factor = emb::clamp(sampling_period/time_constant, 0.f, 1.f);
+        init(sampling_period, time_constant);
         reset();
     }
 
@@ -229,6 +225,57 @@ public:
     void set_sampling_period(float value) {
         _sampling_period = value;
         _smooth_factor = emb::clamp(_sampling_period/_time_constant, 0.f, 1.f);
+    }
+};
+
+
+template<typename T>
+class ramp_filter : public filter<T> {
+private:
+    float _update_period;
+    float _slope;
+    float _step;
+
+    T _ref;
+    T _out;
+public:
+    ramp_filter()
+            : _update_period(0)
+            , _slope(0)
+            , _step(0) {
+        reset();
+    }
+
+    ramp_filter(float update_period, float slope) {
+        init(update_period, slope);
+        reset();
+    }
+
+    virtual void push(T input_value) EMB_OVERRIDE {
+        _ref = input_value;
+    }
+
+    virtual T output() const EMB_OVERRIDE { return _out; }
+    
+    virtual void set_output(T value) EMB_OVERRIDE {
+        _ref = value;
+        _out = value;
+    }
+
+    virtual void reset() EMB_OVERRIDE { set_output(0); }
+
+    void init(float update_period, float slope) {
+        _update_period = update_period;
+        _slope = slope;
+        _step = emb::clamp(update_period * slope, -FLT_MAX, FLT_MAX);
+    }
+
+    void update() {
+        if (_out < _ref) {
+            _out = std::min(_out + _step, _ref);
+        } else {
+            _out = std::max(_out - _step, _ref);
+        }
     }
 };
 
