@@ -47,16 +47,36 @@ private:
     float _w;
 public:
     explicit motor_speed(int p) : _p(p), _w(0) {}
-    motor_speed(int p, emb::units::radps w) : _p(p) { set(w); }
-    motor_speed(int p, emb::units::rpm n) : _p(p) { set(n); }
+    motor_speed(int p, units::radps w) : _p(p) { set(w); }
+    motor_speed(int p, units::rpm n) : _p(p) { set(n); }
 
     int pole_pairs() const { return _p; }
     float radps() const { return _w; }
     float rpm() const { return 60 * _w / (numbers::two_pi * float(_p)); }
     float radps_mech() const { return _w / float(_p); }
 
-    void set(emb::units::radps w) { _w = w.get(); }
-    void set(emb::units::rpm n) { _w = numbers::two_pi * float(_p) * n.get() / 60; }
+    void set(units::radps w) { _w = w.get(); }
+    void set(units::rpm n) { _w = numbers::two_pi * float(_p) * n.get() / 60; }
+};
+
+
+class motor_angle {
+private:
+    const int _p;
+    float _rad;
+public:
+    explicit motor_angle(int p) : _p(p), _rad(0) {}
+    motor_angle(int p, units::rad rad_elec) : _p(p) { set(rad_elec); }
+    motor_angle(int p, units::deg deg_mech) : _p(p) { set(deg_mech); }
+
+    int pole_pairs() const { return _p; }
+    float rad() const { return _rad; }
+    float rad_mech() const { return _rad / float(_p); }
+    float deg() const { return to_deg(_rad); }
+    float deg_mech() const { return to_deg(_rad) / float(_p); }
+
+    void set(units::rad rad_elec) { _rad = rad_elec.get(); }
+    void set(units::deg deg_mech) { _rad = to_rad(deg_mech.get()) * float(_p); }
 };
 
 
