@@ -43,7 +43,7 @@ typedef std::array<float, 3> vec3;
 
 class motor_speed {
 private:
-    const int _p;
+    int _p;
     float _w;
 public:
     explicit motor_speed(int p) : _p(p), _w(0) {}
@@ -62,7 +62,7 @@ public:
 
 class motor_angle {
 private:
-    const int _p;
+    int _p;
     float _rad;
 public:
     explicit motor_angle(int p) : _p(p), _rad(0) {}
