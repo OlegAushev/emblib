@@ -8,6 +8,13 @@ namespace emb {
 namespace units {
 
 
+enum class angle_type {
+    electrical,
+    mechanical
+};
+
+
+template<angle_type T>
 class rad {
 private:
     const float _value;
@@ -17,6 +24,7 @@ public:
 };
 
 
+template<angle_type T>
 class deg {
 private:
     const float _value;
@@ -26,6 +34,7 @@ public:
 };
 
 
+template<angle_type T>
 class radps {
 private:
     const float _value;
