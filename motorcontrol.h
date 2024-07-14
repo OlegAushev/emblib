@@ -13,6 +13,7 @@
 #include <motorcontrol/ipark.h>
 #elif defined(EMBLIB_ARM)
 #include <array>
+#include <utility>
 #endif
 
 
@@ -34,11 +35,33 @@ enum class phase3 : uint32_t {
 #endif
 
 
+template<typename T>
+struct vec3 {
 #if defined(EMBLIB_C28X)
-typedef emb::array<float, 3> vec3;
+    emb::array<T, 3> vec;
 #elif defined(EMBLIB_ARM)
-typedef std::array<float, 3> vec3;
+    std::array<T, 3> vec;
 #endif
+
+    T& a() { return vec[0]; }
+    T& b() { return vec[1]; }
+    T& c() { return vec[2]; }
+
+    const T& a() const { return vec[0]; }
+    const T& b() const { return vec[1]; }
+    const T& c() const { return vec[2]; }
+    
+    T& operator[](size_t pos) { return vec[pos]; }
+    const T& operator[](size_t pos) const { return vec[pos]; }
+
+#if defined(EMBLIB_C28X)
+    T& get(phase3 phase) { return vec[phase.underlying_value()]; }
+    const T& get(phase3 phase) const { return vec[phase.underlying_value()]; }
+#elif defined(EMBLIB_ARM)
+    T& get(phase3 phase) { return vec[std::to_underlying(phase)]; }
+    const T& get(phase3 phase) const { return vec[std::to_underlying(phase)]; }
+#endif
+};
 
 
 class motor_speed {
@@ -95,7 +118,7 @@ inline float to_radps(float speed_rpm) { return numbers::two_pi * speed_rpm / 60
 inline float to_rpm(float speed_radps, int pole_pairs) { return 60.f * speed_radps / (numbers::two_pi * float(pole_pairs)); }
 
 
-inline emb::vec3 calculate_svpwm(float voltage_mag, float voltage_angle, float voltage_dc) {
+inline emb::vec3<float> calculate_svpwm(float voltage_mag, float voltage_angle, float voltage_dc) {
     voltage_angle = rem_2pi(voltage_angle);
     voltage_mag = clamp<float>(voltage_mag, 0, voltage_dc / numbers::sqrt_3);
 
@@ -112,7 +135,7 @@ inline emb::vec3 calculate_svpwm(float voltage_mag, float voltage_angle, float v
 #endif
     float tb0 = (1.f - tb1 - tb2) / 2.f;
 
-    emb::vec3 pulse_durations;
+    emb::vec3<float> pulse_durations;
     switch (sector) {
     case 0:
         pulse_durations[0] = tb1 + tb2 + tb0;
@@ -155,9 +178,9 @@ inline emb::vec3 calculate_svpwm(float voltage_mag, float voltage_angle, float v
 }
 
 
-inline emb::vec3 compensate_deadtime_v1(const emb::vec3& dutycycles, const emb::vec3& currents,
-                                        float current_threshold, float pwm_period, float deadtime) {
-    emb::vec3 dc;
+inline emb::vec3<float> compensate_deadtime_v1(const emb::vec3<float>& dutycycles, const emb::vec3<float>& currents,
+                                               float current_threshold, float pwm_period, float deadtime) {
+    emb::vec3<float> dc;
     const float deadtime_dutycycle = deadtime / pwm_period;
 
     for (size_t i = 0; i < 3; ++i) {
@@ -176,22 +199,22 @@ inline emb::vec3 compensate_deadtime_v1(const emb::vec3& dutycycles, const emb::
 
 
 /// @brief DOI: 10.4028/www.scientific.net/AMM.416-417.536
-inline emb::vec3 compensate_deadtime_v2(const emb::vec3& dutycycles, const emb::vec3& currents,
-                                        float current_threshold, float pwm_period, float deadtime) {
+inline emb::vec3<float> compensate_deadtime_v2(const emb::vec3<float>& dutycycles, const emb::vec3<float>& currents,
+                                               float current_threshold, float pwm_period, float deadtime) {
 #ifdef EMBLIB_C28X
     return dutycycles;
 #else
-    emb::vec3 dc = dutycycles;
+    emb::vec3<float> dc = dutycycles;
     const float deadtime_dutycycle = deadtime / pwm_period;
 
-    const auto [min, max] = std::minmax_element(currents.begin(), currents.end());
+    const auto [min, max] = std::minmax_element(currents.vec.begin(), currents.vec.end());
 
     // use Kirchhoff's current law to determine if there is one positive or one negative current
     if (*min + *max > 0) {
-        const auto idx = std::distance(currents.begin(), max);
+        const auto idx = std::distance(currents.vec.begin(), max);
         dc[size_t(idx)] = std::clamp(dc[size_t(idx)] + 2 * deadtime_dutycycle, 0.0f, 1.0f);
     } else if (*min + *max < 0) {
-        const auto idx = std::distance(currents.begin(), min);
+        const auto idx = std::distance(currents.vec.begin(), min);
         dc[size_t(idx)] = std::clamp(dc[size_t(idx)] - 2 * deadtime_dutycycle, 0.0f, 1.0f);
     }
 
@@ -237,7 +260,7 @@ inline alphabeta_pair clarke_transform(float a, float b, float c) {
 }
 
 
-inline alphabeta_pair clarke_transform(const emb::vec3& vec3_) {
+inline alphabeta_pair clarke_transform(const emb::vec3<float>& vec3_) {
     float alpha = vec3_[0];
     float beta = (vec3_[1] - vec3_[2]) * numbers::inv_sqrt3;
     return alphabeta_pair(alpha, beta);

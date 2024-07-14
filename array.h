@@ -14,7 +14,7 @@ public:
 
     size_t size() const { return Size; }
 
-    T& operator[] (size_t pos) {
+    T& operator[](size_t pos) {
 #ifdef NDEBUG
         return data[pos];
 #else
