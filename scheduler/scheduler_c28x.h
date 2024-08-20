@@ -23,6 +23,7 @@ SCOPED_ENUM_DECLARE_BEGIN(task_execstatus) {
 
 class basic_scheduler {
 private:
+    static bool _initialized;
     static const size_t max_taskcount = 8;
 
     struct task {
@@ -33,18 +34,22 @@ private:
     static emb::static_vector<task, max_taskcount> _tasks;
 
     static task_execstatus empty_task(size_t) { return task_execstatus::success; }
-
 private:
     static emb::chrono::milliseconds _delayed_task_start;
     static emb::chrono::milliseconds _delayed_task_delay;
     static void empty_delayed_task() {}
     static void (*_delayed_task)();
-
-    basic_scheduler() {} // deleted constructor
+private:
+    basic_scheduler();
+    basic_scheduler(const basic_scheduler& other);
+    basic_scheduler& operator=(const basic_scheduler& other);
 public:
-    static void init(emb::chrono::milliseconds (*get_now_func)()) {
+    static void init() {
         assert(emb::chrono::steady_clock::initialized());
+        _initialized = true;
     }
+
+    static bool initialized() { return _initialized; }
 
     static void add_task(task_execstatus (*func)(size_t), emb::chrono::milliseconds period) {
         task task_ = {period, emb::chrono::steady_clock::now(), func};
