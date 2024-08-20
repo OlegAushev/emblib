@@ -1,6 +1,9 @@
 #include "scheduler_c28x.h"
 
 
+#if defined(EMBLIB_C28X)
+
+
 namespace emb {
 
 
@@ -18,3 +21,6 @@ void (*basic_scheduler::_delayed_task)() = basic_scheduler::empty_delayed_task;
 
 
 } // namespace emb
+
+
+#endif

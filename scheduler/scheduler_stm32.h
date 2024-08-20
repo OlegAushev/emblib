@@ -23,6 +23,7 @@ enum class task_execstatus {
 
 class basic_scheduler {
 private:
+    static inline bool _initialized{false};
     static constexpr size_t max_taskcount{8};
 
     struct task {
@@ -42,8 +43,9 @@ private:
 
 public:
     basic_scheduler() = delete;
-    static void init(std::chrono::milliseconds (*get_now_func)()) {
+    static void init() {
         assert(emb::chrono::steady_clock::initialized());
+        _initialized = true;
     }
 
     static void add_task(task_execstatus (*func)(size_t), std::chrono::milliseconds period) {
