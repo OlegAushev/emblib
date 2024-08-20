@@ -35,7 +35,7 @@ public:
         }
     }
 
-    static void initialize(emb::chrono::nanoseconds (*time_now_func)(void)) {
+    static void init(emb::chrono::nanoseconds (*time_now_func)(void)) {
         _time_now_func = time_now_func;
     }
 };
@@ -67,7 +67,7 @@ public:
         }
     }
 
-    static void initialize(uint32_t (*time_now_func_clk)(void)) {
+    static void init(uint32_t (*time_now_func_clk)(void)) {
         _time_now_func = time_now_func_clk;
     }
 };
@@ -106,7 +106,7 @@ public:
         }
     }
 
-    static void initialize(emb::chrono::nanoseconds (*time_now_func)(void)) {
+    static void init(emb::chrono::nanoseconds (*time_now_func)(void)) {
         _time_now_func = time_now_func;
     }
 
