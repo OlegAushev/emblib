@@ -59,22 +59,22 @@ void emb::tests::math_test() {
     integ.output_range.set_lower_bound(-15.f);
     integ.push(-60);
     EMB_ASSERT_EQUAL(integ.output(), -15.f);
-    EMB_ASSERT_EQUAL(integ.output(), integ.output_range.lo());
+    EMB_ASSERT_EQUAL(integ.output(), integ.output_range.lower_bound());
     integ.output_range.set_upper_bound(20.f);
     integ.add(50.f);
     EMB_ASSERT_EQUAL(integ.output(), 20.f);
-    EMB_ASSERT_EQUAL(integ.output(), integ.output_range.hi());
+    EMB_ASSERT_EQUAL(integ.output(), integ.output_range.upper_bound());
     integ.push(-6);
     EMB_ASSERT_TRUE(emb::range<float>(19.399f, 19.401f).contains(integ.output()));
     integ.push(3);
     EMB_ASSERT_TRUE(emb::range<float>(19.699f, 19.701f).contains(integ.output()));
 
     integ.output_range.set_upper_bound(-20.f);
-    EMB_ASSERT_EQUAL(integ.output_range.hi(), 20.f);
+    EMB_ASSERT_EQUAL(integ.output_range.upper_bound(), 20.f);
     integ.output_range.set_lower_bound(21.f);
-    EMB_ASSERT_EQUAL(integ.output_range.lo(), -15.f);
+    EMB_ASSERT_EQUAL(integ.output_range.lower_bound(), -15.f);
     integ.output_range.set_lower_bound(20.f);
-    EMB_ASSERT_EQUAL(integ.output_range.lo(), 20.f);
+    EMB_ASSERT_EQUAL(integ.output_range.lower_bound(), 20.f);
     integ.push(-3);
     EMB_ASSERT_EQUAL(integ.output(), 20.f);
 #endif
