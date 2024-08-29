@@ -4,9 +4,9 @@
 #if defined(EMBLIB_C28X)
 
 
-#include "../core.h"
-#include "../static_vector.h"
-#include "../chrono.h"
+#include <emblib/core.h>
+#include <emblib/static_vector.h>
+#include <emblib/chrono.h>
 
 
 namespace emb {

@@ -1,6 +1,11 @@
 #pragma once
 
 
+#if defined(EMBLIB_C28X)
+#include <emblib/fsm/fsm_c28x.h>
+#endif
+
+
 #ifndef EMBLIB_C28X
 
 
