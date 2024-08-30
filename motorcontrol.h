@@ -118,7 +118,7 @@ inline float to_radps(float speed_rpm) { return numbers::two_pi * speed_rpm / 60
 inline float to_rpm(float speed_radps, int pole_pairs) { return 60.f * speed_radps / (numbers::two_pi * float(pole_pairs)); }
 
 
-inline emb::vec3<float> calculate_svpwm(float voltage_mag, float voltage_angle, float voltage_dc) {
+inline emb::vec3<emb::unsigned_perunit> calculate_svpwm(float voltage_mag, float voltage_angle, float voltage_dc) {
     voltage_angle = rem_2pi(voltage_angle);
     voltage_mag = clamp<float>(voltage_mag, 0, voltage_dc / numbers::sqrt_3);
 
@@ -171,10 +171,12 @@ inline emb::vec3<float> calculate_svpwm(float voltage_mag, float voltage_angle, 
         break;
     }
 
+    emb::vec3<emb::unsigned_perunit> ret;
     for (size_t i = 0; i < 3; ++i) {
-        pulse_durations[i] = emb::clamp<float>(pulse_durations[i], 0.0f, 1.0f);
+        ret[i] = emb::unsigned_perunit(pulse_durations[i]);
     }
-    return pulse_durations;
+
+    return ret;
 }
 
 
