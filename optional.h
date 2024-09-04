@@ -50,8 +50,18 @@ public:
         }
     }
 
+    explicit operator bool() const { return _has_value; }
     bool has_value() const { return _has_value; }
-    const T& value() const { return *(reinterpret_cast<const T*>(_storage)); }
+
+    const T& value() const  { return *(reinterpret_cast<const T*>(_storage)); }
+    T& value() { return *(reinterpret_cast<T*>(_storage)); }
+
+    const T* operator->() const { return reinterpret_cast<const T*>(_storage); }
+    T* operator->() { return reinterpret_cast<T*>(_storage); }
+
+    const T& operator*() const { return *(reinterpret_cast<const T*>(_storage)); }
+    T& operator*() { return *(reinterpret_cast<T*>(_storage)); }
+
     T value_or(const T& default_value) const { return _has_value ? value() : default_value; }
 
     optional& operator=(const T& value) {
