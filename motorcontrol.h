@@ -180,20 +180,22 @@ inline emb::vec3<emb::unsigned_perunit> calculate_svpwm(float voltage_mag, float
 }
 
 
-inline emb::vec3<float> compensate_deadtime_v1(const emb::vec3<float>& dutycycles, const emb::vec3<float>& currents,
-                                               float current_threshold, float pwm_period, float deadtime) {
-    emb::vec3<float> dc;
+inline emb::vec3<unsigned_perunit> compensate_deadtime_v1(const emb::vec3<unsigned_perunit>& dutycycles,
+                                                          const emb::vec3<float>& currents,
+                                                          float current_threshold,
+                                                          float pwm_period,
+                                                          float deadtime) {
+    emb::vec3<unsigned_perunit> dc;
     const float deadtime_dutycycle = deadtime / pwm_period;
 
     for (size_t i = 0; i < 3; ++i) {
         if (currents[i] > current_threshold) {
-            dc[i] = dutycycles[i] + deadtime_dutycycle;
+            dc[i].set(dutycycles[i].get() + deadtime_dutycycle);
         } else if (currents[i] < -current_threshold) {
-            dc[i] = dutycycles[i] - deadtime_dutycycle;
+            dc[i].set(dutycycles[i].get() - deadtime_dutycycle);
         } else {
             dc[i] = dutycycles[i];
         }
-        dc[i] = emb::clamp(dc[i], 0.0f, 1.0f);
     }
 
     return dc;
@@ -201,12 +203,15 @@ inline emb::vec3<float> compensate_deadtime_v1(const emb::vec3<float>& dutycycle
 
 
 /// @brief DOI: 10.4028/www.scientific.net/AMM.416-417.536
-inline emb::vec3<float> compensate_deadtime_v2(const emb::vec3<float>& dutycycles, const emb::vec3<float>& currents,
-                                               float current_threshold, float pwm_period, float deadtime) {
+inline emb::vec3<unsigned_perunit> compensate_deadtime_v2(const emb::vec3<unsigned_perunit>& dutycycles,
+                                                          const emb::vec3<float>& currents,
+                                                          float current_threshold,
+                                                          float pwm_period,
+                                                          float deadtime) {
 #ifdef EMBLIB_C28X
     return dutycycles;
 #else
-    emb::vec3<float> dc = dutycycles;
+    auto dc = dutycycles;
     const float deadtime_dutycycle = deadtime / pwm_period;
 
     const auto [min, max] = std::minmax_element(currents.vec.begin(), currents.vec.end());
@@ -214,10 +219,10 @@ inline emb::vec3<float> compensate_deadtime_v2(const emb::vec3<float>& dutycycle
     // use Kirchhoff's current law to determine if there is one positive or one negative current
     if (*min + *max > 0) {
         const auto idx = std::distance(currents.vec.begin(), max);
-        dc[size_t(idx)] = std::clamp(dc[size_t(idx)] + 2 * deadtime_dutycycle, 0.0f, 1.0f);
+        dc[size_t(idx)].set(dc[size_t(idx)].get() + 2 * deadtime_dutycycle);
     } else if (*min + *max < 0) {
         const auto idx = std::distance(currents.vec.begin(), min);
-        dc[size_t(idx)] = std::clamp(dc[size_t(idx)] - 2 * deadtime_dutycycle, 0.0f, 1.0f);
+        dc[size_t(idx)].set(dc[size_t(idx)].get() - 2 * deadtime_dutycycle);
     }
 
     return dc;
