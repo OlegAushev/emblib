@@ -105,7 +105,7 @@ public:
     }
 
     virtual void push(T input_value) EMB_OVERRIDE {
-        _window.push(input_value);
+        _window.push_back(input_value);
         emb::array<T, WindowSize> window_sorted;
         emb::copy(_window.begin(), _window.end(), window_sorted.begin());
         std::sort(window_sorted.begin(), window_sorted.end());
@@ -196,7 +196,7 @@ public:
     }
 
     virtual void push(T input_value) EMB_OVERRIDE {
-        _window.push(input_value);
+        _window.push_back(input_value);
         emb::array<T, WindowSize> window_sorted;
         emb::copy(_window.begin(), _window.end(), window_sorted.begin());
         std::sort(window_sorted.begin(), window_sorted.end());

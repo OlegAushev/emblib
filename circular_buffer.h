@@ -43,7 +43,7 @@ public:
         return size;
     }
 
-    void push(const T& value) {
+    void push_back(const T& value) {
         _data[_back] = value;
         if (_full) {
             _front = (_front + 1) % Capacity;
