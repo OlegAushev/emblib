@@ -51,7 +51,11 @@ public:
         }
         change_state(init_state);
     }
-    virtual ~abstract_object() {}
+    virtual ~abstract_object() {
+        for (size_t i = 0; i < StateCount; ++i) {
+            AbstractState::destroy(static_cast<State>(i), _states[i]);
+        }
+    }
     State state() const { return _current_state->id(); }
 };
 
