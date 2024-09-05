@@ -1,11 +1,12 @@
 #pragma once
 
 
-#if defined(EMBLIB_C28X)
+#if defined(EMBLIB_ARM)
 
 
-#include <emblib/array.h>
 #include <emblib/chrono.h>
+#include <array>
+#include <utility>
 
 
 namespace emb {
@@ -16,7 +17,7 @@ template<typename Object, typename State, typename AbstractState>
 class abstract_state {
 private:
     const State _id;
-    emb::chrono::milliseconds _enter_timepoint;
+    std::chrono::milliseconds _enter_timepoint;
 protected:
     abstract_state(State id) : _id(id), _enter_timepoint(emb::chrono::steady_clock::now()) {}
     void change_state(Object* object, State state) {
@@ -30,30 +31,28 @@ protected:
 public:
     virtual ~abstract_state() {}
     State id() const { return _id; }
-    emb::chrono::milliseconds time_since_enter() const { return emb::chrono::steady_clock::now() - _enter_timepoint; }
+    std::chrono::milliseconds time_since_enter() const { return emb::chrono::steady_clock::now() - _enter_timepoint; }
 };
 
 
 template<typename State, typename AbstractState, size_t StateCount>
 class abstract_object {
 private:
-    emb::array<AbstractState*, StateCount> _states;
+    std::array<AbstractState*, StateCount> _states;
 protected:
     AbstractState* _current_state;
-    State _current_stateid;
     void change_state(State state) {
-        _current_state = _states[state.underlying_value()];
-        _current_stateid = _current_state->id();
+        _current_state = _states[std::to_underlying(state)];
     }
 public:
     abstract_object(State init_state) {
         for (size_t i = 0; i < StateCount; ++i) {
-            _states[i] = AbstractState::create(State(i));
+            _states[i] = AbstractState::create(static_cast<State>(i));
         }
         change_state(init_state);
     }
     virtual ~abstract_object() {}
-    State state() const { return _current_stateid; }
+    State state() const { return _current_state->id(); }
 };
 
 
