@@ -1,22 +1,22 @@
 #pragma once
 
 
-#include "../testrunner/testrunner.h"
+#include <emblib/testrunner/testrunner.h>
 #include <tests/tests_config.h>
-#include "../array.h"
-#include "../algorithm.h"
-#include "../bitset.h"
-#include "../chrono.h"
-#include "../circular_buffer.h"
-#include "../core.h"
-#include "../eeprom/eeprom.h"
-#include "../filter.h"
-#include "../math.h"
-#include "../optional.h"
-#include "../stack.h"
-#include "../static_vector.h"
-#include "../static_string.h"
-#include "../queue.h"
+#include <emblib/array.h>
+#include <emblib/algorithm.h>
+#include <emblib/bitset.h>
+#include <emblib/chrono.h>
+#include <emblib/circular_buffer.h>
+#include <emblib/core.h>
+#include <emblib/memory.h>
+#include <emblib/filter.h>
+#include <emblib/math.h>
+#include <emblib/optional.h>
+#include <emblib/stack.h>
+#include <emblib/static_vector.h>
+#include <emblib/static_string.h>
+#include <emblib/queue.h>
 #include <algorithm>
 
 

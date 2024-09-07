@@ -12,13 +12,13 @@
 #include <emblib/tests/tests.h>
 
 
-class TestingEepromDriver : public emb::eeprom::driver {
+class TestingEepromDriver : public emb::mem::eeprom::driver {
 private:
     static const size_t _page_bytes = 64;
     static const size_t _page_count = 8;
     static uint16_t _data[_page_count][_page_bytes/2];
 public:
-    virtual emb::eeprom::status read(size_t page, size_t addr, uint8_t* buf, size_t len, EMB_MILLISECONDS timeout) EMB_OVERRIDE  {
+    virtual emb::mem::status read(size_t page, size_t addr, uint8_t* buf, size_t len, EMB_MILLISECONDS timeout) EMB_OVERRIDE  {
         for (size_t i = 0; i < len; ++i) {
             if (((addr + i) % 2) == 0) {
                 buf[i] = uint8_t(_data[page][(addr + i)/2] & 0x00FF);
@@ -26,10 +26,10 @@ public:
                 buf[i] = uint8_t(_data[page][(addr + i)/2] >> 8);
             }
         }
-        return emb::eeprom::status::ok;
+        return emb::mem::status::ok;
     }
 
-    virtual emb::eeprom::status write(size_t page, size_t addr, const uint8_t* buf, size_t len, EMB_MILLISECONDS timeout) EMB_OVERRIDE {
+    virtual emb::mem::status write(size_t page, size_t addr, const uint8_t* buf, size_t len, EMB_MILLISECONDS timeout) EMB_OVERRIDE {
         for (size_t i = 0; i < len; ++i) {
             if (((addr + i) % 2) == 0) {
                 _data[page][(addr + i)/2] = (_data[page][(addr + i)/2] & 0xFF00) | buf[i];
@@ -37,7 +37,7 @@ public:
                 _data[page][(addr + i)/2] = (_data[page][(addr + i)/2] & 0x00FF) | (buf[i] << 8);
             }
         }
-        return emb::eeprom::status::ok;
+        return emb::mem::status::ok;
     }
 
     virtual size_t page_bytes() const EMB_OVERRIDE { return _page_bytes; }
@@ -78,9 +78,9 @@ void emb::tests::eeprom_test() {
 #ifdef EMB_TESTS_ENABLED
     TestingEepromDriver eeprom_driver;
 #if defined(EMBLIB_C28X)
-    emb::eeprom::storage eeprom(eeprom_driver, mcu::crc::calc_crc32_byte8);
+    emb::mem::eeprom::storage eeprom(eeprom_driver, mcu::crc::calc_crc32_byte8);
 #elif defined(EMBLIB_ARM)
-    emb::eeprom::storage eeprom(eeprom_driver, mcu::crc::calc_crc32);
+    emb::mem::eeprom::storage eeprom(eeprom_driver, mcu::crc::calc_crc32);
 #endif
 
     TestingEepromStruct1 s1_src = {42, emb::numbers::pi, 12, -100, true};
@@ -91,8 +91,8 @@ void emb::tests::eeprom_test() {
 
     TestingEepromStruct1 s1_dest = {};
     TestingEepromStruct2 s2_dest = {};
-    EMB_MAYBE_UNUSED emb::eeprom::status read_sts1 = eeprom.read<TestingEepromStruct1>(0, s1_dest, EMB_MILLISECONDS(-1));
-    EMB_MAYBE_UNUSED emb::eeprom::status read_sts2 = eeprom.read<TestingEepromStruct2>(2, s2_dest, EMB_MILLISECONDS(-1));
+    EMB_MAYBE_UNUSED emb::mem::status read_sts1 = eeprom.read<TestingEepromStruct1>(0, s1_dest, EMB_MILLISECONDS(-1));
+    EMB_MAYBE_UNUSED emb::mem::status read_sts2 = eeprom.read<TestingEepromStruct2>(2, s2_dest, EMB_MILLISECONDS(-1));
 
 #if defined(EMBLIB_C28X)
     EMB_ASSERT_TRUE(emb::c28x::are_equal(s1_src, s1_dest));
