@@ -65,7 +65,7 @@ inline constexpr float inv_sqrt3 = 0.57735026918963f;
 
 
 template <typename T>
-inline int sgn(T value) { return (value > T(0)) - (value < T(0)); }
+inline int sgn(T v) { return (v > T(0)) - (v < T(0)); }
 
 
 inline float to_rad(float deg) { return numbers::pi * deg / 180; }
@@ -78,7 +78,7 @@ inline float to_deg(float rad) { return 180 * rad / numbers::pi; }
 
 
 template <typename T>
-constexpr int sgn(T value) { return (value > T(0)) - (value < T(0)); }
+constexpr int sgn(T v) { return (v > T(0)) - (v < T(0)); }
 
 
 constexpr float to_rad(float deg) { return numbers::pi * deg / 180; }
@@ -87,24 +87,27 @@ constexpr float to_rad(float deg) { return numbers::pi * deg / 180; }
 constexpr float to_deg(float rad) { return 180 * rad / numbers::pi; }
 
 
+constexpr bool ispowerof2(unsigned int v) { return v && ((v & (v - 1)) == 0); }
+
+
 #endif
 
 
-inline float rem_2pi(float value) {
-    value = fmodf(value, numbers::two_pi);
-    if (value < 0) {
-        value += numbers::two_pi;
+inline float rem_2pi(float v) {
+    v = fmodf(v, numbers::two_pi);
+    if (v < 0) {
+        v += numbers::two_pi;
     }
-    return value;
+    return v;
 }
 
 
-inline float rem_pi(float value) {
-    value = fmodf(value + numbers::pi, numbers::two_pi);
-    if (value < 0) {
-        value += numbers::two_pi;
+inline float rem_pi(float v) {
+    v = fmodf(v + numbers::pi, numbers::two_pi);
+    if (v < 0) {
+        v += numbers::two_pi;
     }
-    return value - numbers::pi;
+    return v - numbers::pi;
 }
 
 
@@ -114,29 +117,29 @@ private:
     T _lower;
     T _upper;
 public:
-    range(const T& value1, const T& value2) {
-        if (value1 < value2) {
-            _lower = value1;
-            _upper = value2;
+    range(const T& v1, const T& v2) {
+        if (v1 < v2) {
+            _lower = v1;
+            _upper = v2;
         } else {
-            _lower = value2;
-            _upper = value1;
+            _lower = v2;
+            _upper = v1;
         }
     }
 
-    bool contains(const T& value) const { return (_lower <= value) && (value <= _upper); }
+    bool contains(const T& v) const { return (_lower <= v) && (v <= _upper); }
 
     const T& lower_bound() const { return _lower; }
-    void set_lower_bound(const T& value) {
-        if (value <= _upper) {
-            _lower = value;
+    void set_lower_bound(const T& v) {
+        if (v <= _upper) {
+            _lower = v;
         }
     }
 
     const T& upper_bound() const { return _upper; }
-    void set_upper_bound(const T& value) {
-        if (value >= _lower) {
-            _upper = value;
+    void set_upper_bound(const T& v) {
+        if (v >= _lower) {
+            _upper = v;
         }
     }
 
@@ -160,12 +163,12 @@ public:
         reset();
     }
 
-    void push(const T& value) {
-        _sum = clamp(_sum + value * _ts, output_range.lower_bound(), output_range.upper_bound());
+    void push(const T& v) {
+        _sum = clamp(_sum + v * _ts, output_range.lower_bound(), output_range.upper_bound());
     }
 
-    void add(const T& value) {
-        _sum = clamp(_sum + value, output_range.lower_bound(), output_range.upper_bound());
+    void add(const T& v) {
+        _sum = clamp(_sum + v, output_range.lower_bound(), output_range.upper_bound());
     }
 
     const T& output() const { return _sum; }
@@ -173,7 +176,7 @@ public:
         _sum = clamp(_initval, output_range.lower_bound(), output_range.upper_bound());
     }
 
-    void set_sampling_period(float value) { _ts = value; }
+    void set_sampling_period(float v) { _ts = v; }
 };
 
 
@@ -182,11 +185,11 @@ private:
     float _value;
 public:
     signed_perunit() : _value(0.f) {} 
-    explicit signed_perunit(float value) : _value(emb::clamp(value, -1.f, 1.f)) {}
-    signed_perunit(float value, float basevalue) : _value(emb::clamp(value/basevalue, -1.f, 1.f)) {}
+    explicit signed_perunit(float v) : _value(emb::clamp(v, -1.f, 1.f)) {}
+    signed_perunit(float v, float base) : _value(emb::clamp(v/base, -1.f, 1.f)) {}
 
     float get() const { return _value; }
-    void set(float value) { _value = emb::clamp(value, -1.f, 1.f); }
+    void set(float v) { _value = emb::clamp(v, -1.f, 1.f); }
 };
 
 
@@ -195,11 +198,11 @@ private:
     float _value;
 public:
     unsigned_perunit() : _value(0.f) {} 
-    explicit unsigned_perunit(float value) : _value(emb::clamp(value, 0.f, 1.f)) {}
-    unsigned_perunit(float value, float basevalue) : _value(emb::clamp(value/basevalue, 0.f, 1.f)) {}
+    explicit unsigned_perunit(float v) : _value(emb::clamp(v, 0.f, 1.f)) {}
+    unsigned_perunit(float v, float base) : _value(emb::clamp(v/base, 0.f, 1.f)) {}
 
     float get() const { return _value; }
-    void set(float value) { _value = emb::clamp(value, 0.f, 1.f); }
+    void set(float v) { _value = emb::clamp(v, 0.f, 1.f); }
 };
 
 
