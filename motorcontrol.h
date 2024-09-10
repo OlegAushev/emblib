@@ -118,6 +118,79 @@ inline float to_radps(float speed_rpm) { return numbers::two_pi * speed_rpm / 60
 inline float to_rpm(float speed_radps, int pole_pairs) { return 60.f * speed_radps / (numbers::two_pi * float(pole_pairs)); }
 
 
+struct dq_pair {
+    float d;
+    float q;
+    dq_pair() {}
+    dq_pair(float d_, float q_) : d(d_), q(q_) {}
+};
+
+
+struct alphabeta_pair {
+    float alpha;
+    float beta;
+    alphabeta_pair() {}
+    alphabeta_pair(float alpha_, float beta_) : alpha(alpha_), beta(beta_) {}
+};
+
+
+inline dq_pair park_transform(float alpha, float beta, float sine, float cosine) {
+    float d = (alpha * cosine) + (beta * sine);
+    float q = (beta * cosine) - (alpha * sine);
+    return dq_pair(d, q);
+}
+
+
+inline alphabeta_pair invpark_transform(float d, float q, float sine, float cosine) {
+    float alpha = (d * cosine) - (q * sine);
+    float beta = (q * cosine) + (d * sine);
+    return alphabeta_pair(alpha, beta);
+}
+
+
+inline alphabeta_pair clarke_transform(float a, float b, float c) {
+    float alpha = a;
+    float beta = (b - c) * numbers::inv_sqrt3;
+    return alphabeta_pair(alpha, beta);
+}
+
+
+inline alphabeta_pair clarke_transform(const emb::vec3<float>& vec3_) {
+    float alpha = vec3_[0];
+    float beta = (vec3_[1] - vec3_[2]) * numbers::inv_sqrt3;
+    return alphabeta_pair(alpha, beta);
+}
+
+
+inline alphabeta_pair clarke_transform(float a, float b) {
+    float alpha = a;
+    float beta = (a + 2*b) * numbers::inv_sqrt3;
+    return alphabeta_pair(alpha, beta);
+}
+
+
+inline emb::vec3<float> invclarke_transform(float alpha, float beta) {
+    emb::vec3<float> ret;
+    ret.a() = alpha;
+    ret.b() = (-alpha + emb::numbers::sqrt_3 * beta) * 0.5f;
+    ret.c() = (-alpha - emb::numbers::sqrt_3 * beta) * 0.5f;
+    return ret;
+}
+
+
+inline emb::vec3<emb::unsigned_perunit> calculate_sinpwm(float voltage_alpha, float voltage_beta, float voltage_dc) {
+    emb::vec3<float> voltages = invclarke_transform(voltage_alpha, voltage_beta);
+    const float voltage_base = voltage_dc / 1.5f;
+    emb::vec3<emb::unsigned_perunit> duty_cycles;
+
+    for (size_t i = 0; i < 3; ++i) {
+        duty_cycles[i].set(voltages[i] / voltage_base);
+    }
+
+    return duty_cycles;
+}
+
+
 inline emb::vec3<emb::unsigned_perunit> calculate_svpwm(float voltage_mag, float voltage_angle, float voltage_dc) {
     voltage_angle = rem_2pi(voltage_angle);
     voltage_mag = clamp<float>(voltage_mag, 0, voltage_dc / numbers::sqrt_3);
@@ -171,12 +244,12 @@ inline emb::vec3<emb::unsigned_perunit> calculate_svpwm(float voltage_mag, float
         break;
     }
 
-    emb::vec3<emb::unsigned_perunit> ret;
+    emb::vec3<emb::unsigned_perunit> duty_cycles;
     for (size_t i = 0; i < 3; ++i) {
-        ret[i] = emb::unsigned_perunit(pulse_durations[i]);
+        duty_cycles[i] = emb::unsigned_perunit(pulse_durations[i]);
     }
 
-    return ret;
+    return duty_cycles;
 }
 
 
@@ -227,57 +300,6 @@ inline emb::vec3<unsigned_perunit> compensate_deadtime_v2(const emb::vec3<unsign
 
     return dc;
 #endif
-}
-
-
-struct dq_pair {
-    float d;
-    float q;
-    dq_pair() {}
-    dq_pair(float d_, float q_) : d(d_), q(q_) {}
-};
-
-
-struct alphabeta_pair {
-    float alpha;
-    float beta;
-    alphabeta_pair() {}
-    alphabeta_pair(float alpha_, float beta_) : alpha(alpha_), beta(beta_) {}
-};
-
-
-inline dq_pair park_transform(float alpha, float beta, float sine, float cosine) {
-    float d = (alpha * cosine) + (beta * sine);
-    float q = (beta * cosine) - (alpha * sine);
-    return dq_pair(d, q);
-}
-
-
-inline alphabeta_pair invpark_transform(float d, float q, float sine, float cosine) {
-    float alpha = (d * cosine) - (q * sine);
-    float beta = (q * cosine) + (d * sine);
-    return alphabeta_pair(alpha, beta);
-}
-
-
-inline alphabeta_pair clarke_transform(float a, float b, float c) {
-    float alpha = a;
-    float beta = (b - c) * numbers::inv_sqrt3;
-    return alphabeta_pair(alpha, beta);
-}
-
-
-inline alphabeta_pair clarke_transform(const emb::vec3<float>& vec3_) {
-    float alpha = vec3_[0];
-    float beta = (vec3_[1] - vec3_[2]) * numbers::inv_sqrt3;
-    return alphabeta_pair(alpha, beta);
-}
-
-
-inline alphabeta_pair clarke_transform(float a, float b) {
-    float alpha = a;
-    float beta = (a + 2*b) * numbers::inv_sqrt3;
-    return alphabeta_pair(alpha, beta);
 }
 
 
