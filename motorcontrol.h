@@ -118,54 +118,38 @@ inline float to_radps(float speed_rpm) { return numbers::two_pi * speed_rpm / 60
 inline float to_rpm(float speed_radps, int pole_pairs) { return 60.f * speed_radps / (numbers::two_pi * float(pole_pairs)); }
 
 
-struct dq_pair {
-    float d;
-    float q;
-    dq_pair() {}
-    dq_pair(float d_, float q_) : d(d_), q(q_) {}
-};
-
-
-struct alphabeta_pair {
-    float alpha;
-    float beta;
-    alphabeta_pair() {}
-    alphabeta_pair(float alpha_, float beta_) : alpha(alpha_), beta(beta_) {}
-};
-
-
-inline dq_pair park_transform(float alpha, float beta, float sine, float cosine) {
+inline std::pair<float, float> park_transform(float alpha, float beta, float sine, float cosine) {
     float d = (alpha * cosine) + (beta * sine);
     float q = (beta * cosine) - (alpha * sine);
-    return dq_pair(d, q);
+    return std::make_pair(d, q);
 }
 
 
-inline alphabeta_pair invpark_transform(float d, float q, float sine, float cosine) {
+inline std::pair<float, float> invpark_transform(float d, float q, float sine, float cosine) {
     float alpha = (d * cosine) - (q * sine);
     float beta = (q * cosine) + (d * sine);
-    return alphabeta_pair(alpha, beta);
+    return std::make_pair(alpha, beta);
 }
 
 
-inline alphabeta_pair clarke_transform(float a, float b, float c) {
+inline std::pair<float, float> clarke_transform(float a, float b, float c) {
     float alpha = a;
     float beta = (b - c) * numbers::inv_sqrt3;
-    return alphabeta_pair(alpha, beta);
+    return std::make_pair(alpha, beta);
 }
 
 
-inline alphabeta_pair clarke_transform(const emb::vec3<float>& vec3_) {
+inline std::pair<float, float> clarke_transform(const emb::vec3<float>& vec3_) {
     float alpha = vec3_[0];
     float beta = (vec3_[1] - vec3_[2]) * numbers::inv_sqrt3;
-    return alphabeta_pair(alpha, beta);
+    return std::make_pair(alpha, beta);
 }
 
 
-inline alphabeta_pair clarke_transform(float a, float b) {
+inline std::pair<float, float> clarke_transform(float a, float b) {
     float alpha = a;
     float beta = (a + 2*b) * numbers::inv_sqrt3;
-    return alphabeta_pair(alpha, beta);
+    return std::make_pair(alpha, beta);
 }
 
 
