@@ -72,7 +72,7 @@ void emb::tests::algorithm_test() {
     EMB_ASSERT_EQUAL(emb::binary_find(arr3.begin(), arr3.end(), StructTest(8, 0)), arr3.end());
 
     emb::array<int, 9> arr4;
-    emb::copy(arr1, arr1+9, arr4.data);
+    emb::copy(arr1, arr1+9, arr4.begin());
     EMB_ASSERT_EQUAL(emb::binary_find(arr4.begin(), arr4.end(), 0), arr4.begin());
     EMB_ASSERT_EQUAL(emb::binary_find(arr4.begin(), arr4.end(), 1), arr4.begin() + 1);
     EMB_ASSERT_EQUAL(emb::binary_find(arr4.begin(), arr4.end(), 2), arr4.begin() + 2);

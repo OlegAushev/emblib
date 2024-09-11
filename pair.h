@@ -2,10 +2,15 @@
 
 
 #include <emblib/core.h>
+#if defined(EMBLIB_ARM)
+#include <utility>
+#endif
 
 
 namespace emb {
 
+
+#if defined(EMBLIB_C28X)
 
 template <typename T1, typename T2>
 class pair {
@@ -34,6 +39,13 @@ public:
         return !(*this == other);
     }
 };
+
+#elif defined(EMBLIB_ARM)
+
+template <typename T1, typename T2>
+using pair = std::pair<T1, T2>;
+
+#endif
 
 
 } // namespace emb

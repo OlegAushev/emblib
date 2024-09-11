@@ -2,10 +2,15 @@
 
 
 #include <emblib/core.h>
+#if defined(EMBLIB_ARM)
+#include <array>
+#endif
 
 
 namespace emb {
 
+
+#if defined(EMBLIB_C28X)
 
 template <typename T, size_t Size>
 class array {
@@ -51,6 +56,13 @@ public:
         }
     }
 };
+
+#elif defined(EMBLIB_ARM)
+
+template <typename T, size_t Size>
+using array = std::array<T, Size>;
+
+#endif
 
 
 } // namespace emb

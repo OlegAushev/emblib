@@ -45,7 +45,7 @@ public:
 
     movavg_filter(emb::array<T, WindowSize>& data_array)
             : _size(WindowSize)
-            , _window(data_array.data)
+            , _window(data_array.begin())
             , _index(0)
             , _sum(T(0))
             , _heap_used(false) {

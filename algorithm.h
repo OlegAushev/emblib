@@ -4,6 +4,7 @@
 #include <emblib/core.h>
 #include <emblib/pair.h>
 #include <algorithm>
+#include <utility>
 
 
 namespace emb {
@@ -124,11 +125,11 @@ inline It min_element(It first, It last) {
 
 
 template <class It>
-inline pair<It, It> minmax_element(It first, It last) {
+inline std::pair<It, It> minmax_element(It first, It last) {
     It min = first, max = first;
 
     if ((first == last) || (++first == last)) {
-        return pair<It, It>(min, max);
+        return std::pair<It, It>(min, max);
     }
 
     if (*first < *min) {
@@ -166,7 +167,7 @@ inline pair<It, It> minmax_element(It first, It last) {
             }
         }
     }
-    return pair<It, It>(min, max);
+    return std::pair<It, It>(min, max);
 }
 
 

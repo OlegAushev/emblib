@@ -1,18 +1,17 @@
 #pragma once
 
 
+#include <emblib/array.h>
 #include <emblib/core.h>
 #include <emblib/math.h>
 #include <emblib/units.h>
 
 #if defined(EMBLIB_C28X)
-#include <emblib/array.h>
 #include <motorcontrol/math.h>
 #include <motorcontrol/clarke.h>
 #include <motorcontrol/park.h>
 #include <motorcontrol/ipark.h>
 #elif defined(EMBLIB_ARM)
-#include <array>
 #include <utility>
 #endif
 
@@ -33,35 +32,6 @@ enum class phase3 : uint32_t {
     c
 };
 #endif
-
-
-template<typename T>
-struct vec3 {
-#if defined(EMBLIB_C28X)
-    emb::array<T, 3> vec;
-#elif defined(EMBLIB_ARM)
-    std::array<T, 3> vec;
-#endif
-
-    T& a() { return vec[0]; }
-    T& b() { return vec[1]; }
-    T& c() { return vec[2]; }
-
-    const T& a() const { return vec[0]; }
-    const T& b() const { return vec[1]; }
-    const T& c() const { return vec[2]; }
-    
-    T& operator[](size_t pos) { return vec[pos]; }
-    const T& operator[](size_t pos) const { return vec[pos]; }
-
-#if defined(EMBLIB_C28X)
-    T& get(phase3 phase) { return vec[phase.underlying_value()]; }
-    const T& get(phase3 phase) const { return vec[phase.underlying_value()]; }
-#elif defined(EMBLIB_ARM)
-    T& get(phase3 phase) { return vec[std::to_underlying(phase)]; }
-    const T& get(phase3 phase) const { return vec[std::to_underlying(phase)]; }
-#endif
-};
 
 
 class motor_speed {
@@ -139,7 +109,7 @@ inline std::pair<float, float> clarke_transform(float a, float b, float c) {
 }
 
 
-inline std::pair<float, float> clarke_transform(const emb::vec3<float>& vec3_) {
+inline std::pair<float, float> clarke_transform(const emb::array<float, 3>& vec3_) {
     float alpha = vec3_[0];
     float beta = (vec3_[1] - vec3_[2]) * numbers::inv_sqrt3;
     return std::make_pair(alpha, beta);
@@ -153,19 +123,19 @@ inline std::pair<float, float> clarke_transform(float a, float b) {
 }
 
 
-inline emb::vec3<float> invclarke_transform(float alpha, float beta) {
-    emb::vec3<float> ret;
-    ret.a() = alpha;
-    ret.b() = (-alpha + emb::numbers::sqrt_3 * beta) * 0.5f;
-    ret.c() = (-alpha - emb::numbers::sqrt_3 * beta) * 0.5f;
+inline emb::array<float, 3> invclarke_transform(float alpha, float beta) {
+    emb::array<float, 3> ret;
+    ret[0] = alpha;
+    ret[1] = (-alpha + emb::numbers::sqrt_3 * beta) * 0.5f;
+    ret[2] = (-alpha - emb::numbers::sqrt_3 * beta) * 0.5f;
     return ret;
 }
 
 
-inline emb::vec3<emb::unsigned_perunit> calculate_sinpwm(float voltage_alpha, float voltage_beta, float voltage_dc) {
-    emb::vec3<float> voltages = invclarke_transform(voltage_alpha, voltage_beta);
+inline emb::array<emb::unsigned_perunit, 3> calculate_sinpwm(float voltage_alpha, float voltage_beta, float voltage_dc) {
+    emb::array<float, 3> voltages = invclarke_transform(voltage_alpha, voltage_beta);
     const float voltage_base = voltage_dc / 1.5f;
-    emb::vec3<emb::unsigned_perunit> duty_cycles;
+    emb::array<emb::unsigned_perunit, 3> duty_cycles;
 
     for (size_t i = 0; i < 3; ++i) {
         duty_cycles[i].set(voltages[i] / voltage_base);
@@ -175,7 +145,7 @@ inline emb::vec3<emb::unsigned_perunit> calculate_sinpwm(float voltage_alpha, fl
 }
 
 
-inline emb::vec3<emb::unsigned_perunit> calculate_svpwm(float voltage_mag, float voltage_angle, float voltage_dc) {
+inline emb::array<emb::unsigned_perunit, 3> calculate_svpwm(float voltage_mag, float voltage_angle, float voltage_dc) {
     voltage_angle = rem_2pi(voltage_angle);
     voltage_mag = clamp<float>(voltage_mag, 0, voltage_dc / numbers::sqrt_3);
 
@@ -192,7 +162,7 @@ inline emb::vec3<emb::unsigned_perunit> calculate_svpwm(float voltage_mag, float
 #endif
     float tb0 = (1.f - tb1 - tb2) / 2.f;
 
-    emb::vec3<float> pulse_durations;
+    emb::array<float, 3> pulse_durations;
     switch (sector) {
     case 0:
         pulse_durations[0] = tb1 + tb2 + tb0;
@@ -228,7 +198,7 @@ inline emb::vec3<emb::unsigned_perunit> calculate_svpwm(float voltage_mag, float
         break;
     }
 
-    emb::vec3<emb::unsigned_perunit> duty_cycles;
+    emb::array<emb::unsigned_perunit, 3> duty_cycles;
     for (size_t i = 0; i < 3; ++i) {
         duty_cycles[i] = emb::unsigned_perunit(pulse_durations[i]);
     }
@@ -237,12 +207,12 @@ inline emb::vec3<emb::unsigned_perunit> calculate_svpwm(float voltage_mag, float
 }
 
 
-inline emb::vec3<unsigned_perunit> compensate_deadtime_v1(const emb::vec3<unsigned_perunit>& dutycycles,
-                                                          const emb::vec3<float>& currents,
-                                                          float current_threshold,
-                                                          float pwm_period,
-                                                          float deadtime) {
-    emb::vec3<unsigned_perunit> dc;
+inline emb::array<unsigned_perunit, 3> compensate_deadtime_v1(const emb::array<unsigned_perunit, 3>& dutycycles,
+                                                              const emb::array<float, 3>& currents,
+                                                              float current_threshold,
+                                                              float pwm_period,
+                                                              float deadtime) {
+    emb::array<unsigned_perunit, 3> dc;
     const float deadtime_dutycycle = deadtime / pwm_period;
 
     for (size_t i = 0; i < 3; ++i) {
@@ -260,25 +230,25 @@ inline emb::vec3<unsigned_perunit> compensate_deadtime_v1(const emb::vec3<unsign
 
 
 /// @brief DOI: 10.4028/www.scientific.net/AMM.416-417.536
-inline emb::vec3<unsigned_perunit> compensate_deadtime_v2(const emb::vec3<unsigned_perunit>& dutycycles,
-                                                          const emb::vec3<float>& currents,
-                                                          float current_threshold,
-                                                          float pwm_period,
-                                                          float deadtime) {
+inline emb::array<unsigned_perunit, 3> compensate_deadtime_v2(const emb::array<unsigned_perunit, 3>& dutycycles,
+                                                              const emb::array<float, 3>& currents,
+                                                              float current_threshold,
+                                                              float pwm_period,
+                                                              float deadtime) {
 #ifdef EMBLIB_C28X
     return dutycycles;
 #else
     auto dc = dutycycles;
     const float deadtime_dutycycle = deadtime / pwm_period;
 
-    const auto [min, max] = std::minmax_element(currents.vec.begin(), currents.vec.end());
+    const auto [min, max] = std::minmax_element(currents.begin(), currents.end());
 
     // use Kirchhoff's current law to determine if there is one positive or one negative current
     if (*min + *max > 0) {
-        const auto idx = std::distance(currents.vec.begin(), max);
+        const auto idx = std::distance(currents.begin(), max);
         dc[size_t(idx)].set(dc[size_t(idx)].get() + 2 * deadtime_dutycycle);
     } else if (*min + *max < 0) {
-        const auto idx = std::distance(currents.vec.begin(), min);
+        const auto idx = std::distance(currents.begin(), min);
         dc[size_t(idx)].set(dc[size_t(idx)].get() - 2 * deadtime_dutycycle);
     }
 
@@ -288,65 +258,3 @@ inline emb::vec3<unsigned_perunit> compensate_deadtime_v2(const emb::vec3<unsign
 
 
 } // namespace emb
-
-
-
-
-
-
-
-
-
-
-#ifdef OBSOLETE
-/**
- * @brief
- */
-void CompensatePwm(const ArrayN<float, 3>& phase_currents)
-{
-    float uznam __attribute__((unused));
-    uznam = pwm_compensation.udc - pwm_compensation.uvt + pwm_compensation.uvd;
-    float dt2 = pwm_compensation.dt;
-
-    if(phase_currents.data[PHASE_A] > 0){
-        pulse_times.data[0] += dt2;
-    }else{
-        pulse_times.data[0] -= dt2;
-    }
-    if(phase_currents.data[PHASE_B] > 0){
-        pulse_times.data[1] += dt2;
-    }else{
-        pulse_times.data[1] -= dt2;
-    }
-    if(phase_currents.data[PHASE_C] > 0){
-        pulse_times.data[2] += dt2;
-    }else{
-        pulse_times.data[2] -= dt2;
-    }
-    if(pulse_times.data[0] < 0.f){
-        switch_times.data[0] = 0.f;
-    }else {
-        if(pulse_times.data[0] > 1.0f){
-            switch_times.data[0] = 1.0f;
-        }
-    }
-    if(pulse_times.data[1] < 0.f){
-        pulse_times.data[1] = 0.f;
-    }else {
-        if(pulse_times.data[1] > 1.0f){
-            pulse_times.data[1] = 1.0f;
-        }
-    }
-    if(pulse_times.data[2] < 0.f){
-        pulse_times.data[2] = 0.f;
-    }else {
-        if(pulse_times.data[2] > 1.0f){
-            pulse_times.data[2] = 1.0f;
-        }
-    }
-    for(int i = 0; i < 3; i++){
-        switch_times.data[i] = (uint32_t)(pulse_times.data[i]*pwm_counter_period_);
-    }
-}
-#endif
-
