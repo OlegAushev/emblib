@@ -52,9 +52,19 @@ public:
         _full = (_front == _back);
     }
 
+    T& front() {
+        assert(!empty());
+        return _data[_front];
+    }
+
     const T& front() const {
         assert(!empty());
         return _data[_front];
+    }
+
+    T& back() {
+        assert(!empty());
+        return _data[(_back + Capacity - 1) % Capacity];
     }
 
     const T& back() const {
