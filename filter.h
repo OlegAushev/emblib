@@ -168,6 +168,8 @@ public:
         _sampling_period = value;
         _smooth_factor = emb::clamp(_sampling_period/_time_constant, 0.f, 1.f);
     }
+
+    float smooth_factor() const { return _smooth_factor; }
 };
 
 
@@ -226,6 +228,8 @@ public:
         _sampling_period = value;
         _smooth_factor = emb::clamp(_sampling_period/_time_constant, 0.f, 1.f);
     }
+
+    float smooth_factor() const { return _smooth_factor; }
 };
 
 
