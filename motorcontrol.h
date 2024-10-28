@@ -88,6 +88,11 @@ inline float to_radps(float speed_rpm) { return numbers::two_pi * speed_rpm / 60
 inline float to_rpm(float speed_radps, int pole_pairs) { return 60.f * speed_radps / (numbers::two_pi * float(pole_pairs)); }
 
 
+struct vec_alphabeta { float alpha; float beta; };
+struct vec_alpha { float mag; float theta; };
+struct vec_dq { float d; float q; };
+
+
 inline std::pair<float, float> park_transform(float alpha, float beta, float sine, float cosine) {
     float d = (alpha * cosine) + (beta * sine);
     float q = (beta * cosine) - (alpha * sine);
@@ -132,9 +137,9 @@ inline emb::array<float, 3> invclarke_transform(float alpha, float beta) {
 }
 
 
-inline emb::array<emb::unsigned_perunit, 3> calculate_sinpwm(float voltage_alpha, float voltage_beta, float voltage_dc) {
-    emb::array<float, 3> voltages = invclarke_transform(voltage_alpha, voltage_beta);
-    const float voltage_base = voltage_dc / 1.5f;
+inline emb::array<emb::unsigned_perunit, 3> calculate_sinpwm(vec_alphabeta v_s, float v_dc) {
+    emb::array<float, 3> voltages = invclarke_transform(v_s.alpha, v_s.beta);
+    const float voltage_base = v_dc / 1.5f;
     emb::array<emb::unsigned_perunit, 3> duty_cycles;
 
     for (size_t i = 0; i < 3; ++i) {
@@ -145,20 +150,20 @@ inline emb::array<emb::unsigned_perunit, 3> calculate_sinpwm(float voltage_alpha
 }
 
 
-inline emb::array<emb::unsigned_perunit, 3> calculate_svpwm(float voltage_mag, float voltage_angle, float voltage_dc) {
-    voltage_angle = rem_2pi(voltage_angle);
-    voltage_mag = clamp<float>(voltage_mag, 0, voltage_dc / numbers::sqrt_3);
+inline emb::array<emb::unsigned_perunit, 3> calculate_svpwm(vec_alpha v_s, float v_dc) {
+    v_s.theta = rem_2pi(v_s.theta);
+    v_s.mag = clamp<float>(v_s.mag, 0, v_dc / numbers::sqrt_3);
 
-    int32_t sector = static_cast<int32_t>(voltage_angle / numbers::pi_over_3);
-    float theta = voltage_angle - float(sector) * numbers::pi_over_3;
+    int32_t sector = static_cast<int32_t>(v_s.theta / numbers::pi_over_3);
+    float theta = v_s.theta - float(sector) * numbers::pi_over_3;
 
     // base vector times calculation
 #if defined(EMBLIB_C28X)
-    float tb1 = numbers::sqrt_3 * (voltage_mag / voltage_dc) * sinf(numbers::pi_over_3 - theta);
-    float tb2 = numbers::sqrt_3 * (voltage_mag / voltage_dc) * sinf(theta);
+    float tb1 = numbers::sqrt_3 * (v_s.mag / v_dc) * sinf(numbers::pi_over_3 - theta);
+    float tb2 = numbers::sqrt_3 * (v_s.mag / v_dc) * sinf(theta);
 #elif defined(EMBLIB_ARM)
-    float tb1 = numbers::sqrt_3 * (voltage_mag / voltage_dc) * arm_sin_f32(numbers::pi_over_3 - theta);
-    float tb2 = numbers::sqrt_3 * (voltage_mag / voltage_dc) * arm_sin_f32(theta);
+    float tb1 = numbers::sqrt_3 * (v_s.mag / v_dc) * arm_sin_f32(numbers::pi_over_3 - theta);
+    float tb2 = numbers::sqrt_3 * (v_s.mag / v_dc) * arm_sin_f32(theta);
 #endif
     float tb0 = (1.f - tb1 - tb2) / 2.f;
 
