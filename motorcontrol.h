@@ -88,57 +88,62 @@ inline float to_radps(float speed_rpm) { return numbers::two_pi * speed_rpm / 60
 inline float to_rpm(float speed_radps, int pole_pairs) { return 60.f * speed_radps / (numbers::two_pi * float(pole_pairs)); }
 
 
-struct vec_alphabeta { float alpha; float beta; };
 struct vec_alpha { float mag; float theta; };
+struct vec_alphabeta { float alpha; float beta; };
 struct vec_dq { float d; float q; };
 
 
-inline std::pair<float, float> park_transform(float alpha, float beta, float sine, float cosine) {
-    float d = (alpha * cosine) + (beta * sine);
-    float q = (beta * cosine) - (alpha * sine);
-    return std::make_pair(d, q);
+inline vec_dq park_transform(vec_alphabeta v, float sine, float cosine) {
+    vec_dq retv;
+    retv.d = (v.alpha * cosine) + (v.beta * sine);
+    retv.q = (v.beta * cosine) - (v.alpha * sine);
+    return retv;
 }
 
 
-inline std::pair<float, float> invpark_transform(float d, float q, float sine, float cosine) {
-    float alpha = (d * cosine) - (q * sine);
-    float beta = (q * cosine) + (d * sine);
-    return std::make_pair(alpha, beta);
+inline vec_alphabeta invpark_transform(vec_dq v, float sine, float cosine) {
+    vec_alphabeta retv;
+    retv.alpha = (v.d * cosine) - (v.q * sine);
+    retv.beta = (v.q * cosine) + (v.d * sine);
+    return retv;
 }
 
 
-inline std::pair<float, float> clarke_transform(float a, float b, float c) {
-    float alpha = a;
-    float beta = (b - c) * numbers::inv_sqrt3;
-    return std::make_pair(alpha, beta);
+inline vec_alphabeta clarke_transform(float a, float b, float c) {
+    vec_alphabeta retv;
+    retv.alpha = a;
+    retv.beta = (b - c) * numbers::inv_sqrt3;
+    return retv;
 }
 
 
-inline std::pair<float, float> clarke_transform(const emb::array<float, 3>& vec3_) {
-    float alpha = vec3_[0];
-    float beta = (vec3_[1] - vec3_[2]) * numbers::inv_sqrt3;
-    return std::make_pair(alpha, beta);
+inline vec_alphabeta clarke_transform(const emb::array<float, 3>& v) {
+    vec_alphabeta retv;
+    retv.alpha = v[0];
+    retv.beta = (v[1] - v[2]) * numbers::inv_sqrt3;
+    return retv;
 }
 
 
-inline std::pair<float, float> clarke_transform(float a, float b) {
-    float alpha = a;
-    float beta = (a + 2*b) * numbers::inv_sqrt3;
-    return std::make_pair(alpha, beta);
+inline vec_alphabeta clarke_transform(float a, float b) {
+    vec_alphabeta retv;
+    retv.alpha = a;
+    retv.beta = (a + 2*b) * numbers::inv_sqrt3;
+    return retv;
 }
 
 
-inline emb::array<float, 3> invclarke_transform(float alpha, float beta) {
-    emb::array<float, 3> ret;
-    ret[0] = alpha;
-    ret[1] = (-alpha + emb::numbers::sqrt_3 * beta) * 0.5f;
-    ret[2] = (-alpha - emb::numbers::sqrt_3 * beta) * 0.5f;
-    return ret;
+inline emb::array<float, 3> invclarke_transform(vec_alphabeta v) {
+    emb::array<float, 3> retv;
+    retv[0] = v.alpha;
+    retv[1] = (-v.alpha + emb::numbers::sqrt_3 * v.beta) * 0.5f;
+    retv[2] = (-v.alpha - emb::numbers::sqrt_3 * v.beta) * 0.5f;
+    return retv;
 }
 
 
 inline emb::array<emb::unsigned_perunit, 3> calculate_sinpwm(vec_alphabeta v_s, float v_dc) {
-    emb::array<float, 3> voltages = invclarke_transform(v_s.alpha, v_s.beta);
+    emb::array<float, 3> voltages = invclarke_transform(v_s);
     const float voltage_base = v_dc / 1.5f;
     emb::array<emb::unsigned_perunit, 3> duty_cycles;
 
