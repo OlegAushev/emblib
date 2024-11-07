@@ -237,20 +237,20 @@ template<typename T>
 class ramp_filter : public filter<T> {
 private:
     float _update_period;
-    float _slope;
-    float _step;
+    T _slope;
+    T _step;
 
     T _ref;
     T _out;
 public:
     ramp_filter()
             : _update_period(0)
-            , _slope(0)
-            , _step(0) {
+            , _slope(T(0))
+            , _step(T(0)) {
         reset();
     }
 
-    ramp_filter(float update_period, float slope) {
+    ramp_filter(float update_period, T slope) {
         init(update_period, slope);
         reset();
     }
@@ -266,9 +266,9 @@ public:
         _out = value;
     }
 
-    virtual void reset() EMB_OVERRIDE { set_output(0); }
+    virtual void reset() EMB_OVERRIDE { set_output(T(0)); }
 
-    void init(float update_period, float slope) {
+    void init(float update_period, T slope) {
         _update_period = update_period;
         _slope = slope;
         _step = emb::clamp(update_period * slope, -FLT_MAX, FLT_MAX);

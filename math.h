@@ -190,7 +190,42 @@ public:
 
     float get() const { return _value; }
     void set(float v) { _value = emb::clamp(v, -1.f, 1.f); }
+
+    signed_perunit& operator+=(const signed_perunit& rhs) {
+        set(_value + rhs._value);
+        return *this;
+    }
+
+    signed_perunit& operator-=(const signed_perunit& rhs) {
+        set(_value - rhs._value);
+        return *this;
+    }
 };
+
+
+inline bool operator< (const signed_perunit& lhs, const signed_perunit& rhs) { return lhs.get() < rhs.get(); }
+inline bool operator> (const signed_perunit& lhs, const signed_perunit& rhs) { return rhs < lhs; }
+inline bool operator<=(const signed_perunit& lhs, const signed_perunit& rhs) { return !(lhs > rhs); }
+inline bool operator>=(const signed_perunit& lhs, const signed_perunit& rhs) { return !(lhs < rhs); }
+
+
+inline signed_perunit operator+(const signed_perunit& lhs, const signed_perunit& rhs) {
+    signed_perunit res = lhs;
+    res += rhs;
+    return res;
+}
+
+
+inline signed_perunit operator-(const signed_perunit& lhs, const signed_perunit& rhs) {
+    signed_perunit res = lhs;
+    res -= rhs;
+    return res;
+}
+
+
+inline signed_perunit operator*(const signed_perunit& lhs, float rhs) { return signed_perunit(lhs.get() * rhs); }
+inline signed_perunit operator*(float lhs, const signed_perunit& rhs) { return rhs * lhs; }
+inline signed_perunit operator/(const signed_perunit& lhs, float rhs) { return signed_perunit(lhs.get() / rhs); }
 
 
 class unsigned_perunit {
@@ -203,7 +238,42 @@ public:
 
     float get() const { return _value; }
     void set(float v) { _value = emb::clamp(v, 0.f, 1.f); }
+
+    unsigned_perunit& operator+=(const unsigned_perunit& rhs) {
+        set(_value + rhs._value);
+        return *this;
+    }
+
+
+    unsigned_perunit& operator-=(const unsigned_perunit& rhs) {
+        set(_value - rhs._value);
+        return *this;
+    }
 };
+
+
+inline bool operator< (const unsigned_perunit& lhs, const unsigned_perunit& rhs) { return lhs.get() < rhs.get(); }
+inline bool operator> (const unsigned_perunit& lhs, const unsigned_perunit& rhs) { return rhs < lhs; }
+inline bool operator<=(const unsigned_perunit& lhs, const unsigned_perunit& rhs) { return !(lhs > rhs); }
+inline bool operator>=(const unsigned_perunit& lhs, const unsigned_perunit& rhs) { return !(lhs < rhs); }
+
+
+inline unsigned_perunit operator+(const unsigned_perunit& lhs, const unsigned_perunit& rhs) {
+    unsigned_perunit res = lhs;
+    res += rhs;
+    return res;
+}
+
+
+inline unsigned_perunit operator-(const unsigned_perunit& lhs, const unsigned_perunit& rhs) {
+    unsigned_perunit res;
+    res -= rhs;
+    return res;
+}
+
+inline unsigned_perunit operator*(const unsigned_perunit& lhs, float rhs) { return unsigned_perunit(lhs.get() * rhs); }
+inline unsigned_perunit operator*(float lhs, const unsigned_perunit& rhs) { return rhs * lhs; }
+inline unsigned_perunit operator/(const unsigned_perunit& lhs, float rhs) { return unsigned_perunit(lhs.get() / rhs); }
 
 
 } // namespace emb
