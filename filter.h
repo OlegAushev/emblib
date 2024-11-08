@@ -269,9 +269,11 @@ public:
     virtual void reset() EMB_OVERRIDE { set_output(T(0)); }
 
     void init(float update_period, T slope) {
+        assert(update_period > 0);
+        assert(slope > T(0));
         _update_period = update_period;
         _slope = slope;
-        _step = emb::clamp(update_period * slope, -FLT_MAX, FLT_MAX);
+        _step = emb::clamp(update_period * slope, T(-FLT_MAX), T(FLT_MAX));
     }
 
     void update() {
