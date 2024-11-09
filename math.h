@@ -55,9 +55,7 @@ inline constexpr float inv_sqrt3 = 0.57735026918963f;
 #if defined(EMBLIB_C28X)
 
 template<typename T>
-inline int sgn(T v) {
-    return (v > T(0)) - (v < T(0));
-}
+inline int sgn(T v) { return (v > T(0)) - (v < T(0)); }
 
 inline float to_rad(float deg) { return numbers::pi * deg / 180; }
 
@@ -66,9 +64,7 @@ inline float to_deg(float rad) { return 180 * rad / numbers::pi; }
 #elif defined(EMBLIB_ARM)
 
 template<typename T>
-constexpr int sgn(T v) {
-    return (v > T(0)) - (v < T(0));
-}
+constexpr int sgn(T v) { return (v > T(0)) - (v < T(0)); }
 
 constexpr float to_rad(float deg) { return numbers::pi * deg / 180; }
 

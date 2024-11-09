@@ -41,7 +41,7 @@ public:
         set(n, unit_tag);
     }
 
-    int pole_pairs() const { return _p; }
+    int p() const { return _p; }
 
     float get(units::impl::radps_t unit_tag) const { return _w; }
     float get(units::impl::rpm_t unit_tag) const {
@@ -55,7 +55,7 @@ public:
 };
 
 inline motor_speed operator*(const motor_speed& lhs, float rhs) {
-    return motor_speed(lhs.pole_pairs(),
+    return motor_speed(lhs.p(),
                        lhs.get(emb::units::radps) * rhs,
                        emb::units::radps);
 }
@@ -65,7 +65,7 @@ inline motor_speed operator*(float lhs, const motor_speed& rhs) {
 }
 
 inline motor_speed operator/(const motor_speed& lhs, float rhs) {
-    return motor_speed(lhs.pole_pairs(),
+    return motor_speed(lhs.p(),
                        lhs.get(emb::units::radps) / rhs,
                        emb::units::radps);
 }
@@ -90,7 +90,7 @@ public:
         set(v, unit_tag);
     }
 
-    int pole_pairs() const { return _p; }
+    int p() const { return _p; }
 
     float get(units::impl::elec_rad_t unit_tag) const { return _rad; }
     float get(units::impl::mech_rad_t unit_tag) const {
