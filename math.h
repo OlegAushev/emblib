@@ -204,16 +204,14 @@ inline bool operator>=(const signed_perunit& lhs, const signed_perunit& rhs) {
 
 inline signed_perunit operator+(const signed_perunit& lhs,
                                 const signed_perunit& rhs) {
-    signed_perunit res = lhs;
-    res += rhs;
-    return res;
+    signed_perunit tmp = lhs;
+    return tmp += rhs;
 }
 
 inline signed_perunit operator-(const signed_perunit& lhs,
                                 const signed_perunit& rhs) {
-    signed_perunit res = lhs;
-    res -= rhs;
-    return res;
+    signed_perunit tmp = lhs;
+    return tmp -= rhs;
 }
 
 inline signed_perunit operator*(const signed_perunit& lhs, float rhs) {
@@ -273,16 +271,14 @@ inline bool operator>=(const unsigned_perunit& lhs,
 
 inline unsigned_perunit operator+(const unsigned_perunit& lhs,
                                   const unsigned_perunit& rhs) {
-    unsigned_perunit res = lhs;
-    res += rhs;
-    return res;
+    unsigned_perunit tmp = lhs;
+    return tmp += rhs;
 }
 
 inline unsigned_perunit operator-(const unsigned_perunit& lhs,
                                   const unsigned_perunit& rhs) {
-    unsigned_perunit res;
-    res -= rhs;
-    return res;
+    unsigned_perunit tmp = lhs;
+    return tmp -= rhs;
 }
 
 inline unsigned_perunit operator*(const unsigned_perunit& lhs, float rhs) {
