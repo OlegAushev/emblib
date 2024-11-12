@@ -1,29 +1,29 @@
 #pragma once
 
-
 #if defined(EMBLIB_ARM)
 
-
 #include <emblib/chrono.h>
+
 #include <array>
 #include <utility>
-
 
 namespace emb {
 namespace fsm {
 
-
-template<typename Object, typename State, typename AbstractState>
+template<typename Object, typename State>
 class abstract_state {
 private:
     const State _id;
     std::chrono::milliseconds _enter_timepoint;
 protected:
-    abstract_state(State id) : _id(id), _enter_timepoint(emb::chrono::steady_clock::now()) {}
+    abstract_state(State id)
+            : _id(id),
+              _enter_timepoint(emb::chrono::steady_clock::now()) {}
     void change_state(Object* object, State state) {
         object->_current_state->_finalize(object);
         object->change_state(state);
-        object->_current_state->_enter_timepoint = emb::chrono::steady_clock::now();
+        object->_current_state->_enter_timepoint =
+            emb::chrono::steady_clock::now();
         object->_current_state->_initiate(object);
     }
     virtual void _initiate(Object* object) = 0;
@@ -31,9 +31,10 @@ protected:
 public:
     virtual ~abstract_state() {}
     State id() const { return _id; }
-    std::chrono::milliseconds time_since_enter() const { return emb::chrono::steady_clock::now() - _enter_timepoint; }
+    std::chrono::milliseconds time_since_enter() const {
+        return emb::chrono::steady_clock::now() - _enter_timepoint;
+    }
 };
-
 
 template<typename State, typename AbstractState, size_t StateCount>
 class abstract_object {
@@ -59,9 +60,7 @@ public:
     State state() const { return _current_state->id(); }
 };
 
-
 } // namespace fsm
 } // namespace emb
-
 
 #endif

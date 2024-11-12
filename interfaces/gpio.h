@@ -28,7 +28,7 @@ SCOPED_ENUM_DECLARE_BEGIN(pin_state) {
 #elif defined(EMBLIB_ARM)
 
 
-enum class active_pin_state : unsigned int {
+enum class active_state : unsigned int {
     low = 0,
     high = 1
 };
