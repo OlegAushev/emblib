@@ -78,7 +78,7 @@ void emb::tests::eeprom_test() {
 #ifdef EMB_TESTS_ENABLED
     TestingEepromDriver eeprom_driver;
 #if defined(EMBLIB_C28X)
-    emb::mem::eeprom::storage eeprom(eeprom_driver, mcu::crc::calc_crc32_byte8);
+    emb::mem::eeprom::storage eeprom(eeprom_driver, mcu::c28x::crc::calc_crc32_byte8);
 #elif defined(EMBLIB_ARM)
     emb::mem::eeprom::storage eeprom(eeprom_driver, mcu::crc::calc_crc32);
 #endif
