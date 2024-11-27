@@ -34,30 +34,24 @@ private:
     float _w;
 public:
     explicit motor_speed(int p) : _p(p), _w(0) {}
-    motor_speed(int p, float w, units::impl::radps_t unit_tag) : _p(p) {
-        set(w, unit_tag);
-    }
-    motor_speed(int p, float n, units::impl::rpm_t unit_tag) : _p(p) {
-        set(n, unit_tag);
-    }
+    motor_speed(int p, units::eradps_t w) : _p(p) { set(w); }
+    motor_speed(int p, units::rpm_t n) : _p(p) { set(n); }
 
     int p() const { return _p; }
 
-    float get(units::impl::radps_t unit_tag) const { return _w; }
-    float get(units::impl::rpm_t unit_tag) const {
-        return 60.f * _w / (numbers::two_pi * float(_p));
+    units::eradps_t eradps() const { return units::eradps_t(_w); }
+    units::rpm_t rpm() const {
+        return units::rpm_t(60.f * _w / (numbers::two_pi * float(_p)));
     }
 
-    void set(float w, units::impl::radps_t unit_tag) { _w = w; }
-    void set(float n, units::impl::rpm_t unit_tag) {
-        _w = numbers::two_pi * float(_p) * n / 60.f;
+    void set(units::eradps_t w) { _w = w.get(); }
+    void set(units::rpm_t n) {
+        _w = numbers::two_pi * float(_p) * n.get() / 60.f;
     }
 };
 
 inline motor_speed operator*(const motor_speed& lhs, float rhs) {
-    return motor_speed(lhs.p(),
-                       lhs.get(emb::units::radps) * rhs,
-                       emb::units::radps);
+    return motor_speed(lhs.p(), lhs.eradps() * rhs);
 }
 
 inline motor_speed operator*(float lhs, const motor_speed& rhs) {
@@ -65,9 +59,7 @@ inline motor_speed operator*(float lhs, const motor_speed& rhs) {
 }
 
 inline motor_speed operator/(const motor_speed& lhs, float rhs) {
-    return motor_speed(lhs.p(),
-                       lhs.get(emb::units::radps) / rhs,
-                       emb::units::radps);
+    return motor_speed(lhs.p(), lhs.eradps() / rhs);
 }
 
 class motor_angle {
