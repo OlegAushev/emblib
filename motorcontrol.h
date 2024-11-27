@@ -69,38 +69,24 @@ private:
 public:
     explicit motor_angle(int p) : _p(p), _rad(0) {}
 
-    motor_angle(int p, float v, units::impl::elec_rad_t unit_tag) : _p(p) {
-        set(v, unit_tag);
-    }
-    motor_angle(int p, float v, units::impl::mech_rad_t unit_tag) : _p(p) {
-        set(v, unit_tag);
-    }
-    motor_angle(int p, float v, units::impl::elec_deg_t unit_tag) : _p(p) {
-        set(v, unit_tag);
-    }
-    motor_angle(int p, float v, units::impl::mech_deg_t unit_tag) : _p(p) {
-        set(v, unit_tag);
-    }
+    motor_angle(int p, units::erad_t v) : _p(p) { set(v); }
+    motor_angle(int p, units::mrad_t v) : _p(p) { set(v); }
+    motor_angle(int p, units::edeg_t v) : _p(p) { set(v); }
+    motor_angle(int p, units::mdeg_t v) : _p(p) { set(v); }
 
     int p() const { return _p; }
 
-    float get(units::impl::elec_rad_t unit_tag) const { return _rad; }
-    float get(units::impl::mech_rad_t unit_tag) const {
-        return _rad / float(_p);
-    }
-    float get(units::impl::elec_deg_t unit_tag) const { return to_deg(_rad); }
-    float get(units::impl::mech_deg_t unit_tag) const {
-        return to_deg(_rad) / float(_p);
+    units::erad_t erad() const { return units::erad_t(_rad); }
+    units::mrad_t mrad() const { return units::mrad_t(_rad / float(_p)); }
+    units::edeg_t edeg() const { return units::edeg_t(to_deg(_rad)); }
+    units::mdeg_t mdeg() const {
+        return units::mdeg_t(to_deg(_rad) / float(_p));
     }
 
-    void set(float v, units::impl::elec_rad_t unit_tag) { _rad = v; }
-    void set(float v, units::impl::mech_rad_t unit_tag) {
-        _rad = v * float(_p);
-    }
-    void set(float v, units::impl::elec_deg_t unit_tag) { _rad = to_rad(v); }
-    void set(float v, units::impl::mech_deg_t unit_tag) {
-        _rad = to_rad(v) * float(_p);
-    }
+    void set(units::erad_t v) { _rad = v.get(); }
+    void set(units::mrad_t v) { _rad = v.get() * float(_p); }
+    void set(units::edeg_t v) { _rad = to_rad(v.get()); }
+    void set(units::mdeg_t v) { _rad = to_rad(v.get()) * float(_p); }
 };
 
 inline float to_radps(float speed_rpm, int pole_pairs) {

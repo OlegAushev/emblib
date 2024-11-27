@@ -84,35 +84,31 @@ inline named_unit<T, Unit> operator/(const named_unit<T, Unit>& lhs,
 }
 
 namespace impl {
+// speed
 struct rpm {};
 struct eradps {};
+// angle
+struct erad {};
+struct edeg {};
+struct mrad {};
+struct mdeg {};
 } // namespace impl
 
 typedef named_unit<float, impl::rpm> rpm_t;
 typedef named_unit<float, impl::eradps> eradps_t;
 
+typedef named_unit<float, impl::erad> erad_t;
+typedef named_unit<float, impl::edeg> edeg_t;
+typedef named_unit<float, impl::mrad> mrad_t;
+typedef named_unit<float, impl::mdeg> mdeg_t;
 
 namespace impl {
 struct rad_t{};
 struct deg_t{};
-struct elec_rad_t{};
-struct mech_rad_t{};
-struct elec_deg_t{};
-struct mech_deg_t{};
-//struct radps_t{};
-//struct rpm_t{};
 }
-
 
 const impl::rad_t rad;
 const impl::deg_t deg;
-const impl::elec_rad_t elec_rad;
-const impl::mech_rad_t mech_rad;
-const impl::elec_deg_t elec_deg;
-const impl::mech_deg_t mech_deg;
-//const impl::radps_t radps;
-//const impl::rpm_t rpm;
-
 
 } // namespace units
 } // namespace emb
