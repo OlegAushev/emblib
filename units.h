@@ -107,8 +107,5 @@ struct rad_t{};
 struct deg_t{};
 }
 
-const impl::rad_t rad;
-const impl::deg_t deg;
-
 } // namespace units
 } // namespace emb
