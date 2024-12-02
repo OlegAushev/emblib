@@ -19,15 +19,15 @@ protected:
     abstract_state(State id)
             : _id(id),
               _enter_timepoint(emb::chrono::steady_clock::now()) {}
-    void change_state(Object* object, State state) {
-        object->_current_state->_finalize(object);
+    static void change_state(Object* object, State state) {
+        object->_current_state->finalize(object);
         object->change_state(state);
         object->_current_state->_enter_timepoint =
             emb::chrono::steady_clock::now();
-        object->_current_state->_initiate(object);
+        object->_current_state->initiate(object);
     }
-    virtual void _initiate(Object* object) = 0;
-    virtual void _finalize(Object* object) = 0;
+    virtual void initiate(Object* object) = 0;
+    virtual void finalize(Object* object) = 0;
 public:
     virtual ~abstract_state() {}
     State id() const { return _id; }
