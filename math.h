@@ -186,6 +186,14 @@ public:
     }
 };
 
+inline bool operator==(const signed_perunit& lhs, const signed_perunit& rhs) {
+    return lhs.get() == rhs.get();
+}
+
+inline bool operator!=(const signed_perunit& lhs, const signed_perunit& rhs) {
+    return !(lhs == rhs);
+}
+
 inline bool operator<(const signed_perunit& lhs, const signed_perunit& rhs) {
     return lhs.get() < rhs.get();
 }
@@ -248,6 +256,16 @@ public:
         return *this;
     }
 };
+
+inline bool operator==(const unsigned_perunit& lhs,
+                       const unsigned_perunit& rhs) {
+    return lhs.get() == rhs.get();
+}
+
+inline bool operator!=(const unsigned_perunit& lhs,
+                       const unsigned_perunit& rhs) {
+    return !(lhs == rhs);
+}
 
 inline bool operator<(const unsigned_perunit& lhs,
                       const unsigned_perunit& rhs) {

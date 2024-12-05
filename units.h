@@ -28,6 +28,18 @@ public:
 };
 
 template<typename T, typename Unit>
+inline bool operator==(const named_unit<T, Unit>& lhs,
+                       const named_unit<T, Unit>& rhs) {
+    return lhs.get() == rhs.get();
+}
+
+template<typename T, typename Unit>
+inline bool operator!=(const named_unit<T, Unit>& lhs,
+                       const named_unit<T, Unit>& rhs) {
+    return !(lhs == rhs);
+}
+
+template<typename T, typename Unit>
 inline bool operator<(const named_unit<T, Unit>& lhs,
                       const named_unit<T, Unit>& rhs) {
     return lhs.get() < rhs.get();
