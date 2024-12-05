@@ -283,6 +283,8 @@ public:
             _out = std::max(_out - _step, _ref);
         }
     }
+
+    bool steady() const { return _out == _ref; }
 };
 
 
