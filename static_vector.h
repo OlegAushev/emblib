@@ -1,46 +1,43 @@
 #pragma once
 
-
 #include <emblib/core.h>
 #include <emblib/algorithm.h>
 
-
 namespace emb {
-
 
 template <typename T, size_t Capacity>
 class static_vector {
 private:
-    T _data[Capacity];
-    size_t _size;
+    T data_[Capacity];
+    size_t size_;
 public:
-    static_vector() : _size(0) {}
+    static_vector() : size_(0) {}
 
-    explicit static_vector(size_t size) : _size(size) {
+    explicit static_vector(size_t size) : size_(size) {
         assert(size <= Capacity);
         emb::fill(begin(), end(), T());
     }
 
-    static_vector(size_t size, const T& value) : _size(size) {
+    static_vector(size_t size, const T& value) : size_(size) {
         assert(size <= Capacity);
         emb::fill(begin(), end(), value);
     }
 
     template <class V>
-    static_vector(V* first, V* last) : _size(size_t(last - first)) {
+    static_vector(V* first, V* last) : size_(size_t(last - first)) {
         assert(first <= last);
         assert(size_t(last - first) <= Capacity);
         emb::copy(first, last, begin());
     }
 public:
     size_t capacity() const { return Capacity; }
-    size_t size() const { return _size; }
-    bool empty() const { return _size == 0; }
-    bool full() const { return _size == Capacity; }
+    size_t size() const { return size_; }
+    bool empty() const { return size_ == 0; }
+    bool full() const { return size_ == Capacity; }
 
     T& operator[] (size_t pos) {
 #ifdef NDEBUG
-        return _data[pos];
+        return data_[pos];
 #else
         return at(pos);
 #endif
@@ -48,78 +45,78 @@ public:
 
     const T& operator[](size_t pos) const {
 #ifdef NDEBUG
-        return _data[pos];
+        return data_[pos];
 #else
         return at(pos);
 #endif
     }
 
     T& at(size_t pos) {
-        assert(pos < _size);
-        return _data[pos];
+        assert(pos < size_);
+        return data_[pos];
     }
 
     const T& at(size_t pos) const {
-        assert((pos >= 0) && (pos < _size));
-        return _data[pos];
+        assert((pos >= 0) && (pos < size_));
+        return data_[pos];
     }
 public:
-    T* begin() { return _data; }
-    T* end() { return _data + _size; }
-    const T* begin() const { return _data; }
-    const T* end() const { return _data + _size; }
+    T* begin() { return data_; }
+    T* end() { return data_ + size_; }
+    const T* begin() const { return data_; }
+    const T* end() const { return data_ + size_; }
 
-    T* data() { return _data; }
-    const T* data() const { return _data; }
+    T* data() { return data_; }
+    const T* data() const { return data_; }
 
     T& front() {
         assert(!empty());
-        return _data[0];
+        return data_[0];
     }
 
     const T& front() const {
         assert(!empty());
-        return _data[0];
+        return data_[0];
     }
 
     T& back() {
         assert(!empty());
-        return _data[_size - 1];
+        return data_[size_ - 1];
     }
 
     const T& back() const {
         assert(!empty());
-        return _data[_size - 1];
+        return data_[size_ - 1];
     }
 public:
     void resize(size_t size) {
         assert(size <= Capacity);
-        if (size > _size) {
-            emb::fill(_data + _size, _data + size, T());
+        if (size > size_) {
+            emb::fill(data_ + size_, data_ + size, T());
         }
-        _size = size;
+        size_ = size;
     }
 
     void resize(size_t size, const T& value) {
         assert(size <= Capacity);
-        if (size > _size) {
-            emb::fill(_data + _size, _data + size, value);
+        if (size > size_) {
+            emb::fill(data_ + size_, data_ + size, value);
         }
-        _size = size;
+        size_ = size;
     }
 
     void clear() {
-        _size = 0;
+        size_ = 0;
     }
 public:
     void push_back(const T& value) {
         assert(!full());
-        _data[_size++] = value;
+        data_[size_++] = value;
     }
 
     void pop_back() {
         assert(!empty());
-        --_size;
+        --size_;
     }
 
     void insert(T* pos, const T& value) {
@@ -129,11 +126,11 @@ public:
         static_vector<T, Capacity> buf(pos, end());
         *pos++ = value;
         emb::copy(buf.begin(), buf.end(), pos);
-        ++_size;
+        ++size_;
     }
 
     void insert(T* pos, size_t count, const T& value) {
-        assert((_size + count) <= Capacity);
+        assert((size_ + count) <= Capacity);
         assert(pos <= end());
 
         static_vector<T, Capacity> buf(pos, end());
@@ -141,19 +138,19 @@ public:
             *pos++ = value;
         }
         emb::copy(buf.begin(), buf.end(), pos);
-        _size += count;
+        size_ += count;
     }
 
     template <class V>
     void insert(T* pos, V* first, V* last) {
         assert(first <= last);
-        assert(size_t(_size + last - first) <= Capacity);
+        assert(size_t(size_ + last - first) <= Capacity);
         assert(pos <= end());
 
         static_vector<T, Capacity> buf(pos, end());
         pos = emb::copy(first, last, pos);
         emb::copy(buf.begin(), buf.end(), pos);
-        _size = _size + size_t(last - first);
+        size_ = size_ + size_t(last - first);
     }
 public:
     T* erase(T* pos) {
@@ -161,21 +158,20 @@ public:
         assert(pos < end());
 
         static_vector<T, Capacity> buf(pos + 1, end());
-        --_size;
+        --size_;
         return emb::copy(buf.begin(), buf.end(), pos);
     }
 
     T* erase(T* first, T* last) {
         assert(first <= last);
-        assert(_size >= size_t(last - first));
+        assert(size_ >= size_t(last - first));
         assert(begin() <= first);
         assert(last <= end());
 
         static_vector<T, Capacity> buf(last, end());
-        _size = _size - size_t(last - first);
+        size_ = size_ - size_t(last - first);
         return emb::copy(buf.begin(), buf.end(), first);
     }
 };
-
 
 } // namespace emb

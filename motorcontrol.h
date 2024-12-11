@@ -30,23 +30,23 @@ enum class phase3 : uint32_t { a, b, c };
 
 class motor_speed {
 private:
-    int _p;
-    float _w;
+    int p_;
+    float w_;
 public:
-    explicit motor_speed(int p) : _p(p), _w(0) {}
-    motor_speed(int p, units::eradps_t w) : _p(p) { set(w); }
-    motor_speed(int p, units::rpm_t n) : _p(p) { set(n); }
+    explicit motor_speed(int p) : p_(p), w_(0) {}
+    motor_speed(int p, units::eradps_t w) : p_(p) { set(w); }
+    motor_speed(int p, units::rpm_t n) : p_(p) { set(n); }
 
-    int p() const { return _p; }
+    int p() const { return p_; }
 
-    units::eradps_t eradps() const { return units::eradps_t(_w); }
+    units::eradps_t eradps() const { return units::eradps_t(w_); }
     units::rpm_t rpm() const {
-        return units::rpm_t(60.f * _w / (numbers::two_pi * float(_p)));
+        return units::rpm_t(60.f * w_ / (numbers::two_pi * float(p_)));
     }
 
-    void set(units::eradps_t w) { _w = w.get(); }
+    void set(units::eradps_t w) { w_ = w.get(); }
     void set(units::rpm_t n) {
-        _w = numbers::two_pi * float(_p) * n.get() / 60.f;
+        w_ = numbers::two_pi * float(p_) * n.get() / 60.f;
     }
 };
 
@@ -64,29 +64,29 @@ inline motor_speed operator/(const motor_speed& lhs, float rhs) {
 
 class motor_angle {
 private:
-    int _p;
-    float _rad;
+    int p_;
+    float rad_;
 public:
-    explicit motor_angle(int p) : _p(p), _rad(0) {}
+    explicit motor_angle(int p) : p_(p), rad_(0) {}
 
-    motor_angle(int p, units::erad_t v) : _p(p) { set(v); }
-    motor_angle(int p, units::mrad_t v) : _p(p) { set(v); }
-    motor_angle(int p, units::edeg_t v) : _p(p) { set(v); }
-    motor_angle(int p, units::mdeg_t v) : _p(p) { set(v); }
+    motor_angle(int p, units::erad_t v) : p_(p) { set(v); }
+    motor_angle(int p, units::mrad_t v) : p_(p) { set(v); }
+    motor_angle(int p, units::edeg_t v) : p_(p) { set(v); }
+    motor_angle(int p, units::mdeg_t v) : p_(p) { set(v); }
 
-    int p() const { return _p; }
+    int p() const { return p_; }
 
-    units::erad_t erad() const { return units::erad_t(_rad); }
-    units::mrad_t mrad() const { return units::mrad_t(_rad / float(_p)); }
-    units::edeg_t edeg() const { return units::edeg_t(to_deg(_rad)); }
+    units::erad_t erad() const { return units::erad_t(rad_); }
+    units::mrad_t mrad() const { return units::mrad_t(rad_ / float(p_)); }
+    units::edeg_t edeg() const { return units::edeg_t(to_deg(rad_)); }
     units::mdeg_t mdeg() const {
-        return units::mdeg_t(to_deg(_rad) / float(_p));
+        return units::mdeg_t(to_deg(rad_) / float(p_));
     }
 
-    void set(units::erad_t v) { _rad = v.get(); }
-    void set(units::mrad_t v) { _rad = v.get() * float(_p); }
-    void set(units::edeg_t v) { _rad = to_rad(v.get()); }
-    void set(units::mdeg_t v) { _rad = to_rad(v.get()) * float(_p); }
+    void set(units::erad_t v) { rad_ = v.get(); }
+    void set(units::mrad_t v) { rad_ = v.get() * float(p_); }
+    void set(units::edeg_t v) { rad_ = to_rad(v.get()); }
+    void set(units::mdeg_t v) { rad_ = to_rad(v.get()) * float(p_); }
 };
 
 inline float to_radps(float speed_rpm, int pole_pairs) {

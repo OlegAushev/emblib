@@ -1,65 +1,61 @@
 #pragma once
 
-
 #include <emblib/core.h>
 
-
 namespace emb {
-
 
 template <typename T, size_t Capacity>
 class queue {
 private:
-    T _data[Capacity];
-    size_t _front;
-    size_t _back;
-    size_t _size;
+    T data_[Capacity];
+    size_t front_;
+    size_t back_;
+    size_t size_;
 public:
     queue()
-            : _front(0)
-            , _back(0)
-            , _size(0) {
+            : front_(0)
+            , back_(0)
+            , size_(0) {
     }
 
     void clear() {
-        _front = 0;
-        _back = 0;
-        _size = 0;
+        front_ = 0;
+        back_ = 0;
+        size_ = 0;
     }
 
-    bool empty() const { return _size == 0; }
-    bool full() const { return _size == Capacity; }
+    bool empty() const { return size_ == 0; }
+    bool full() const { return size_ == Capacity; }
     size_t capacity() const { return Capacity; }
-    size_t size() const { return _size; }
+    size_t size() const { return size_; }
 
     void push(const T& value) {
         assert(!full());
 
         if (empty()) {
-            _back = _front;
+            back_ = front_;
         } else {
-            _back = (_back + 1) % Capacity;
+            back_ = (back_ + 1) % Capacity;
         }
-        _data[_back] = value;
-        ++_size;
+        data_[back_] = value;
+        ++size_;
     }
 
     const T& front() const {
         assert(!empty());
-        return _data[_front];
+        return data_[front_];
     }
 
     const T& back() const {
         assert(!empty());
-        return _data[_back];
+        return data_[back_];
     }
 
     void pop() {
         assert(!empty());
-        _front = (_front + 1) % Capacity;
-        --_size;
+        front_ = (front_ + 1) % Capacity;
+        --size_;
     }
 };
-
 
 } // namespace emb

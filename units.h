@@ -10,19 +10,19 @@ namespace units {
 template<typename T, typename Unit>
 class named_unit {
 private:
-    T _v;
+    T v_;
 public:
-    named_unit() : _v(T(0)) {}
-    explicit named_unit(const T& v) : _v(v) {}
-    const T& get() const { return _v; }
+    named_unit() : v_(T(0)) {}
+    explicit named_unit(const T& v) : v_(v) {}
+    const T& get() const { return v_; }
 
     named_unit& operator+=(const named_unit& rhs) {
-        _v += rhs._v;
+        v_ += rhs.v_;
         return *this;
     }
 
     named_unit& operator-=(const named_unit& rhs) {
-        _v -= rhs._v;
+        v_ -= rhs.v_;
         return *this;
     }
 };

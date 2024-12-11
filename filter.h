@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include <emblib/core.h>
 #include <emblib/algorithm.h>
 #include <emblib/array.h>
@@ -8,9 +7,7 @@
 #include <algorithm>
 #include <float.h>
 
-
 namespace emb {
-
 
 template<typename T>
 class filter {
@@ -24,80 +21,78 @@ public:
     virtual void reset() = 0;
 };
 
-
 template<typename T, size_t WindowSize>
 class movavg_filter : public filter<T>, private emb::noncopyable {
 private:
-    size_t _size;
-    T* _window;
-    size_t _index;
-    T _sum;
-    bool _heap_used;
+    size_t size_;
+    T* window_;
+    size_t index_;
+    T sum_;
+    bool heap_used_;
 public:
     movavg_filter()
-            : _size(WindowSize)
-            , _window(new T[WindowSize])
-            , _index(0)
-            , _sum(0)
-            , _heap_used(true) {
+            : size_(WindowSize)
+            , window_(new T[WindowSize])
+            , index_(0)
+            , sum_(0)
+            , heap_used_(true) {
         reset();
     }
 
     movavg_filter(emb::array<T, WindowSize>& data_array)
-            : _size(WindowSize)
-            , _window(data_array.begin())
-            , _index(0)
-            , _sum(T(0))
-            , _heap_used(false) {
+            : size_(WindowSize)
+            , window_(data_array.begin())
+            , index_(0)
+            , sum_(T(0))
+            , heap_used_(false) {
         reset();
     }
 
     ~movavg_filter() {
-        if (_heap_used == true) {
-            delete[] _window;
+        if (heap_used_ == true) {
+            delete[] window_;
         }
     }
 
     virtual void push(T input_value) EMB_OVERRIDE {
-        _sum = _sum + input_value - _window[_index];
-        _window[_index] = input_value;
-        _index = (_index + 1) % _size;
+        sum_ = sum_ + input_value - window_[index_];
+        window_[index_] = input_value;
+        index_ = (index_ + 1) % size_;
     }
 
-    virtual T output() const EMB_OVERRIDE { return _sum / T(_size); }
+    virtual T output() const EMB_OVERRIDE { return sum_ / T(size_); }
 
     virtual void set_output(T value) EMB_OVERRIDE {
-        for (size_t i = 0; i < _size; ++i) {
-            _window[i] = value;
+        for (size_t i = 0; i < size_; ++i) {
+            window_[i] = value;
         }
-        _index = 0;
-        _sum = value * T(_size);
+        index_ = 0;
+        sum_ = value * T(size_);
     }
 
     virtual void reset() EMB_OVERRIDE { set_output(0); }
 
-    size_t size() const { return _size; }
+    size_t size() const { return size_; }
 
     void resize(size_t size) {
         if (size == 0) {
             return;
         }
         if (size > WindowSize) {
-            _size = WindowSize;
+            size_ = WindowSize;
             reset();
             return;
         }
-        _size = size;
+        size_ = size;
         reset();
     }
 };
 
-
 template<typename T, size_t WindowSize>
 class med_filter : public filter<T> {
 private:
-    circular_buffer<T, WindowSize> _window;
-    T _out;
+    circular_buffer<T, WindowSize> window_;
+    T out_;
 public:
     med_filter() {
         EMB_STATIC_ASSERT((WindowSize % 2) == 1);
@@ -105,37 +100,35 @@ public:
     }
 
     virtual void push(T input_value) EMB_OVERRIDE {
-        _window.push_back(input_value);
+        window_.push_back(input_value);
         emb::array<T, WindowSize> window_sorted;
-        emb::copy(_window.begin(), _window.end(), window_sorted.begin());
+        emb::copy(window_.begin(), window_.end(), window_sorted.begin());
         std::sort(window_sorted.begin(), window_sorted.end());
-        _out = window_sorted[WindowSize/2];
+        out_ = window_sorted[WindowSize/2];
     }
 
-    virtual T output() const EMB_OVERRIDE { return _out; }
+    virtual T output() const EMB_OVERRIDE { return out_; }
 
     virtual void set_output(T value) EMB_OVERRIDE {
-        _window.fill(value);
-        _out = value;
+        window_.fill(value);
+        out_ = value;
     }
 
     virtual void reset() EMB_OVERRIDE { set_output(0); }
 };
 
-
 template<typename T>
 class exp_filter : public filter<T> {
 private:
-    float _sampling_period;
-    float _time_constant;
-    float _smooth_factor;
-    T _out;
-    T _out_prev;
+    float sampling_period_;
+    float time_constant_;
+    float smooth_factor_;
+    T out_;
 public:
     exp_filter()
-            : _sampling_period(0)
-            , _time_constant(FLT_MAX)
-            , _smooth_factor(0) {
+            : sampling_period_(0)
+            , time_constant_(FLT_MAX)
+            , smooth_factor_(0) {
         reset();
     }
 
@@ -145,48 +138,42 @@ public:
     }
 
     virtual void push(T input_value) EMB_OVERRIDE {
-        _out = _out_prev + _smooth_factor * (input_value - _out_prev);
-        _out_prev = _out;
+        out_ = out_ + smooth_factor_ * (input_value - out_);
     }
 
-    virtual T output() const EMB_OVERRIDE { return _out; }
+    virtual T output() const EMB_OVERRIDE { return out_; }
 
-    virtual void set_output(T value) EMB_OVERRIDE {
-        _out = value;
-        _out_prev = value;
-    }
+    virtual void set_output(T value) EMB_OVERRIDE { out_ = value; }
 
     virtual void reset() EMB_OVERRIDE { set_output(0); }
 
     void init(float sampling_period, float time_constant) {
-        _sampling_period = sampling_period;
-        _time_constant = time_constant;
-        _smooth_factor = emb::clamp(sampling_period/time_constant, 0.f, 1.f);
+        sampling_period_ = sampling_period;
+        time_constant_ = time_constant;
+        smooth_factor_ = emb::clamp(sampling_period/time_constant, 0.f, 1.f);
     }
 
     void set_sampling_period(float value) {
-        _sampling_period = value;
-        _smooth_factor = emb::clamp(_sampling_period/_time_constant, 0.f, 1.f);
+        sampling_period_ = value;
+        smooth_factor_ = emb::clamp(sampling_period_/time_constant_, 0.f, 1.f);
     }
 
-    float smooth_factor() const { return _smooth_factor; }
+    float smooth_factor() const { return smooth_factor_; }
 };
-
 
 template<typename T, size_t WindowSize>
 class expmed_filter : public filter<T> {
 private:
     circular_buffer<T, WindowSize> _window;
-    float _sampling_period;
-    float _time_constant;
-    float _smooth_factor;
-    T _out;
-    T _out_prev;
+    float sampling_period_;
+    float time_constant_;
+    float smooth_factor_;
+    T out_;
 public:
     expmed_filter()
-            : _sampling_period(0)
-            , _time_constant(FLT_MAX)
-            , _smooth_factor(0) {
+            : sampling_period_(0)
+            , time_constant_(FLT_MAX)
+            , smooth_factor_(0) {
         EMB_STATIC_ASSERT((WindowSize % 2) == 1);
         reset();
     }
@@ -204,49 +191,46 @@ public:
         std::sort(window_sorted.begin(), window_sorted.end());
         input_value = window_sorted[WindowSize/2];
 
-        _out = _out_prev + _smooth_factor * (input_value - _out_prev);
-        _out_prev = _out;
+        out_ = out_ + smooth_factor_ * (input_value - out_);
     }
 
-    virtual T output() const EMB_OVERRIDE { return _out; }
+    virtual T output() const EMB_OVERRIDE { return out_; }
 
     virtual void set_output(T value) EMB_OVERRIDE {
         _window.fill(value);
-        _out = value;
-        _out_prev = value;
+        out_ = value;
     }
 
     virtual void reset() EMB_OVERRIDE { set_output(0); }
     
     void init(float sampling_period, float time_constant) {
-        _sampling_period = sampling_period;
-        _time_constant = time_constant;
-        _smooth_factor = emb::clamp(sampling_period/time_constant, 0.f, 1.f);
+        sampling_period_ = sampling_period;
+        time_constant_ = time_constant;
+        smooth_factor_ = emb::clamp(sampling_period/time_constant, 0.f, 1.f);
     }
 
     void set_sampling_period(float value) {
-        _sampling_period = value;
-        _smooth_factor = emb::clamp(_sampling_period/_time_constant, 0.f, 1.f);
+        sampling_period_ = value;
+        smooth_factor_ = emb::clamp(sampling_period_/time_constant_, 0.f, 1.f);
     }
 
-    float smooth_factor() const { return _smooth_factor; }
+    float smooth_factor() const { return smooth_factor_; }
 };
-
 
 template<typename T>
 class ramp_filter : public filter<T> {
 private:
-    float _update_period;
-    T _slope;
-    T _step;
+    float update_period_;
+    T slope_;
+    T step_;
 
-    T _ref;
-    T _out;
+    T ref_;
+    T out_;
 public:
     ramp_filter()
-            : _update_period(0)
-            , _slope(T(0))
-            , _step(T(0)) {
+            : update_period_(0)
+            , slope_(T(0))
+            , step_(T(0)) {
         reset();
     }
 
@@ -256,14 +240,14 @@ public:
     }
 
     virtual void push(T input_value) EMB_OVERRIDE {
-        _ref = input_value;
+        ref_ = input_value;
     }
 
-    virtual T output() const EMB_OVERRIDE { return _out; }
+    virtual T output() const EMB_OVERRIDE { return out_; }
     
     virtual void set_output(T value) EMB_OVERRIDE {
-        _ref = value;
-        _out = value;
+        ref_ = value;
+        out_ = value;
     }
 
     virtual void reset() EMB_OVERRIDE { set_output(T(0)); }
@@ -271,21 +255,20 @@ public:
     void init(float update_period, T slope) {
         assert(update_period > 0);
         assert(slope > T(0));
-        _update_period = update_period;
-        _slope = slope;
-        _step = emb::clamp(update_period * slope, T(-FLT_MAX), T(FLT_MAX));
+        update_period_ = update_period;
+        slope_ = slope;
+        step_ = emb::clamp(update_period * slope, T(-FLT_MAX), T(FLT_MAX));
     }
 
     void update() {
-        if (_out < _ref) {
-            _out = std::min(_out + _step, _ref);
+        if (out_ < ref_) {
+            out_ = std::min(out_ + step_, ref_);
         } else {
-            _out = std::max(_out - _step, _ref);
+            out_ = std::max(out_ - step_, ref_);
         }
     }
 
-    bool steady() const { return _out == _ref; }
+    bool steady() const { return out_ == ref_; }
 };
-
 
 } // namespace emb
