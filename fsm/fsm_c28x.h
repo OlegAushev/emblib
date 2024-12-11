@@ -8,7 +8,7 @@
 namespace emb {
 namespace fsm {
 
-template<typename Object, typename State>
+template<typename Object, typename State, typename LockGuard = void*>
 class abstract_state {
 private:
     const State id_;
@@ -18,6 +18,7 @@ protected:
             : id_(id),
               enter_timepoint_(emb::chrono::steady_clock::now()) {}
     static void change_state(Object* object, State state) {
+        LockGuard lock_guard;
         const State prev_state = object->state();
         const State next_state = state;
         object->state_->finalize(object, next_state);
