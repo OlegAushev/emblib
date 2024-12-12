@@ -25,14 +25,11 @@ private:
     static bool _initialized;
 protected:
     interrupt_invoker(T* self) {
-        assert(!_initialized);
-        _instance = self;
-        _initialized = true;
+        register_object(self);
     }
 
     ~interrupt_invoker() {
-        _initialized = false;
-        _instance = static_cast<T*>(NULL);
+        deregister_object();
     }
 public:
     static T* instance() {
@@ -41,6 +38,17 @@ public:
     }
 
     static bool initialized() { return _initialized; }
+
+    static void register_object(T* obj) {
+        assert(!_initialized);
+        _instance = obj;
+        _initialized = true;
+    }
+
+    static void deregister_object() {
+        _initialized = false;
+        _instance = static_cast<T*>(NULL);
+    }
 };
 
 template <class T>
