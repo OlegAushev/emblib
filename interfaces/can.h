@@ -8,6 +8,7 @@
 
 
 typedef emb::array<uint8_t, 8> can_payload;
+typedef uint32_t can_id;
 
 
 #elif defined(EMBLIB_ARM)
