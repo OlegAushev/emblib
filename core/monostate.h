@@ -21,24 +21,24 @@ namespace emb {
 template <class T>
 class monostate {
 private:
-    static bool _initialized;
+    static bool initialized_;
 protected:
     monostate() {
-        assert(_initialized);
+        assert(initialized_);
     }
 
     ~monostate() {}
 
     static void set_initialized() {
-        assert(!_initialized);
-        _initialized = true;
+        assert(!initialized_);
+        initialized_ = true;
     }
 public:
-    static bool initialized() { return _initialized; }
+    static bool initialized() { return initialized_; }
 };
 
 template <class T>
-bool monostate<T>::_initialized = false;
+bool monostate<T>::initialized_ = false;
 
 
 #elif defined(EMBLIB_ARM)
@@ -47,20 +47,20 @@ bool monostate<T>::_initialized = false;
 template <class T>
 class monostate {
 private:
-    static inline bool _initialized = false;
+    static inline bool initialized_ = false;
 protected:
     monostate() {
-        assert(_initialized);
+        assert(initialized_);
     }
 
     ~monostate() = default;
 
     static void set_initialized() {
-        assert(!_initialized);
-        _initialized = true;
+        assert(!initialized_);
+        initialized_ = true;
     }
 public:
-    static bool initialized() { return _initialized; }
+    static bool initialized() { return initialized_; }
 };
 
 
