@@ -1,6 +1,5 @@
 #pragma once
 
-
 #if defined(EMBLIB_C28X)
 #include <stdint.h>
 #include <stddef.h>
@@ -11,12 +10,9 @@
 #include <cassert>
 #endif
 
-
 namespace emb {
 
-
 #if defined(EMBLIB_C28X)
-
 
 template <class T>
 class monostate {
@@ -40,9 +36,7 @@ public:
 template <class T>
 bool monostate<T>::initialized_ = false;
 
-
 #elif defined(EMBLIB_ARM)
-
 
 template <class T>
 class monostate {
@@ -63,8 +57,6 @@ public:
     static bool initialized() { return initialized_; }
 };
 
-
 #endif
-
 
 } // namespace emb

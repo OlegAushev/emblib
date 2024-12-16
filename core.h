@@ -22,7 +22,7 @@
 #include "core/scopedenum.h"
 #endif
 
-#include "core/interrupt_invoker.h"
+#include "core/singleton.h"
 #include "core/monostate.h"
 #include "core/noncopyable.h"
 

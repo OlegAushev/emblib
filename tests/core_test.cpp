@@ -1,9 +1,9 @@
 #include <emblib/tests/tests.h>
 
 
-class SingletonTest : public emb::interrupt_invoker<SingletonTest> {
+class SingletonTest : public emb::singleton<SingletonTest> {
 public:
-    SingletonTest() : interrupt_invoker(this) {}
+    SingletonTest() : singleton(this) {}
 };
 
 
