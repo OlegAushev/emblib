@@ -1,4 +1,4 @@
-#include "scheduler_c28x.h"
+#include "scheduler_c28x.hpp"
 
 
 #if defined(EMBLIB_C28X)

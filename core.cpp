@@ -1,4 +1,4 @@
-#include <emblib/core.h>
+#include <emblib/core.hpp>
 
 
 #if defined(EMBLIB_ARM)

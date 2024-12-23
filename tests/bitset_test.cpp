@@ -1,4 +1,4 @@
-#include <emblib/tests/tests.h>
+#include <emblib/tests/tests.hpp>
 
 
 #if defined(EMBLIB_C28X)

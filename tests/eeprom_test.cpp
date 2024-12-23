@@ -9,7 +9,7 @@
 #endif
 
 
-#include <emblib/tests/tests.h>
+#include <emblib/tests/tests.hpp>
 
 
 class TestingEepromDriver : public emb::mem::eeprom::driver {

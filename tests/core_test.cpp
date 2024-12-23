@@ -1,4 +1,4 @@
-#include <emblib/tests/tests.h>
+#include <emblib/tests/tests.hpp>
 
 
 class SingletonTest : public emb::singleton<SingletonTest> {

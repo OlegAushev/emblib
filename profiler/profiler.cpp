@@ -1,4 +1,4 @@
-#include <emblib/profiler/profiler.h>
+#include <emblib/profiler/profiler.hpp>
 
 
 namespace emb {

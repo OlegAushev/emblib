@@ -1,4 +1,4 @@
-#include <emblib/memory/eeprom/eeprom.h>
+#include <emblib/memory/eeprom/eeprom.hpp>
 
 
 namespace emb {
