@@ -2,7 +2,7 @@
 
 
 #include <emblib/testrunner/testrunner.h>
-#include <tests/tests_config.h>
+#include <tests/tests_config.hpp>
 #include <emblib/array.h>
 #include <emblib/algorithm.h>
 #include <emblib/bitset.h>
