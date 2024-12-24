@@ -8,7 +8,6 @@
 #include <math.h>
 #include <motorcontrol/math.h>
 #elif defined(EMBLIB_ARM)
-#include <algorithm>
 extern "C" {
 #include "arm_math.h"
 }
@@ -19,60 +18,37 @@ extern "C" {
 namespace emb {
 
 namespace numbers {
-
-#if defined(EMBLIB_C28X)
-
-const float pi = MATH_PI;
-const float pi_over_2 = MATH_PI_OVER_TWO;
-const float pi_over_4 = MATH_PI_OVER_FOUR;
-const float pi_over_3 = MATH_PI / 3;
-const float pi_over_6 = MATH_PI / 6;
-const float two_pi = MATH_TWO_PI;
-
-const float sqrt_2 = sqrtf(2.f);
-const float sqrt_3 = sqrtf(3.f);
-
-const float inv_sqrt3 = 0.57735026918963f;
-
-#elif defined(EMBLIB_ARM)
-
+#ifdef __cpp_inline_variables
 inline constexpr float pi = PI;
 inline constexpr float pi_over_2 = pi / 2;
 inline constexpr float pi_over_4 = pi / 4;
 inline constexpr float pi_over_3 = pi / 3;
 inline constexpr float pi_over_6 = pi / 6;
 inline constexpr float two_pi = 2 * pi;
-
 inline float sqrt_2 = std::sqrt(2.f);
 inline float sqrt_3 = std::sqrt(3.f);
-
 inline constexpr float inv_sqrt3 = 0.57735026918963f;
-
+#else
+const float pi = MATH_PI;
+const float pi_over_2 = MATH_PI_OVER_TWO;
+const float pi_over_4 = MATH_PI_OVER_FOUR;
+const float pi_over_3 = MATH_PI / 3;
+const float pi_over_6 = MATH_PI / 6;
+const float two_pi = MATH_TWO_PI;
+const float sqrt_2 = sqrtf(2.f);
+const float sqrt_3 = sqrtf(3.f);
+const float inv_sqrt3 = 0.57735026918963f;
 #endif
-
 } // namespace numbers
 
-#if defined(EMBLIB_C28X)
-
 template<typename T>
-inline int sgn(T v) { return (v > T(0)) - (v < T(0)); }
+EMB_CONSTEXPR int sgn(T v) { return (v > T(0)) - (v < T(0)); }
 
-inline float to_rad(float deg) { return numbers::pi * deg / 180; }
+EMB_CONSTEXPR float to_rad(float deg) { return numbers::pi * deg / 180; }
 
-inline float to_deg(float rad) { return 180 * rad / numbers::pi; }
+EMB_CONSTEXPR float to_deg(float rad) { return 180 * rad / numbers::pi; }
 
-#elif defined(EMBLIB_ARM)
-
-template<typename T>
-constexpr int sgn(T v) { return (v > T(0)) - (v < T(0)); }
-
-constexpr float to_rad(float deg) { return numbers::pi * deg / 180; }
-
-constexpr float to_deg(float rad) { return 180 * rad / numbers::pi; }
-
-constexpr bool ispowerof2(unsigned int v) { return v && ((v & (v - 1)) == 0); }
-
-#endif
+EMB_CONSTEXPR bool ispow2(unsigned int v) { return v && ((v & (v - 1)) == 0); }
 
 inline float rem_2pi(float v) {
     v = fmodf(v, numbers::two_pi);

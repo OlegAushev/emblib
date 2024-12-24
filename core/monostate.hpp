@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <assert.h>
-#elif defined(EMBLIB_ARM)
+#else
 #include <cstdint>
 #include <cstddef>
 #include <cassert>
@@ -12,7 +12,28 @@
 
 namespace emb {
 
-#if defined(EMBLIB_C28X)
+#if __cplusplus >= 201100
+
+template <class T>
+class monostate {
+private:
+    static inline bool initialized_ = false;
+protected:
+    monostate() {
+        assert(initialized_);
+    }
+
+    ~monostate() = default;
+
+    static void set_initialized() {
+        assert(!initialized_);
+        initialized_ = true;
+    }
+public:
+    static bool initialized() { return initialized_; }
+};
+
+#else
 
 template <class T>
 class monostate {
@@ -35,27 +56,6 @@ public:
 
 template <class T>
 bool monostate<T>::initialized_ = false;
-
-#elif defined(EMBLIB_ARM)
-
-template <class T>
-class monostate {
-private:
-    static inline bool initialized_ = false;
-protected:
-    monostate() {
-        assert(initialized_);
-    }
-
-    ~monostate() = default;
-
-    static void set_initialized() {
-        assert(!initialized_);
-        initialized_ = true;
-    }
-public:
-    static bool initialized() { return initialized_; }
-};
 
 #endif
 

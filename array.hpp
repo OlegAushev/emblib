@@ -1,16 +1,18 @@
 #pragma once
 
-
 #include <emblib/core.hpp>
-#if defined(EMBLIB_ARM)
+#if __cplusplus >= 201100
 #include <array>
 #endif
 
-
 namespace emb {
 
+#if __cplusplus >= 201100
 
-#if defined(EMBLIB_C28X)
+template <typename T, size_t Size>
+using array = std::array<T, Size>;
+
+#else
 
 template <typename T, size_t Size>
 class array {
@@ -57,12 +59,6 @@ public:
     }
 };
 
-#elif defined(EMBLIB_ARM)
-
-template <typename T, size_t Size>
-using array = std::array<T, Size>;
-
 #endif
-
 
 } // namespace emb

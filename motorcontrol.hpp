@@ -5,18 +5,11 @@
 #include <emblib/math.hpp>
 #include <emblib/units.hpp>
 
-#if defined(EMBLIB_C28X)
-#include <motorcontrol/clarke.h>
-#include <motorcontrol/ipark.h>
-#include <motorcontrol/math.h>
-#include <motorcontrol/park.h>
-#elif defined(EMBLIB_ARM)
-#include <utility>
-#endif
-
 namespace emb {
 
-#if defined(EMBLIB_C28X)
+#if __cplusplus >= 201100
+enum class phase3 : uint32_t { a, b, c };
+#else
 // clang-format off
 SCOPED_ENUM_UT_DECLARE_BEGIN(phase3, uint32_t) {
     a,
@@ -24,20 +17,22 @@ SCOPED_ENUM_UT_DECLARE_BEGIN(phase3, uint32_t) {
     c
 } SCOPED_ENUM_DECLARE_END(phase3);
 // clang-format on
-#elif defined(EMBLIB_ARM)
-enum class phase3 : uint32_t { a, b, c };
 #endif
 
-inline float to_radps(float speed_rpm, int pole_pairs) {
-    return numbers::two_pi * float(pole_pairs) * speed_rpm / 60.f;
+EMB_CONSTEXPR float to_eradps(float n, int p) {
+    return numbers::two_pi * float(p) * n / 60.f;
 }
 
-inline float to_radps(float speed_rpm) {
-    return numbers::two_pi * speed_rpm / 60.f;
+EMB_CONSTEXPR emb::units::eradps_t to_eradps(emb::units::rpm_t n, int p) {
+    return emb::units::eradps_t(to_eradps(n.get(), p));
 }
 
-inline float to_rpm(float speed_radps, int pole_pairs) {
-    return 60.f * speed_radps / (numbers::two_pi * float(pole_pairs));
+EMB_CONSTEXPR float to_rpm(float w, int p) {
+    return 60.f * w / (numbers::two_pi * float(p));
+}
+
+EMB_CONSTEXPR emb::units::rpm_t to_rpm(emb::units::eradps_t w, int p) {
+    return emb::units::rpm_t(to_rpm(w.get(), p));
 }
 
 class motor_speed {

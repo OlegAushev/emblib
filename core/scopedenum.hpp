@@ -2,11 +2,9 @@
 // https://github.com/steinwurf/boost/blob/master/boost/core/scoped_enum.hpp
 #pragma once
 
-
 #include <stdint.h>
 #include <stddef.h>
 #include <assert.h>
-
 
 #define SCOPED_ENUM_UT_DECLARE_BEGIN(EnumType, UnderlyingType)  \
     struct EnumType {                                           \
