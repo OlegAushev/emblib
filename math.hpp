@@ -173,7 +173,6 @@ public:
             : _value(emb::clamp(v / base, -1.f, 1.f)) {}
 
     float get() const { return _value; }
-    void set(float v) { _value = emb::clamp(v, -1.f, 1.f); }
 
     signed_perunit& operator+=(const signed_perunit& rhs) {
         set(_value + rhs._value);
@@ -184,6 +183,8 @@ public:
         set(_value - rhs._value);
         return *this;
     }
+private:
+    void set(float v) { _value = emb::clamp(v, -1.f, 1.f); }
 };
 
 inline bool operator==(const signed_perunit& lhs, const signed_perunit& rhs) {
@@ -244,7 +245,6 @@ public:
             : _value(emb::clamp(v / base, 0.f, 1.f)) {}
 
     float get() const { return _value; }
-    void set(float v) { _value = emb::clamp(v, 0.f, 1.f); }
 
     unsigned_perunit& operator+=(const unsigned_perunit& rhs) {
         set(_value + rhs._value);
@@ -255,6 +255,8 @@ public:
         set(_value - rhs._value);
         return *this;
     }
+private:
+    void set(float v) { _value = emb::clamp(v, 0.f, 1.f); }
 };
 
 inline bool operator==(const unsigned_perunit& lhs,

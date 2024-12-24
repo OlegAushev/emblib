@@ -28,6 +28,18 @@ SCOPED_ENUM_UT_DECLARE_BEGIN(phase3, uint32_t) {
 enum class phase3 : uint32_t { a, b, c };
 #endif
 
+inline float to_radps(float speed_rpm, int pole_pairs) {
+    return numbers::two_pi * float(pole_pairs) * speed_rpm / 60.f;
+}
+
+inline float to_radps(float speed_rpm) {
+    return numbers::two_pi * speed_rpm / 60.f;
+}
+
+inline float to_rpm(float speed_radps, int pole_pairs) {
+    return 60.f * speed_radps / (numbers::two_pi * float(pole_pairs));
+}
+
 class motor_speed {
 private:
     int p_;
@@ -37,13 +49,19 @@ public:
     motor_speed(int p, units::eradps_t w) : p_(p) { set(w); }
     motor_speed(int p, units::rpm_t n) : p_(p) { set(n); }
 
+    template<typename Unit>
+    motor_speed& operator=(Unit v) {
+        set(v);
+        return *this;
+    }
+
     int p() const { return p_; }
 
     units::eradps_t eradps() const { return units::eradps_t(w_); }
     units::rpm_t rpm() const {
         return units::rpm_t(60.f * w_ / (numbers::two_pi * float(p_)));
     }
-
+private:
     void set(units::eradps_t w) { w_ = w.get(); }
     void set(units::rpm_t n) {
         w_ = numbers::two_pi * float(p_) * n.get() / 60.f;
@@ -74,6 +92,12 @@ public:
     motor_angle(int p, units::edeg_t v) : p_(p) { set(v); }
     motor_angle(int p, units::mdeg_t v) : p_(p) { set(v); }
 
+    template<typename Unit>
+    motor_angle& operator=(Unit v) {
+        set(v);
+        return *this;
+    }
+
     int p() const { return p_; }
 
     units::erad_t erad() const { return units::erad_t(rad_); }
@@ -83,23 +107,12 @@ public:
         return units::mdeg_t(to_deg(rad_) / float(p_));
     }
 
+private:
     void set(units::erad_t v) { rad_ = v.get(); }
     void set(units::mrad_t v) { rad_ = v.get() * float(p_); }
     void set(units::edeg_t v) { rad_ = to_rad(v.get()); }
     void set(units::mdeg_t v) { rad_ = to_rad(v.get()) * float(p_); }
 };
-
-inline float to_radps(float speed_rpm, int pole_pairs) {
-    return numbers::two_pi * float(pole_pairs) * speed_rpm / 60.f;
-}
-
-inline float to_radps(float speed_rpm) {
-    return numbers::two_pi * speed_rpm / 60.f;
-}
-
-inline float to_rpm(float speed_radps, int pole_pairs) {
-    return 60.f * speed_radps / (numbers::two_pi * float(pole_pairs));
-}
 
 struct vec_alpha {
     float mag;
@@ -164,7 +177,7 @@ inline emb::array<emb::unsigned_perunit, 3> calculate_sinpwm(vec_alphabeta v_s,
     emb::array<emb::unsigned_perunit, 3> duty_cycles;
 
     for (size_t i = 0; i < 3; ++i) {
-        duty_cycles[i].set(voltages[i] / voltage_base);
+        duty_cycles[i] = emb::unsigned_perunit(voltages[i] / voltage_base);
     }
 
     return duty_cycles;
@@ -241,13 +254,13 @@ compensate_deadtime_v1(const emb::array<unsigned_perunit, 3>& dutycycles,
                        float pwm_period,
                        float deadtime) {
     emb::array<unsigned_perunit, 3> dc;
-    const float deadtime_dutycycle = deadtime / pwm_period;
+    const emb::unsigned_perunit deadtime_dutycycle(deadtime / pwm_period);
 
     for (size_t i = 0; i < 3; ++i) {
         if (currents[i] > current_threshold) {
-            dc[i].set(dutycycles[i].get() + deadtime_dutycycle);
+            dc[i] = dutycycles[i] + deadtime_dutycycle;
         } else if (currents[i] < -current_threshold) {
-            dc[i].set(dutycycles[i].get() - deadtime_dutycycle);
+            dc[i] = dutycycles[i] - deadtime_dutycycle;
         } else {
             dc[i] = dutycycles[i];
         }
