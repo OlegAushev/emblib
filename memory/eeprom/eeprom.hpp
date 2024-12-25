@@ -1,25 +1,29 @@
 #pragma once
 
-
 #include <emblib/core.hpp>
-#include <emblib/memory/memory_def.hpp>
 #include <emblib/chrono.hpp>
+#include <emblib/memory/memory_def.hpp>
 #include <cstring>
-
 
 namespace emb {
 namespace mem {
 namespace eeprom {
 
-
 class driver {
 public:
-    virtual emb::mem::status read(size_t page, size_t offset, uint8_t* buf, size_t len, EMB_MILLISECONDS timeout) = 0;
-    virtual emb::mem::status write(size_t page, size_t offset, const uint8_t* buf, size_t len, EMB_MILLISECONDS timeout) = 0;
+    virtual emb::mem::status read(size_t page,
+                                  size_t offset,
+                                  uint8_t* buf,
+                                  size_t len,
+                                  EMB_MILLISECONDS timeout) = 0;
+    virtual emb::mem::status write(size_t page,
+                                   size_t offset,
+                                   const uint8_t* buf,
+                                   size_t len,
+                                   EMB_MILLISECONDS timeout) = 0;
     virtual size_t page_bytes() const = 0;
     virtual size_t page_count() const = 0;
 };
-
 
 class storage {
 private:
@@ -41,10 +45,17 @@ private:
         uint32_t fatal;
     } _errors;
 public:
-    storage(driver& driver_, uint32_t (*calc_crc32_func_)(const uint8_t*, size_t));
+    storage(driver& driver_,
+            uint32_t (*calc_crc32_func_)(const uint8_t*, size_t));
     ~storage();
-    emb::mem::status read(size_t page, uint8_t* buf, size_t len, EMB_MILLISECONDS timeout);
-    emb::mem::status write(size_t page, const uint8_t* buf, size_t len, EMB_MILLISECONDS timeout);
+    emb::mem::status read(size_t page,
+                          uint8_t* buf,
+                          size_t len,
+                          EMB_MILLISECONDS timeout);
+    emb::mem::status write(size_t page,
+                           const uint8_t* buf,
+                           size_t len,
+                           EMB_MILLISECONDS timeout);
 
     template <typename T>
     emb::mem::status read(size_t page, T& data, EMB_MILLISECONDS timeout) {
@@ -61,7 +72,9 @@ public:
     }
 
     template <typename T>
-    emb::mem::status write(size_t page, const T& data, EMB_MILLISECONDS timeout) {
+    emb::mem::status write(size_t page,
+                           const T& data,
+                           EMB_MILLISECONDS timeout) {
 #if defined(EMBLIB_C28X)
         uint8_t data_bytes[2*sizeof(T)];
         emb::c28x::to_bytes<T>(data_bytes, data);
@@ -73,7 +86,6 @@ public:
 #endif
     }
 };
-
 
 } // namespace eeprom
 } // namespace mem

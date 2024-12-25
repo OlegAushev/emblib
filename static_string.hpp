@@ -1,13 +1,10 @@
 #pragma once
 
-
 #include <emblib/core.hpp>
 #include <emblib/algorithm.hpp>
 #include <cstring>
 
-
 namespace emb {
-
 
 template <size_t Capacity>
 class static_string {
@@ -138,17 +135,16 @@ public:
     }
 };
 
-
 template <size_t Capacity>
-inline bool operator==(const static_string<Capacity>& lhs, const static_string<Capacity>& rhs) {
+inline bool operator==(const static_string<Capacity>& lhs,
+                       const static_string<Capacity>& rhs) {
     return strcmp(lhs.data(), rhs.data()) == 0;
 }
 
-
 template <size_t Capacity>
-inline bool operator!=(const static_string<Capacity>& lhs, const static_string<Capacity>& rhs) {
+inline bool operator!=(const static_string<Capacity>& lhs,
+                       const static_string<Capacity>& rhs) {
     return !(lhs == rhs);
 }
-
 
 } // namespace emb

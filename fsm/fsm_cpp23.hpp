@@ -1,6 +1,6 @@
 #pragma once
 
-#if defined(EMBLIB_ARM)
+#if __cplusplus >= 202300
 
 #include <emblib/chrono.hpp>
 
@@ -10,7 +10,7 @@
 namespace emb {
 namespace fsm {
 
-template<typename Object, typename State>
+template<typename Object, typename State, typename LockGuard = void*>
 class abstract_state {
 private:
     const State _id;
@@ -20,10 +20,11 @@ protected:
             : _id(id),
               _enter_timepoint(emb::chrono::steady_clock::now()) {}
     static void change_state(Object* object, State state) {
+        LockGuard lock_guard;
         object->_current_state->finalize(object);
         object->change_state(state);
         object->_current_state->_enter_timepoint =
-            emb::chrono::steady_clock::now();
+                emb::chrono::steady_clock::now();
         object->_current_state->initiate(object);
     }
     virtual void initiate(Object* object) = 0;

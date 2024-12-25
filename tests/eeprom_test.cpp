@@ -94,13 +94,7 @@ void emb::tests::eeprom_test() {
     EMB_MAYBE_UNUSED emb::mem::status read_sts1 = eeprom.read<TestingEepromStruct1>(0, s1_dest, EMB_MILLISECONDS(-1));
     EMB_MAYBE_UNUSED emb::mem::status read_sts2 = eeprom.read<TestingEepromStruct2>(2, s2_dest, EMB_MILLISECONDS(-1));
 
-#if defined(EMBLIB_C28X)
-    EMB_ASSERT_TRUE(emb::c28x::are_equal(s1_src, s1_dest));
-    EMB_ASSERT_TRUE(emb::c28x::are_equal(s2_src, s2_dest));
-#else
     EMB_ASSERT_EQUAL(s1_src, s1_dest);
     EMB_ASSERT_EQUAL(s2_src, s2_dest);
-#endif
-
 #endif
 }

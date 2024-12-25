@@ -1,11 +1,8 @@
 #pragma once
 
-
 #include <emblib/core.hpp>
 
-
 namespace emb {
-
 
 template <typename T, size_t Capacity>
 class circular_buffer {
@@ -89,6 +86,4 @@ public:
     }
 };
 
-
 } // namespace emb
-

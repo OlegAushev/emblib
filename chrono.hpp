@@ -1,23 +1,16 @@
 #pragma once
 
-
 #include <emblib/core.hpp>
-#if defined(EMBLIB_ARM)
+#if __cplusplus >= 201100
 #include <chrono>
 #endif
 
-
 namespace emb {
-
-
 namespace chrono {
 
-
-#if defined(EMBLIB_C28X)
-
+#if __cplusplus < 201100
 
 namespace impl {
-
 
 template <int64_t Divider>
 class duration {
@@ -61,49 +54,67 @@ public:
     }
 };
 
-
 template <int64_t Divider>
-duration<Divider> operator+(const duration<Divider>& lhs, const duration<Divider>& rhs) {
+duration<Divider> operator+(const duration<Divider>& lhs,
+                            const duration<Divider>& rhs) {
     return duration<Divider>(lhs.count() + rhs.count());
 }
 
-
 template <int64_t Divider>
-duration<Divider> operator-(const duration<Divider>& lhs, const duration<Divider>& rhs) {
+duration<Divider> operator-(const duration<Divider>& lhs,
+                            const duration<Divider>& rhs) {
     return duration<Divider>(lhs.count() - rhs.count());
 }
 
 template <int64_t Divider>
-bool operator>(const duration<Divider>& lhs, const duration<Divider>& rhs) { return lhs.count() > rhs.count(); }
-template <int64_t Divider>
-bool operator>=(const duration<Divider>& lhs, const duration<Divider>& rhs) { return lhs.count() >= rhs.count(); }
-template <int64_t Divider>
-bool operator<(const duration<Divider>& lhs, const duration<Divider>& rhs) { return lhs.count() < rhs.count(); }
-template <int64_t Divider>
-bool operator<=(const duration<Divider>& lhs, const duration<Divider>& rhs) { return lhs.count() <= rhs.count(); }
-template <int64_t Divider>
-bool operator==(const duration<Divider>& lhs, const duration<Divider>& rhs) { return lhs.count() == rhs.count(); }
-template <int64_t Divider>
-bool operator!=(const duration<Divider>& lhs, const duration<Divider>& rhs) { return lhs.count() != rhs.count(); }
+bool operator>(const duration<Divider>& lhs,
+               const duration<Divider>& rhs) {
+    return lhs.count() > rhs.count();
+}
 
+template <int64_t Divider>
+bool operator>=(const duration<Divider>& lhs,
+                const duration<Divider>& rhs) {
+    return lhs.count() >= rhs.count();
+}
+
+template <int64_t Divider>
+bool operator<(const duration<Divider>& lhs,
+               const duration<Divider>& rhs) {
+    return lhs.count() < rhs.count();
+}
+
+template <int64_t Divider>
+bool operator<=(const duration<Divider>& lhs,
+                const duration<Divider>& rhs) {
+    return lhs.count() <= rhs.count();
+}
+
+template <int64_t Divider>
+bool operator==(const duration<Divider>& lhs,
+                const duration<Divider>& rhs) {
+    return lhs.count() == rhs.count();
+}
+
+template <int64_t Divider>
+bool operator!=(const duration<Divider>& lhs,
+                const duration<Divider>& rhs) {
+    return lhs.count() != rhs.count();
+}
 
 } // namespace impl
-
 
 template<typename ToDuration, int64_t Divider>
 ToDuration duration_cast(const impl::duration<Divider> duration) {
     return impl::duration<ToDuration::divider>(duration.count() * Divider / ToDuration::divider);
 }
 
-
 typedef impl::duration<1> nanoseconds;
 typedef impl::duration<1000> microseconds;
 typedef impl::duration<1000000> milliseconds;
 typedef impl::duration<1000000000> seconds;
 
-
 #endif
-
 
 class steady_clock {
 private:
@@ -123,7 +134,6 @@ public:
     static EMB_MILLISECONDS now() { return _now(); }
     static bool initialized() { return _initialized; }
 };
-
 
 class watchdog {
 private:
@@ -155,8 +165,5 @@ public:
     }
 };
 
-
 } // namespace chrono
-
-
 } // namespace emb

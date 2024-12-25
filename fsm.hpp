@@ -1,20 +1,15 @@
 #pragma once
 
-
-#if defined(EMBLIB_C28X)
-#include <emblib/fsm/fsm_c28x.hpp>
+#if __cplusplus < 201100
+#include <emblib/fsm/fsm_cpp03.hpp>
+#elif __cplusplus >= 202300
+#include <emblib/fsm/fsm_cpp23.hpp>
 #endif
-
-
-#ifdef EMBLIB_ARM
-#include <emblib/fsm/fsm_arm.hpp>
 
 // #include <optional>
 // #include <variant>
 
-
 // namespace emb {
-
 
 // template<typename FsmType, typename... States>
 // class fsm {
@@ -35,8 +30,4 @@
 //     }
 // };
 
-
-// } // namespace fsm
-
-
-#endif
+// } // namespace emb

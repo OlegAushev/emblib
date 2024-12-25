@@ -6,22 +6,22 @@
 
 namespace emb {
 
-#if defined(EMBLIB_C28X)
-SCOPED_ENUM_DECLARE_BEGIN(controller_logic) {
-    direct,
-    inverse
-} SCOPED_ENUM_DECLARE_END(controller_logic)
-#elif defined(EMBLIB_ARM)
+#if __cplusplus >= 201100
 enum class controller_logic {
     direct,
     inverse
 };
+#else
+SCOPED_ENUM_DECLARE_BEGIN(controller_logic) {
+    direct,
+    inverse
+} SCOPED_ENUM_DECLARE_END(controller_logic)
 #endif
 
-#if defined(EMBLIB_C28X)
-template <controller_logic::enum_type Logic>
-#elif defined(EMBLIB_ARM)
+#if __cplusplus >= 201100
 template <controller_logic Logic>
+#else
+template <controller_logic::enum_type Logic>
 #endif
 class p_controller : private emb::noncopyable {
 protected:
@@ -67,10 +67,10 @@ inline float p_controller<controller_logic::inverse>::_error(float ref,
     return meas - ref;
 }
 
-#if defined(EMBLIB_C28X)
-template <controller_logic::enum_type Logic>
-#elif defined(EMBLIB_ARM)
+#if __cplusplus >= 201100
 template <controller_logic Logic>
+#else
+template <controller_logic::enum_type Logic>
 #endif
 class abstract_pi_controller : private emb::noncopyable {
 protected:
@@ -131,10 +131,10 @@ inline float abstract_pi_controller<controller_logic::inverse>::_error(
     return meas - ref;
 }
 
-#if defined(EMBLIB_C28X)
-template <controller_logic::enum_type Logic>
-#elif defined(EMBLIB_ARM)
+#if __cplusplus >= 201100
 template <controller_logic Logic>
+#else
+template <controller_logic::enum_type Logic>
 #endif
 class backcalc_pi_controller : public abstract_pi_controller<Logic> {
 protected:
@@ -165,10 +165,10 @@ public:
     }
 };
 
-#if defined(EMBLIB_C28X)
-template <controller_logic::enum_type Logic>
-#elif defined(EMBLIB_ARM)
+#if __cplusplus >= 201100
 template <controller_logic Logic>
+#else
+template <controller_logic::enum_type Logic>
 #endif
 class clamping_pi_controller : public abstract_pi_controller<Logic> {
 protected:

@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include <emblib/core.hpp>
 #include <emblib/array.hpp>
 #include <bitset>
@@ -9,9 +8,7 @@
 #include <cstring>
 #endif
 
-
 namespace emb {
-
 
 template <size_t BitCount>
 class bitset {
@@ -163,6 +160,5 @@ public:
         }
     };
 };
-
 
 } // namespace emb

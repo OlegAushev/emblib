@@ -4,18 +4,19 @@
 #error "emblib error: arch not defined!"
 #endif
 
-#if defined(EMBLIB_C28X)
-#include <stdint.h>
-#include <stddef.h>
-#include <assert.h>
-#else
+#if __cplusplus >= 201100
 #include <cstdint>
+#else
+#include <stdint.h>
+#endif
 #include <cstddef>
 #include <cassert>
-#endif
 
 #if defined(EMBLIB_C28X)
 #include "core/c28x.hpp"
+#endif
+
+#if __cplusplus < 201100
 #include "core/scopedenum.hpp"
 #endif
 

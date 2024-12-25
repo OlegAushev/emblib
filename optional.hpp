@@ -1,20 +1,15 @@
 #pragma once
 
-
 #include <emblib/core.hpp>
 #include <new>
 
-
 namespace emb {
-
 
 struct nullopt_t {
     explicit nullopt_t() {}
 };
 
-
 const nullopt_t nullopt;
-
 
 template <class T>
 class optional {
@@ -59,10 +54,14 @@ public:
     const T* operator->() const { return reinterpret_cast<const T*>(_storage); }
     T* operator->() { return reinterpret_cast<T*>(_storage); }
 
-    const T& operator*() const { return *(reinterpret_cast<const T*>(_storage)); }
+    const T& operator*() const {
+        return *(reinterpret_cast<const T*>(_storage));
+    }
     T& operator*() { return *(reinterpret_cast<T*>(_storage)); }
 
-    T value_or(const T& default_value) const { return _has_value ? value() : default_value; }
+    T value_or(const T& default_value) const {
+        return _has_value ? value() : default_value;
+    }
 
     optional& operator=(const T& value) {
         reset();
@@ -80,6 +79,5 @@ public:
         return *this;
     }
 };
-
 
 } // namespace emb

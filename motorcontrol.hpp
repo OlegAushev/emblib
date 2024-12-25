@@ -195,6 +195,8 @@ inline emb::array<emb::unsigned_perunit, 3> calculate_svpwm(vec_alpha v_s,
     float tb1 = numbers::sqrt_3 * (v_s.mag / v_dc) *
                 arm_sin_f32(numbers::pi_over_3 - theta);
     float tb2 = numbers::sqrt_3 * (v_s.mag / v_dc) * arm_sin_f32(theta);
+#else
+#error "emblib error: arch not defined!"
 #endif
     float tb0 = (1.f - tb1 - tb2) / 2.f;
 

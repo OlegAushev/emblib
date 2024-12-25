@@ -1,12 +1,11 @@
 #include <emblib/memory/eeprom/eeprom.hpp>
 
-
 namespace emb {
 namespace mem {
 namespace eeprom {
 
-
-storage::storage(driver& driver_, uint32_t (*calc_crc32_func_)(const uint8_t*, size_t))
+storage::storage(driver& driver_,
+                 uint32_t (*calc_crc32_func_)(const uint8_t*, size_t))
         : _driver(driver_)
         , _calc_crc32(calc_crc32_func_)
         , available_page_bytes(_driver.page_bytes()-4)
@@ -22,18 +21,24 @@ storage::storage(driver& driver_, uint32_t (*calc_crc32_func_)(const uint8_t*, s
     _backup_buf = new uint8_t[available_page_bytes];
 }
 
-
 storage::~storage() {
     delete[] _backup_buf;
 }
 
-
-emb::mem::status storage::write(size_t page, const uint8_t* buf, size_t len, EMB_MILLISECONDS timeout) {
+emb::mem::status storage::write(size_t page,
+                                const uint8_t* buf,
+                                size_t len,
+                                EMB_MILLISECONDS timeout) {
     assert(page < available_page_count);
     assert(len < available_page_bytes);
 
-    if (page >= available_page_count) { return emb::mem::status::invalid_address; }
-    if (len >= available_page_bytes) { return emb::mem::status::invalid_data_size; }
+    if (page >= available_page_count) {
+        return emb::mem::status::invalid_address;
+    }
+
+    if (len >= available_page_bytes) {
+        return emb::mem::status::invalid_data_size;
+    }
 
     uint32_t crc = _calc_crc32(buf, len);
     uint8_t crc_bytes[4];
@@ -71,13 +76,20 @@ write_end:
     return sts;
 }
 
-
-emb::mem::status storage::read(size_t page, uint8_t* buf, size_t len, EMB_MILLISECONDS timeout) {
+emb::mem::status storage::read(size_t page,
+                               uint8_t* buf,
+                               size_t len,
+                               EMB_MILLISECONDS timeout) {
     assert(page < available_page_count);
     assert(len < available_page_bytes);
 
-    if (page >= available_page_count) { return emb::mem::status::invalid_address; }
-    if (len >= available_page_bytes) { return emb::mem::status::invalid_data_size; }
+    if (page >= available_page_count) {
+        return emb::mem::status::invalid_address;
+    }
+
+    if (len >= available_page_bytes) {
+        return emb::mem::status::invalid_data_size;
+    }
 
     uint8_t crc_bytes[4];
     uint32_t primary_crc = 0;
@@ -140,7 +152,10 @@ read_backup:
 read_end:
     if (primary_ok && secondary_ok && (primary_crc == secondary_crc)) {
         return emb::mem::status::ok;
-    } else if ((primary_ok && !secondary_ok) || (primary_ok && secondary_ok && (primary_crc != secondary_crc))) {
+    } else if ((primary_ok && !secondary_ok) ||
+               (primary_ok &&
+                secondary_ok &&
+                (primary_crc != secondary_crc))) {
         // backup is corrupted or outdated
         ++_errors.secondary_data_corrupted;
         _driver.write(page+available_page_count, 0, buf, len, timeout);
@@ -170,10 +185,6 @@ read_end:
 
     return sts;
 }
-
-
-//#endif
-
 
 } // namespace eeprom
 } // namespace mem

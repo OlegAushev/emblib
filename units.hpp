@@ -1,8 +1,6 @@
 #pragma once
 
-
 #include <emblib/core.hpp>
-
 
 namespace emb {
 namespace units {
@@ -36,7 +34,7 @@ inline bool operator==(const named_unit<T, Unit>& lhs,
 template<typename T, typename Unit>
 inline bool operator!=(const named_unit<T, Unit>& lhs,
                        const named_unit<T, Unit>& rhs) {
-    return !(lhs == rhs);
+    return lhs.get() != rhs.get();
 }
 
 template<typename T, typename Unit>
@@ -48,19 +46,19 @@ inline bool operator<(const named_unit<T, Unit>& lhs,
 template<typename T, typename Unit>
 inline bool operator>(const named_unit<T, Unit>& lhs,
                       const named_unit<T, Unit>& rhs) {
-    return rhs < lhs;
+    return lhs.get() > rhs.get();
 }
 
 template<typename T, typename Unit>
 inline bool operator<=(const named_unit<T, Unit>& lhs,
                        const named_unit<T, Unit>& rhs) {
-    return !(lhs > rhs);
+    return lhs.get() <= rhs.get();
 }
 
 template<typename T, typename Unit>
 inline bool operator>=(const named_unit<T, Unit>& lhs,
                        const named_unit<T, Unit>& rhs) {
-    return !(lhs < rhs);
+    return lhs.get() >= rhs.get();
 }
 
 template<typename T, typename Unit>

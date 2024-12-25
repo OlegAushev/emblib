@@ -1,14 +1,12 @@
 #pragma once
 
-#if defined(EMBLIB_C28X)
-#include <stdint.h>
-#include <stddef.h>
-#include <assert.h>
-#else
+#if __cplusplus >= 201100
 #include <cstdint>
+#else
+#include <stdint.h>
+#endif
 #include <cstddef>
 #include <cassert>
-#endif
 
 namespace emb {
 

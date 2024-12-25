@@ -168,7 +168,7 @@ inline bool operator==(const signed_perunit& lhs, const signed_perunit& rhs) {
 }
 
 inline bool operator!=(const signed_perunit& lhs, const signed_perunit& rhs) {
-    return !(lhs == rhs);
+    return lhs.get() != rhs.get();
 }
 
 inline bool operator<(const signed_perunit& lhs, const signed_perunit& rhs) {
@@ -176,15 +176,15 @@ inline bool operator<(const signed_perunit& lhs, const signed_perunit& rhs) {
 }
 
 inline bool operator>(const signed_perunit& lhs, const signed_perunit& rhs) {
-    return rhs < lhs;
+    return lhs.get() > rhs.get();
 }
 
 inline bool operator<=(const signed_perunit& lhs, const signed_perunit& rhs) {
-    return !(lhs > rhs);
+    return lhs.get() <= rhs.get();
 }
 
 inline bool operator>=(const signed_perunit& lhs, const signed_perunit& rhs) {
-    return !(lhs < rhs);
+    return lhs.get() >= rhs.get();
 }
 
 inline signed_perunit operator+(const signed_perunit& lhs,
@@ -242,7 +242,7 @@ inline bool operator==(const unsigned_perunit& lhs,
 
 inline bool operator!=(const unsigned_perunit& lhs,
                        const unsigned_perunit& rhs) {
-    return !(lhs == rhs);
+    return lhs.get() != rhs.get();
 }
 
 inline bool operator<(const unsigned_perunit& lhs,
@@ -252,17 +252,17 @@ inline bool operator<(const unsigned_perunit& lhs,
 
 inline bool operator>(const unsigned_perunit& lhs,
                       const unsigned_perunit& rhs) {
-    return rhs < lhs;
+    return lhs.get() > rhs.get();
 }
 
 inline bool operator<=(const unsigned_perunit& lhs,
                        const unsigned_perunit& rhs) {
-    return !(lhs > rhs);
+    return lhs.get() <= rhs.get();
 }
 
 inline bool operator>=(const unsigned_perunit& lhs,
                        const unsigned_perunit& rhs) {
-    return !(lhs < rhs);
+    return lhs.get() >= rhs.get();
 }
 
 inline unsigned_perunit operator+(const unsigned_perunit& lhs,

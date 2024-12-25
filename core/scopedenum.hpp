@@ -2,9 +2,13 @@
 // https://github.com/steinwurf/boost/blob/master/boost/core/scoped_enum.hpp
 #pragma once
 
+#if __cplusplus >= 201100
+#include <cstdint>
+#else
 #include <stdint.h>
-#include <stddef.h>
-#include <assert.h>
+#endif
+#include <cstddef>
+#include <cassert>
 
 #define SCOPED_ENUM_UT_DECLARE_BEGIN(EnumType, UnderlyingType)  \
     struct EnumType {                                           \

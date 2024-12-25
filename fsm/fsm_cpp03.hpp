@@ -1,6 +1,6 @@
 #pragma once
 
-#if defined(EMBLIB_C28X)
+#if __cplusplus < 201100
 
 #include <emblib/array.hpp>
 #include <emblib/chrono.hpp>
