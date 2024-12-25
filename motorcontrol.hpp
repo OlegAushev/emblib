@@ -277,7 +277,7 @@ compensate_deadtime_v2(const emb::array<unsigned_perunit, 3>& dutycycles,
     return dutycycles;
 #else
     auto dc = dutycycles;
-    const float deadtime_dutycycle = deadtime / pwm_period;
+    const emb::unsigned_perunit deadtime_dutycycle(deadtime / pwm_period);
 
     const auto [min, max] =
         std::minmax_element(currents.begin(), currents.end());
@@ -285,10 +285,10 @@ compensate_deadtime_v2(const emb::array<unsigned_perunit, 3>& dutycycles,
     // use Kirchhoff's current law to determine if there is one positive or one negative current
     if (*min + *max > 0) {
         const auto idx = std::distance(currents.begin(), max);
-        dc[size_t(idx)].set(dc[size_t(idx)].get() + 2 * deadtime_dutycycle);
+        dc[size_t(idx)] = dc[size_t(idx)] + 2 * deadtime_dutycycle;
     } else if (*min + *max < 0) {
         const auto idx = std::distance(currents.begin(), min);
-        dc[size_t(idx)].set(dc[size_t(idx)].get() - 2 * deadtime_dutycycle);
+        dc[size_t(idx)] = dc[size_t(idx)] - 2 * deadtime_dutycycle;
     }
 
     return dc;

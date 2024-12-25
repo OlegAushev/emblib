@@ -20,7 +20,7 @@ protected:
             : _id(id),
               _enter_timepoint(emb::chrono::steady_clock::now()) {}
     static void change_state(Object* object, State state) {
-        LockGuard lock_guard;
+        [[maybe_unused]] LockGuard lock_guard;
         object->_current_state->finalize(object);
         object->change_state(state);
         object->_current_state->_enter_timepoint =
