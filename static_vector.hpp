@@ -57,7 +57,7 @@ public:
     }
 
     const T& at(size_t pos) const {
-        assert((pos >= 0) && (pos < size_));
+        assert(pos < size_);
         return data_[pos];
     }
 public:
