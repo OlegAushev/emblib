@@ -5,26 +5,26 @@
 #else
 #include <stdint.h>
 #endif
-#include <cstddef>
 #include <cassert>
+#include <cstddef>
 
 namespace emb {
 
 #if __cplusplus >= 201100
 
-template <class T>
+template<class Derived>
 class singleton {
 private:
-    static inline T* instance_ = nullptr;
-    static inline bool initialized_ = false;
+    static inline Derived* instance_{nullptr};
+    static inline bool initialized_{false};
 protected:
-    singleton(T* self) {
+    singleton(Derived* self) {
         assert(!initialized_);
         instance_ = self;
         initialized_ = true;
     }
 public:
-    static T* instance() {
+    static Derived* instance() {
         assert(initialized_);
         return instance_;
     }
@@ -37,60 +37,44 @@ public:
     }
 };
 
-template <class T, size_t Size>
-class singleton_array
-{
+template<class Derived, size_t DerivedCount>
+class singleton_array {
 private:
-    static inline T* instance_[Size];
-    static inline bool initialized_[Size];
-    static inline bool constructed_ = false;
+    static inline Derived* instance_[DerivedCount]{};
+    static inline bool initialized_[DerivedCount]{};
 protected:
-    singleton_array(T* self, size_t instance_idx) {
-        assert(instance_idx < Size);
+    singleton_array(Derived* self, size_t instance_idx) {
+        assert(instance_idx < DerivedCount);
         assert(!initialized_[instance_idx]);
-        if (!constructed_) {
-            for (size_t i = 0; i < Size; ++i) {
-                instance_[i] = nullptr;
-                initialized_[i] = false;
-            }
-            constructed_ = true;
-        }
-
         instance_[instance_idx] = self;
         initialized_[instance_idx] = true;
     }
 public:
-    static T* instance(size_t instance_idx) {
-        assert(constructed_);
-        assert(instance_idx < Size);
+    static Derived* instance(size_t instance_idx) {
+        assert(instance_idx < DerivedCount);
         assert(initialized_[instance_idx]);
         return instance_[instance_idx];
     }
 
     static bool initialized(size_t instance_idx) {
-        assert(instance_idx < Size);
-        if (!constructed_) return false;
+        assert(instance_idx < DerivedCount);
         return initialized_[instance_idx];
     }
 };
 
 #else
 
-template <class T>
+template<class Derived>
 class singleton {
 private:
-    static T* instance_;
+    static Derived* instance_;
     static bool initialized_;
 protected:
-    singleton(T* self) {
-        register_object(self);
-    }
+    singleton(Derived* self) { register_object(self); }
 
-    ~singleton() {
-        deregister_object();
-    }
+    ~singleton() { deregister_object(); }
 public:
-    static T* instance() {
+    static Derived* instance() {
         assert(initialized_);
         return instance_;
     }
@@ -109,54 +93,40 @@ public:
     }
 };
 
-template <class T>
-T* singleton<T>::instance_ = static_cast<T*>(NULL);
-template <class T>
-bool singleton<T>::initialized_ = false;
+template<class Derived>
+Derived* singleton<T>::instance_ = static_cast<T*>(NULL);
+template<class Derived>
+bool singleton<Derived>::initialized_ = false;
 
-
-template <class T, size_t Size>
+template<class Derived, size_t DerivedCount>
 class singleton_array {
 private:
-    static T* instance_[Size];
-    static bool initialized_[Size];
-    static bool constructed_;
+    static Derived* instance_[DerivedCount];
+    static bool initialized_[DerivedCount];
 protected:
-    singleton_array(T* self, size_t instance_idx) {
-        assert(instance_idx < Size);
+    singleton_array(Derived* self, size_t instance_idx) {
+        assert(instance_idx < DerivedCount);
         assert(!initialized_[instance_idx]);
-        if (!constructed_) {
-            for (size_t i = 0; i < Size; ++i) {
-                instance_[i] = static_cast<T*>(NULL);
-                initialized_[i] = false;
-            }
-            constructed_ = true;
-        }
-
         instance_[instance_idx] = self;
         initialized_[instance_idx] = true;
     }
 public:
-    static T* instance(size_t instance_idx) {
-        assert(constructed_);
-        assert(instance_idx < Size);
+    static Derived* instance(size_t instance_idx) {
+        assert(instance_idx < DerivedCount);
         assert(initialized_[instance_idx]);
         return instance_[instance_idx];
     }
 
     static bool initialized(size_t instance_idx) {
-        assert(instance_idx < Size);
-        if (!constructed_) { return false; }
+        assert(instance_idx < DerivedCount);
         return initialized_[instance_idx];
     }
 };
 
-template <class T, size_t Size>
-T* singleton_array<T, Size>::instance_[Size];
-template <class T, size_t Size>
-bool singleton_array<T, Size>::initialized_[Size];
-template <class T, size_t Size>
-bool singleton_array<T, Size>::constructed_ = false;
+template<class Derived, size_t DerivedCount>
+Derived* singleton_array<T, DerivedCount>::instance_[DerivedCount];
+template<class Derived, size_t DerivedCount>
+bool singleton_array<Derived, DerivedCount>::initialized_[DerivedCount];
 
 #endif
 

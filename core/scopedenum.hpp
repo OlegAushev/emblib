@@ -7,8 +7,8 @@
 #else
 #include <stdint.h>
 #endif
-#include <cstddef>
 #include <cassert>
+#include <cstddef>
 
 #define SCOPED_ENUM_UT_DECLARE_BEGIN(EnumType, UnderlyingType)  \
     struct EnumType {                                           \
@@ -50,4 +50,3 @@
 
 #define SCOPED_ENUM_DECLARE_BEGIN(EnumType) \
     SCOPED_ENUM_UT_DECLARE_BEGIN(EnumType, unsigned int)
-

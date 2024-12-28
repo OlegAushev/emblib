@@ -5,6 +5,7 @@
 #include <emblib/chrono.hpp>
 
 #include <array>
+#include <type_traits>
 #include <utility>
 
 namespace emb {
@@ -12,53 +13,54 @@ namespace fsm {
 
 template<typename Object, typename State, typename LockGuard = void*>
 class abstract_state {
+    static_assert(std::is_enum_v<State>);
 private:
-    const State _id;
-    std::chrono::milliseconds _enter_timepoint;
+    const State id_;
+    std::chrono::milliseconds enter_timepoint_;
 protected:
     abstract_state(State id)
-            : _id(id),
-              _enter_timepoint(emb::chrono::steady_clock::now()) {}
+            : id_(id), enter_timepoint_(emb::chrono::steady_clock::now()) {}
     static void change_state(Object* object, State state) {
         [[maybe_unused]] LockGuard lock_guard;
-        object->_current_state->finalize(object);
+        object->current_state_->finalize(object);
         object->change_state(state);
-        object->_current_state->_enter_timepoint =
+        object->current_state_->enter_timepoint_ =
                 emb::chrono::steady_clock::now();
-        object->_current_state->initiate(object);
+        object->current_state_->initiate(object);
     }
     virtual void initiate(Object* object) = 0;
     virtual void finalize(Object* object) = 0;
 public:
     virtual ~abstract_state() {}
-    State id() const { return _id; }
+    State id() const { return id_; }
     std::chrono::milliseconds time_since_enter() const {
-        return emb::chrono::steady_clock::now() - _enter_timepoint;
+        return emb::chrono::steady_clock::now() - enter_timepoint_;
     }
 };
 
 template<typename State, typename AbstractState, size_t StateCount>
 class abstract_object {
+    static_assert(std::is_enum_v<State>);
 private:
-    std::array<AbstractState*, StateCount> _states;
+    std::array<AbstractState*, StateCount> states_;
 protected:
-    AbstractState* _current_state;
+    AbstractState* current_state_;
     void change_state(State state) {
-        _current_state = _states[std::to_underlying(state)];
+        current_state_ = states_[std::to_underlying(state)];
     }
 public:
     abstract_object(State init_state) {
         for (size_t i = 0; i < StateCount; ++i) {
-            _states[i] = AbstractState::create(static_cast<State>(i));
+            states_[i] = AbstractState::create(static_cast<State>(i));
         }
         change_state(init_state);
     }
     virtual ~abstract_object() {
         for (size_t i = 0; i < StateCount; ++i) {
-            AbstractState::destroy(static_cast<State>(i), _states[i]);
+            AbstractState::destroy(static_cast<State>(i), states_[i]);
         }
     }
-    State state() const { return _current_state->id(); }
+    State state() const { return current_state_->id(); }
 };
 
 } // namespace fsm

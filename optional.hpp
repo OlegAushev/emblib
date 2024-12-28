@@ -2,8 +2,22 @@
 
 #include <emblib/core.hpp>
 #include <new>
+#if __cplusplus >= 201700
+#include <optional>
+#endif
 
 namespace emb {
+
+#if __cplusplus >= 201700
+
+template <typename T>
+using optional = std::optional<T>;
+
+using nullopt_t = std::nullopt_t;
+
+const nullopt_t nullopt = std::nullopt;
+
+#else
 
 struct nullopt_t {
     explicit nullopt_t() {}
@@ -19,7 +33,7 @@ private:
 public:
     optional() : _has_value(false) {}
     optional(nullopt_t) : _has_value(false) {}
-   
+
     optional(const T& value) {
         new(_storage) T(value);
         _has_value = true;
@@ -79,5 +93,7 @@ public:
         return *this;
     }
 };
+
+#endif
 
 } // namespace emb

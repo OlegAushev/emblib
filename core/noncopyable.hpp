@@ -5,8 +5,8 @@
 #else
 #include <stdint.h>
 #endif
-#include <cstddef>
 #include <cassert>
+#include <cstddef>
 
 namespace emb {
 
