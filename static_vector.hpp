@@ -15,19 +15,19 @@ public:
 
     explicit static_vector(size_t size) : size_(size) {
         assert(size <= Capacity);
-        emb::fill(begin(), end(), T());
+        std::fill(begin(), end(), T());
     }
 
     static_vector(size_t size, const T& value) : size_(size) {
         assert(size <= Capacity);
-        emb::fill(begin(), end(), value);
+        std::fill(begin(), end(), value);
     }
 
     template <class V>
     static_vector(V* first, V* last) : size_(size_t(last - first)) {
         assert(first <= last);
         assert(size_t(last - first) <= Capacity);
-        emb::copy(first, last, begin());
+        std::copy(first, last, begin());
     }
 public:
     size_t capacity() const { return Capacity; }
@@ -92,7 +92,7 @@ public:
     void resize(size_t size) {
         assert(size <= Capacity);
         if (size > size_) {
-            emb::fill(data_ + size_, data_ + size, T());
+            std::fill(data_ + size_, data_ + size, T());
         }
         size_ = size;
     }
@@ -100,7 +100,7 @@ public:
     void resize(size_t size, const T& value) {
         assert(size <= Capacity);
         if (size > size_) {
-            emb::fill(data_ + size_, data_ + size, value);
+            std::fill(data_ + size_, data_ + size, value);
         }
         size_ = size;
     }
@@ -125,7 +125,7 @@ public:
 
         static_vector<T, Capacity> buf(pos, end());
         *pos++ = value;
-        emb::copy(buf.begin(), buf.end(), pos);
+        std::copy(buf.begin(), buf.end(), pos);
         ++size_;
     }
 
@@ -137,7 +137,7 @@ public:
         for (size_t i = 0; i < count; ++i) {
             *pos++ = value;
         }
-        emb::copy(buf.begin(), buf.end(), pos);
+        std::copy(buf.begin(), buf.end(), pos);
         size_ += count;
     }
 
@@ -148,8 +148,8 @@ public:
         assert(pos <= end());
 
         static_vector<T, Capacity> buf(pos, end());
-        pos = emb::copy(first, last, pos);
-        emb::copy(buf.begin(), buf.end(), pos);
+        pos = std::copy(first, last, pos);
+        std::copy(buf.begin(), buf.end(), pos);
         size_ = size_ + size_t(last - first);
     }
 public:
@@ -159,7 +159,7 @@ public:
 
         static_vector<T, Capacity> buf(pos + 1, end());
         --size_;
-        return emb::copy(buf.begin(), buf.end(), pos);
+        return std::copy(buf.begin(), buf.end(), pos);
     }
 
     T* erase(T* first, T* last) {
@@ -170,7 +170,7 @@ public:
 
         static_vector<T, Capacity> buf(last, end());
         size_ = size_ - size_t(last - first);
-        return emb::copy(buf.begin(), buf.end(), first);
+        return std::copy(buf.begin(), buf.end(), first);
     }
 };
 

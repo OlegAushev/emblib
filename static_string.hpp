@@ -86,9 +86,9 @@ public:
     void resize(size_t len) {
         assert(len < Capacity);
         if (len > size()) {
-            emb::fill(end(), _data + len, 0);
+            std::fill(end(), _data + len, 0);
         } else {
-            emb::fill(_data + len, end(), 0);
+            std::fill(_data + len, end(), 0);
         }
         _size = len + 1;
     }
@@ -96,9 +96,9 @@ public:
     void resize(size_t len, char ch) {
         assert(len < Capacity);
         if (len > size()) {
-            emb::fill(end(), _data + len, ch);
+            std::fill(end(), _data + len, ch);
         } else {
-            emb::fill(_data + len, end(), ch);
+            std::fill(_data + len, end(), ch);
         }
         _size = len + 1;
     }

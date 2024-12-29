@@ -102,7 +102,7 @@ public:
     virtual void push(T input_value) EMB_OVERRIDE {
         window_.push_back(input_value);
         emb::array<T, WindowSize> window_sorted;
-        emb::copy(window_.begin(), window_.end(), window_sorted.begin());
+        std::copy(window_.begin(), window_.end(), window_sorted.begin());
         std::sort(window_sorted.begin(), window_sorted.end());
         out_ = window_sorted[WindowSize/2];
     }
@@ -187,7 +187,7 @@ public:
     virtual void push(T input_value) EMB_OVERRIDE {
         _window.push_back(input_value);
         emb::array<T, WindowSize> window_sorted;
-        emb::copy(_window.begin(), _window.end(), window_sorted.begin());
+        std::copy(_window.begin(), _window.end(), window_sorted.begin());
         std::sort(window_sorted.begin(), window_sorted.end());
         input_value = window_sorted[WindowSize/2];
 
@@ -202,7 +202,7 @@ public:
     }
 
     virtual void reset() EMB_OVERRIDE { set_output(0); }
-    
+
     void init(float sampling_period, float time_constant) {
         sampling_period_ = sampling_period;
         time_constant_ = time_constant;
@@ -244,7 +244,7 @@ public:
     }
 
     virtual T output() const EMB_OVERRIDE { return out_; }
-    
+
     virtual void set_output(T value) EMB_OVERRIDE {
         ref_ = value;
         out_ = value;
