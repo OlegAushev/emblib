@@ -25,7 +25,7 @@ inline T median_of_three(T a, T b, T c) {
     return b;
 }
 
-#if __cplusplus < 199800
+#if __cplusplus < 199700
 
 template<class It, class T>
 inline It find(It first, It last, const T& value) {

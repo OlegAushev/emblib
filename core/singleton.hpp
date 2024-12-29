@@ -81,7 +81,7 @@ public:
 
     static bool initialized() { return initialized_; }
 
-    static void register_object(T* obj) {
+    static void register_object(Derived* obj) {
         assert(!initialized_);
         instance_ = obj;
         initialized_ = true;
@@ -89,12 +89,12 @@ public:
 
     static void deregister_object() {
         initialized_ = false;
-        instance_ = static_cast<T*>(NULL);
+        instance_ = static_cast<Derived*>(NULL);
     }
 };
 
 template<class Derived>
-Derived* singleton<T>::instance_ = static_cast<T*>(NULL);
+Derived* singleton<Derived>::instance_ = static_cast<Derived*>(NULL);
 template<class Derived>
 bool singleton<Derived>::initialized_ = false;
 
@@ -124,7 +124,7 @@ public:
 };
 
 template<class Derived, size_t DerivedCount>
-Derived* singleton_array<T, DerivedCount>::instance_[DerivedCount];
+Derived* singleton_array<Derived, DerivedCount>::instance_[DerivedCount];
 template<class Derived, size_t DerivedCount>
 bool singleton_array<Derived, DerivedCount>::initialized_[DerivedCount];
 
