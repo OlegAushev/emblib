@@ -13,11 +13,12 @@ namespace emb {
 #if __cplusplus >= 201100
 
 class noncopyable {
-public:
+protected:
     noncopyable() = default;
+    ~noncopyable() = default;
+public:
     noncopyable(const noncopyable& other) = delete;
     noncopyable& operator=(const noncopyable& other) = delete;
-    virtual ~noncopyable() = default;
 };
 
 #else

@@ -23,6 +23,11 @@ protected:
         instance_ = self;
         initialized_ = true;
     }
+
+    ~singleton() {
+        initialized_ = false;
+        instance_ = nullptr;
+    }
 public:
     static Derived* instance() {
         assert(initialized_);
@@ -30,11 +35,6 @@ public:
     }
 
     static bool initialized() { return initialized_; }
-
-    virtual ~singleton() {
-        initialized_ = false;
-        instance_ = nullptr;
-    }
 };
 
 template<class Derived, size_t DerivedCount>
@@ -71,7 +71,6 @@ private:
     static bool initialized_;
 protected:
     singleton(Derived* self) { register_object(self); }
-
     ~singleton() { deregister_object(); }
 public:
     static Derived* instance() {
