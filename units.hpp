@@ -1,6 +1,7 @@
 #pragma once
 
 #include <emblib/core.hpp>
+#include <emblib/math.hpp>
 
 namespace emb {
 namespace units {
@@ -119,3 +120,9 @@ struct deg_t{};
 
 } // namespace units
 } // namespace emb
+
+template<typename T, typename Unit>
+inline emb::units::named_unit<T, Unit>
+abs(const emb::units::named_unit<T, Unit>& v) {
+    return emb::units::named_unit<T, Unit>(abs(v.get()));
+}
