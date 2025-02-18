@@ -113,11 +113,6 @@ typedef named_unit<float, impl::edeg> edeg_t;
 typedef named_unit<float, impl::mrad> mrad_t;
 typedef named_unit<float, impl::mdeg> mdeg_t;
 
-namespace impl {
-struct rad_t{};
-struct deg_t{};
-}
-
 } // namespace units
 } // namespace emb
 
