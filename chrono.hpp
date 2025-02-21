@@ -165,5 +165,41 @@ public:
     }
 };
 
+class triggered_action {
+private:
+    bool (*trigger_)();
+    EMB_MILLISECONDS delay_;
+    void (*action_)();
+
+    bool trigger_detected_;
+    EMB_MILLISECONDS trigger_timepoint_;
+public:
+    triggered_action(bool (*trigger)(),
+                     EMB_MILLISECONDS delay,
+                     void (*action)())
+            : trigger_(trigger),
+              delay_(delay),
+              action_(action),
+              trigger_detected_(false),
+              trigger_timepoint_(emb::chrono::steady_clock::now()) {
+        check_and_execute();
+    }
+
+    void check_and_execute() {
+        if (trigger_()) {
+            EMB_MILLISECONDS now = emb::chrono::steady_clock::now();
+            if (!trigger_detected_) {
+                trigger_detected_ = true;
+                trigger_timepoint_ = now;
+            }
+            if (now > trigger_timepoint_ + delay_) {
+                action_();
+            }
+        } else {
+            trigger_detected_ = false;
+        }
+    }
+};
+
 } // namespace chrono
 } // namespace emb
