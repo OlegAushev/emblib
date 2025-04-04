@@ -12,6 +12,7 @@
 
 #define SCOPED_ENUM_UT_DECLARE_BEGIN(EnumType, UnderlyingType)  \
     struct EnumType {                                           \
+        typedef void is_scoped_enum_tag;                        \
         EnumType() {}                                           \
         explicit EnumType(UnderlyingType v) : v_(v) {}          \
         UnderlyingType underlying_value() const { return v_; }  \
