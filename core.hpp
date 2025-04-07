@@ -12,17 +12,15 @@
 #include <cstddef>
 #include <cassert>
 
-#if defined(EMBLIB_C28X)
-#include "core/c28x.hpp"
-#endif
-
 #if __cplusplus < 201100
-#include "core/scopedenum.hpp"
+#include <emblib/scopedenum.hpp>
 #endif
 
-#include "core/singleton.hpp"
-#include "core/monostate.hpp"
-#include "core/noncopyable.hpp"
+#include <emblib/noncopyable.hpp>
+
+#ifdef EMBLIB_C28X
+#include <emblib/c28x.hpp>
+#endif
 
 #define EMB_UNUSED(arg) (void)arg;
 

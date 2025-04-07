@@ -1,5 +1,5 @@
 #if defined(EMBLIB_C28X)
-#include <mcudrv/c28x/f2837xd/crc/crc.hpp>
+#include <mcudrv-c28x/f2837xd/crc/crc.hpp>
 #elif defined(STM32H7xx)
 #include <mcudrv/stm32/h7/crc/crc.h>
 #elif defined(STM32F4xx)

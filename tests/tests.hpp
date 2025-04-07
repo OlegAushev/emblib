@@ -13,6 +13,7 @@
 #include <emblib/filter.hpp>
 #include <emblib/math.hpp>
 #include <emblib/optional.hpp>
+#include <emblib/singleton.hpp>
 #include <emblib/stack.hpp>
 #include <emblib/static_vector.hpp>
 #include <emblib/static_string.hpp>
