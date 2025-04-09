@@ -1,6 +1,9 @@
 #pragma once
 
 #include <emblib/core.hpp>
+#if __cplusplus < 201100
+#include <emblib/scopedenum.hpp>
+#endif
 
 namespace emb {
 namespace mem {

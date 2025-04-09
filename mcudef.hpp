@@ -1,6 +1,8 @@
 #pragma once
 
 #include <emblib/core.hpp>
+#include <emblib/noncopyable.hpp>
+#include <emblib/scopedenum.hpp>
 
 namespace mcu {
 namespace gpio {

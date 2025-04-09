@@ -5,6 +5,12 @@
 #include <chrono>
 #endif
 
+#if __cplusplus >= 201100
+#define EMB_MILLISECONDS std::chrono::milliseconds
+#else
+#define EMB_MILLISECONDS emb::chrono::milliseconds
+#endif
+
 namespace emb {
 namespace chrono {
 

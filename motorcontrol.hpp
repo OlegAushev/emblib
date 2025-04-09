@@ -3,6 +3,7 @@
 #include <emblib/array.hpp>
 #include <emblib/core.hpp>
 #include <emblib/math.hpp>
+#include <emblib/scopedenum.hpp>
 #include <emblib/units.hpp>
 
 namespace emb {

@@ -4,6 +4,7 @@
 
 #include <emblib/core.hpp>
 #include <emblib/chrono.hpp>
+#include <emblib/scopedenum.hpp>
 #include <emblib/static_vector.hpp>
 
 namespace emb {

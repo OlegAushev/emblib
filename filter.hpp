@@ -5,6 +5,7 @@
 #include <emblib/array.hpp>
 #include <emblib/circular_buffer.hpp>
 #include <emblib/core.hpp>
+#include <emblib/noncopyable.hpp>
 #include <float.h>
 
 namespace emb {

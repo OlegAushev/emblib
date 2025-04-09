@@ -12,12 +12,6 @@
 #include <cstddef>
 #include <cassert>
 
-#if __cplusplus < 201100
-#include <emblib/scopedenum.hpp>
-#endif
-
-#include <emblib/noncopyable.hpp>
-
 #ifdef EMBLIB_C28X
 #include <emblib/c28x.hpp>
 #endif
@@ -53,12 +47,6 @@
 #define EMB_CAT_(a, b) a ## b
 #define EMB_CAT(a, b) EMB_CAT_(a, b)
 #define EMB_STATIC_ASSERT(cond) typedef int EMB_CAT(assert, __LINE__)[(cond) ? 1 : -1]
-#endif
-
-#if __cplusplus >= 201100
-#define EMB_MILLISECONDS std::chrono::milliseconds
-#else
-#define EMB_MILLISECONDS emb::chrono::milliseconds
 #endif
 
 #if defined(EMBLIB_ARM)
