@@ -10,17 +10,48 @@ namespace ctl {
 
 template<typename ConcreteControl>
 class controllable {
+private:
+    ConcreteControl* control_;
+public:
+    controllable() : control_(NULL) {}
+
+    ConcreteControl* control_item() const { return control_; }
+
+    void grant_control(ConcreteControl* control) {
+        if (control == control_) {
+            return;
+        }
+
+        ConcreteControl* old_control = control_; // make copy, critical section
+        if (old_control) {
+            old_control->release_control();
+        }
+
+        control_ = control;
+        if (control) {
+            control->take_control(this);
+        }
+    }
+
+    void revoke_control() {
+        ConcreteControl control = control_; // make copy, critical section
+        if (control) {
+            control->release_control;
+        }
+        control_ = NULL;
+    }
 public:
     virtual void visit(ConcreteControl* control) = 0;
 };
 
 template<typename ConcreteControl>
 class abstract_control {
+    friend class controllable<ConcreteControl>;
 private:
     controllable<ConcreteControl>* obj_;
 public:
     abstract_control() : obj_(NULL) {}
-
+private:
     void take_control(controllable<ConcreteControl>* obj) {
         obj_ = obj;
         visit();
@@ -35,61 +66,6 @@ protected:
         controllable<ConcreteControl>* obj = obj_;
         if (obj) {
             obj->visit(static_cast<ConcreteControl*>(this));
-        }
-    }
-};
-
-template<typename ConcreteControl, size_t StackSize>
-class control_manager : public controllable<ConcreteControl> {
-private:
-    controllable<ConcreteControl>* obj_;
-    emb::stack<ConcreteControl*, StackSize> controls_;
-public:
-    control_manager(controllable<ConcreteControl>* obj) : obj_(obj) {}
-
-    void activate(ConcreteControl& control) {
-        assert(!controls_.full());
-        if (controls_.full()) {
-            // error
-            controls_.top()->release_control();
-            controls_.clear();
-            return;
-        }
-
-        if (!controls_.empty()) {
-            controls_.top()->release_control();
-        }
-
-        controls_.push(&control);
-        control.take_control(this);
-    }
-
-    void deactivate(ConcreteControl& control) {
-        assert(!controls_.empty());
-        assert(controls_.top() == &control);
-
-        if (controls_.empty()) {
-            return;
-        }
-
-        if (controls_.top() != &control) {
-            // error: deactivate not active control
-            controls_.top()->release_control();
-            controls_.clear();
-            return;
-        }
-
-        control.release_control();
-        controls_.pop();
-
-        if (!controls_.empty()) {
-            controls_.top()->take_control(this);
-        }
-    }
-
-    void visit(ConcreteControl* control) {
-        if (controls_.top() == control) {
-            obj_->visit(control);
         }
     }
 };
