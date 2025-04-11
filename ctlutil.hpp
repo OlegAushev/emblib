@@ -14,23 +14,19 @@ public:
     virtual void visit(ConcreteControl* control) = 0;
 };
 
-template<typename ConcreteControl, size_t StackSize> class control_manager;
-
 template<typename ConcreteControl>
 class abstract_control {
-    template<typename T, size_t StackSize>
-    friend class control_manager;
 private:
     controllable<ConcreteControl>* obj_;
 public:
     abstract_control() : obj_(NULL) {}
-private:
-    void activate(controllable<ConcreteControl>* obj) {
+
+    void take_control(controllable<ConcreteControl>* obj) {
         obj_ = obj;
         visit();
     }
 
-    void deactivate() {
+    void release_control() {
         obj_ = NULL;
     }
 protected:
@@ -55,17 +51,17 @@ public:
         assert(!controls_.full());
         if (controls_.full()) {
             // error
-            controls_.top()->deactivate();
+            controls_.top()->release_control();
             controls_.clear();
             return;
         }
 
         if (!controls_.empty()) {
-            controls_.top()->deactivate();
+            controls_.top()->release_control();
         }
 
         controls_.push(&control);
-        control.activate(this);
+        control.take_control(this);
     }
 
     void deactivate(ConcreteControl& control) {
@@ -78,16 +74,16 @@ public:
 
         if (controls_.top() != &control) {
             // error: deactivate not active control
-            controls_.top()->deactivate();
+            controls_.top()->release_control();
             controls_.clear();
             return;
         }
 
-        control.deactivate();
+        control.release_control();
         controls_.pop();
 
         if (!controls_.empty()) {
-            controls_.top()->activate(this);
+            controls_.top()->take_control(this);
         }
     }
 
