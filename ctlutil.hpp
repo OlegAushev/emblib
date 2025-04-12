@@ -9,11 +9,11 @@ namespace ctl {
 #if __cplusplus < 201100
 
 template<typename ConcreteControl>
-class controllable {
+class abstract_controllable {
 private:
     ConcreteControl* control_;
 public:
-    controllable() : control_(NULL) {}
+    abstract_controllable() : control_(NULL) {}
 
     ConcreteControl* control_item() const { return control_; }
 
@@ -41,18 +41,24 @@ public:
         control_ = NULL;
     }
 public:
-    virtual void visit(ConcreteControl* control) = 0;
+    virtual void visit(ConcreteControl& control) = 0;
+
+    void visit() {
+        if (control_) {
+            visit(*control_);
+        }
+    }
 };
 
 template<typename ConcreteControl>
 class abstract_control {
-    friend class controllable<ConcreteControl>;
+    friend class abstract_controllable<ConcreteControl>;
 private:
-    controllable<ConcreteControl>* obj_;
+    abstract_controllable<ConcreteControl>* obj_;
 public:
     abstract_control() : obj_(NULL) {}
 private:
-    void take_control(controllable<ConcreteControl>* obj) {
+    void take_control(abstract_controllable<ConcreteControl>* obj) {
         obj_ = obj;
         visit();
     }
@@ -63,9 +69,9 @@ private:
 protected:
     void visit() {
         // make copy, critical section
-        controllable<ConcreteControl>* obj = obj_;
+        abstract_controllable<ConcreteControl>* obj = obj_;
         if (obj) {
-            obj->visit(static_cast<ConcreteControl*>(this));
+            obj->visit(*static_cast<ConcreteControl*>(this));
         }
     }
 };
