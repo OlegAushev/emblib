@@ -25,7 +25,7 @@ EMB_CONSTEXPR float to_eradps(float n, int p) {
 }
 
 EMB_CONSTEXPR emb::units::eradps_t to_eradps(emb::units::rpm_t n, int p) {
-    return emb::units::eradps_t(to_eradps(n.get(), p));
+    return emb::units::eradps_t(to_eradps(n.numval(), p));
 }
 
 EMB_CONSTEXPR float to_rpm(float w, int p) {
@@ -33,7 +33,7 @@ EMB_CONSTEXPR float to_rpm(float w, int p) {
 }
 
 EMB_CONSTEXPR emb::units::rpm_t to_rpm(emb::units::eradps_t w, int p) {
-    return emb::units::rpm_t(to_rpm(w.get(), p));
+    return emb::units::rpm_t(to_rpm(w.numval(), p));
 }
 
 class motor_speed {
@@ -58,9 +58,9 @@ public:
         return units::rpm_t(60.f * w_ / (numbers::two_pi * float(p_)));
     }
 private:
-    void set(units::eradps_t w) { w_ = w.get(); }
+    void set(units::eradps_t w) { w_ = w.numval(); }
     void set(units::rpm_t n) {
-        w_ = numbers::two_pi * float(p_) * n.get() / 60.f;
+        w_ = numbers::two_pi * float(p_) * n.numval() / 60.f;
     }
 };
 
@@ -104,10 +104,10 @@ public:
     }
 
 private:
-    void set(units::erad_t v) { rad_ = v.get(); }
-    void set(units::mrad_t v) { rad_ = v.get() * float(p_); }
-    void set(units::edeg_t v) { rad_ = to_rad(v.get()); }
-    void set(units::mdeg_t v) { rad_ = to_rad(v.get()) * float(p_); }
+    void set(units::erad_t v) { rad_ = v.numval(); }
+    void set(units::mrad_t v) { rad_ = v.numval() * float(p_); }
+    void set(units::edeg_t v) { rad_ = to_rad(v.numval()); }
+    void set(units::mdeg_t v) { rad_ = to_rad(v.numval()) * float(p_); }
 };
 
 struct vec_alpha {

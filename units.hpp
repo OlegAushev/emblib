@@ -13,7 +13,7 @@ private:
 public:
     named_unit() : v_(T(0)) {}
     explicit named_unit(const T& v) : v_(v) {}
-    const T& get() const { return v_; }
+    const T& numval() const { return v_; }
 
     named_unit& operator+=(const named_unit& rhs) {
         v_ += rhs.v_;
@@ -29,37 +29,37 @@ public:
 template<typename T, typename Unit>
 inline bool operator==(const named_unit<T, Unit>& lhs,
                        const named_unit<T, Unit>& rhs) {
-    return lhs.get() == rhs.get();
+    return lhs.numval() == rhs.numval();
 }
 
 template<typename T, typename Unit>
 inline bool operator!=(const named_unit<T, Unit>& lhs,
                        const named_unit<T, Unit>& rhs) {
-    return lhs.get() != rhs.get();
+    return lhs.numval() != rhs.numval();
 }
 
 template<typename T, typename Unit>
 inline bool operator<(const named_unit<T, Unit>& lhs,
                       const named_unit<T, Unit>& rhs) {
-    return lhs.get() < rhs.get();
+    return lhs.numval() < rhs.numval();
 }
 
 template<typename T, typename Unit>
 inline bool operator>(const named_unit<T, Unit>& lhs,
                       const named_unit<T, Unit>& rhs) {
-    return lhs.get() > rhs.get();
+    return lhs.numval() > rhs.numval();
 }
 
 template<typename T, typename Unit>
 inline bool operator<=(const named_unit<T, Unit>& lhs,
                        const named_unit<T, Unit>& rhs) {
-    return lhs.get() <= rhs.get();
+    return lhs.numval() <= rhs.numval();
 }
 
 template<typename T, typename Unit>
 inline bool operator>=(const named_unit<T, Unit>& lhs,
                        const named_unit<T, Unit>& rhs) {
-    return lhs.get() >= rhs.get();
+    return lhs.numval() >= rhs.numval();
 }
 
 template<typename T, typename Unit>
@@ -79,7 +79,7 @@ inline named_unit<T, Unit> operator-(const named_unit<T, Unit>& lhs,
 template<typename T, typename Unit>
 inline named_unit<T, Unit> operator*(const named_unit<T, Unit>& lhs,
                                      float rhs) {
-    return named_unit<T, Unit>(lhs.get() * rhs);
+    return named_unit<T, Unit>(lhs.numval() * rhs);
 }
 
 template<typename T, typename Unit>
@@ -91,7 +91,7 @@ inline named_unit<T, Unit> operator*(float lhs,
 template<typename T, typename Unit>
 inline named_unit<T, Unit> operator/(const named_unit<T, Unit>& lhs,
                                      float rhs) {
-    return named_unit<T, Unit>(lhs.get() / rhs);
+    return named_unit<T, Unit>(lhs.numval() / rhs);
 }
 
 namespace impl {
@@ -119,5 +119,5 @@ typedef named_unit<float, impl::mdeg> mdeg_t;
 template<typename T, typename Unit>
 inline emb::units::named_unit<T, Unit>
 abs(const emb::units::named_unit<T, Unit>& v) {
-    return emb::units::named_unit<T, Unit>(abs(v.get()));
+    return emb::units::named_unit<T, Unit>(abs(v.numval()));
 }
