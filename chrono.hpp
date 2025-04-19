@@ -58,18 +58,30 @@ public:
         --_ticks;
         return tmp;
     }
+
+    duration& operator+=(const duration& rhs) {
+        _ticks += rhs._ticks;
+        return *this;
+    }
+
+    duration& operator-=(const duration& rhs) {
+        _ticks -= rhs._ticks;
+        return *this;
+    }
 };
 
 template <int64_t Divider>
 duration<Divider> operator+(const duration<Divider>& lhs,
                             const duration<Divider>& rhs) {
-    return duration<Divider>(lhs.count() + rhs.count());
+    duration<Divider> tmp = lhs;
+    return tmp += rhs;
 }
 
 template <int64_t Divider>
 duration<Divider> operator-(const duration<Divider>& lhs,
                             const duration<Divider>& rhs) {
-    return duration<Divider>(lhs.count() - rhs.count());
+    duration<Divider> tmp = lhs;
+    return tmp -= rhs;
 }
 
 template <int64_t Divider>
