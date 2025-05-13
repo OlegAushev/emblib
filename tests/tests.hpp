@@ -1,25 +1,23 @@
 #pragma once
 
-
-#include <emblib/testrunner/testrunner.hpp>
-#include <tests/tests_config.hpp>
-#include <emblib/array.hpp>
 #include <emblib/algorithm.hpp>
+#include <emblib/array.hpp>
 #include <emblib/bitset.hpp>
 #include <emblib/chrono.hpp>
 #include <emblib/circular_buffer.hpp>
 #include <emblib/core.hpp>
-#include <emblib/memory.hpp>
 #include <emblib/filter.hpp>
 #include <emblib/math.hpp>
+#include <emblib/memory.hpp>
 #include <emblib/optional.hpp>
+#include <emblib/queue.hpp>
 #include <emblib/singleton.hpp>
 #include <emblib/stack.hpp>
-#include <emblib/static_vector.hpp>
 #include <emblib/static_string.hpp>
-#include <emblib/queue.hpp>
-#include <algorithm>
+#include <emblib/static_vector.hpp>
+#include <emblib/testrunner/testrunner.hpp>
 
+#include <algorithm>
 
 namespace emb {
 
@@ -44,4 +42,3 @@ public:
 };
 
 } // namespace emb
-
