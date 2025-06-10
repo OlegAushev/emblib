@@ -39,10 +39,12 @@ EMB_CONSTEXPR emb::units::rpm_t to_rpm(emb::units::eradps_t w, int p) {
 class motorspeed {
 private:
     int p_;
-    float w_;
+    units::eradps_t w_;
 public:
     explicit motorspeed(int p) : p_(p), w_(0) {}
+
     motorspeed(int p, units::eradps_t w) : p_(p) { set(w); }
+
     motorspeed(int p, units::rpm_t n) : p_(p) { set(n); }
 
     template<typename Unit>
@@ -53,15 +55,13 @@ public:
 
     int p() const { return p_; }
 
-    units::eradps_t eradps() const { return units::eradps_t(w_); }
-    units::rpm_t rpm() const {
-        return units::rpm_t(60.f * w_ / (numbers::two_pi * float(p_)));
-    }
+    units::eradps_t eradps() const { return w_; }
+
+    units::rpm_t rpm() const { return to_rpm(w_, p_); }
 private:
-    void set(units::eradps_t w) { w_ = w.numval(); }
-    void set(units::rpm_t n) {
-        w_ = numbers::two_pi * float(p_) * n.numval() / 60.f;
-    }
+    void set(units::eradps_t w) { w_ = w; }
+
+    void set(units::rpm_t n) { w_ = to_eradps(n, p_); }
 };
 
 inline motorspeed operator*(const motorspeed& lhs, float rhs) {
