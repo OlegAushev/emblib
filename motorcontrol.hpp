@@ -36,17 +36,17 @@ EMB_CONSTEXPR emb::units::rpm_t to_rpm(emb::units::eradps_t w, int p) {
     return emb::units::rpm_t(to_rpm(w.numval(), p));
 }
 
-class motor_speed {
+class motorspeed {
 private:
     int p_;
     float w_;
 public:
-    explicit motor_speed(int p) : p_(p), w_(0) {}
-    motor_speed(int p, units::eradps_t w) : p_(p) { set(w); }
-    motor_speed(int p, units::rpm_t n) : p_(p) { set(n); }
+    explicit motorspeed(int p) : p_(p), w_(0) {}
+    motorspeed(int p, units::eradps_t w) : p_(p) { set(w); }
+    motorspeed(int p, units::rpm_t n) : p_(p) { set(n); }
 
     template<typename Unit>
-    motor_speed& operator=(Unit v) {
+    motorspeed& operator=(Unit v) {
         set(v);
         return *this;
     }
@@ -64,16 +64,16 @@ private:
     }
 };
 
-inline motor_speed operator*(const motor_speed& lhs, float rhs) {
-    return motor_speed(lhs.p(), lhs.eradps() * rhs);
+inline motorspeed operator*(const motorspeed& lhs, float rhs) {
+    return motorspeed(lhs.p(), lhs.eradps() * rhs);
 }
 
-inline motor_speed operator*(float lhs, const motor_speed& rhs) {
+inline motorspeed operator*(float lhs, const motorspeed& rhs) {
     return rhs * lhs;
 }
 
-inline motor_speed operator/(const motor_speed& lhs, float rhs) {
-    return motor_speed(lhs.p(), lhs.eradps() / rhs);
+inline motorspeed operator/(const motorspeed& lhs, float rhs) {
+    return motorspeed(lhs.p(), lhs.eradps() / rhs);
 }
 
 class motor_angle {
