@@ -139,23 +139,24 @@ public:
     void set_sampling_period(float v) { _ts = v; }
 };
 
-class signed_perunit {
+class signed_pu {
 private:
     float v_;
 public:
-    signed_perunit() : v_(0.f) {}
-    explicit signed_perunit(float v) : v_(emb::clamp(v, -1.f, 1.f)) {}
-    signed_perunit(float v, float base)
-            : v_(emb::clamp(v / base, -1.f, 1.f)) {}
+    signed_pu() : v_(0.f) {}
+
+    explicit signed_pu(float v) : v_(emb::clamp(v, -1.f, 1.f)) {}
+
+    signed_pu(float v, float base) : v_(emb::clamp(v / base, -1.f, 1.f)) {}
 
     float numval() const { return v_; }
 
-    signed_perunit& operator+=(const signed_perunit& rhs) {
+    signed_pu& operator+=(const signed_pu& rhs) {
         set(v_ + rhs.v_);
         return *this;
     }
 
-    signed_perunit& operator-=(const signed_perunit& rhs) {
+    signed_pu& operator-=(const signed_pu& rhs) {
         set(v_ - rhs.v_);
         return *this;
     }
@@ -163,71 +164,70 @@ private:
     void set(float v) { v_ = emb::clamp(v, -1.f, 1.f); }
 };
 
-inline bool operator==(const signed_perunit& lhs, const signed_perunit& rhs) {
+inline bool operator==(const signed_pu& lhs, const signed_pu& rhs) {
     return lhs.numval() == rhs.numval();
 }
 
-inline bool operator!=(const signed_perunit& lhs, const signed_perunit& rhs) {
+inline bool operator!=(const signed_pu& lhs, const signed_pu& rhs) {
     return lhs.numval() != rhs.numval();
 }
 
-inline bool operator<(const signed_perunit& lhs, const signed_perunit& rhs) {
+inline bool operator<(const signed_pu& lhs, const signed_pu& rhs) {
     return lhs.numval() < rhs.numval();
 }
 
-inline bool operator>(const signed_perunit& lhs, const signed_perunit& rhs) {
+inline bool operator>(const signed_pu& lhs, const signed_pu& rhs) {
     return lhs.numval() > rhs.numval();
 }
 
-inline bool operator<=(const signed_perunit& lhs, const signed_perunit& rhs) {
+inline bool operator<=(const signed_pu& lhs, const signed_pu& rhs) {
     return lhs.numval() <= rhs.numval();
 }
 
-inline bool operator>=(const signed_perunit& lhs, const signed_perunit& rhs) {
+inline bool operator>=(const signed_pu& lhs, const signed_pu& rhs) {
     return lhs.numval() >= rhs.numval();
 }
 
-inline signed_perunit operator+(const signed_perunit& lhs,
-                                const signed_perunit& rhs) {
-    signed_perunit tmp = lhs;
+inline signed_pu operator+(const signed_pu& lhs, const signed_pu& rhs) {
+    signed_pu tmp = lhs;
     return tmp += rhs;
 }
 
-inline signed_perunit operator-(const signed_perunit& lhs,
-                                const signed_perunit& rhs) {
-    signed_perunit tmp = lhs;
+inline signed_pu operator-(const signed_pu& lhs, const signed_pu& rhs) {
+    signed_pu tmp = lhs;
     return tmp -= rhs;
 }
 
-inline signed_perunit operator*(const signed_perunit& lhs, float rhs) {
-    return signed_perunit(lhs.numval() * rhs);
+inline signed_pu operator*(const signed_pu& lhs, float rhs) {
+    return signed_pu(lhs.numval() * rhs);
 }
 
-inline signed_perunit operator*(float lhs, const signed_perunit& rhs) {
+inline signed_pu operator*(float lhs, const signed_pu& rhs) {
     return rhs * lhs;
 }
 
-inline signed_perunit operator/(const signed_perunit& lhs, float rhs) {
-    return signed_perunit(lhs.numval() / rhs);
+inline signed_pu operator/(const signed_pu& lhs, float rhs) {
+    return signed_pu(lhs.numval() / rhs);
 }
 
-class unsigned_perunit {
+class unsigned_pu {
 private:
     float v_;
 public:
-    unsigned_perunit() : v_(0.f) {}
-    explicit unsigned_perunit(float v) : v_(emb::clamp(v, 0.f, 1.f)) {}
-    unsigned_perunit(float v, float base)
-            : v_(emb::clamp(v / base, 0.f, 1.f)) {}
+    unsigned_pu() : v_(0.f) {}
+
+    explicit unsigned_pu(float v) : v_(emb::clamp(v, 0.f, 1.f)) {}
+
+    unsigned_pu(float v, float base) : v_(emb::clamp(v / base, 0.f, 1.f)) {}
 
     float numval() const { return v_; }
 
-    unsigned_perunit& operator+=(const unsigned_perunit& rhs) {
+    unsigned_pu& operator+=(const unsigned_pu& rhs) {
         set(v_ + rhs.v_);
         return *this;
     }
 
-    unsigned_perunit& operator-=(const unsigned_perunit& rhs) {
+    unsigned_pu& operator-=(const unsigned_pu& rhs) {
         set(v_ - rhs.v_);
         return *this;
     }
@@ -235,58 +235,50 @@ private:
     void set(float v) { v_ = emb::clamp(v, 0.f, 1.f); }
 };
 
-inline bool operator==(const unsigned_perunit& lhs,
-                       const unsigned_perunit& rhs) {
+inline bool operator==(const unsigned_pu& lhs, const unsigned_pu& rhs) {
     return lhs.numval() == rhs.numval();
 }
 
-inline bool operator!=(const unsigned_perunit& lhs,
-                       const unsigned_perunit& rhs) {
+inline bool operator!=(const unsigned_pu& lhs, const unsigned_pu& rhs) {
     return lhs.numval() != rhs.numval();
 }
 
-inline bool operator<(const unsigned_perunit& lhs,
-                      const unsigned_perunit& rhs) {
+inline bool operator<(const unsigned_pu& lhs, const unsigned_pu& rhs) {
     return lhs.numval() < rhs.numval();
 }
 
-inline bool operator>(const unsigned_perunit& lhs,
-                      const unsigned_perunit& rhs) {
+inline bool operator>(const unsigned_pu& lhs, const unsigned_pu& rhs) {
     return lhs.numval() > rhs.numval();
 }
 
-inline bool operator<=(const unsigned_perunit& lhs,
-                       const unsigned_perunit& rhs) {
+inline bool operator<=(const unsigned_pu& lhs, const unsigned_pu& rhs) {
     return lhs.numval() <= rhs.numval();
 }
 
-inline bool operator>=(const unsigned_perunit& lhs,
-                       const unsigned_perunit& rhs) {
+inline bool operator>=(const unsigned_pu& lhs, const unsigned_pu& rhs) {
     return lhs.numval() >= rhs.numval();
 }
 
-inline unsigned_perunit operator+(const unsigned_perunit& lhs,
-                                  const unsigned_perunit& rhs) {
-    unsigned_perunit tmp = lhs;
+inline unsigned_pu operator+(const unsigned_pu& lhs, const unsigned_pu& rhs) {
+    unsigned_pu tmp = lhs;
     return tmp += rhs;
 }
 
-inline unsigned_perunit operator-(const unsigned_perunit& lhs,
-                                  const unsigned_perunit& rhs) {
-    unsigned_perunit tmp = lhs;
+inline unsigned_pu operator-(const unsigned_pu& lhs, const unsigned_pu& rhs) {
+    unsigned_pu tmp = lhs;
     return tmp -= rhs;
 }
 
-inline unsigned_perunit operator*(const unsigned_perunit& lhs, float rhs) {
-    return unsigned_perunit(lhs.numval() * rhs);
+inline unsigned_pu operator*(const unsigned_pu& lhs, float rhs) {
+    return unsigned_pu(lhs.numval() * rhs);
 }
 
-inline unsigned_perunit operator*(float lhs, const unsigned_perunit& rhs) {
+inline unsigned_pu operator*(float lhs, const unsigned_pu& rhs) {
     return rhs * lhs;
 }
 
-inline unsigned_perunit operator/(const unsigned_perunit& lhs, float rhs) {
-    return unsigned_perunit(lhs.numval() / rhs);
+inline unsigned_pu operator/(const unsigned_pu& lhs, float rhs) {
+    return unsigned_pu(lhs.numval() / rhs);
 }
 
 } // namespace emb

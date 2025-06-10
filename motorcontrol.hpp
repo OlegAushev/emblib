@@ -166,21 +166,21 @@ inline emb::array<float, 3> invclarke_transform(vec_alphabeta v) {
     return retv;
 }
 
-inline emb::array<emb::unsigned_perunit, 3> calculate_sinpwm(vec_alphabeta v_s,
-                                                             float v_dc) {
+inline emb::array<emb::unsigned_pu, 3> calculate_sinpwm(vec_alphabeta v_s,
+                                                        float v_dc) {
     emb::array<float, 3> voltages = invclarke_transform(v_s);
     const float voltage_base = v_dc / 1.5f;
-    emb::array<emb::unsigned_perunit, 3> duty_cycles;
+    emb::array<emb::unsigned_pu, 3> duty_cycles;
 
     for (size_t i = 0; i < 3; ++i) {
-        duty_cycles[i] = emb::unsigned_perunit(voltages[i] / voltage_base);
+        duty_cycles[i] = emb::unsigned_pu(voltages[i] / voltage_base);
     }
 
     return duty_cycles;
 }
 
-inline emb::array<emb::unsigned_perunit, 3> calculate_svpwm(vec_alpha v_s,
-                                                            float v_dc) {
+inline emb::array<emb::unsigned_pu, 3> calculate_svpwm(vec_alpha v_s,
+                                                       float v_dc) {
     v_s.theta = rem_2pi(v_s.theta);
     v_s.mag = clamp<float>(v_s.mag, 0, v_dc / numbers::sqrt_3);
 
@@ -237,22 +237,22 @@ inline emb::array<emb::unsigned_perunit, 3> calculate_svpwm(vec_alpha v_s,
         break;
     }
 
-    emb::array<emb::unsigned_perunit, 3> duty_cycles;
+    emb::array<emb::unsigned_pu, 3> duty_cycles;
     for (size_t i = 0; i < 3; ++i) {
-        duty_cycles[i] = emb::unsigned_perunit(pulse_durations[i]);
+        duty_cycles[i] = emb::unsigned_pu(pulse_durations[i]);
     }
 
     return duty_cycles;
 }
 
-inline emb::array<unsigned_perunit, 3>
-compensate_deadtime_v1(const emb::array<unsigned_perunit, 3>& dutycycles,
+inline emb::array<unsigned_pu, 3>
+compensate_deadtime_v1(const emb::array<unsigned_pu, 3>& dutycycles,
                        const emb::array<float, 3>& currents,
                        float current_threshold,
                        float pwm_period,
                        float deadtime) {
-    emb::array<unsigned_perunit, 3> dc;
-    const emb::unsigned_perunit deadtime_dutycycle(deadtime / pwm_period);
+    emb::array<unsigned_pu, 3> dc;
+    const emb::unsigned_pu deadtime_dutycycle(deadtime / pwm_period);
 
     for (size_t i = 0; i < 3; ++i) {
         if (currents[i] > current_threshold) {
@@ -268,8 +268,8 @@ compensate_deadtime_v1(const emb::array<unsigned_perunit, 3>& dutycycles,
 }
 
 /// @brief DOI: 10.4028/www.scientific.net/AMM.416-417.536
-inline emb::array<unsigned_perunit, 3>
-compensate_deadtime_v2(const emb::array<unsigned_perunit, 3>& dutycycles,
+inline emb::array<unsigned_pu, 3>
+compensate_deadtime_v2(const emb::array<unsigned_pu, 3>& dutycycles,
                        const emb::array<float, 3>& currents,
                        float current_threshold,
                        float pwm_period,
@@ -278,7 +278,7 @@ compensate_deadtime_v2(const emb::array<unsigned_perunit, 3>& dutycycles,
     return dutycycles;
 #else
     auto dc = dutycycles;
-    const emb::unsigned_perunit deadtime_dutycycle(deadtime / pwm_period);
+    const emb::unsigned_pu deadtime_dutycycle(deadtime / pwm_period);
 
     const auto [min, max] =
         std::minmax_element(currents.begin(), currents.end());
