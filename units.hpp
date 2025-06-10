@@ -101,8 +101,8 @@ struct eradps {};
 // angle
 struct erad {};
 struct edeg {};
-struct mrad {};
-struct mdeg {};
+struct rad {};
+struct deg {};
 } // namespace impl
 
 typedef named_unit<float, impl::rpm> rpm_t;
@@ -110,8 +110,58 @@ typedef named_unit<float, impl::eradps> eradps_t;
 
 typedef named_unit<float, impl::erad> erad_t;
 typedef named_unit<float, impl::edeg> edeg_t;
-typedef named_unit<float, impl::mrad> mrad_t;
-typedef named_unit<float, impl::mdeg> mdeg_t;
+typedef named_unit<float, impl::rad> rad_t;
+typedef named_unit<float, impl::deg> deg_t;
+
+class eangle_t {
+private:
+    units::erad_t erad_;
+public:
+    eangle_t() : erad_(0) {}
+
+    eangle_t(units::erad_t v) { set(v); }
+
+    eangle_t(units::edeg_t v) { set(v); }
+
+    template<typename Unit>
+    eangle_t& operator=(Unit v) {
+        set(v);
+        return *this;
+    }
+
+    units::erad_t erad() const { return erad_; }
+
+    units::edeg_t edeg() const { return units::edeg_t(to_deg(erad_.numval())); }
+private:
+    void set(units::erad_t v) { erad_ = v; }
+
+    void set(units::edeg_t v) { erad_ = units::erad_t(to_rad(v.numval())); }
+};
+
+class angle_t {
+private:
+    units::rad_t rad_;
+public:
+    angle_t() : rad_(0) {}
+
+    angle_t(units::rad_t v) { set(v); }
+
+    angle_t(units::deg_t v) { set(v); }
+
+    template<typename Unit>
+    angle_t& operator=(Unit v) {
+        set(v);
+        return *this;
+    }
+
+    units::rad_t rad() const { return rad_; }
+
+    units::deg_t deg() const { return units::deg_t(to_deg(rad_.numval())); }
+private:
+    void set(units::rad_t v) { rad_ = v; }
+
+    void set(units::deg_t v) { rad_ = units::rad_t(to_rad(v.numval())); }
+};
 
 } // namespace units
 } // namespace emb

@@ -76,40 +76,6 @@ inline motorspeed operator/(const motorspeed& lhs, float rhs) {
     return motorspeed(lhs.p(), lhs.eradps() / rhs);
 }
 
-class motor_angle {
-private:
-    int p_;
-    float rad_;
-public:
-    explicit motor_angle(int p) : p_(p), rad_(0) {}
-
-    motor_angle(int p, units::erad_t v) : p_(p) { set(v); }
-    motor_angle(int p, units::mrad_t v) : p_(p) { set(v); }
-    motor_angle(int p, units::edeg_t v) : p_(p) { set(v); }
-    motor_angle(int p, units::mdeg_t v) : p_(p) { set(v); }
-
-    template<typename Unit>
-    motor_angle& operator=(Unit v) {
-        set(v);
-        return *this;
-    }
-
-    int p() const { return p_; }
-
-    units::erad_t erad() const { return units::erad_t(rad_); }
-    units::mrad_t mrad() const { return units::mrad_t(rad_ / float(p_)); }
-    units::edeg_t edeg() const { return units::edeg_t(to_deg(rad_)); }
-    units::mdeg_t mdeg() const {
-        return units::mdeg_t(to_deg(rad_) / float(p_));
-    }
-
-private:
-    void set(units::erad_t v) { rad_ = v.numval(); }
-    void set(units::mrad_t v) { rad_ = v.numval() * float(p_); }
-    void set(units::edeg_t v) { rad_ = to_rad(v.numval()); }
-    void set(units::mdeg_t v) { rad_ = to_rad(v.numval()) * float(p_); }
-};
-
 struct vec_alpha {
     float mag;
     float theta;

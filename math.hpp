@@ -44,9 +44,9 @@ const float inv_sqrt3 = 0.57735026918963f;
 template<typename T>
 EMB_CONSTEXPR int sgn(T v) { return (v > T(0)) - (v < T(0)); }
 
-EMB_CONSTEXPR float to_rad(float deg) { return numbers::pi * deg / 180; }
+EMB_CONSTEXPR float to_rad(float deg) { return numbers::pi * deg / 180.0f; }
 
-EMB_CONSTEXPR float to_deg(float rad) { return 180 * rad / numbers::pi; }
+EMB_CONSTEXPR float to_deg(float rad) { return 180.0f * rad / numbers::pi; }
 
 EMB_CONSTEXPR bool ispow2(unsigned int v) { return v && ((v & (v - 1)) == 0); }
 
