@@ -42,11 +42,25 @@ const float inv_sqrt3 = 0.57735026918963f;
 } // namespace numbers
 
 template<typename T>
-EMB_CONSTEXPR int sgn(T v) { return (v > T(0)) - (v < T(0)); }
+EMB_CONSTEXPR int sgn(T v) {
+    return (v > T(0)) - (v < T(0));
+}
 
-EMB_CONSTEXPR float to_rad(float deg) { return numbers::pi * deg / 180.0f; }
+EMB_CONSTEXPR float to_rad(float deg) {
+    return numbers::pi * deg / 180.0f;
+}
 
-EMB_CONSTEXPR float to_deg(float rad) { return 180.0f * rad / numbers::pi; }
+EMB_CONSTEXPR float to_deg(float rad) {
+    return 180.0f * rad / numbers::pi;
+}
+
+EMB_CONSTEXPR float to_eradps(float n, int p) {
+    return numbers::two_pi * float(p) * n / 60.f;
+}
+
+EMB_CONSTEXPR float to_rpm(float w, int p) {
+    return 60.f * w / (numbers::two_pi * float(p));
+}
 
 EMB_CONSTEXPR bool ispow2(unsigned int v) { return v && ((v & (v - 1)) == 0); }
 

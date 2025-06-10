@@ -20,62 +20,6 @@ SCOPED_ENUM_UT_DECLARE_BEGIN(phase3, uint32_t) {
 // clang-format on
 #endif
 
-EMB_CONSTEXPR float to_eradps(float n, int p) {
-    return numbers::two_pi * float(p) * n / 60.f;
-}
-
-EMB_CONSTEXPR emb::units::eradps_t to_eradps(emb::units::rpm_t n, int p) {
-    return emb::units::eradps_t(to_eradps(n.numval(), p));
-}
-
-EMB_CONSTEXPR float to_rpm(float w, int p) {
-    return 60.f * w / (numbers::two_pi * float(p));
-}
-
-EMB_CONSTEXPR emb::units::rpm_t to_rpm(emb::units::eradps_t w, int p) {
-    return emb::units::rpm_t(to_rpm(w.numval(), p));
-}
-
-class motorspeed {
-private:
-    int p_;
-    units::eradps_t w_;
-public:
-    explicit motorspeed(int p) : p_(p), w_(0) {}
-
-    motorspeed(int p, units::eradps_t w) : p_(p) { set(w); }
-
-    motorspeed(int p, units::rpm_t n) : p_(p) { set(n); }
-
-    template<typename Unit>
-    motorspeed& operator=(Unit v) {
-        set(v);
-        return *this;
-    }
-
-    int p() const { return p_; }
-
-    units::eradps_t eradps() const { return w_; }
-
-    units::rpm_t rpm() const { return to_rpm(w_, p_); }
-private:
-    void set(units::eradps_t w) { w_ = w; }
-
-    void set(units::rpm_t n) { w_ = to_eradps(n, p_); }
-};
-
-inline motorspeed operator*(const motorspeed& lhs, float rhs) {
-    return motorspeed(lhs.p(), lhs.eradps() * rhs);
-}
-
-inline motorspeed operator*(float lhs, const motorspeed& rhs) {
-    return rhs * lhs;
-}
-
-inline motorspeed operator/(const motorspeed& lhs, float rhs) {
-    return motorspeed(lhs.p(), lhs.eradps() / rhs);
-}
-
 struct vec_alpha {
     float mag;
     float theta;

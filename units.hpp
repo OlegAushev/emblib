@@ -113,15 +113,63 @@ typedef named_unit<float, impl::edeg> edeg_t;
 typedef named_unit<float, impl::rad> rad_t;
 typedef named_unit<float, impl::deg> deg_t;
 
+EMB_CONSTEXPR eradps_t to_eradps(rpm_t n, int p) {
+    return eradps_t(emb::to_eradps(n.numval(), p));
+}
+
+EMB_CONSTEXPR rpm_t to_rpm(eradps_t w, int p) {
+    return rpm_t(emb::to_rpm(w.numval(), p));
+}
+
+class motorspeed_t {
+private:
+    int p_;
+    eradps_t w_;
+public:
+    explicit motorspeed_t(int p) : p_(p), w_(0) {}
+
+    motorspeed_t(int p, eradps_t w) : p_(p) { set(w); }
+
+    motorspeed_t(int p, rpm_t n) : p_(p) { set(n); }
+
+    template<typename Unit>
+    motorspeed_t& operator=(Unit v) {
+        set(v);
+        return *this;
+    }
+
+    int p() const { return p_; }
+
+    eradps_t eradps() const { return w_; }
+
+    rpm_t rpm() const { return to_rpm(w_, p_); }
+private:
+    void set(eradps_t w) { w_ = w; }
+
+    void set(rpm_t n) { w_ = to_eradps(n, p_); }
+};
+
+inline motorspeed_t operator*(const motorspeed_t& lhs, float rhs) {
+    return motorspeed_t(lhs.p(), lhs.eradps() * rhs);
+}
+
+inline motorspeed_t operator*(float lhs, const motorspeed_t& rhs) {
+    return rhs * lhs;
+}
+
+inline motorspeed_t operator/(const motorspeed_t& lhs, float rhs) {
+    return motorspeed_t(lhs.p(), lhs.eradps() / rhs);
+}
+
 class eangle_t {
 private:
-    units::erad_t erad_;
+    erad_t erad_;
 public:
     eangle_t() : erad_(0) {}
 
-    eangle_t(units::erad_t v) { set(v); }
+    eangle_t(erad_t v) { set(v); }
 
-    eangle_t(units::edeg_t v) { set(v); }
+    eangle_t(edeg_t v) { set(v); }
 
     template<typename Unit>
     eangle_t& operator=(Unit v) {
@@ -129,24 +177,24 @@ public:
         return *this;
     }
 
-    units::erad_t erad() const { return erad_; }
+    erad_t erad() const { return erad_; }
 
-    units::edeg_t edeg() const { return units::edeg_t(to_deg(erad_.numval())); }
+    edeg_t edeg() const { return edeg_t(to_deg(erad_.numval())); }
 private:
-    void set(units::erad_t v) { erad_ = v; }
+    void set(erad_t v) { erad_ = v; }
 
-    void set(units::edeg_t v) { erad_ = units::erad_t(to_rad(v.numval())); }
+    void set(edeg_t v) { erad_ = erad_t(to_rad(v.numval())); }
 };
 
 class angle_t {
 private:
-    units::rad_t rad_;
+    rad_t rad_;
 public:
     angle_t() : rad_(0) {}
 
-    angle_t(units::rad_t v) { set(v); }
+    angle_t(rad_t v) { set(v); }
 
-    angle_t(units::deg_t v) { set(v); }
+    angle_t(deg_t v) { set(v); }
 
     template<typename Unit>
     angle_t& operator=(Unit v) {
@@ -154,13 +202,13 @@ public:
         return *this;
     }
 
-    units::rad_t rad() const { return rad_; }
+    rad_t rad() const { return rad_; }
 
-    units::deg_t deg() const { return units::deg_t(to_deg(rad_.numval())); }
+    deg_t deg() const { return deg_t(to_deg(rad_.numval())); }
 private:
-    void set(units::rad_t v) { rad_ = v; }
+    void set(rad_t v) { rad_ = v; }
 
-    void set(units::deg_t v) { rad_ = units::rad_t(to_rad(v.numval())); }
+    void set(deg_t v) { rad_ = rad_t(to_rad(v.numval())); }
 };
 
 } // namespace units
