@@ -14,22 +14,23 @@ namespace emb {
 
 class noncopyable {
 protected:
-    noncopyable() = default;
-    ~noncopyable() = default;
+  noncopyable() = default;
+  ~noncopyable() = default;
 public:
-    noncopyable(const noncopyable& other) = delete;
-    noncopyable& operator=(const noncopyable& other) = delete;
+  noncopyable(noncopyable const& other) = delete;
+  noncopyable& operator=(noncopyable const& other) = delete;
 };
 
 #else
 
 class noncopyable {
 protected:
-    noncopyable() {}
-    ~noncopyable() {}
+  noncopyable() {}
+
+  ~noncopyable() {}
 private:
-    noncopyable(const noncopyable&);
-    const noncopyable& operator=(const noncopyable&);
+  noncopyable(noncopyable const&);
+  noncopyable const& operator=(noncopyable const&);
 };
 
 #endif
