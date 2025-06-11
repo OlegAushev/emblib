@@ -174,9 +174,9 @@ private:
 public:
   eangle_t() : erad_(0) {}
 
-  eangle_t(erad_t v) { set(v); }
+  explicit eangle_t(erad_t v) { set(v); }
 
-  eangle_t(edeg_t v) { set(v); }
+  explicit eangle_t(edeg_t v) { set(v); }
 
   template<typename Unit>
   eangle_t& operator=(Unit v) {
@@ -199,9 +199,9 @@ private:
 public:
   angle_t() : rad_(0) {}
 
-  angle_t(rad_t v) { set(v); }
+  explicit angle_t(rad_t v) { set(v); }
 
-  angle_t(deg_t v) { set(v); }
+  explicit angle_t(deg_t v) { set(v); }
 
   template<typename Unit>
   angle_t& operator=(Unit v) {
