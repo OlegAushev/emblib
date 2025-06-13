@@ -128,10 +128,8 @@ private:
 public:
   range<T> output_range;
 
-  integrator(Time const& ts_,
-             range<T> const& output_range_,
-             T const& initvalue_)
-      : ts_(ts_), initval_(initvalue_), output_range(output_range_) {
+  integrator(Time const& ts, range<T> const& outrange, T const& initval)
+      : ts_(ts), initval_(initval), output_range(outrange) {
     reset();
   }
 
@@ -152,7 +150,7 @@ public:
         clamp(initval_, output_range.lower_bound(), output_range.upper_bound());
   }
 
-  void set_sampling_period(float v) { ts_ = v; }
+  void set_sampling_period(float ts) { ts_ = ts; }
 };
 
 class signed_pu {
