@@ -4,7 +4,7 @@
 #include <emblib/noncopyable.hpp>
 #include <emblib/scopedenum.hpp>
 
-namespace mcu {
+namespace emb {
 namespace gpio {
 
 #if __cplusplus >= 201100
@@ -14,27 +14,27 @@ enum class active_state : unsigned int {
   high = 1
 };
 
-enum class pin_state : unsigned int {
+enum class state : unsigned int {
   inactive = 0,
   active = 1
 };
 
-class input_pin {
+class input {
 public:
-  input_pin() = default;
-  virtual ~input_pin() = default;
+  input() = default;
+  virtual ~input() = default;
 
-  virtual pin_state read() const = 0;
+  virtual state read() const = 0;
   virtual unsigned int read_level() const = 0;
 };
 
-class output_pin {
+class output {
 public:
-  output_pin() = default;
-  virtual ~output_pin() = default;
+  output() = default;
+  virtual ~output() = default;
 
-  virtual pin_state read() const = 0;
-  virtual void set(pin_state s = pin_state::active) = 0;
+  virtual state read() const = 0;
+  virtual void set(state s = state::active) = 0;
   virtual void reset() = 0;
   virtual void toggle() = 0;
   virtual unsigned int read_level() const = 0;
@@ -141,4 +141,4 @@ public:
 
 } // namespace uart
 
-} // namespace mcu
+} // namespace emb
