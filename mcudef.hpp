@@ -48,30 +48,28 @@ SCOPED_ENUM_UT_DECLARE_BEGIN(active_state, unsigned int) {
   high = 1
 } SCOPED_ENUM_DECLARE_END(active_state);
 
-SCOPED_ENUM_UT_DECLARE_BEGIN(pin_state, unsigned int) {
+SCOPED_ENUM_UT_DECLARE_BEGIN(state, unsigned int) {
   inactive = 0,
   active = 1
-} SCOPED_ENUM_DECLARE_END(pin_state);
+} SCOPED_ENUM_DECLARE_END(state);
 // clang-format on
 
-class digital_input {
+class input {
 public:
-  digital_input() {}
+  input() {}
+  virtual ~input() {}
 
-  virtual ~digital_input() {}
-
-  virtual pin_state read() const = 0;
+  virtual state read() const = 0;
   virtual unsigned int read_level() const = 0;
 };
 
-class digital_output {
+class output {
 public:
-  digital_output() {}
+  output() {}
+  virtual ~output() {}
 
-  virtual ~digital_output() {}
-
-  virtual pin_state read() const = 0;
-  virtual void set(pin_state s = pin_state::active) = 0;
+  virtual state read() const = 0;
+  virtual void set(state s = state::active) = 0;
   virtual void reset() = 0;
   virtual void toggle() = 0;
   virtual unsigned int read_level() const = 0;
