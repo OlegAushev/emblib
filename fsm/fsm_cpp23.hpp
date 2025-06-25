@@ -16,7 +16,7 @@ class abstract_state {
   static_assert(std::is_enum_v<State>);
 private:
   State const id_;
-  std::chrono::milliseconds enter_timepoint_;
+  std::chrono::time_point<emb::chrono::steady_clock> enter_timepoint_;
 protected:
   abstract_state(State id)
       : id_(id), enter_timepoint_(emb::chrono::steady_clock::now()) {}

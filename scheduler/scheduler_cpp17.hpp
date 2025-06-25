@@ -21,7 +21,7 @@ private:
 
   struct task {
     std::chrono::milliseconds period;
-    std::chrono::milliseconds timepoint;
+    std::chrono::time_point<emb::chrono::steady_clock> timepoint;
     task_execstatus (*func)(size_t);
   };
 
@@ -30,7 +30,8 @@ private:
   static task_execstatus empty_task(size_t) { return task_execstatus::success; }
 
 private:
-  static inline std::chrono::milliseconds delayed_task_start_{0};
+  static inline std::chrono::time_point<emb::chrono::steady_clock>
+      delayed_task_start_{};
   static inline std::chrono::milliseconds delayed_task_delay_{0};
 
   static void empty_delayed_task() {}
@@ -40,10 +41,7 @@ private:
 public:
   basic_scheduler() = delete;
 
-  static void init() {
-    assert(emb::chrono::steady_clock::initialized());
-    initialized_ = true;
-  }
+  static void init() { initialized_ = true; }
 
   static void add_task(task_execstatus (*func)(size_t),
                        std::chrono::milliseconds period) {
