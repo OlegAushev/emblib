@@ -43,7 +43,7 @@ float const inv_sqrt3 = 0.57735026918963f;
 
 template<typename T>
 EMB_CONSTEXPR int sgn(T v) {
-  return (v > T(0)) - (v < T(0));
+  return (T(0) < v) - (v < T(0));
 }
 
 EMB_CONSTEXPR float to_rad(float deg) {
