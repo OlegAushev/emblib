@@ -19,18 +19,20 @@ private:
   std::chrono::time_point<emb::chrono::steady_clock> enter_timepoint_;
 protected:
   abstract_state(State id)
-      : id_(id), enter_timepoint_(emb::chrono::steady_clock::now()) {}
+      : id_{id}, enter_timepoint_{emb::chrono::steady_clock::now()} {}
 
   static void change_state(Object* object, State state) {
     [[maybe_unused]] LockGuard lock_guard;
-    object->current_state_->finalize(object);
+    State const prev_state{object->state()};
+    State const next_state{state};
+    object->state_->finalize(object, next_state);
     object->change_state(state);
-    object->current_state_->enter_timepoint_ = emb::chrono::steady_clock::now();
-    object->current_state_->initiate(object);
+    object->state_->enter_timepoint_ = emb::chrono::steady_clock::now();
+    object->state_->initiate(object, prev_state);
   }
 
-  virtual void initiate(Object* object) = 0;
-  virtual void finalize(Object* object) = 0;
+  virtual void initiate(Object* object, State prev_state) = 0;
+  virtual void finalize(Object* object, State next_state) = 0;
 public:
   virtual ~abstract_state() {}
 
@@ -41,32 +43,32 @@ public:
   }
 };
 
-template<typename State, typename AbstractState, size_t StateCount>
+template<typename State, typename AbstractState, size_t StateNum>
 class abstract_object {
   static_assert(std::is_enum_v<State>);
 private:
-  std::array<AbstractState*, StateCount> states_;
+  std::array<AbstractState*, StateNum> states_;
 protected:
-  AbstractState* current_state_;
+  AbstractState* state_;
 
   void change_state(State state) {
-    current_state_ = states_[std::to_underlying(state)];
+    state_ = states_[std::to_underlying(state)];
   }
 public:
   abstract_object(State init_state) {
-    for (size_t i = 0; i < StateCount; ++i) {
+    for (auto i{0uz}; i < StateNum; ++i) {
       states_[i] = AbstractState::create(static_cast<State>(i));
     }
     change_state(init_state);
   }
 
   virtual ~abstract_object() {
-    for (size_t i = 0; i < StateCount; ++i) {
+    for (auto i{0uz}; i < StateNum; ++i) {
       AbstractState::destroy(static_cast<State>(i), states_[i]);
     }
   }
 
-  State state() const { return current_state_->id(); }
+  State state() const { return state_->id(); }
 };
 
 } // namespace fsm
