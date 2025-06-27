@@ -9,12 +9,20 @@ namespace gpio {
 
 #if __cplusplus >= 201100
 
-enum class active_state : unsigned int {
+enum class level : int {
   low = 0,
   high = 1
 };
 
-enum class state : unsigned int {
+constexpr level operator!(level lvl) {
+  if (lvl == level::low) {
+    return level::high;
+  } else {
+    return level::low;
+  }
+}
+
+enum class state : int {
   inactive = 0,
   active = 1
 };
@@ -25,7 +33,7 @@ public:
   virtual ~input() = default;
 
   virtual state read() const = 0;
-  virtual unsigned int read_level() const = 0;
+  virtual level read_level() const = 0;
 };
 
 class output {
@@ -37,8 +45,8 @@ public:
   virtual void set(state s = state::active) = 0;
   virtual void reset() = 0;
   virtual void toggle() = 0;
-  virtual unsigned int read_level() const = 0;
-  virtual void set_level(unsigned int level) = 0;
+  virtual level read_level() const = 0;
+  virtual void set_level(level lvl) = 0;
 };
 
 #else
