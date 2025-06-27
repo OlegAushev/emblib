@@ -72,7 +72,7 @@ public:
     sum_ = value * T(size_);
   }
 
-  virtual void reset() EMB_OVERRIDE { set_output(0); }
+  virtual void reset() EMB_OVERRIDE { set_output(T(0)); }
 
   size_t size() const { return size_; }
 
@@ -116,7 +116,7 @@ public:
     out_ = value;
   }
 
-  virtual void reset() EMB_OVERRIDE { set_output(0); }
+  virtual void reset() EMB_OVERRIDE { set_output(T(0)); }
 };
 
 template<typename T>
@@ -145,7 +145,7 @@ public:
 
   virtual void set_output(T value) EMB_OVERRIDE { out_ = value; }
 
-  virtual void reset() EMB_OVERRIDE { set_output(0); }
+  virtual void reset() EMB_OVERRIDE { set_output(T(0)); }
 
   void init(float sampling_period, float time_constant) {
     sampling_period_ = sampling_period;
@@ -199,7 +199,7 @@ public:
     out_ = value;
   }
 
-  virtual void reset() EMB_OVERRIDE { set_output(0); }
+  virtual void reset() EMB_OVERRIDE { set_output(T(0)); }
 
   void init(float sampling_period, float time_constant) {
     sampling_period_ = sampling_period;
