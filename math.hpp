@@ -25,9 +25,9 @@ inline constexpr float pi_over_4 = pi / 4.0f;
 inline constexpr float pi_over_3 = pi / 3.0f;
 inline constexpr float pi_over_6 = pi / 6.0f;
 inline constexpr float two_pi = 2.0f * pi;
-inline float sqrt_2 = std::sqrt(2.0f);
-inline float sqrt_3 = std::sqrt(3.0f);
-inline constexpr float inv_sqrt3 = 0.57735026918963f;
+inline constexpr float sqrt_2 = 1.41421356237f;
+inline constexpr float sqrt_3 = 1.73205080757f;
+inline constexpr float inv_sqrt3 = 1 / sqrt_3;
 #else
 const float pi = MATH_PI;
 float const pi_over_2 = MATH_PI_OVER_TWO;
