@@ -62,9 +62,25 @@ EMB_CONSTEXPR float to_rpm(float w, int p) {
   return 60.f * w / (numbers::two_pi * float(p));
 }
 
+#if __cplusplus < 202000
+
 EMB_CONSTEXPR bool ispow2(unsigned int v) {
   return v && ((v & (v - 1)) == 0);
 }
+
+#endif
+
+#ifdef __cpp_concepts
+
+constexpr bool iseven(std::integral auto v) {
+  return v % 2 == 0;
+}
+
+constexpr bool isodd(std::integral auto v) {
+  return !iseven(v);
+}
+
+#endif
 
 inline float rem_2pi(float v) {
   v = fmodf(v, numbers::two_pi);
