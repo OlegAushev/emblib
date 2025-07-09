@@ -82,7 +82,7 @@ constexpr bool isodd(std::integral auto v) {
 
 #endif
 
-inline float rem_2pi(float v) {
+inline float rem2pi(float v) {
   v = fmodf(v, numbers::two_pi);
   if (v < 0) {
     v += numbers::two_pi;
@@ -90,7 +90,7 @@ inline float rem_2pi(float v) {
   return v;
 }
 
-inline float rem_pi(float v) {
+inline float rempi(float v) {
   v = fmodf(v + numbers::pi, numbers::two_pi);
   if (v < 0) {
     v += numbers::two_pi;

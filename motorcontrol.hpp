@@ -97,7 +97,7 @@ inline emb::array<emb::unsigned_pu, 3> calculate_sinpwm(vec_alphabeta v_s,
 
 inline emb::array<emb::unsigned_pu, 3> calculate_svpwm(vec_alpha v_s,
                                                        float v_dc) {
-  v_s.theta = rem_2pi(v_s.theta);
+  v_s.theta = rem2pi(v_s.theta);
   v_s.mag = clamp<float>(v_s.mag, 0, v_dc / numbers::sqrt_3);
 
   int32_t sector = static_cast<int32_t>(v_s.theta / numbers::pi_over_3);

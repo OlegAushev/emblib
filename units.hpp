@@ -120,13 +120,59 @@ typedef named_unit<float, impl::edeg> edeg_t;
 typedef named_unit<float, impl::rad> rad_t;
 typedef named_unit<float, impl::deg> deg_t;
 
-EMB_INLINE_CONSTEXPR eradps_t to_eradps(rpm_t n, int p) {
-  return eradps_t(emb::to_eradps(n.numval(), p));
+#ifdef __cpp_concepts
+
+template<typename Unit>
+concept RadianUnit = std::same_as<Unit, erad_t> || std::same_as<Unit, rad_t>;
+
+template<typename Unit>
+concept DegreeUnit = std::same_as<Unit, edeg_t> || std::same_as<Unit, deg_t>;
+
+#endif
+
+} // namespace units
+
+#ifdef __cpp_concepts
+
+template<units::RadianUnit Unit>
+Unit rem2pi(Unit v) {
+  return Unit{rem2pi(v.numval())};
 }
 
-EMB_INLINE_CONSTEXPR rpm_t to_rpm(eradps_t w, int p) {
-  return rpm_t(emb::to_rpm(w.numval(), p));
+template<units::RadianUnit Unit>
+Unit rempi(Unit v) {
+  return Unit{rempi(v.numval())};
 }
+
+template<units::DegreeUnit Unit>
+Unit rem2pi(Unit v) {
+  float v_ = fmodf(v.numval(), to_deg(numbers::two_pi));
+  if (v_ < 0) {
+    v_ += to_deg(numbers::two_pi);
+  }
+  return Unit{v_};
+}
+
+template<units::DegreeUnit Unit>
+Unit rempi(Unit v) {
+  float v_ = fmodf(v.numval() + to_deg(numbers::pi), to_deg(numbers::two_pi));
+  if (v_ < 0) {
+    v_ += to_deg(numbers::two_pi);
+  }
+  return Unit{v_ - to_deg(numbers::pi)};
+}
+
+#endif
+
+EMB_INLINE_CONSTEXPR units::eradps_t to_eradps(units::rpm_t n, int p) {
+  return units::eradps_t(emb::to_eradps(n.numval(), p));
+}
+
+EMB_INLINE_CONSTEXPR units::rpm_t to_rpm(units::eradps_t w, int p) {
+  return units::rpm_t(emb::to_rpm(w.numval(), p));
+}
+
+namespace units {
 
 class motorspeed_t {
 private:
