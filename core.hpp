@@ -30,9 +30,11 @@
 #endif
 
 #if __cpp_constexpr >= 201304
+#define EMB_INLINE_CONSTEXPR constexpr
 #define EMB_CONSTEXPR constexpr
 #else
-#define EMB_CONSTEXPR inline
+#define EMB_INLINE_CONSTEXPR inline
+#define EMB_CONSTEXPR
 #endif
 
 #if __cplusplus >= 201700

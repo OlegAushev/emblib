@@ -42,29 +42,29 @@ float const inv_sqrt3 = 0.57735026918963f;
 } // namespace numbers
 
 template<typename T>
-EMB_CONSTEXPR int sgn(T v) {
+EMB_INLINE_CONSTEXPR int sgn(T v) {
   return (T(0) < v) - (v < T(0));
 }
 
-EMB_CONSTEXPR float to_rad(float deg) {
+EMB_INLINE_CONSTEXPR float to_rad(float deg) {
   return numbers::pi * deg / 180.0f;
 }
 
-EMB_CONSTEXPR float to_deg(float rad) {
+EMB_INLINE_CONSTEXPR float to_deg(float rad) {
   return 180.0f * rad / numbers::pi;
 }
 
-EMB_CONSTEXPR float to_eradps(float n, int p) {
+EMB_INLINE_CONSTEXPR float to_eradps(float n, int p) {
   return numbers::two_pi * float(p) * n / 60.0f;
 }
 
-EMB_CONSTEXPR float to_rpm(float w, int p) {
+EMB_INLINE_CONSTEXPR float to_rpm(float w, int p) {
   return 60.f * w / (numbers::two_pi * float(p));
 }
 
 #if __cplusplus < 202000
 
-EMB_CONSTEXPR bool ispow2(unsigned int v) {
+EMB_INLINE_CONSTEXPR bool ispow2(unsigned int v) {
   return v && ((v & (v - 1)) == 0);
 }
 
@@ -173,70 +173,79 @@ class signed_pu {
 private:
   float v_;
 public:
-  signed_pu() : v_(0.0f) {}
+  EMB_CONSTEXPR signed_pu() : v_(0.0f) {}
 
-  explicit signed_pu(float v) : v_(emb::clamp(v, -1.0f, 1.0f)) {}
+  EMB_CONSTEXPR explicit signed_pu(float v) : v_(emb::clamp(v, -1.0f, 1.0f)) {}
 
-  signed_pu(float v, float base) : v_(emb::clamp(v / base, -1.0f, 1.0f)) {}
+  EMB_CONSTEXPR signed_pu(float v, float base)
+      : v_(emb::clamp(v / base, -1.0f, 1.0f)) {}
 
-  float numval() const { return v_; }
+  EMB_CONSTEXPR float numval() const { return v_; }
 
-  signed_pu& operator+=(signed_pu const& rhs) {
+  EMB_CONSTEXPR signed_pu& operator+=(signed_pu const& rhs) {
     set(v_ + rhs.v_);
     return *this;
   }
 
-  signed_pu& operator-=(signed_pu const& rhs) {
+  EMB_CONSTEXPR signed_pu& operator-=(signed_pu const& rhs) {
     set(v_ - rhs.v_);
     return *this;
   }
 private:
-  void set(float v) { v_ = emb::clamp(v, -1.0f, 1.0f); }
+  EMB_CONSTEXPR void set(float v) { v_ = emb::clamp(v, -1.0f, 1.0f); }
 };
 
-inline bool operator==(signed_pu const& lhs, signed_pu const& rhs) {
+EMB_INLINE_CONSTEXPR bool
+operator==(signed_pu const& lhs, signed_pu const& rhs) {
   return lhs.numval() == rhs.numval();
 }
 
-inline bool operator!=(signed_pu const& lhs, signed_pu const& rhs) {
+EMB_INLINE_CONSTEXPR bool
+operator!=(signed_pu const& lhs, signed_pu const& rhs) {
   return lhs.numval() != rhs.numval();
 }
 
-inline bool operator<(signed_pu const& lhs, signed_pu const& rhs) {
+EMB_INLINE_CONSTEXPR bool
+operator<(signed_pu const& lhs, signed_pu const& rhs) {
   return lhs.numval() < rhs.numval();
 }
 
-inline bool operator>(signed_pu const& lhs, signed_pu const& rhs) {
+EMB_INLINE_CONSTEXPR bool
+operator>(signed_pu const& lhs, signed_pu const& rhs) {
   return lhs.numval() > rhs.numval();
 }
 
-inline bool operator<=(signed_pu const& lhs, signed_pu const& rhs) {
+EMB_INLINE_CONSTEXPR bool
+operator<=(signed_pu const& lhs, signed_pu const& rhs) {
   return lhs.numval() <= rhs.numval();
 }
 
-inline bool operator>=(signed_pu const& lhs, signed_pu const& rhs) {
+EMB_INLINE_CONSTEXPR bool
+operator>=(signed_pu const& lhs, signed_pu const& rhs) {
   return lhs.numval() >= rhs.numval();
 }
 
-inline signed_pu operator+(signed_pu const& lhs, signed_pu const& rhs) {
+EMB_INLINE_CONSTEXPR signed_pu
+operator+(signed_pu const& lhs, signed_pu const& rhs) {
   signed_pu tmp = lhs;
   return tmp += rhs;
 }
 
-inline signed_pu operator-(signed_pu const& lhs, signed_pu const& rhs) {
+EMB_INLINE_CONSTEXPR signed_pu
+operator-(signed_pu const& lhs, signed_pu const& rhs) {
   signed_pu tmp = lhs;
   return tmp -= rhs;
 }
 
-inline signed_pu operator*(signed_pu const& lhs, float rhs) {
+EMB_INLINE_CONSTEXPR signed_pu operator*(signed_pu const& lhs, float rhs) {
   return signed_pu(lhs.numval() * rhs);
 }
 
-inline signed_pu operator*(float lhs, signed_pu const& rhs) {
+EMB_INLINE_CONSTEXPR signed_pu operator*(float lhs, signed_pu const& rhs) {
   return rhs * lhs;
 }
 
-inline signed_pu operator/(signed_pu const& lhs, float rhs) {
+EMB_INLINE_CONSTEXPR signed_pu operator/(signed_pu const& lhs, float rhs) {
   return signed_pu(lhs.numval() / rhs);
 }
 
@@ -244,70 +253,79 @@ class unsigned_pu {
 private:
   float v_;
 public:
-  unsigned_pu() : v_(0.0f) {}
+  EMB_CONSTEXPR unsigned_pu() : v_(0.0f) {}
 
-  explicit unsigned_pu(float v) : v_(emb::clamp(v, 0.0f, 1.0f)) {}
+  EMB_CONSTEXPR explicit unsigned_pu(float v) : v_(emb::clamp(v, 0.0f, 1.0f)) {}
 
-  unsigned_pu(float v, float base) : v_(emb::clamp(v / base, 0.0f, 1.0f)) {}
+  EMB_CONSTEXPR unsigned_pu(float v, float base)
+      : v_(emb::clamp(v / base, 0.0f, 1.0f)) {}
 
-  float numval() const { return v_; }
+  EMB_CONSTEXPR float numval() const { return v_; }
 
-  unsigned_pu& operator+=(unsigned_pu const& rhs) {
+  EMB_CONSTEXPR unsigned_pu& operator+=(unsigned_pu const& rhs) {
     set(v_ + rhs.v_);
     return *this;
   }
 
-  unsigned_pu& operator-=(unsigned_pu const& rhs) {
+  EMB_CONSTEXPR unsigned_pu& operator-=(unsigned_pu const& rhs) {
     set(v_ - rhs.v_);
     return *this;
   }
 private:
-  void set(float v) { v_ = emb::clamp(v, 0.0f, 1.0f); }
+  EMB_CONSTEXPR void set(float v) { v_ = emb::clamp(v, 0.0f, 1.0f); }
 };
 
-inline bool operator==(unsigned_pu const& lhs, unsigned_pu const& rhs) {
+EMB_INLINE_CONSTEXPR bool
+operator==(unsigned_pu const& lhs, unsigned_pu const& rhs) {
   return lhs.numval() == rhs.numval();
 }
 
-inline bool operator!=(unsigned_pu const& lhs, unsigned_pu const& rhs) {
+EMB_INLINE_CONSTEXPR bool
+operator!=(unsigned_pu const& lhs, unsigned_pu const& rhs) {
   return lhs.numval() != rhs.numval();
 }
 
-inline bool operator<(unsigned_pu const& lhs, unsigned_pu const& rhs) {
+EMB_INLINE_CONSTEXPR bool
+operator<(unsigned_pu const& lhs, unsigned_pu const& rhs) {
   return lhs.numval() < rhs.numval();
 }
 
-inline bool operator>(unsigned_pu const& lhs, unsigned_pu const& rhs) {
+EMB_INLINE_CONSTEXPR bool
+operator>(unsigned_pu const& lhs, unsigned_pu const& rhs) {
   return lhs.numval() > rhs.numval();
 }
 
-inline bool operator<=(unsigned_pu const& lhs, unsigned_pu const& rhs) {
+EMB_INLINE_CONSTEXPR bool
+operator<=(unsigned_pu const& lhs, unsigned_pu const& rhs) {
   return lhs.numval() <= rhs.numval();
 }
 
-inline bool operator>=(unsigned_pu const& lhs, unsigned_pu const& rhs) {
+EMB_INLINE_CONSTEXPR bool
+operator>=(unsigned_pu const& lhs, unsigned_pu const& rhs) {
   return lhs.numval() >= rhs.numval();
 }
 
-inline unsigned_pu operator+(unsigned_pu const& lhs, unsigned_pu const& rhs) {
+EMB_INLINE_CONSTEXPR unsigned_pu
+operator+(unsigned_pu const& lhs, unsigned_pu const& rhs) {
   unsigned_pu tmp = lhs;
   return tmp += rhs;
 }
 
-inline unsigned_pu operator-(unsigned_pu const& lhs, unsigned_pu const& rhs) {
+EMB_INLINE_CONSTEXPR unsigned_pu
+operator-(unsigned_pu const& lhs, unsigned_pu const& rhs) {
   unsigned_pu tmp = lhs;
   return tmp -= rhs;
 }
 
-inline unsigned_pu operator*(unsigned_pu const& lhs, float rhs) {
+EMB_INLINE_CONSTEXPR unsigned_pu operator*(unsigned_pu const& lhs, float rhs) {
   return unsigned_pu(lhs.numval() * rhs);
 }
 
-inline unsigned_pu operator*(float lhs, unsigned_pu const& rhs) {
+EMB_INLINE_CONSTEXPR unsigned_pu operator*(float lhs, unsigned_pu const& rhs) {
   return rhs * lhs;
 }
 
-inline unsigned_pu operator/(unsigned_pu const& lhs, float rhs) {
+EMB_INLINE_CONSTEXPR unsigned_pu operator/(unsigned_pu const& lhs, float rhs) {
   return unsigned_pu(lhs.numval() / rhs);
 }
 
