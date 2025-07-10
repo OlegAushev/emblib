@@ -225,7 +225,7 @@ private:
   T ref_;
   T out_;
 public:
-  ramp_filter() : update_period_(0), slope_(T(0)), step_(T(0)) { reset(); }
+  ramp_filter() : update_period_(0), slope_(T()), step_(T()) { reset(); }
 
   ramp_filter(float update_period, T slope) {
     init(update_period, slope);
@@ -241,14 +241,14 @@ public:
     out_ = value;
   }
 
-  virtual void reset() EMB_OVERRIDE { set_output(T(0)); }
+  virtual void reset() EMB_OVERRIDE { set_output(T()); }
 
   void init(float update_period, T slope) {
     assert(update_period > 0);
     assert(slope > T(0));
     update_period_ = update_period;
     slope_ = slope;
-    step_ = emb::clamp(update_period * slope, T(-FLT_MAX), T(FLT_MAX));
+    step_ = update_period * slope;
   }
 
   void update() {

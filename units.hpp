@@ -128,6 +128,12 @@ concept RadianUnit = std::same_as<Unit, erad_t> || std::same_as<Unit, rad_t>;
 template<typename Unit>
 concept DegreeUnit = std::same_as<Unit, edeg_t> || std::same_as<Unit, deg_t>;
 
+template<typename Unit>
+concept EAngleUnit = std::same_as<Unit, erad_t> || std::same_as<Unit, edeg_t>;
+
+template<typename Unit>
+concept AngleUnit = std::same_as<Unit, rad_t> || std::same_as<Unit, deg_t>;
+
 #endif
 
 } // namespace units
@@ -174,6 +180,7 @@ EMB_INLINE_CONSTEXPR units::rpm_t to_rpm(units::eradps_t w, int p) {
 
 namespace units {
 
+/*============================================================================*/
 class motorspeed_t {
 private:
   int p_;
@@ -217,6 +224,9 @@ operator/(motorspeed_t const& lhs, float rhs) {
   return motorspeed_t(lhs.p(), lhs.eradps() / rhs);
 }
 
+/*============================================================================*/
+
+/*============================================================================*/
 class eangle_t {
 private:
   erad_t erad_;
@@ -236,12 +246,73 @@ public:
   EMB_CONSTEXPR erad_t erad() const { return erad_; }
 
   EMB_CONSTEXPR edeg_t edeg() const { return edeg_t(to_deg(erad_.numval())); }
+
+  EMB_CONSTEXPR eangle_t& operator+=(eangle_t const& rhs) {
+    erad_ += rhs.erad_;
+    return *this;
+  }
+
+  EMB_CONSTEXPR eangle_t& operator-=(eangle_t const& rhs) {
+    erad_ -= rhs.erad_;
+    return *this;
+  }
 private:
   EMB_CONSTEXPR void set(erad_t v) { erad_ = v; }
 
   EMB_CONSTEXPR void set(edeg_t v) { erad_ = erad_t(to_rad(v.numval())); }
 };
 
+EMB_INLINE_CONSTEXPR bool operator==(eangle_t const& lhs, eangle_t const& rhs) {
+  return lhs.erad() == rhs.erad();
+}
+
+EMB_INLINE_CONSTEXPR bool operator!=(eangle_t const& lhs, eangle_t const& rhs) {
+  return lhs.erad() != rhs.erad();
+}
+
+EMB_INLINE_CONSTEXPR bool operator<(eangle_t const& lhs, eangle_t const& rhs) {
+  return lhs.erad() < rhs.erad();
+}
+
+EMB_INLINE_CONSTEXPR bool operator>(eangle_t const& lhs, eangle_t const& rhs) {
+  return lhs.erad() > rhs.erad();
+}
+
+EMB_INLINE_CONSTEXPR bool operator<=(eangle_t const& lhs, eangle_t const& rhs) {
+  return lhs.erad() <= rhs.erad();
+}
+
+EMB_INLINE_CONSTEXPR bool operator>=(eangle_t const& lhs, eangle_t const& rhs) {
+  return lhs.erad() >= rhs.erad();
+}
+
+EMB_INLINE_CONSTEXPR eangle_t
+operator+(eangle_t const& lhs, eangle_t const& rhs) {
+  eangle_t tmp = lhs;
+  return tmp += rhs;
+}
+
+EMB_INLINE_CONSTEXPR eangle_t
+operator-(eangle_t const& lhs, eangle_t const& rhs) {
+  eangle_t tmp = lhs;
+  return tmp -= rhs;
+}
+
+EMB_INLINE_CONSTEXPR eangle_t operator*(eangle_t const& lhs, float rhs) {
+  return eangle_t(lhs.erad() * rhs);
+}
+
+EMB_INLINE_CONSTEXPR eangle_t operator*(float lhs, eangle_t const& rhs) {
+  return rhs * lhs;
+}
+
+EMB_INLINE_CONSTEXPR eangle_t operator/(eangle_t const& lhs, float rhs) {
+  return eangle_t(lhs.erad() / rhs);
+}
+
+/*============================================================================*/
+
+/*============================================================================*/
 class angle_t {
 private:
   rad_t rad_;
@@ -261,11 +332,69 @@ public:
   EMB_CONSTEXPR rad_t rad() const { return rad_; }
 
   EMB_CONSTEXPR deg_t deg() const { return deg_t(to_deg(rad_.numval())); }
+
+  EMB_CONSTEXPR angle_t& operator+=(angle_t const& rhs) {
+    rad_ += rhs.rad_;
+    return *this;
+  }
+
+  EMB_CONSTEXPR angle_t& operator-=(angle_t const& rhs) {
+    rad_ -= rhs.rad_;
+    return *this;
+  }
 private:
   EMB_CONSTEXPR void set(rad_t v) { rad_ = v; }
 
   EMB_CONSTEXPR void set(deg_t v) { rad_ = rad_t(to_rad(v.numval())); }
 };
+
+EMB_INLINE_CONSTEXPR bool operator==(angle_t const& lhs, angle_t const& rhs) {
+  return lhs.rad() == rhs.rad();
+}
+
+EMB_INLINE_CONSTEXPR bool operator!=(angle_t const& lhs, angle_t const& rhs) {
+  return lhs.rad() != rhs.rad();
+}
+
+EMB_INLINE_CONSTEXPR bool operator<(angle_t const& lhs, angle_t const& rhs) {
+  return lhs.rad() < rhs.rad();
+}
+
+EMB_INLINE_CONSTEXPR bool operator>(angle_t const& lhs, angle_t const& rhs) {
+  return lhs.rad() > rhs.rad();
+}
+
+EMB_INLINE_CONSTEXPR bool operator<=(angle_t const& lhs, angle_t const& rhs) {
+  return lhs.rad() <= rhs.rad();
+}
+
+EMB_INLINE_CONSTEXPR bool operator>=(angle_t const& lhs, angle_t const& rhs) {
+  return lhs.rad() >= rhs.rad();
+}
+
+EMB_INLINE_CONSTEXPR angle_t operator+(angle_t const& lhs, angle_t const& rhs) {
+  angle_t tmp = lhs;
+  return tmp += rhs;
+}
+
+EMB_INLINE_CONSTEXPR angle_t operator-(angle_t const& lhs, angle_t const& rhs) {
+  angle_t tmp = lhs;
+  return tmp -= rhs;
+}
+
+EMB_INLINE_CONSTEXPR angle_t operator*(angle_t const& lhs, float rhs) {
+  return angle_t(lhs.rad() * rhs);
+}
+
+EMB_INLINE_CONSTEXPR angle_t operator*(float lhs, angle_t const& rhs) {
+  return rhs * lhs;
+}
+
+EMB_INLINE_CONSTEXPR angle_t operator/(angle_t const& lhs, float rhs) {
+  return angle_t(lhs.rad() / rhs);
+}
+
+/*============================================================================*/
 
 } // namespace units
 } // namespace emb
