@@ -170,6 +170,22 @@ Unit rempi(Unit v) {
 
 #endif
 
+EMB_INLINE_CONSTEXPR units::erad_t to_rad(units::edeg_t deg) {
+  return units::erad_t(emb::to_rad(deg.numval()));
+}
+
+EMB_INLINE_CONSTEXPR units::edeg_t to_deg(units::erad_t rad) {
+  return units::edeg_t(emb::to_deg(rad.numval()));
+}
+
+EMB_INLINE_CONSTEXPR units::rad_t to_rad(units::deg_t deg) {
+  return units::rad_t(emb::to_rad(deg.numval()));
+}
+
+EMB_INLINE_CONSTEXPR units::deg_t to_deg(units::rad_t rad) {
+  return units::deg_t(emb::to_deg(rad.numval()));
+}
+
 EMB_INLINE_CONSTEXPR units::eradps_t to_eradps(units::rpm_t n, int p) {
   return units::eradps_t(emb::to_eradps(n.numval(), p));
 }
