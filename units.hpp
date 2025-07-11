@@ -225,6 +225,37 @@ private:
   EMB_CONSTEXPR void set(rpm_t n) { w_ = to_eradps(n, p_); }
 };
 
+// NOTE: if lhs.p() != rhs.p() then comparison operator behaviour is undefined
+EMB_INLINE_CONSTEXPR bool
+operator==(motorspeed_t const& lhs, motorspeed_t const& rhs) {
+  return lhs.eradps() == rhs.eradps();
+}
+
+EMB_INLINE_CONSTEXPR bool
+operator!=(motorspeed_t const& lhs, motorspeed_t const& rhs) {
+  return lhs.eradps() != rhs.eradps();
+}
+
+EMB_INLINE_CONSTEXPR bool
+operator<(motorspeed_t const& lhs, motorspeed_t const& rhs) {
+  return lhs.eradps() < rhs.eradps();
+}
+
+EMB_INLINE_CONSTEXPR bool
+operator>(motorspeed_t const& lhs, motorspeed_t const& rhs) {
+  return lhs.eradps() > rhs.eradps();
+}
+
+EMB_INLINE_CONSTEXPR bool
+operator<=(motorspeed_t const& lhs, motorspeed_t const& rhs) {
+  return lhs.eradps() <= rhs.eradps();
+}
+
+EMB_INLINE_CONSTEXPR bool
+operator>=(motorspeed_t const& lhs, motorspeed_t const& rhs) {
+  return lhs.eradps() >= rhs.eradps();
+}
+
 EMB_INLINE_CONSTEXPR motorspeed_t
 operator*(motorspeed_t const& lhs, float rhs) {
   return motorspeed_t(lhs.p(), lhs.eradps() * rhs);
