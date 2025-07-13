@@ -9,25 +9,28 @@
 namespace emb {
 namespace scheduler {
 
-enum class task_execstatus {
-  success,
-  fail
-};
-
 class basic_scheduler {
+public:
+  using periodic_task_type = void (*)(size_t);
+  using onetime_task_type = void (*)();
 private:
-  static inline bool initialized_{false};
-  static constexpr size_t max_taskcount{8};
+  static constexpr size_t max_taskcount{16};
 
-  struct task {
+  struct periodic_task {
+    periodic_task_type func;
     std::chrono::milliseconds period;
-    std::chrono::time_point<emb::chrono::steady_clock> timepoint;
-    task_execstatus (*func)(size_t);
+    std::chrono::time_point<emb::chrono::steady_clock> exec_timepoint;
   };
 
-  static inline emb::static_vector<task, max_taskcount> tasks_;
+  struct onetime_task {
+    onetime_task_type func;
+    std::chrono::milliseconds delay;
+    std::chrono::time_point<emb::chrono::steady_clock> creation_timepoint;
+  };
 
-  static task_execstatus empty_task(size_t) { return task_execstatus::success; }
+  static inline emb::static_vector<periodic_task, max_taskcount> tasks_;
+
+  static void empty_task(size_t) {}
 
 private:
   static inline std::chrono::time_point<emb::chrono::steady_clock>
@@ -41,11 +44,9 @@ private:
 public:
   basic_scheduler() = delete;
 
-  static void init() { initialized_ = true; }
-
-  static void add_task(task_execstatus (*func)(size_t),
+  static void add_task(periodic_task_type func,
                        std::chrono::milliseconds period) {
-    task task_ = {period, emb::chrono::steady_clock::now(), func};
+    periodic_task task_ = {func, period, emb::chrono::steady_clock::now()};
     tasks_.push_back(task_);
   }
 
@@ -66,10 +67,9 @@ public:
     auto now = emb::chrono::steady_clock::now();
 
     for (size_t i = 0; i < tasks_.size(); ++i) {
-      if (now >= (tasks_[i].timepoint + tasks_[i].period)) {
-        if (tasks_[i].func(i) == task_execstatus::success) {
-          tasks_[i].timepoint = now;
-        }
+      if (now >= (tasks_[i].exec_timepoint + tasks_[i].period)) {
+        tasks_[i].func(i);
+        tasks_[i].exec_timepoint = now;
       }
     }
 
@@ -83,7 +83,7 @@ public:
 
   static void reset() {
     for (size_t i = 0; i < tasks_.size(); ++i) {
-      tasks_[i].timepoint = emb::chrono::steady_clock::now();
+      tasks_[i].exec_timepoint = emb::chrono::steady_clock::now();
     }
   }
 };
