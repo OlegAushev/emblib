@@ -7,7 +7,7 @@
 namespace emb {
 
 template<class T>
-inline T const& clamp(T const& value, T const& lo, T const& hi) {
+EMB_INLINE_CONSTEXPR T const& clamp(T const& value, T const& lo, T const& hi) {
   return (value < lo) ? lo : (hi < value) ? hi : value;
 }
 
