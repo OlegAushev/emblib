@@ -13,28 +13,33 @@ private:
   T slope_;
   T step_;
 
-  T ref_;
-  T out_;
+  T target_;
+  T init_output_;
+  T output_;
 public:
-  ramp_generator() : update_period_(0), slope_(T()), step_(T()) { reset(); }
-
-  ramp_generator(float update_period, T slope) {
-    init(update_period, slope);
+  ramp_generator(
+      float update_period,
+      T const& slope,
+      T const& init_output = T())
+      : init_output_(init_output) {
+    configure(update_period, slope);
     reset();
   }
 
-  void push(T input_value) { ref_ = input_value; }
+  T target() const { return target_; }
 
-  T output() const { return out_; }
+  T output() const { return output_; }
 
-  void set_output(T value) {
-    ref_ = value;
-    out_ = value;
+  void set_target(T const& input_v) { target_ = input_v; }
+
+  void set_output(T const& output_v) {
+    target_ = output_v;
+    output_ = output_v;
   }
 
-  void reset() { set_output(T()); }
+  void reset() { set_output(init_output_); }
 
-  void init(float update_period, T slope) {
+  void configure(float update_period, T slope) {
     assert(update_period > 0);
     assert(slope > T(0));
     update_period_ = update_period;
@@ -43,14 +48,14 @@ public:
   }
 
   void update() {
-    if (out_ < ref_) {
-      out_ = std::min(out_ + step_, ref_);
+    if (output_ < target_) {
+      output_ = std::min(output_ + step_, target_);
     } else {
-      out_ = std::max(out_ - step_, ref_);
+      output_ = std::max(output_ - step_, target_);
     }
   }
 
-  bool steady() const { return out_ == ref_; }
+  bool steady() const { return output_ == target_; }
 };
 
 } // namespace emb

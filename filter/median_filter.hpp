@@ -5,8 +5,6 @@
 #include <emblib/array.hpp>
 #include <emblib/circular_buffer.hpp>
 #include <emblib/core.hpp>
-#include <emblib/noncopyable.hpp>
-#include <float.h>
 
 namespace emb {
 
@@ -14,29 +12,30 @@ template<typename T, size_t WindowSize>
 class median_filter {
 private:
   circular_buffer<T, WindowSize> window_;
-  T out_;
+  T init_output_;
+  T output_;
 public:
-  median_filter() {
+  median_filter(T const& init_output = T()) : init_output_(init_output) {
     EMB_STATIC_ASSERT((WindowSize % 2) == 1);
     reset();
   }
 
-  void push(T input_value) {
-    window_.push_back(input_value);
+  void push(T const& input_v) {
+    window_.push_back(input_v);
     emb::array<T, WindowSize> window_sorted = {};
     std::copy(window_.begin(), window_.end(), window_sorted.begin());
     std::sort(window_sorted.begin(), window_sorted.end());
-    out_ = window_sorted[WindowSize / 2];
+    output_ = window_sorted[WindowSize / 2];
   }
 
-  T output() const { return out_; }
+  T output() const { return output_; }
 
-  void set_output(T value) {
-    window_.fill(value);
-    out_ = value;
+  void set_output(T const& output_v) {
+    window_.fill(output_v);
+    output_ = output_v;
   }
 
-  void reset() { set_output(T(0)); }
+  void reset() { set_output(init_output_); }
 };
 
 } // namespace emb

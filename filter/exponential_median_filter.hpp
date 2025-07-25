@@ -5,60 +5,57 @@
 #include <emblib/array.hpp>
 #include <emblib/circular_buffer.hpp>
 #include <emblib/core.hpp>
-#include <emblib/noncopyable.hpp>
-#include <float.h>
 
 namespace emb {
 
 template<typename T, size_t WindowSize>
 class exponential_median_filter {
 private:
-  circular_buffer<T, WindowSize> _window;
+  circular_buffer<T, WindowSize> window_;
   float sampling_period_;
   float time_constant_;
   float smooth_factor_;
-  T out_;
+  T init_output_;
+  T output_;
 public:
-  exponential_median_filter()
-      : sampling_period_(0), time_constant_(FLT_MAX), smooth_factor_(0) {
+  exponential_median_filter(
+      float sampling_period,
+      float time_constant,
+      T const& init_output = T())
+      : init_output_(init_output) {
     EMB_STATIC_ASSERT((WindowSize % 2) == 1);
+    configure(sampling_period, time_constant);
     reset();
   }
 
-  exponential_median_filter(float sampling_period, float time_constant) {
-    EMB_STATIC_ASSERT((WindowSize % 2) == 1);
-    init(sampling_period, time_constant);
-    reset();
-  }
-
-  void push(T input_value) {
-    _window.push_back(input_value);
+  void push(T const& input_v) {
+    window_.push_back(input_v);
     emb::array<T, WindowSize> window_sorted = {};
-    std::copy(_window.begin(), _window.end(), window_sorted.begin());
+    std::copy(window_.begin(), window_.end(), window_sorted.begin());
     std::sort(window_sorted.begin(), window_sorted.end());
-    input_value = window_sorted[WindowSize / 2];
+    T const median_v = window_sorted[WindowSize / 2];
 
-    out_ = out_ + smooth_factor_ * (input_value - out_);
+    output_ = output_ + smooth_factor_ * (median_v - output_);
   }
 
-  T output() const { return out_; }
+  T output() const { return output_; }
 
-  void set_output(T value) {
-    _window.fill(value);
-    out_ = value;
+  void set_output(T const& output_v) {
+    window_.fill(output_v);
+    output_ = output_v;
   }
 
-  void reset() { set_output(T(0)); }
+  void reset() { set_output(init_output_); }
 
-  void init(float sampling_period, float time_constant) {
+  void configure(float sampling_period, float time_constant) {
     sampling_period_ = sampling_period;
     time_constant_ = time_constant;
-    smooth_factor_ = emb::clamp(sampling_period / time_constant, 0.f, 1.f);
+    smooth_factor_ = emb::clamp(sampling_period / time_constant, 0.0f, 1.0f);
   }
 
-  void set_sampling_period(float value) {
-    sampling_period_ = value;
-    smooth_factor_ = emb::clamp(sampling_period_ / time_constant_, 0.f, 1.f);
+  void set_sampling_period(float ts) {
+    sampling_period_ = ts;
+    smooth_factor_ = emb::clamp(sampling_period_ / time_constant_, 0.0f, 1.0f);
   }
 
   float smooth_factor() const { return smooth_factor_; }
