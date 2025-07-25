@@ -5,83 +5,173 @@
 namespace emb {
 
 template<typename T, size_t Capacity>
-class circular_buffer {
+class static_circular_buffer {
 private:
-  T _data[Capacity];
-  size_t _front;
-  size_t _back;
-  bool _full;
+  T data_[Capacity];
+  size_t front_;
+  size_t back_;
+  bool full_;
 public:
-  circular_buffer() : _front(0), _back(0), _full(false) {}
+  static_circular_buffer() : front_(0), back_(0), full_(false) {}
 
   void clear() {
-    _front = 0;
-    _back = 0;
-    _full = false;
+    front_ = 0;
+    back_ = 0;
+    full_ = false;
   }
 
-  bool empty() const { return (!_full && (_front == _back)); }
+  bool empty() const { return (!full_ && (front_ == back_)); }
 
-  bool full() const { return _full; }
+  bool full() const { return full_; }
 
   size_t capacity() const { return Capacity; }
 
   size_t size() const {
     size_t size = Capacity;
-    if (!_full) {
-      if (_back >= _front) {
-        size = _back - _front;
+    if (!full_) {
+      if (back_ >= front_) {
+        size = back_ - front_;
       } else {
-        size = Capacity + _back - _front;
+        size = Capacity + back_ - front_;
       }
     }
     return size;
   }
 
   void push_back(T const& value) {
-    _data[_back] = value;
-    if (_full) {
-      _front = (_front + 1) % Capacity;
+    data_[back_] = value;
+    if (full_) {
+      front_ = (front_ + 1) % Capacity;
     }
-    _back = (_back + 1) % Capacity;
-    _full = (_front == _back);
+    back_ = (back_ + 1) % Capacity;
+    full_ = (front_ == back_);
   }
 
   T& front() {
     assert(!empty());
-    return _data[_front];
+    return data_[front_];
   }
 
   T const& front() const {
     assert(!empty());
-    return _data[_front];
+    return data_[front_];
   }
 
   T& back() {
     assert(!empty());
-    return _data[(_back + Capacity - 1) % Capacity];
+    return data_[(back_ + Capacity - 1) % Capacity];
   }
 
   T const& back() const {
     assert(!empty());
-    return _data[(_back + Capacity - 1) % Capacity];
+    return data_[(back_ + Capacity - 1) % Capacity];
   }
 
   void pop() {
     assert(!empty());
-    _full = false;
-    _front = (_front + 1) % Capacity;
+    full_ = false;
+    front_ = (front_ + 1) % Capacity;
   }
 
-  T const* data() const { return _data; }
+  T const* data() const { return data_; }
 
-  T const* begin() const { return _data; }
+  T const* begin() const { return data_; }
 
-  T const* end() const { return _data + Capacity; }
+  T const* end() const { return data_ + Capacity; }
 
   void fill(T const& value) {
     for (size_t i = 0; i < Capacity; ++i) {
-      _data[i] = value;
+      data_[i] = value;
+    }
+  }
+};
+
+template<typename T>
+class circular_buffer {
+private:
+  T* data_;
+  size_t Capacity;
+  size_t front_;
+  size_t back_;
+  bool full_;
+public:
+  circular_buffer(size_t capacity)
+      : data_(new T[capacity]),
+        Capacity(capacity),
+        front_(0),
+        back_(0),
+        full_(false) {}
+
+  ~circular_buffer() { delete[] data_; }
+
+  void clear() {
+    front_ = 0;
+    back_ = 0;
+    full_ = false;
+  }
+
+  bool empty() const { return (!full_ && (front_ == back_)); }
+
+  bool full() const { return full_; }
+
+  size_t capacity() const { return Capacity; }
+
+  size_t size() const {
+    size_t size = Capacity;
+    if (!full_) {
+      if (back_ >= front_) {
+        size = back_ - front_;
+      } else {
+        size = Capacity + back_ - front_;
+      }
+    }
+    return size;
+  }
+
+  void push_back(T const& value) {
+    data_[back_] = value;
+    if (full_) {
+      front_ = (front_ + 1) % Capacity;
+    }
+    back_ = (back_ + 1) % Capacity;
+    full_ = (front_ == back_);
+  }
+
+  T& front() {
+    assert(!empty());
+    return data_[front_];
+  }
+
+  T const& front() const {
+    assert(!empty());
+    return data_[front_];
+  }
+
+  T& back() {
+    assert(!empty());
+    return data_[(back_ + Capacity - 1) % Capacity];
+  }
+
+  T const& back() const {
+    assert(!empty());
+    return data_[(back_ + Capacity - 1) % Capacity];
+  }
+
+  void pop() {
+    assert(!empty());
+    full_ = false;
+    front_ = (front_ + 1) % Capacity;
+  }
+
+  T const* data() const { return data_; }
+
+  T const* begin() const { return data_; }
+
+  T const* end() const { return data_ + Capacity; }
+
+  void fill(T const& value) {
+    for (size_t i = 0; i < Capacity; ++i) {
+      data_[i] = value;
     }
   }
 };
