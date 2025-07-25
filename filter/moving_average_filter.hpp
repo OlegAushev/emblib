@@ -2,79 +2,81 @@
 
 #include <algorithm>
 #include <emblib/algorithm.hpp>
-#include <emblib/array.hpp>
 #include <emblib/circular_buffer.hpp>
 #include <emblib/core.hpp>
-#include <emblib/noncopyable.hpp>
-#include <float.h>
+#include <vector>
 
 namespace emb {
 
-template<typename T, size_t WindowSize>
-class movavg_filter {
+template<typename T, size_t Capacity>
+class static_moving_average_filter {
 private:
-  size_t size_;
-  T* window_;
-  size_t index_;
+  emb::static_circular_buffer<T, Capacity> data_;
   T sum_;
-  bool heap_used_;
+  T init_output_;
+  T output_;
 public:
-  movavg_filter()
-      : size_(WindowSize),
-        window_(new T[WindowSize]),
-        index_(0),
-        sum_(0),
-        heap_used_(true) {
+  static_moving_average_filter(T const& init_output = T())
+      : init_output_(init_output) {
     reset();
   }
 
-  movavg_filter(emb::array<T, WindowSize>& data_array)
-      : size_(WindowSize),
-        window_(data_array.begin()),
-        index_(0),
-        sum_(T(0)),
-        heap_used_(false) {
+  void push(T const& input_v) {
+    if (!data_.full()) {
+      data_.push_back(input_v);
+      sum_ += input_v;
+    } else {
+      sum_ = sum_ - data_.front() + input_v;
+      data_.push_back(input_v);
+    }
+    output_ = sum_ / data_.size();
+  }
+
+  T output() const { return output_; }
+
+  void set_output(T const& output_v) {
+    data_.clear();
+    sum_ = 0;
+    output_ = output_v;
+  }
+
+  void reset() { set_output(init_output_); }
+};
+
+template<typename T>
+class moving_average_filter {
+private:
+  emb::circular_buffer<T> data_;
+  T sum_;
+  T init_output_;
+  T output_;
+public:
+  moving_average_filter(size_t capacity, T const& init_output = T())
+      : data_(capacity),
+        init_output_(init_output) {
     reset();
   }
 
-  ~movavg_filter() {
-    if (heap_used_ == true) {
-      delete[] window_;
+  void push(T const& input_v) {
+    if (!data_.full()) {
+      data_.push_back(input_v);
+      sum_ += input_v;
+    } else {
+      sum_ = sum_ - data_.front() + input_v;
+      data_.push_back(input_v);
     }
+    output_ = sum_ / data_.size();
   }
 
-  void push(T input_value) {
-    sum_ = sum_ + input_value - window_[index_];
-    window_[index_] = input_value;
-    index_ = (index_ + 1) % size_;
+  T output() const { return output_; }
+
+  void set_output(T const& output_v) {
+    data_.clear();
+    sum_ = 0;
+    output_ = output_v;
   }
 
-  T output() const { return sum_ / T(size_); }
-
-  void set_output(T value) {
-    for (size_t i = 0; i < size_; ++i) {
-      window_[i] = value;
-    }
-    index_ = 0;
-    sum_ = value * T(size_);
-  }
-
-  void reset() { set_output(T(0)); }
-
-  size_t size() const { return size_; }
-
-  void resize(size_t size) {
-    if (size == 0) {
-      return;
-    }
-    if (size > WindowSize) {
-      size_ = WindowSize;
-      reset();
-      return;
-    }
-    size_ = size;
-    reset();
-  }
+  void reset() { set_output(init_output_); }
 };
 
 } // namespace emb
