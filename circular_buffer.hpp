@@ -67,7 +67,7 @@ public:
     return data_[(back_ + Capacity - 1) % Capacity];
   }
 
-  void pop() {
+  void pop_front() {
     assert(!empty());
     full_ = false;
     front_ = (front_ + 1) % Capacity;
@@ -80,9 +80,11 @@ public:
   T const* end() const { return data_ + Capacity; }
 
   void fill(T const& value) {
+    clear();
     for (size_t i = 0; i < Capacity; ++i) {
       data_[i] = value;
     }
+    full_ = true;
   }
 };
 
@@ -95,7 +97,7 @@ private:
   size_t back_;
   bool full_;
 public:
-  circular_buffer(size_t capacity)
+  explicit circular_buffer(size_t capacity)
       : data_(new T[capacity]),
         Capacity(capacity),
         front_(0),
@@ -157,7 +159,7 @@ public:
     return data_[(back_ + Capacity - 1) % Capacity];
   }
 
-  void pop() {
+  void pop_front() {
     assert(!empty());
     full_ = false;
     front_ = (front_ + 1) % Capacity;
@@ -170,9 +172,11 @@ public:
   T const* end() const { return data_ + Capacity; }
 
   void fill(T const& value) {
+    clear();
     for (size_t i = 0; i < Capacity; ++i) {
       data_[i] = value;
     }
+    full_ = true;
   }
 };
 
