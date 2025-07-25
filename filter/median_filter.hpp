@@ -11,7 +11,7 @@ namespace emb {
 template<typename T, size_t WindowSize>
 class median_filter {
 private:
-  circular_buffer<T, WindowSize> window_;
+  emb::static_circular_buffer<T, WindowSize> window_;
   T init_output_;
   T output_;
 public:
