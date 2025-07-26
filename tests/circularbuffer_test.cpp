@@ -9,7 +9,7 @@ namespace emb {
 namespace internal {
 
 constexpr bool test_static_circular_buffer() {
-  emb::static_circular_buffer<int, 4> buf;
+  emb::circular_buffer<int, 4> buf;
   EMB_CONSTEXPR_ASSERT(buf.empty());
 
   buf.push_back(1);

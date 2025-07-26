@@ -11,7 +11,7 @@ namespace emb {
 template<typename T, size_t WindowSize>
 class exponential_median_filter {
 private:
-  emb::static_circular_buffer<T, WindowSize> window_;
+  emb::circular_buffer<T, WindowSize> window_;
   float sampling_period_;
   float time_constant_;
   float smooth_factor_;
