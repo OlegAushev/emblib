@@ -1,10 +1,14 @@
 #pragma once
 
+#define EMB_CONSTEXPR_ASSERT(expression) \
+  if (!(expression)) {                   \
+    return false;                        \
+  }
+
 #include <emblib/algorithm.hpp>
 #include <emblib/array.hpp>
 #include <emblib/bitset.hpp>
 #include <emblib/chrono.hpp>
-#include <emblib/circular_buffer.hpp>
 #include <emblib/core.hpp>
 #include <emblib/filter.hpp>
 #include <emblib/math.hpp>
@@ -26,7 +30,6 @@ public:
   static void algorithm_test();
   static void array_test();
   static void chrono_test();
-  static void circular_buffer_test();
   static void common_test();
   static void filter_test();
   static void math_test();
