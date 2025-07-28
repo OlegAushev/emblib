@@ -52,7 +52,7 @@ public:
       sum_ = sum_ - data_.front() + input_v;
       data_.push_back(input_v);
     }
-    output_ = sum_ / data_.size();
+    output_ = sum_ / static_cast<value_type>(data_.size()); // FIXME
   }
 
   constexpr const_reference output() const { return output_; }
@@ -100,7 +100,7 @@ public:
       sum_ = sum_ - data_.front() + input_v;
       data_.push_back(input_v);
     }
-    output_ = sum_ / data_.size();
+    output_ = sum_ / static_cast<value_type>(data_.size()); // FIXME
   }
 
   EMB_CONSTEXPR const_reference output() const { return output_; }

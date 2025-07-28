@@ -5,6 +5,7 @@
     return false;                        \
   }
 
+#if 0
 #include <emblib/algorithm.hpp>
 #include <emblib/array.hpp>
 #include <emblib/bitset.hpp>
@@ -45,3 +46,4 @@ public:
 };
 
 } // namespace emb
+#endif

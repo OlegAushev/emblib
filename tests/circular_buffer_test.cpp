@@ -9,8 +9,7 @@ namespace internal {
 namespace tests {
 
 constexpr bool test_circular_buffer(CircularBuffer auto buf)
-  requires(std::same_as<typename decltype(buf)::value_type, int>)
-{
+  requires(std::same_as<typename decltype(buf)::value_type, int>) {
   EMB_CONSTEXPR_ASSERT(buf.empty());
 
   buf.push_back(1);
