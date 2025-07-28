@@ -139,7 +139,7 @@ public:
   typedef value_type const* const_pointer;
 private:
   value_type data_[Capacity]
-#ifdef __cpp_nsdmi
+#if __cplusplus >= 201100
       {}
 #endif
   ;
