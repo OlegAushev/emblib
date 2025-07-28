@@ -4,14 +4,10 @@
 
 #include <emblib/circular_buffer.hpp>
 
-emb::circular_buffer<int> buf2{3};
-
 namespace emb {
 namespace internal {
 namespace tests {
 
-// template<CircularBuffer T>
-//    requires(std::same_as<typename T::value_type, int>)
 constexpr bool test_circular_buffer(CircularBuffer auto buf)
   requires(std::same_as<typename decltype(buf)::value_type, int>)
 {
@@ -68,8 +64,9 @@ constexpr bool test_circular_buffer(CircularBuffer auto buf)
   return true;
 }
 
-static_assert(test_circular_buffer(circular_buffer<int, 4>{}));
-static_assert(test_circular_buffer(circular_buffer<int>{4}));
+static_assert(test_circular_buffer(emb::circular_buffer<int, 4>{}));
+static_assert(test_circular_buffer(emb::circular_buffer<int>{4}));
+static_assert(test_circular_buffer(emb::v1::circular_buffer<int, 4>{}));
 
 } // namespace tests
 } // namespace internal
