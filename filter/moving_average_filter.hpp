@@ -4,6 +4,7 @@
 #include <emblib/algorithm.hpp>
 #include <emblib/circular_buffer.hpp>
 #include <emblib/core.hpp>
+#include <emblib/math.hpp>
 
 #ifdef EMB_CIRCULAR_BUFFER_V2
 #define EMB_MOVING_AVERAGE_FILTER_V2
@@ -26,13 +27,32 @@ public:
   using const_pointer = value_type const*;
   using underlying_type = emb::circular_buffer<value_type, WindowSize>;
 private:
+  template<typename V, bool B>
+  struct arithmetic_type;
+
+  template<typename V>
+  struct arithmetic_type<V, true> {
+    using type = V;
+  };
+
+  template<typename V>
+  struct arithmetic_type<V, false> {
+    using type = typename V::underlying_type;
+  };
+
+  template<typename V, bool B>
+  using arithmetic_type_t = typename arithmetic_type<V, B>::type;
+public:
+  using divider_type =
+      arithmetic_type_t<value_type, std::is_arithmetic_v<value_type>>;
+private:
   underlying_type data_;
   value_type sum_;
   value_type init_output_;
   value_type output_;
 public:
   constexpr explicit moving_average_filter(
-      value_type const& init_output = value_type())
+      value_type const& init_output = value_type{})
     requires(WindowSize > 0)
       : init_output_(init_output) {
     reset();
@@ -40,7 +60,7 @@ public:
 
   constexpr explicit moving_average_filter(
       size_type capacity,
-      value_type const& init_output = value_type())
+      value_type const& init_output = value_type{})
     requires(WindowSize == 0)
       : data_(capacity), init_output_(init_output) {
     reset();
@@ -54,18 +74,20 @@ public:
       sum_ = sum_ - data_.front() + input_v;
       data_.push_back(input_v);
     }
-    output_ = sum_ / static_cast<value_type>(data_.size()); // FIXME
+    output_ = sum_ / static_cast<divider_type>(data_.size());
   }
 
   constexpr const_reference output() const { return output_; }
 
   constexpr void set_output(value_type const& output_v) {
     data_.clear();
-    sum_ = 0;
+    sum_ = value_type{0};
     output_ = output_v;
   }
 
   constexpr void reset() { set_output(init_output_); }
+
+  constexpr underlying_type const& data() const { return data_; }
 };
 
 } // namespace v2
@@ -89,6 +111,22 @@ public:
   typedef emb::circular_buffer<value_type, WindowSize> underlying_type;
 #endif
 private:
+  template<typename V, bool B>
+  struct arithmetic_type;
+
+  template<typename V>
+  struct arithmetic_type<V, true> {
+    typedef V type;
+  };
+
+  template<typename V>
+  struct arithmetic_type<V, false> {
+    typedef typename V::underlying_type type;
+  };
+public:
+  using divider_type =
+      arithmetic_type<value_type, std::is_arithmetic_v<value_type>>::type;
+private:
   underlying_type data_;
   value_type sum_;
   value_type init_output_;
@@ -108,18 +146,20 @@ public:
       sum_ = sum_ - data_.front() + input_v;
       data_.push_back(input_v);
     }
-    output_ = sum_ / static_cast<value_type>(data_.size()); // FIXME
+    output_ = sum_ / static_cast<divider_type>(data_.size());
   }
 
   EMB_CONSTEXPR const_reference output() const { return output_; }
 
   EMB_CONSTEXPR void set_output(value_type const& output_v) {
     data_.clear();
-    sum_ = 0;
+    sum_ = value_type(0);
     output_ = output_v;
   }
 
   EMB_CONSTEXPR void reset() { set_output(init_output_); }
+
+  EMB_CONSTEXPR underlying_type const& data() const { return data_; }
 };
 
 #ifdef EMB_MOVING_AVERAGE_FILTER_V2

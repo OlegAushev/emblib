@@ -8,10 +8,12 @@ namespace units {
 
 template<typename T, typename Unit>
 class named_unit {
+public:
+  typedef T underlying_type;
 private:
   T v_;
 public:
-  named_unit() : v_(T(0)) {}
+  EMB_CONSTEXPR named_unit() : v_(T(0)) {}
 
   EMB_CONSTEXPR explicit named_unit(T const& v) : v_(v) {}
 
@@ -79,20 +81,23 @@ operator-(named_unit<T, Unit> const& lhs, named_unit<T, Unit> const& rhs) {
 }
 
 template<typename T, typename Unit>
-EMB_INLINE_CONSTEXPR named_unit<T, Unit>
-operator*(named_unit<T, Unit> const& lhs, float rhs) {
+EMB_INLINE_CONSTEXPR named_unit<T, Unit> operator*(
+    named_unit<T, Unit> const& lhs,
+    typename named_unit<T, Unit>::underlying_type rhs) {
   return named_unit<T, Unit>(lhs.numval() * rhs);
 }
 
 template<typename T, typename Unit>
-EMB_INLINE_CONSTEXPR named_unit<T, Unit>
-operator*(float lhs, named_unit<T, Unit> const& rhs) {
+EMB_INLINE_CONSTEXPR named_unit<T, Unit> operator*(
+    typename named_unit<T, Unit>::underlying_type lhs,
+    named_unit<T, Unit> const& rhs) {
   return rhs * lhs;
 }
 
 template<typename T, typename Unit>
-EMB_INLINE_CONSTEXPR named_unit<T, Unit>
-operator/(named_unit<T, Unit> const& lhs, float rhs) {
+EMB_INLINE_CONSTEXPR named_unit<T, Unit> operator/(
+    named_unit<T, Unit> const& lhs,
+    typename named_unit<T, Unit>::underlying_type rhs) {
   return named_unit<T, Unit>(lhs.numval() / rhs);
 }
 
