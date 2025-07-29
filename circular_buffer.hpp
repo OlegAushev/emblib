@@ -109,6 +109,12 @@ public:
     front_ = (front_ + 1) % capacity_;
   }
 
+  constexpr void pop_back() {
+    assert(!empty());
+    full_ = false;
+    back_ = (back_ + capacity_ - 1) % capacity_;
+  }
+
   constexpr const_pointer data() const { return data_.data(); }
 
   constexpr const_pointer begin() const { return data_.begin(); }
@@ -206,6 +212,12 @@ public:
     assert(!empty());
     full_ = false;
     front_ = (front_ + 1) % Capacity;
+  }
+
+  EMB_CONSTEXPR void pop_back() {
+    assert(!empty());
+    full_ = false;
+    back_ = (back_ + Capacity - 1) % Capacity;
   }
 
   EMB_CONSTEXPR const_pointer data() const { return data_; }

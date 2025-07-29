@@ -90,6 +90,10 @@ static_assert(test_queue(emb::queue<int, 1>{}));
 static_assert(test_queue(emb::queue<int>{1}));
 static_assert(test_queue(emb::v1::queue<int, 1>{}));
 
+static_assert(test_queue(emb::queue<int, 2>{}));
+static_assert(test_queue(emb::queue<int>{2}));
+static_assert(test_queue(emb::v1::queue<int, 2>{}));
+
 static_assert(test_queue(emb::queue<int, 5>{}));
 static_assert(test_queue(emb::queue<int>{5}));
 static_assert(test_queue(emb::v1::queue<int, 5>{}));

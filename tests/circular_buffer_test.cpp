@@ -10,62 +10,123 @@ namespace tests {
 
 constexpr bool test_circular_buffer(CircularBuffer auto buf)
   requires(std::same_as<typename decltype(buf)::value_type, int>) {
+  int const cap{static_cast<int>(buf.capacity())};
+
   EMB_CONSTEXPR_ASSERT(buf.empty());
 
   buf.push_back(1);
   EMB_CONSTEXPR_ASSERT(buf.front() == 1 && buf.back() == 1 && buf.size() == 1);
 
+  if (buf.capacity() != 1) {
+    EMB_CONSTEXPR_ASSERT(!buf.full());
+  } else {
+    EMB_CONSTEXPR_ASSERT(buf.full());
+  }
+
   buf.pop_front();
   EMB_CONSTEXPR_ASSERT(buf.empty() && buf.size() == 0);
 
-  buf.push_back(2);
-  EMB_CONSTEXPR_ASSERT(buf.front() == 2 && buf.back() == 2 && buf.size() == 1);
+  buf.push_back(1);
+  buf.pop_back();
+  EMB_CONSTEXPR_ASSERT(buf.empty() && buf.size() == 0);
 
-  buf.push_back(3);
-  EMB_CONSTEXPR_ASSERT(buf.size() == 2 && buf.back() == 3);
+  for (auto i{1}; i <= cap; ++i) {
+    buf.push_back(i);
+    EMB_CONSTEXPR_ASSERT(
+        buf.front() == 1 && buf.back() == i &&
+        buf.size() == static_cast<size_t>(i));
+  }
 
-  buf.push_back(4);
-  EMB_CONSTEXPR_ASSERT(buf.size() == 3 && !buf.full() && buf.back() == 4);
+  EMB_CONSTEXPR_ASSERT(buf.size() == buf.capacity() && buf.full());
 
-  buf.push_back(5);
-  EMB_CONSTEXPR_ASSERT(buf.size() == 4 && buf.full() && buf.back() == 5);
+  auto val = buf.back();
+  auto size = buf.size();
+  while (!buf.empty()) {
+    EMB_CONSTEXPR_ASSERT(buf.size() == size--);
+    EMB_CONSTEXPR_ASSERT(buf.front() == 1);
+    EMB_CONSTEXPR_ASSERT(buf.back() == val--);
+    buf.pop_back();
+  }
 
-  buf.push_back(6);
-  EMB_CONSTEXPR_ASSERT(
-      buf.size() == 4 && buf.full() && buf.front() == 3 && buf.back() == 6);
+  for (auto i{1}; i <= cap; ++i) {
+    buf.push_back(i);
+  }
 
-  buf.push_back(7);
-  buf.push_back(8);
-  EMB_CONSTEXPR_ASSERT(buf.front() == 5 && buf.back() == 8);
+  val = buf.front();
+  size = buf.size();
+  while (!buf.empty()) {
+    EMB_CONSTEXPR_ASSERT(buf.size() == size--);
+    EMB_CONSTEXPR_ASSERT(buf.front() == val++);
+    EMB_CONSTEXPR_ASSERT(buf.back() == cap);
+    buf.pop_front();
+  }
 
-  buf.push_back(9);
-  EMB_CONSTEXPR_ASSERT(buf.front() == 6 && buf.back() == 9);
+  auto const max_val{2 * cap + cap};
+  for (auto i{1}; i <= max_val; ++i) {
+    buf.push_back(i);
+  }
+
+  EMB_CONSTEXPR_ASSERT(buf.back() == max_val);
+  EMB_CONSTEXPR_ASSERT(buf.front() == max_val - cap + 1);
+
+  size = buf.size();
+  while (buf.size() != 1) {
+    EMB_CONSTEXPR_ASSERT(buf.size() == size--);
+    buf.pop_back();
+  }
+
+  EMB_CONSTEXPR_ASSERT(buf.back() == max_val - cap + 1);
+  EMB_CONSTEXPR_ASSERT(buf.front() == max_val - cap + 1);
+
+  buf.pop_back();
+  EMB_CONSTEXPR_ASSERT(buf.empty());
+
+  buf.clear();
+  for (auto i{1}; i <= max_val; ++i) {
+    buf.push_back(i);
+  }
+
+  size = buf.size();
+  while (buf.size() != 1) {
+    EMB_CONSTEXPR_ASSERT(buf.size() == size--);
+    buf.pop_front();
+  }
+
+  EMB_CONSTEXPR_ASSERT(buf.back() == max_val);
+  EMB_CONSTEXPR_ASSERT(buf.front() == max_val);
 
   buf.pop_front();
-  EMB_CONSTEXPR_ASSERT(
-      buf.size() == 3 && !buf.full() && buf.front() == 7 && buf.back() == 9);
+  EMB_CONSTEXPR_ASSERT(buf.empty());
+
+  buf.fill(42);
+  EMB_CONSTEXPR_ASSERT(buf.full() && buf.front() == 42 && buf.back() == 42);
 
   buf.pop_front();
-  EMB_CONSTEXPR_ASSERT(buf.size() == 2 && buf.front() == 8 && buf.back() == 9);
-
-  buf.push_back(10);
-  EMB_CONSTEXPR_ASSERT(buf.size() == 3 && buf.front() == 8 && buf.back() == 10);
-
-  buf.push_back(11);
-  EMB_CONSTEXPR_ASSERT(buf.full() && buf.front() == 8 && buf.back() == 11);
-
-  buf.fill(12);
-  EMB_CONSTEXPR_ASSERT(buf.full() && buf.front() == 12 && buf.back() == 12);
-
-  buf.pop_front();
-  EMB_CONSTEXPR_ASSERT(!buf.full() && buf.front() == 12 && buf.back() == 12);
+  EMB_CONSTEXPR_ASSERT(!buf.full());
+  if (buf.capacity() != 1) {
+    EMB_CONSTEXPR_ASSERT(buf.front() == 42 && buf.back() == 42);
+  } else {
+    EMB_CONSTEXPR_ASSERT(buf.empty());
+  }
 
   return true;
 }
 
-static_assert(test_circular_buffer(emb::circular_buffer<int, 4>{}));
-static_assert(test_circular_buffer(emb::circular_buffer<int>{4}));
-static_assert(test_circular_buffer(emb::v1::circular_buffer<int, 4>{}));
+static_assert(test_circular_buffer(emb::circular_buffer<int, 1>{}));
+static_assert(test_circular_buffer(emb::circular_buffer<int>{1}));
+static_assert(test_circular_buffer(emb::v1::circular_buffer<int, 1>{}));
+
+static_assert(test_circular_buffer(emb::circular_buffer<int, 2>{}));
+static_assert(test_circular_buffer(emb::circular_buffer<int>{2}));
+static_assert(test_circular_buffer(emb::v1::circular_buffer<int, 2>{}));
+
+static_assert(test_circular_buffer(emb::circular_buffer<int, 5>{}));
+static_assert(test_circular_buffer(emb::circular_buffer<int>{5}));
+static_assert(test_circular_buffer(emb::v1::circular_buffer<int, 5>{}));
+
+static_assert(test_circular_buffer(emb::circular_buffer<int, 10>{}));
+static_assert(test_circular_buffer(emb::circular_buffer<int>{10}));
+static_assert(test_circular_buffer(emb::v1::circular_buffer<int, 10>{}));
 
 } // namespace tests
 } // namespace internal
