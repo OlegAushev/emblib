@@ -17,7 +17,25 @@ namespace emb {
 inline namespace v2 {
 
 template<typename T, size_t WindowSize = 0>
+  requires std::is_arithmetic_v<T> ||
+           std::is_arithmetic_v<typename T::underlying_type>
 class moving_average_filter {
+private:
+  template<typename V, bool B>
+  struct get_arithmetic_type;
+
+  template<typename V>
+  struct get_arithmetic_type<V, true> {
+    using type = V;
+  };
+
+  template<typename V>
+  struct get_arithmetic_type<V, false> {
+    using type = typename V::underlying_type;
+  };
+
+  template<typename V, bool B>
+  using get_arithmetic_type_t = typename get_arithmetic_type<V, B>::type;
 public:
   using value_type = T;
   using size_type = size_t;
@@ -26,25 +44,8 @@ public:
   using pointer = value_type*;
   using const_pointer = value_type const*;
   using underlying_type = emb::circular_buffer<value_type, WindowSize>;
-private:
-  template<typename V, bool B>
-  struct arithmetic_type;
-
-  template<typename V>
-  struct arithmetic_type<V, true> {
-    using type = V;
-  };
-
-  template<typename V>
-  struct arithmetic_type<V, false> {
-    using type = typename V::underlying_type;
-  };
-
-  template<typename V, bool B>
-  using arithmetic_type_t = typename arithmetic_type<V, B>::type;
-public:
   using divider_type =
-      arithmetic_type_t<value_type, std::is_arithmetic_v<value_type>>;
+      get_arithmetic_type_t<value_type, std::is_arithmetic_v<value_type>>;
 private:
   underlying_type data_;
   value_type sum_;
@@ -88,6 +89,8 @@ public:
   constexpr void reset() { set_output(init_output_); }
 
   constexpr underlying_type const& data() const { return data_; }
+
+  constexpr size_type window_size() const { return data_.capacity(); }
 };
 
 } // namespace v2
@@ -98,6 +101,19 @@ namespace v1 {
 
 template<typename T, size_t WindowSize>
 class moving_average_filter {
+private:
+  template<typename V, bool B>
+  struct get_arithmetic_type;
+
+  template<typename V>
+  struct get_arithmetic_type<V, true> {
+    typedef V type;
+  };
+
+  template<typename V>
+  struct get_arithmetic_type<V, false> {
+    typedef typename V::underlying_type type;
+  };
 public:
   typedef T value_type;
   typedef size_t size_type;
@@ -110,22 +126,8 @@ public:
 #else
   typedef emb::circular_buffer<value_type, WindowSize> underlying_type;
 #endif
-private:
-  template<typename V, bool B>
-  struct arithmetic_type;
-
-  template<typename V>
-  struct arithmetic_type<V, true> {
-    typedef V type;
-  };
-
-  template<typename V>
-  struct arithmetic_type<V, false> {
-    typedef typename V::underlying_type type;
-  };
-public:
   using divider_type =
-      arithmetic_type<value_type, std::is_arithmetic_v<value_type>>::type;
+      get_arithmetic_type<value_type, std::is_arithmetic_v<value_type>>::type;
 private:
   underlying_type data_;
   value_type sum_;
@@ -160,6 +162,8 @@ public:
   EMB_CONSTEXPR void reset() { set_output(init_output_); }
 
   EMB_CONSTEXPR underlying_type const& data() const { return data_; }
+
+  EMB_CONSTEXPR size_type window_size() const { return data_.capacity(); }
 };
 
 #ifdef EMB_MOVING_AVERAGE_FILTER_V2
@@ -169,11 +173,13 @@ public:
 template<typename T>
 struct is_moving_average_filter : std::false_type {};
 
-template<typename T, size_t Size>
-struct is_moving_average_filter<moving_average_filter<T, Size>> : std::true_type {};
+template<typename T, size_t WindowSize>
+struct is_moving_average_filter<moving_average_filter<T, WindowSize>>
+    : std::true_type {};
 
-template<typename T, size_t Size>
-struct is_moving_average_filter<v1::moving_average_filter<T, Size>> : std::true_type {};
+template<typename T, size_t WindowSize>
+struct is_moving_average_filter<v1::moving_average_filter<T, WindowSize>>
+    : std::true_type {};
 
 template<typename T>
 concept MovingAverageFilter = is_moving_average_filter<T>::value;

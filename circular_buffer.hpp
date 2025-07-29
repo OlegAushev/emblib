@@ -115,11 +115,11 @@ public:
     back_ = (back_ + capacity_ - 1) % capacity_;
   }
 
-  constexpr const_pointer data() const { return data_.data(); }
+  constexpr auto data() const { return data_.data(); }
 
-  constexpr const_pointer begin() const { return data_.begin(); }
+  constexpr auto begin() const { return data_.begin(); }
 
-  constexpr const_pointer end() const { return data_.end(); }
+  constexpr auto end() const { return data_.end(); }
 
   constexpr void fill(value_type const& value) {
     clear();
