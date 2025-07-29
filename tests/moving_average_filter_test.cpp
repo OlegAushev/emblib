@@ -36,6 +36,12 @@ constexpr bool test_moving_average_filter(MovingAverageFilter auto filt)
   filt.reset();
   EMB_CONSTEXPR_ASSERT(filt.output() == 42);
 
+  filt.push(16);
+  EMB_CONSTEXPR_ASSERT(filt.output() == 16);
+
+  filt.push(8);
+  EMB_CONSTEXPR_ASSERT(filt.output() == 12);
+
   return true;
 }
 

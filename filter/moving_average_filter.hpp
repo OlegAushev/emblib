@@ -24,19 +24,21 @@ public:
   using const_reference = value_type const&;
   using pointer = value_type*;
   using const_pointer = value_type const*;
+  using underlying_type = emb::circular_buffer<value_type, WindowSize>;
 private:
-  emb::circular_buffer<value_type, WindowSize> data_;
+  underlying_type data_;
   value_type sum_;
   value_type init_output_;
   value_type output_;
 public:
-  constexpr moving_average_filter(value_type const& init_output = value_type())
+  constexpr explicit moving_average_filter(
+      value_type const& init_output = value_type())
     requires(WindowSize > 0)
       : init_output_(init_output) {
     reset();
   }
 
-  constexpr moving_average_filter(
+  constexpr explicit moving_average_filter(
       size_type capacity,
       value_type const& init_output = value_type())
     requires(WindowSize == 0)
@@ -81,13 +83,19 @@ public:
   typedef value_type const& const_reference;
   typedef value_type* pointer;
   typedef value_type const* const_pointer;
+#ifdef EMB_MOVING_AVERAGE_FILTER_V2
+  typedef emb::v1::circular_buffer<value_type, WindowSize> underlying_type;
+#else
+  typedef emb::circular_buffer<value_type, WindowSize> underlying_type;
+#endif
 private:
-  emb::circular_buffer<value_type, WindowSize> data_;
+  underlying_type data_;
   value_type sum_;
   value_type init_output_;
   value_type output_;
 public:
-  EMB_CONSTEXPR moving_average_filter(value_type const& init_output = T())
+  EMB_CONSTEXPR explicit moving_average_filter(
+      value_type const& init_output = T())
       : init_output_(init_output) {
     reset();
   }
@@ -115,6 +123,7 @@ public:
 };
 
 #ifdef EMB_MOVING_AVERAGE_FILTER_V2
+
 } // namespace v1
 
 template<typename T>

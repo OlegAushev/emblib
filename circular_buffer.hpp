@@ -27,12 +27,12 @@ public:
   using const_reference = value_type const&;
   using pointer = value_type*;
   using const_pointer = value_type const*;
-private:
-  using underlying_container_type = std::conditional_t<
+  using underlying_type = std::conditional_t<
       (Capacity > 0),
       std::array<value_type, Capacity>,
       std::vector<value_type>>;
-  underlying_container_type data_;
+private:
+  underlying_type data_;
   size_type const capacity_;
   size_type front_;
   size_type back_;
@@ -42,7 +42,7 @@ public:
     requires(Capacity > 0)
       : data_{}, capacity_{Capacity}, front_{0}, back_{0}, full_{false} {}
 
-  constexpr circular_buffer(size_type capacity)
+  constexpr explicit circular_buffer(size_type capacity)
     requires(Capacity == 0)
       : data_(capacity),
         capacity_{capacity},
@@ -224,19 +224,21 @@ public:
 };
 
 #ifdef EMB_CIRCULAR_BUFFER_V2
+
 } // namespace v1
 
 template<typename T>
 struct is_circular_buffer : std::false_type {};
 
 template<typename T, size_t Size>
-struct is_circular_buffer<circular_buffer<T, Size>> : std::true_type {};
+struct is_circular_buffer<emb::circular_buffer<T, Size>> : std::true_type {};
 
 template<typename T, size_t Size>
-struct is_circular_buffer<v1::circular_buffer<T, Size>> : std::true_type {};
+struct is_circular_buffer<emb::v1::circular_buffer<T, Size>> : std::true_type {};
 
 template<typename T>
 concept CircularBuffer = is_circular_buffer<T>::value;
+
 #endif
 
 } // namespace emb
