@@ -19,7 +19,7 @@ inline namespace v2 {
 template<typename T, size_t WindowSize = 0>
   requires std::is_arithmetic_v<T> ||
            std::is_arithmetic_v<typename T::underlying_type>
-class moving_average_filter {
+class movavg_filter {
 private:
   template<typename V, bool B>
   struct get_arithmetic_type;
@@ -52,14 +52,14 @@ private:
   value_type init_output_;
   value_type output_;
 public:
-  constexpr explicit moving_average_filter(
+  constexpr explicit movavg_filter(
       value_type const& init_output = value_type{})
     requires(WindowSize > 0)
       : init_output_(init_output) {
     reset();
   }
 
-  constexpr explicit moving_average_filter(
+  constexpr explicit movavg_filter(
       size_type capacity,
       value_type const& init_output = value_type{})
     requires(WindowSize == 0)
@@ -100,7 +100,7 @@ namespace v1 {
 #endif
 
 template<typename T, size_t WindowSize>
-class moving_average_filter {
+class movavg_filter {
 private:
   template<typename V, bool B>
   struct get_arithmetic_type;
@@ -134,7 +134,7 @@ private:
   value_type init_output_;
   value_type output_;
 public:
-  EMB_CONSTEXPR explicit moving_average_filter(
+  EMB_CONSTEXPR explicit movavg_filter(
       value_type const& init_output = T())
       : init_output_(init_output) {
     reset();
@@ -174,11 +174,11 @@ template<typename T>
 struct is_moving_average_filter : std::false_type {};
 
 template<typename T, size_t WindowSize>
-struct is_moving_average_filter<moving_average_filter<T, WindowSize>>
+struct is_moving_average_filter<movavg_filter<T, WindowSize>>
     : std::true_type {};
 
 template<typename T, size_t WindowSize>
-struct is_moving_average_filter<v1::moving_average_filter<T, WindowSize>>
+struct is_moving_average_filter<v1::movavg_filter<T, WindowSize>>
     : std::true_type {};
 
 template<typename T>

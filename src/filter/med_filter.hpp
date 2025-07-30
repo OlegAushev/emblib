@@ -9,13 +9,13 @@
 namespace emb {
 
 template<typename T, size_t WindowSize>
-class median_filter {
+class med_filter {
 private:
   emb::circular_buffer<T, WindowSize> window_;
   T init_output_;
   T output_;
 public:
-  median_filter(T const& init_output = T()) : init_output_(init_output) {
+  med_filter(T const& init_output = T()) : init_output_(init_output) {
     EMB_STATIC_ASSERT((WindowSize % 2) == 1);
     reset();
   }
