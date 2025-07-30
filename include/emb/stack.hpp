@@ -18,7 +18,7 @@ namespace emb {
 
 inline namespace v2 {
 
-template<typename T, size_t Capacity>
+template<typename T, size_t Capacity = 0>
 class stack {
 public:
   using value_type = T;
@@ -36,36 +36,36 @@ private:
   size_type const capacity_;
   size_type size_;
 public:
-  stack()
+  constexpr stack()
     requires(Capacity > 0)
       : data_{}, capacity_{Capacity}, size_{0} {}
 
-  stack(size_type capacity)
+  constexpr stack(size_type capacity)
     requires(Capacity == 0)
       : data_(capacity), capacity_{capacity}, size_{0} {}
 
-  void clear() { size_ = 0; }
+  constexpr void clear() { size_ = 0; }
 
-  bool empty() const { return size_ == 0; }
+  constexpr bool empty() const { return size_ == 0; }
 
-  bool full() const { return size_ == capacity_; }
+  constexpr bool full() const { return size_ == capacity_; }
 
-  size_type capacity() const { return capacity_; }
+  constexpr size_type capacity() const { return capacity_; }
 
-  size_type size() const { return size_; }
+  constexpr size_type size() const { return size_; }
 
-  void push(value_type const& value) {
+  constexpr void push(value_type const& value) {
     assert(!full());
     data_[size_] = value;
     ++size_;
   }
 
-  const_reference top() const {
+  constexpr const_reference top() const {
     assert(!empty());
     return data_[size_ - 1];
   }
 
-  void pop() {
+  constexpr void pop() {
     assert(!empty());
     --size_;
   }
@@ -94,30 +94,30 @@ private:
   ;
   size_type size_;
 public:
-  stack() : size_(0) {}
+  EMB_CONSTEXPR stack() : size_(0) {}
 
-  void clear() { size_ = 0; }
+  EMB_CONSTEXPR void clear() { size_ = 0; }
 
-  bool empty() const { return size_ == 0; }
+  EMB_CONSTEXPR bool empty() const { return size_ == 0; }
 
-  bool full() const { return size_ == Capacity; }
+  EMB_CONSTEXPR bool full() const { return size_ == Capacity; }
 
-  size_type capacity() const { return Capacity; }
+  EMB_CONSTEXPR size_type capacity() const { return Capacity; }
 
-  size_type size() const { return size_; }
+  EMB_CONSTEXPR size_type size() const { return size_; }
 
-  void push(value_type const& value) {
+  EMB_CONSTEXPR void push(value_type const& value) {
     assert(!full());
     data_[size_] = value;
     ++size_;
   }
 
-  const_reference top() const {
+  EMB_CONSTEXPR const_reference top() const {
     assert(!empty());
     return data_[size_ - 1];
   }
 
-  void pop() {
+  EMB_CONSTEXPR void pop() {
     assert(!empty());
     --size_;
   }
