@@ -5,7 +5,7 @@
 #include <emb/filter.hpp>
 #include <emb/units.hpp>
 
-#include <random>
+#include <numeric>
 
 namespace emb {
 namespace internal {
