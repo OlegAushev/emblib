@@ -10,6 +10,10 @@
 #define EMB_MOVING_AVERAGE_FILTER_V2
 #endif
 
+#ifndef __cpp_lib_logical_traits
+#include <emb/units.hpp>
+#endif
+
 namespace emb {
 
 #ifdef EMB_MOVING_AVERAGE_FILTER_V2
@@ -101,6 +105,19 @@ namespace v1 {
 
 template<typename T, size_t WindowSize>
 class movavg_filter {
+public:
+  typedef T value_type;
+  typedef size_t size_type;
+  typedef value_type& reference;
+  typedef value_type const& const_reference;
+  typedef value_type* pointer;
+  typedef value_type const* const_pointer;
+#ifdef EMB_MOVING_AVERAGE_FILTER_V2
+  typedef emb::v1::circular_buffer<value_type, WindowSize> underlying_type;
+#else
+  typedef emb::circular_buffer<value_type, WindowSize> underlying_type;
+#endif
+#ifdef __cpp_lib_logical_traits
 private:
   template<typename V, bool B>
   struct get_arithmetic_type;
@@ -115,19 +132,24 @@ private:
     typedef typename V::underlying_type type;
   };
 public:
-  typedef T value_type;
-  typedef size_t size_type;
-  typedef value_type& reference;
-  typedef value_type const& const_reference;
-  typedef value_type* pointer;
-  typedef value_type const* const_pointer;
-#ifdef EMB_MOVING_AVERAGE_FILTER_V2
-  typedef emb::v1::circular_buffer<value_type, WindowSize> underlying_type;
+  typedef get_arithmetic_type<value_type, std::is_arithmetic_v<value_type>>::type divider_type;
 #else
-  typedef emb::circular_buffer<value_type, WindowSize> underlying_type;
+private:
+  template<typename V>
+  struct get_arithmetic_type;
+
+  template<typename V, typename Unit>
+  struct get_arithmetic_type<units::named_unit<V, Unit> > {
+    typedef typename units::named_unit<V, Unit>::underlying_type type;
+  };
+
+  template<typename V>
+  struct get_arithmetic_type {
+    typedef V type;
+  };
+public:
+  typedef typename get_arithmetic_type<value_type>::type divider_type;
 #endif
-  using divider_type =
-      get_arithmetic_type<value_type, std::is_arithmetic_v<value_type>>::type;
 private:
   underlying_type data_;
   value_type sum_;
