@@ -8,22 +8,6 @@
 
 namespace emb {
 
-#if __cplusplus >= 201100
-enum class phase3 : uint32_t {
-  a,
-  b,
-  c
-};
-#else
-// clang-format off
-SCOPED_ENUM_UT_DECLARE_BEGIN(phase3, uint32_t) {
-  a,
-  b,
-  c
-} SCOPED_ENUM_DECLARE_END(phase3);
-// clang-format on
-#endif
-
 struct vec_alpha {
   float mag;
   float theta;
