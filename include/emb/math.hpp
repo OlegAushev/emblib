@@ -98,6 +98,26 @@ inline float rempi(float v) {
   return v - numbers::pi;
 }
 
+EMB_INLINE_CONSTEXPR float sinf(float x) {
+#ifdef EMBLIB_C28X
+  return ::sinf(x);
+#endif
+#ifdef EMBLIB_ARM
+  if !consteval {
+    return arm_sin_f32(x);
+  } else {
+    float sin{0};
+    float pow{x};
+    for (auto fac{1ull}, n{1ull}; n != 20; fac *= ++n, pow *= x) {
+      if (n & 1) {
+        sin += (n & 2 ? -pow : pow) / static_cast<float>(fac);
+      }
+    }
+    return sin;
+  }
+#endif
+}
+
 template<typename T>
 class range {
 private:
