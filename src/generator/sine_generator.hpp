@@ -32,7 +32,7 @@ public:
         wfreq_(2 * emb::numbers::pi * freq),
         init_phase_(init_phase),
         phase_(init_phase_.rad().numval()),
-        output_(ampl_ * emb::sinf(phase_)) {
+        output_(ampl_ * emb::sin(phase_)) {
     assert(update_period > 0);
   }
 
@@ -40,12 +40,12 @@ public:
 
   EMB_CONSTEXPR void reset() {
     phase_ = init_phase_.rad().numval();
-    output_ = ampl_ * emb::sinf(phase_);
+    output_ = ampl_ * emb::sin(phase_);
   }
 
   EMB_CONSTEXPR void update() {
     phase_ = emb::rem2pi(phase_ + wfreq_ * update_period_);
-    output_ = ampl_ * emb::sinf(phase_);
+    output_ = ampl_ * emb::sin(phase_);
   }
 
   EMB_CONSTEXPR float update_period() const { return update_period_; }

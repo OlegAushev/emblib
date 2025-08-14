@@ -30,7 +30,7 @@ test_sine_generator(SineGenerator auto sine, emb::units::angle_t init_phase) {
       [&](float t) -> float {
         float const w = 2 * emb::numbers::pi * sine.freq();
         float const phase = w * t + init_phase.rad().numval();
-        return output_type{sine.ampl() * emb::sinf(phase)};
+        return output_type{sine.ampl() * emb::sin(phase)};
       });
 
   for (auto i{0uz}; i < sine_ref.size(); ++i) {
