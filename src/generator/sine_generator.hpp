@@ -47,6 +47,16 @@ public:
     phase_ = emb::rem2pi(phase_ + wfreq_ * update_period_);
     output_ = ampl_ * emb::sinf(phase_);
   }
+
+  EMB_CONSTEXPR float update_period() const { return update_period_; }
+
+  EMB_CONSTEXPR const_reference ampl() const { return ampl_; }
+
+  EMB_CONSTEXPR float freq() const { return wfreq_ / (2 * emb::numbers::pi); }
+
+  emb::units::angle_t phase() const {
+    return emb::units::angle_t(emb::units::rad_t(phase_));
+  }
 };
 
 #ifdef __cpp_concepts

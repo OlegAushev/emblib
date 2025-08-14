@@ -143,6 +143,22 @@ concept AngleUnit = std::same_as<Unit, rad_t> || std::same_as<Unit, deg_t>;
 
 } // namespace units
 
+EMB_INLINE_CONSTEXPR float to_rad(float deg) {
+  return numbers::pi * deg / 180.0f;
+}
+
+EMB_INLINE_CONSTEXPR float to_deg(float rad) {
+  return 180.0f * rad / numbers::pi;
+}
+
+EMB_INLINE_CONSTEXPR float to_eradps(float n, int p) {
+  return numbers::two_pi * float(p) * n / 60.0f;
+}
+
+EMB_INLINE_CONSTEXPR float to_rpm(float w, int p) {
+  return 60.f * w / (numbers::two_pi * float(p));
+}
+
 #ifdef __cpp_concepts
 
 template<units::RadianUnit Unit>

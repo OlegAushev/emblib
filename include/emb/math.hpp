@@ -1,7 +1,9 @@
 #pragma once
 
+#include "../../src/math/trigonometric.hpp"
 #include <emb/algorithm.hpp>
 #include <emb/core.hpp>
+#include <emb/numbers.hpp>
 
 #if defined(EMBLIB_C28X)
 #include <float.h>
@@ -17,49 +19,36 @@ extern "C" {
 
 namespace emb {
 
-namespace numbers {
-#ifdef __cpp_inline_variables
-inline constexpr float pi = PI;
-inline constexpr float pi_over_2 = pi / 2.0f;
-inline constexpr float pi_over_4 = pi / 4.0f;
-inline constexpr float pi_over_3 = pi / 3.0f;
-inline constexpr float pi_over_6 = pi / 6.0f;
-inline constexpr float two_pi = 2.0f * pi;
-inline constexpr float sqrt_2 = 1.41421356237f;
-inline constexpr float sqrt_3 = 1.73205080757f;
-inline constexpr float inv_sqrt3 = 1 / sqrt_3;
-#else
-const float pi = MATH_PI;
-float const pi_over_2 = MATH_PI_OVER_TWO;
-float const pi_over_4 = MATH_PI_OVER_FOUR;
-float const pi_over_3 = MATH_PI / 3.0f;
-float const pi_over_6 = MATH_PI / 6.0f;
-float const two_pi = MATH_TWO_PI;
-float const sqrt_2 = sqrtf(2.0f);
-float const sqrt_3 = sqrtf(3.0f);
-float const inv_sqrt3 = 0.57735026918963f;
+inline float builtin_sinf(float x) {
+#ifdef EMBLIB_C28X
+  return ::sinf(x);
 #endif
-} // namespace numbers
+#ifdef EMBLIB_ARM
+    return arm_sin_f32(x);
+#endif
+}
+
+#ifdef __cpp_consteval
+consteval float cvl_fmodf(float x, float y) {
+  return x - static_cast<float>(static_cast<long long>(x / y)) * y;
+}
+#endif
+
+EMB_INLINE_CONSTEXPR float sinf(float x) {
+#ifdef __cpp_if_consteval
+  if !consteval {
+    return builtin_sinf(x);
+  } else {
+    return lookup_sinf(x);
+  }
+#else
+  return builtin_sinf(x);
+#endif
+}
 
 template<typename T>
 EMB_INLINE_CONSTEXPR int sgn(T v) {
   return (T(0) < v) - (v < T(0));
-}
-
-EMB_INLINE_CONSTEXPR float to_rad(float deg) {
-  return numbers::pi * deg / 180.0f;
-}
-
-EMB_INLINE_CONSTEXPR float to_deg(float rad) {
-  return 180.0f * rad / numbers::pi;
-}
-
-EMB_INLINE_CONSTEXPR float to_eradps(float n, int p) {
-  return numbers::two_pi * float(p) * n / 60.0f;
-}
-
-EMB_INLINE_CONSTEXPR float to_rpm(float w, int p) {
-  return 60.f * w / (numbers::two_pi * float(p));
 }
 
 #if __cplusplus < 202000
@@ -82,40 +71,36 @@ constexpr bool isodd(std::integral auto v) {
 
 #endif
 
-inline float rem2pi(float v) {
+EMB_INLINE_CONSTEXPR float rem2pi(float v) {
+#ifdef __cpp_if_consteval
+  if consteval {
+    v = cvl_fmodf(v, numbers::two_pi);
+  } else {
+    v = fmodf(v, numbers::two_pi);
+  }
+#else
   v = fmodf(v, numbers::two_pi);
+#endif
   if (v < 0) {
     v += numbers::two_pi;
   }
   return v;
 }
 
-inline float rempi(float v) {
+EMB_INLINE_CONSTEXPR float rempi(float v) {
+#ifdef __cpp_if_consteval
+  if consteval {
+    v = cvl_fmodf(v + numbers::pi, numbers::two_pi);
+  } else {
+    v = fmodf(v + numbers::pi, numbers::two_pi);
+  }
+#else
   v = fmodf(v + numbers::pi, numbers::two_pi);
+#endif
   if (v < 0) {
     v += numbers::two_pi;
   }
   return v - numbers::pi;
-}
-
-EMB_INLINE_CONSTEXPR float sinf(float x) {
-#ifdef EMBLIB_C28X
-  return ::sinf(x);
-#endif
-#ifdef EMBLIB_ARM
-  if !consteval {
-    return arm_sin_f32(x);
-  } else {
-    float sin{0};
-    float pow{x};
-    for (auto fac{1ull}, n{1ull}; n != 20; fac *= ++n, pow *= x) {
-      if (n & 1) {
-        sin += (n & 2 ? -pow : pow) / static_cast<float>(fac);
-      }
-    }
-    return sin;
-  }
-#endif
 }
 
 template<typename T>
