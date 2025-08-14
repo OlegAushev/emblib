@@ -152,11 +152,11 @@ EMB_INLINE_CONSTEXPR float to_deg(float rad) {
 }
 
 EMB_INLINE_CONSTEXPR float to_eradps(float n, int p) {
-  return numbers::two_pi * float(p) * n / 60.0f;
+  return 2 * numbers::pi * float(p) * n / 60.0f;
 }
 
 EMB_INLINE_CONSTEXPR float to_rpm(float w, int p) {
-  return 60.f * w / (numbers::two_pi * float(p));
+  return 60.f * w / (2 * numbers::pi * float(p));
 }
 
 #ifdef __cpp_concepts
@@ -173,18 +173,18 @@ Unit rempi(Unit v) {
 
 template<units::DegreeUnit Unit>
 Unit rem2pi(Unit v) {
-  float v_ = fmodf(v.numval(), to_deg(numbers::two_pi));
+  float v_ = fmodf(v.numval(), to_deg(2 * numbers::pi));
   if (v_ < 0) {
-    v_ += to_deg(numbers::two_pi);
+    v_ += to_deg(2 * numbers::pi);
   }
   return Unit{v_};
 }
 
 template<units::DegreeUnit Unit>
 Unit rempi(Unit v) {
-  float v_ = fmodf(v.numval() + to_deg(numbers::pi), to_deg(numbers::two_pi));
+  float v_ = fmodf(v.numval() + to_deg(numbers::pi), to_deg(2 * numbers::pi));
   if (v_ < 0) {
-    v_ += to_deg(numbers::two_pi);
+    v_ += to_deg(2 * numbers::pi);
   }
   return Unit{v_ - to_deg(numbers::pi)};
 }

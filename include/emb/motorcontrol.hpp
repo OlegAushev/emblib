@@ -61,8 +61,8 @@ inline vec_alphabeta clarke_transform(float a, float b) {
 inline emb::array<float, 3> invclarke_transform(vec_alphabeta v) {
   emb::array<float, 3> retv;
   retv[0] = v.alpha;
-  retv[1] = (-v.alpha + emb::numbers::sqrt_3 * v.beta) * 0.5f;
-  retv[2] = (-v.alpha - emb::numbers::sqrt_3 * v.beta) * 0.5f;
+  retv[1] = (-v.alpha + emb::numbers::sqrt3 * v.beta) * 0.5f;
+  retv[2] = (-v.alpha - emb::numbers::sqrt3 * v.beta) * 0.5f;
   return retv;
 }
 
@@ -82,15 +82,15 @@ inline emb::array<emb::unsigned_pu, 3> calculate_sinpwm(vec_alphabeta v_s,
 inline emb::array<emb::unsigned_pu, 3> calculate_svpwm(vec_alpha v_s,
                                                        float v_dc) {
   v_s.theta = rem2pi(v_s.theta);
-  v_s.mag = clamp<float>(v_s.mag, 0, v_dc / numbers::sqrt_3);
+  v_s.mag = clamp<float>(v_s.mag, 0, v_dc / numbers::sqrt3);
 
-  int32_t const sector = static_cast<int32_t>(v_s.theta / numbers::pi_over_3);
-  float const theta = v_s.theta - float(sector) * numbers::pi_over_3;
+  int32_t const sector = static_cast<int32_t>(v_s.theta / (numbers::pi / 3.0f));
+  float const theta = v_s.theta - float(sector) * (numbers::pi / 3.0f);
 
   // base vector times calculation
-  float const tb1 =
-      numbers::sqrt_3 * (v_s.mag / v_dc) * emb::sin(numbers::pi_over_3 - theta);
-  float const tb2 = numbers::sqrt_3 * (v_s.mag / v_dc) * emb::sin(theta);
+  float const tb1 = numbers::sqrt3 * (v_s.mag / v_dc) *
+                    emb::sin((numbers::pi / 3.0f) - theta);
+  float const tb2 = numbers::sqrt3 * (v_s.mag / v_dc) * emb::sin(theta);
   float const tb0 = (1.f - tb1 - tb2) / 2.f;
 
   emb::array<float, 3> pulse_durations;

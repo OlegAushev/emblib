@@ -72,15 +72,15 @@ constexpr bool isodd(std::integral auto v) {
 EMB_INLINE_CONSTEXPR float rem2pi(float v) {
 #ifdef __cpp_if_consteval
   if consteval {
-    v = cvl_fmodf(v, numbers::two_pi);
+    v = cvl_fmodf(v, 2 * numbers::pi);
   } else {
-    v = fmodf(v, numbers::two_pi);
+    v = fmodf(v, 2 * numbers::pi);
   }
 #else
-  v = fmodf(v, numbers::two_pi);
+  v = fmodf(v, 2 * numbers::pi);
 #endif
   if (v < 0) {
-    v += numbers::two_pi;
+    v += 2 * numbers::pi;
   }
   return v;
 }
@@ -88,15 +88,15 @@ EMB_INLINE_CONSTEXPR float rem2pi(float v) {
 EMB_INLINE_CONSTEXPR float rempi(float v) {
 #ifdef __cpp_if_consteval
   if consteval {
-    v = cvl_fmodf(v + numbers::pi, numbers::two_pi);
+    v = cvl_fmodf(v + numbers::pi, 2 * numbers::pi);
   } else {
-    v = fmodf(v + numbers::pi, numbers::two_pi);
+    v = fmodf(v + numbers::pi, 2 * numbers::pi);
   }
 #else
-  v = fmodf(v + numbers::pi, numbers::two_pi);
+  v = fmodf(v + numbers::pi, 2 * numbers::pi);
 #endif
   if (v < 0) {
-    v += numbers::two_pi;
+    v += 2 * numbers::pi;
   }
   return v - numbers::pi;
 }

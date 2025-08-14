@@ -145,7 +145,7 @@ inline constexpr emb::array<float, 129> sincos_lookup_table{
 } // namespace internal
 
 EMB_INLINE_CONSTEXPR float lookup_sinf(float x) {
-  x /= (emb::numbers::pi_over_2);
+  x /= (emb::numbers::pi / 2.0f);
 
   int sign = x < 0.0f;
   x = sign ? -x : x;
