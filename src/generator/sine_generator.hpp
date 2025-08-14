@@ -26,7 +26,7 @@ public:
       float update_period,
       T const& ampl,
       float const& freq,
-      emb::units::angle_t const& init_phase = {})
+      emb::units::angle_t const& init_phase = emb::units::angle_t())
       : update_period_(update_period),
         ampl_(ampl),
         wfreq_(2 * emb::numbers::pi * freq),

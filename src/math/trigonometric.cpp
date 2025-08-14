@@ -1,15 +1,10 @@
-#pragma once
-
-#include <emb/array.hpp>
-#include <emb/core.hpp>
-#include <emb/numbers.hpp>
+#include "trigonometric.hpp"
 
 namespace emb {
 
 namespace internal {
 
-#ifdef __cpp_inline_variables
-inline constexpr emb::array<float, 129> sincos_lookup_table{
+const emb::array<float, 129> sincos_lookup_table{
     0.0f,
     0.012271538285719931f,
     0.024541228522912288f,
@@ -139,43 +134,7 @@ inline constexpr emb::array<float, 129> sincos_lookup_table{
     0.99969881869620425f,
     0.9999247018391445f,
     1.0f};
-#else
-  extern const emb::array<float, 129> sincos_lookup_table;
-#endif
+
 } // namespace internal
-
-EMB_INLINE_CONSTEXPR float lookup_sinf(float x) {
-  x /= (emb::numbers::pi_over_2);
-
-  int sign = x < 0.0f;
-  x = sign ? -x : x;
-
-  int xf = static_cast<int>(x);
-  x -= static_cast<float>(xf);
-
-  int rev = xf & 1;
-  if (rev) {
-    x = 1 - x;
-  }
-  int per = (xf >> 1) & 1;
-
-  float z = x * 128;
-  size_t zf = static_cast<size_t>(z);
-  z -= static_cast<float>(zf);
-
-  float sint = internal::sincos_lookup_table[zf];
-  float cost = internal::sincos_lookup_table[128 - zf];
-
-  float zz = z * z;
-  float ss =
-      z * (0.012271846303085128928f +
-           zz * (-3.0801968454884792651e-7f + 2.3193461291439683491e-12f * zz));
-  float cc = 1.0f - zz * (0.000075299105843272081f +
-                          zz * (-9.449925567834354484e-10f +
-                                4.7437807891647010749e-15f * zz));
-
-  float sin_v = (sign ^ per) ? -sint * cc - cost * ss : sint * cc + cost * ss;
-  return sin_v;
-}
 
 } // namespace emb

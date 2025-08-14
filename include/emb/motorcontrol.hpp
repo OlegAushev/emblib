@@ -84,22 +84,14 @@ inline emb::array<emb::unsigned_pu, 3> calculate_svpwm(vec_alpha v_s,
   v_s.theta = rem2pi(v_s.theta);
   v_s.mag = clamp<float>(v_s.mag, 0, v_dc / numbers::sqrt_3);
 
-  int32_t sector = static_cast<int32_t>(v_s.theta / numbers::pi_over_3);
-  float theta = v_s.theta - float(sector) * numbers::pi_over_3;
+  int32_t const sector = static_cast<int32_t>(v_s.theta / numbers::pi_over_3);
+  float const theta = v_s.theta - float(sector) * numbers::pi_over_3;
 
   // base vector times calculation
-#if defined(EMBLIB_C28X)
-  float tb1 =
-      numbers::sqrt_3 * (v_s.mag / v_dc) * sinf(numbers::pi_over_3 - theta);
-  float tb2 = numbers::sqrt_3 * (v_s.mag / v_dc) * sinf(theta);
-#elif defined(EMBLIB_ARM)
-  float tb1 = numbers::sqrt_3 * (v_s.mag / v_dc) *
-              arm_sin_f32(numbers::pi_over_3 - theta);
-  float tb2 = numbers::sqrt_3 * (v_s.mag / v_dc) * arm_sin_f32(theta);
-#else
-#error "emblib error: arch not defined!"
-#endif
-  float tb0 = (1.f - tb1 - tb2) / 2.f;
+  float const tb1 =
+      numbers::sqrt_3 * (v_s.mag / v_dc) * emb::sin(numbers::pi_over_3 - theta);
+  float const tb2 = numbers::sqrt_3 * (v_s.mag / v_dc) * emb::sin(theta);
+  float const tb0 = (1.f - tb1 - tb2) / 2.f;
 
   emb::array<float, 3> pulse_durations;
   switch (sector) {

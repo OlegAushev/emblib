@@ -6,25 +6,23 @@
 #include <emb/numbers.hpp>
 
 #if defined(EMBLIB_C28X)
-#include <float.h>
 #include <math.h>
-#include <motorcontrol/math.h>
-#elif defined(EMBLIB_ARM)
+#endif
+
+#if defined(EMBLIB_ARM)
 extern "C" {
 #include "arm_math.h"
 }
 #endif
 
-#include <limits.h>
-
 namespace emb {
 
 inline float builtin_sinf(float x) {
 #ifdef EMBLIB_C28X
-  return ::sinf(x);
+  return sinf(x);
 #endif
 #ifdef EMBLIB_ARM
-    return arm_sin_f32(x);
+  return arm_sin_f32(x);
 #endif
 }
 
@@ -34,7 +32,7 @@ consteval float cvl_fmodf(float x, float y) {
 }
 #endif
 
-EMB_INLINE_CONSTEXPR float sinf(float x) {
+EMB_INLINE_CONSTEXPR float sin(float x) {
 #ifdef __cpp_if_consteval
   if !consteval {
     return builtin_sinf(x);
