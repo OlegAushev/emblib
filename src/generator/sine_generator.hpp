@@ -18,39 +18,43 @@ private:
   output_type ampl_;
   float wfreq_;
   emb::units::angle_t init_phase_;
+  output_type bias_;
 
   float phase_;
   output_type output_;
 public:
   EMB_CONSTEXPR sine_generator(
       float update_period,
-      T const& ampl,
+      output_type const& ampl,
       float const& freq,
-      emb::units::angle_t const& init_phase = emb::units::angle_t())
+      emb::units::angle_t const& init_phase = emb::units::angle_t(),
+      output_type bias = output_type())
       : update_period_(update_period),
         ampl_(ampl),
         wfreq_(2 * emb::numbers::pi * freq),
         init_phase_(init_phase),
-        phase_(init_phase_.rad().numval()),
-        output_(ampl_ * emb::sin(phase_)) {
+        bias_(bias) {
     assert(update_period > 0);
+    reset();
   }
 
   EMB_CONSTEXPR const_reference output() const { return output_; }
 
   EMB_CONSTEXPR void reset() {
     phase_ = init_phase_.rad().numval();
-    output_ = ampl_ * emb::sin(phase_);
+    output_ = ampl_ * emb::sin(phase_) + bias_;
   }
 
   EMB_CONSTEXPR void update() {
     phase_ = emb::rem2pi(phase_ + wfreq_ * update_period_);
-    output_ = ampl_ * emb::sin(phase_);
+    output_ = ampl_ * emb::sin(phase_) + bias_;
   }
 
   EMB_CONSTEXPR float update_period() const { return update_period_; }
 
   EMB_CONSTEXPR const_reference ampl() const { return ampl_; }
+
+  EMB_CONSTEXPR const_reference bias() const { return bias_; }
 
   EMB_CONSTEXPR float freq() const { return wfreq_ / (2 * emb::numbers::pi); }
 
