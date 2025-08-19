@@ -1,6 +1,6 @@
 #pragma once
 
-#if !defined(EMBLIB_C28X) && !defined(EMBLIB_ARM)
+#if !defined(EMBLIB_C28X) && !defined(EMBLIB_ARM) && !defined(EMBLIB_X86)
 #error "emblib error: arch not defined!"
 #endif
 
@@ -51,12 +51,12 @@
 #define EMB_STATIC_ASSERT(cond) typedef int EMB_CAT(assert, __LINE__)[(cond) ? 1 : -1]
 #endif
 
-#if defined(EMBLIB_ARM)
+#ifndef EMBLIB_C28X
 #define EMB_STRINGIZE_IMPL(x) #x
 #define EMB_STRINGIZE(x) EMB_STRINGIZE_IMPL(x)
 #endif
 
-#if defined(EMBLIB_ARM)
+#ifndef EMBLIB_C28X
 namespace emb {
 
 void fatal_error_cb(const char* hint, int code);

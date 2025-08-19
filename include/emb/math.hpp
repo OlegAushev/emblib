@@ -5,14 +5,18 @@
 #include <emb/core.hpp>
 #include <emb/numbers.hpp>
 
-#if defined(EMBLIB_C28X)
+#ifdef EMBLIB_C28X
 #include <math.h>
 #endif
 
-#if defined(EMBLIB_ARM)
+#ifdef EMBLIB_ARM
 extern "C" {
 #include "arm_math.h"
 }
+#endif
+
+#ifdef EMBLIB_X86
+#include <cmath>
 #endif
 
 namespace emb {
@@ -23,6 +27,9 @@ inline float builtin_sinf(float x) {
 #endif
 #ifdef EMBLIB_ARM
   return arm_sin_f32(x);
+#endif
+#ifdef EMBLIB_X86
+  return std::sinf(x);
 #endif
 }
 

@@ -17,7 +17,7 @@ private:
   static void print_dbg(char const* str) { printf(str); }
 
   static void print_nextline_dbg() { printf("\n"); }
-#elif defined(EMBLIB_ARM)
+#else
 public:
   static inline void (*print)(char const* str) = [](char const* str) {
     fatal_error("emb::test_runner print function not defined");
@@ -144,7 +144,7 @@ public:
 #define EMB_ASSERT_TRUE(x) ((void)0)
 #endif
 
-#elif defined(EMBLIB_ARM)
+#else
 
 #ifdef UNIT_TESTS_ENABLED
 #define EMB_ASSERT_EQUAL(x, y)                                                 \

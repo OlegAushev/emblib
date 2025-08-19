@@ -3,7 +3,7 @@
 #include <bitset>
 #include <emb/array.hpp>
 #include <emb/core.hpp>
-#if defined(EMBLIB_ARM)
+#ifndef EMBLIB_C28X
 #include <climits>
 #include <cstring>
 #endif
