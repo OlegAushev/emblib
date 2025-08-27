@@ -51,9 +51,9 @@ EMB_INLINE_CONSTEXPR float sin(float x) {
 #endif
 }
 
-template<typename T>
-EMB_INLINE_CONSTEXPR int sgn(T v) {
-  return (T(0) < v) - (v < T(0));
+template<typename T = int, typename V>
+EMB_INLINE_CONSTEXPR T sgn(V v) {
+  return T((V(0) < v) - (v < V(0)));
 }
 
 #if __cplusplus < 202000

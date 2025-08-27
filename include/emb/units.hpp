@@ -161,11 +161,11 @@ EMB_INLINE_CONSTEXPR float to_deg(float rad) {
   return 180.0f * rad / numbers::pi;
 }
 
-EMB_INLINE_CONSTEXPR float to_eradps(float n, int p) {
+EMB_INLINE_CONSTEXPR float to_eradps(float n, int32_t p) {
   return 2 * numbers::pi * float(p) * n / 60.0f;
 }
 
-EMB_INLINE_CONSTEXPR float to_rpm(float w, int p) {
+EMB_INLINE_CONSTEXPR float to_rpm(float w, int32_t p) {
   return 60.f * w / (2 * numbers::pi * float(p));
 }
 
@@ -217,11 +217,11 @@ EMB_INLINE_CONSTEXPR units::deg_f32 to_deg(units::rad_f32 rad) {
   return units::deg_f32(emb::to_deg(rad.numval()));
 }
 
-EMB_INLINE_CONSTEXPR units::eradps_f32 to_eradps(units::rpm_f32 n, int p) {
+EMB_INLINE_CONSTEXPR units::eradps_f32 to_eradps(units::rpm_f32 n, int32_t p) {
   return units::eradps_f32(emb::to_eradps(n.numval(), p));
 }
 
-EMB_INLINE_CONSTEXPR units::rpm_f32 to_rpm(units::eradps_f32 w, int p) {
+EMB_INLINE_CONSTEXPR units::rpm_f32 to_rpm(units::eradps_f32 w, int32_t p) {
   return units::rpm_f32(emb::to_rpm(w.numval(), p));
 }
 
@@ -230,14 +230,14 @@ namespace units {
 /*============================================================================*/
 class motorspeed_t {
 private:
-  int p_;
+  int32_t p_;
   eradps_f32 w_;
 public:
-  EMB_CONSTEXPR explicit motorspeed_t(int p) : p_(p), w_(0) {}
+  EMB_CONSTEXPR explicit motorspeed_t(int32_t p) : p_(p), w_(0) {}
 
-  EMB_CONSTEXPR motorspeed_t(int p, eradps_f32 w) : p_(p) { set(w); }
+  EMB_CONSTEXPR motorspeed_t(int32_t p, eradps_f32 w) : p_(p) { set(w); }
 
-  EMB_CONSTEXPR motorspeed_t(int p, rpm_f32 n) : p_(p) { set(n); }
+  EMB_CONSTEXPR motorspeed_t(int32_t p, rpm_f32 n) : p_(p) { set(n); }
 
   template<typename Unit>
   EMB_CONSTEXPR motorspeed_t& operator=(Unit v) {
@@ -245,7 +245,7 @@ public:
     return *this;
   }
 
-  EMB_CONSTEXPR int p() const { return p_; }
+  EMB_CONSTEXPR int32_t p() const { return p_; }
 
   EMB_CONSTEXPR eradps_f32 eradps() const { return w_; }
 
