@@ -91,14 +91,14 @@ static_assert(test_movavg_filter(emb::movavg_filter<int>{10, 42}, 42));
 static_assert(test_movavg_filter(emb::v1::movavg_filter<int, 10>{42}, 42));
 
 static_assert(test_movavg_filter(
-    emb::movavg_filter<emb::units::erad_t, 4>{},
-    emb::units::erad_t{0}));
+    emb::movavg_filter<emb::units::erad_f32, 4>{},
+    emb::units::erad_f32{0}));
 static_assert(test_movavg_filter(
-    emb::movavg_filter<emb::units::erad_t>{4},
-    emb::units::erad_t{0}));
+    emb::movavg_filter<emb::units::erad_f32>{4},
+    emb::units::erad_f32{0}));
 static_assert(test_movavg_filter(
-    emb::v1::movavg_filter<emb::units::erad_t, 4>{},
-    emb::units::erad_t{0}));
+    emb::v1::movavg_filter<emb::units::erad_f32, 4>{},
+    emb::units::erad_f32{0}));
 
 } // namespace tests
 } // namespace internal

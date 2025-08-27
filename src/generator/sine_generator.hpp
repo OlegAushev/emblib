@@ -59,7 +59,7 @@ public:
   EMB_CONSTEXPR float freq() const { return wfreq_ / (2 * emb::numbers::pi); }
 
   emb::units::angle_t phase() const {
-    return emb::units::angle_t(emb::units::rad_t(phase_));
+    return emb::units::angle_t(emb::units::rad_f32(phase_));
   }
 };
 

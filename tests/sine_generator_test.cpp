@@ -53,17 +53,17 @@ static_assert(test_sine_generator(
         0.125f,
         100.0f,
         1.0f,
-        emb::units::angle_t{emb::units::deg_t{90.0f}}},
-    emb::units::angle_t{emb::units::deg_t{90.0f}}));
+        emb::units::angle_t{emb::units::deg_f32{90.0f}}},
+    emb::units::angle_t{emb::units::deg_f32{90.0f}}));
 
 static_assert(test_sine_generator(
     emb::sine_generator<float>{
         0.1f,
         1.0f,
         4.2f,
-        emb::units::angle_t{emb::units::deg_t{42.0f}},
+        emb::units::angle_t{emb::units::deg_f32{42.0f}},
         42.0f},
-    emb::units::angle_t{emb::units::deg_t{42.0f}}));
+    emb::units::angle_t{emb::units::deg_f32{42.0f}}));
 
 } // namespace tests
 } // namespace internal
