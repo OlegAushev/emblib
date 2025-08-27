@@ -11,13 +11,13 @@ class named_unit {
 public:
   typedef T underlying_type;
 private:
-  T v_;
+  underlying_type v_;
 public:
-  EMB_CONSTEXPR named_unit() : v_(T(0)) {}
+  EMB_CONSTEXPR named_unit() : v_(underlying_type(0)) {}
 
-  EMB_CONSTEXPR explicit named_unit(T const& v) : v_(v) {}
+  EMB_CONSTEXPR explicit named_unit(underlying_type const& v) : v_(v) {}
 
-  EMB_CONSTEXPR T const& numval() const { return v_; }
+  EMB_CONSTEXPR underlying_type const& numval() const { return v_; }
 
   EMB_CONSTEXPR named_unit& operator+=(named_unit const& rhs) {
     v_ += rhs.v_;
