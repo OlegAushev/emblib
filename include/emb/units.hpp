@@ -80,25 +80,24 @@ operator-(named_unit<T, Unit> const& lhs, named_unit<T, Unit> const& rhs) {
   return tmp -= rhs;
 }
 
-template<typename T, typename Unit>
-EMB_INLINE_CONSTEXPR named_unit<T, Unit> operator*(
-    named_unit<T, Unit> const& lhs,
-    typename named_unit<T, Unit>::underlying_type rhs) {
-  return named_unit<T, Unit>(lhs.numval() * rhs);
+template<typename T, typename Unit, typename V>
+EMB_INLINE_CONSTEXPR named_unit<T, Unit>
+operator*(named_unit<T, Unit> const& lhs, V const& rhs) {
+  return named_unit<T, Unit>(
+      lhs.numval() * static_cast<named_unit<T, Unit>::underlying_type>(rhs));
 }
 
-template<typename T, typename Unit>
-EMB_INLINE_CONSTEXPR named_unit<T, Unit> operator*(
-    typename named_unit<T, Unit>::underlying_type lhs,
-    named_unit<T, Unit> const& rhs) {
+template<typename T, typename Unit, typename V>
+EMB_INLINE_CONSTEXPR named_unit<T, Unit>
+operator*(V const& lhs, named_unit<T, Unit> const& rhs) {
   return rhs * lhs;
 }
 
-template<typename T, typename Unit>
-EMB_INLINE_CONSTEXPR named_unit<T, Unit> operator/(
-    named_unit<T, Unit> const& lhs,
-    typename named_unit<T, Unit>::underlying_type rhs) {
-  return named_unit<T, Unit>(lhs.numval() / rhs);
+template<typename T, typename Unit, typename V>
+EMB_INLINE_CONSTEXPR named_unit<T, Unit>
+operator/(named_unit<T, Unit> const& lhs, V const& rhs) {
+  return named_unit<T, Unit>(
+      lhs.numval() / static_cast<named_unit<T, Unit>::underlying_type>(rhs));
 }
 
 template<typename T, typename Unit>
@@ -228,19 +227,21 @@ EMB_INLINE_CONSTEXPR units::rpm_f32 to_rpm(units::eradps_f32 w, int32_t p) {
 namespace units {
 
 /*============================================================================*/
-class motorspeed_t {
+class motorspeed_f32 {
+public:
+  typedef float underlying_type;
 private:
   int32_t p_;
   eradps_f32 w_;
 public:
-  EMB_CONSTEXPR explicit motorspeed_t(int32_t p) : p_(p), w_(0) {}
+  EMB_CONSTEXPR explicit motorspeed_f32(int32_t p) : p_(p), w_(0) {}
 
-  EMB_CONSTEXPR motorspeed_t(int32_t p, eradps_f32 w) : p_(p) { set(w); }
+  EMB_CONSTEXPR motorspeed_f32(int32_t p, eradps_f32 w) : p_(p) { set(w); }
 
-  EMB_CONSTEXPR motorspeed_t(int32_t p, rpm_f32 n) : p_(p) { set(n); }
+  EMB_CONSTEXPR motorspeed_f32(int32_t p, rpm_f32 n) : p_(p) { set(n); }
 
   template<typename Unit>
-  EMB_CONSTEXPR motorspeed_t& operator=(Unit v) {
+  EMB_CONSTEXPR motorspeed_f32& operator=(Unit v) {
     set(v);
     return *this;
   }
@@ -258,49 +259,57 @@ private:
 
 // NOTE: if lhs.p() != rhs.p() then comparison operator behaviour is undefined
 EMB_INLINE_CONSTEXPR bool
-operator==(motorspeed_t const& lhs, motorspeed_t const& rhs) {
+operator==(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
   assert(lhs.p() == rhs.p());
   return lhs.eradps() == rhs.eradps();
 }
 
 EMB_INLINE_CONSTEXPR bool
-operator!=(motorspeed_t const& lhs, motorspeed_t const& rhs) {
+operator!=(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
+  assert(lhs.p() == rhs.p());
   return lhs.eradps() != rhs.eradps();
 }
 
 EMB_INLINE_CONSTEXPR bool
-operator<(motorspeed_t const& lhs, motorspeed_t const& rhs) {
+operator<(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
+  assert(lhs.p() == rhs.p());
   return lhs.eradps() < rhs.eradps();
 }
 
 EMB_INLINE_CONSTEXPR bool
-operator>(motorspeed_t const& lhs, motorspeed_t const& rhs) {
+operator>(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
+  assert(lhs.p() == rhs.p());
   return lhs.eradps() > rhs.eradps();
 }
 
 EMB_INLINE_CONSTEXPR bool
-operator<=(motorspeed_t const& lhs, motorspeed_t const& rhs) {
+operator<=(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
+  assert(lhs.p() == rhs.p());
   return lhs.eradps() <= rhs.eradps();
 }
 
 EMB_INLINE_CONSTEXPR bool
-operator>=(motorspeed_t const& lhs, motorspeed_t const& rhs) {
+operator>=(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
+  assert(lhs.p() == rhs.p());
   return lhs.eradps() >= rhs.eradps();
 }
 
-EMB_INLINE_CONSTEXPR motorspeed_t
-operator*(motorspeed_t const& lhs, float rhs) {
-  return motorspeed_t(lhs.p(), lhs.eradps() * rhs);
+template<typename V>
+EMB_INLINE_CONSTEXPR motorspeed_f32
+operator*(motorspeed_f32 const& lhs, V const& rhs) {
+  return motorspeed_f32(lhs.p(), lhs.eradps() * rhs);
 }
 
-EMB_INLINE_CONSTEXPR motorspeed_t
-operator*(float lhs, motorspeed_t const& rhs) {
+template<typename V>
+EMB_INLINE_CONSTEXPR motorspeed_f32
+operator*(V const& lhs, motorspeed_f32 const& rhs) {
   return rhs * lhs;
 }
 
-EMB_INLINE_CONSTEXPR motorspeed_t
-operator/(motorspeed_t const& lhs, float rhs) {
-  return motorspeed_t(lhs.p(), lhs.eradps() / rhs);
+template<typename V>
+EMB_INLINE_CONSTEXPR motorspeed_f32
+operator/(motorspeed_f32 const& lhs, V const& rhs) {
+  return motorspeed_f32(lhs.p(), lhs.eradps() / rhs);
 }
 
 /*============================================================================*/
