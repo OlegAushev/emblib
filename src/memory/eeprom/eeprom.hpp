@@ -55,7 +55,7 @@ public:
 
   template<typename T>
   emb::mem::status read(size_t page, T& data, EMB_MILLISECONDS timeout) {
-#if defined(EMBLIB_C28X)
+#ifdef __c28x__
     uint8_t data_bytes[2 * sizeof(T)];
     status sts = read(page, data_bytes, 2 * sizeof(T), timeout);
     emb::c28x::from_bytes<T>(data, data_bytes);
@@ -69,7 +69,7 @@ public:
 
   template<typename T>
   emb::mem::status write(size_t page, T const& data, EMB_MILLISECONDS timeout) {
-#if defined(EMBLIB_C28X)
+#ifdef __c28x__
     uint8_t data_bytes[2 * sizeof(T)];
     emb::c28x::to_bytes<T>(data_bytes, data);
     return write(page, data_bytes, 2 * sizeof(T), timeout);

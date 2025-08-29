@@ -1,4 +1,4 @@
-#if defined(EMBLIB_C28X)
+#ifdef __c28x__
 #include <mcudrv-c28x/f2837xd/crc/crc.hpp>
 #elif defined(STM32H7xx)
 #include <mcudrv/stm32/h7/crc/crc.h>
@@ -62,7 +62,7 @@ struct TestingEepromStruct1 {
   uint16_t u16;
   int32_t i32;
   bool bl;
-#ifndef EMBLIB_C28X
+#ifndef __c28x__
   friend auto operator<=>(const TestingEepromStruct1&,
                           const TestingEepromStruct1&) = default;
 #endif
@@ -74,7 +74,7 @@ struct TestingEepromStruct2 {
   float f32_3;
   float f32_4;
   float f32_5;
-#ifndef EMBLIB_C28X
+#ifndef __c28x__
   friend auto operator<=>(const TestingEepromStruct2&,
                           const TestingEepromStruct2&) = default;
 #endif
@@ -83,7 +83,7 @@ struct TestingEepromStruct2 {
 void emb::tests::eeprom_test() {
 #ifdef EMB_TESTS_ENABLED
   TestingEepromDriver eeprom_driver;
-#if defined(EMBLIB_C28X)
+#ifdef __c28x__
   emb::mem::eeprom::storage eeprom(eeprom_driver,
                                    mcu::c28x::crc::calc_crc32_byte8);
 #else

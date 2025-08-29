@@ -39,7 +39,7 @@ public:
   static void static_vector_test();
   static void static_string_test();
   static void queue_test();
-#if defined(EMBLIB_C28X)
+#ifdef __c28x__
   static void bitset_test();
 #endif
   static void eeprom_test();

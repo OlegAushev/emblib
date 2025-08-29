@@ -2,7 +2,7 @@
 
 namespace emb {
 
-#if defined(EMBLIB_C28X)
+#ifdef __c28x__
 
 void (*test_runner::print)(const char* str) = test_runner::print_dbg;
 void (*test_runner::print_nextline)() = test_runner::print_nextline_dbg;

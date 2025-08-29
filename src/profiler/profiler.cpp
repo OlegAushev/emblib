@@ -2,7 +2,7 @@
 
 namespace emb {
 
-#if defined(EMBLIB_C28X)
+#ifdef __c28x__
 
 emb::chrono::nanoseconds time_now_func_none() {
   return emb::chrono::nanoseconds(0);

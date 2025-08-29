@@ -1,7 +1,7 @@
 #pragma once
 
-#if !defined(EMBLIB_C28X) && !defined(EMBLIB_ARM) && !defined(EMBLIB_X86)
-#error "emblib error: arch not defined!"
+#if !defined(__c28x__) && !defined(__arm__) && !defined(__x86_64__)
+#error "emblib: arch not recognized"
 #endif
 
 #if __cplusplus >= 201100
@@ -12,7 +12,8 @@
 #include <cstddef>
 #include <cassert>
 
-#ifdef EMBLIB_C28X
+#ifdef __TMS320C28XX__
+#define __c28x__
 #include <emb/c28x.hpp>
 #endif
 
@@ -51,12 +52,12 @@
 #define EMB_STATIC_ASSERT(cond) typedef int EMB_CAT(assert, __LINE__)[(cond) ? 1 : -1]
 #endif
 
-#ifndef EMBLIB_C28X
+#ifndef __c28x__
 #define EMB_STRINGIZE_IMPL(x) #x
 #define EMB_STRINGIZE(x) EMB_STRINGIZE_IMPL(x)
 #endif
 
-#ifndef EMBLIB_C28X
+#ifndef __c28x__
 namespace emb {
 
 void fatal_error_cb(const char* hint, int code);

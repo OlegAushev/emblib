@@ -42,7 +42,7 @@ emb::mem::status storage::write(size_t page,
 
   uint32_t crc = _calc_crc32(buf, len);
   uint8_t crc_bytes[4];
-#if defined(EMBLIB_C28X)
+#ifdef __c28x__
   emb::c28x::to_bytes<uint32_t>(crc_bytes, crc);
 #else
   memcpy(crc_bytes, &crc, 4);
@@ -110,7 +110,7 @@ storage::read(size_t page, uint8_t* buf, size_t len, EMB_MILLISECONDS timeout) {
     goto read_backup;
   }
 
-#if defined(EMBLIB_C28X)
+#ifdef __c28x__
   emb::c28x::from_bytes<uint32_t>(primary_stored_crc, crc_bytes);
 #else
   memcpy(&primary_stored_crc, crc_bytes, 4);
@@ -135,7 +135,7 @@ read_backup:
     goto read_end;
   }
 
-#if defined(EMBLIB_C28X)
+#ifdef __c28x__
   emb::c28x::from_bytes<uint32_t>(secondary_stored_crc, crc_bytes);
 #else
   memcpy(&secondary_stored_crc, crc_bytes, 4);
@@ -155,7 +155,7 @@ read_end:
     // backup is corrupted or outdated
     ++_errors.secondary_data_corrupted;
     _driver.write(page + available_page_count, 0, buf, len, timeout);
-#if defined(EMBLIB_C28X)
+#ifdef __c28x__
     emb::c28x::to_bytes<uint32_t>(crc_bytes, primary_crc);
 #else
     memcpy(crc_bytes, &primary_crc, 4);
@@ -167,7 +167,7 @@ read_end:
     ++_errors.primary_data_corrupted;
     memcpy(buf, _backup_buf, len); // update output buffer
     _driver.write(page, 0, _backup_buf, len, timeout);
-#if defined(EMBLIB_C28X)
+#ifdef __c28x__
     emb::c28x::to_bytes<uint32_t>(crc_bytes, secondary_crc);
 #else
     memcpy(crc_bytes, &secondary_crc, 4);

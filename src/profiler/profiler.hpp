@@ -7,7 +7,7 @@
 
 namespace emb {
 
-#if defined(EMBLIB_C28X)
+#ifdef __c28x__
 
 class duration_logger {
 private:

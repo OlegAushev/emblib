@@ -9,7 +9,7 @@ namespace emb {
 void run_tests();
 
 class test_runner {
-#if defined(EMBLIB_C28X)
+#ifdef __c28x__
 public:
   static void (*print)(char const* str);
   static void (*print_nextline)();
@@ -120,7 +120,7 @@ public:
 
 #define EMB_RUN_TEST(func) emb::test_runner::run_test(func, #func)
 
-#if defined(EMBLIB_C28X)
+#ifdef __c28x__
 
 #ifdef UNIT_TESTS_ENABLED
 #define EMB_ASSERT_EQUAL(x, y)                                        \

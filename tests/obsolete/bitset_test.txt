@@ -1,6 +1,6 @@
 #include <emb/tests/tests.hpp>
 
-#if defined(EMBLIB_C28X)
+#ifdef __c28x__
 
 void emb::tests::bitset_test() {
 #ifdef EMB_TESTS_ENABLED

@@ -166,7 +166,7 @@ compensate_deadtime_v2(emb::array<unsigned_pu, 3> const& dutycycles,
                        float current_threshold,
                        float pwm_period,
                        float deadtime) {
-#ifdef EMBLIB_C28X
+#ifdef __c28x__
   return dutycycles;
 #else
   auto dc = dutycycles;

@@ -10,7 +10,7 @@
 #include <stdint.h>
 #endif
 #include <cstddef>
-#ifdef EMBLIB_C28X
+#ifdef __c28x__
 #include <driverlib.h>
 #endif
 

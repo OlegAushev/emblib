@@ -2,7 +2,7 @@
 
 void emb::tests::chrono_test() {
 #ifdef EMB_TESTS_ENABLED
-#if defined(EMBLIB_C28X)
+#ifdef __c28x__
   emb::chrono::seconds sec(10);
   EMB_ASSERT_EQUAL(sec.count(), 10);
   emb::chrono::milliseconds msec =
