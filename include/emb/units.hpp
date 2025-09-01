@@ -154,10 +154,17 @@ concept AngleUnit =
 
 /*============================================================================*/
 
-#ifdef __cpp_variadic_templates
+#if defined (__cpp_variadic_templates) && defined (__cpp_concepts)
 
 template<typename To, typename From, typename... Args>
+  requires(!std::same_as<To, From>)
 EMB_INLINE_CONSTEXPR To convert_to(From const& v, Args... args);
+
+template<typename To, typename From, typename... Args>
+  requires std::same_as<To, From>
+EMB_INLINE_CONSTEXPR To convert_to(From const& v, Args... args) {
+  return v;
+}
 
 #else
 
@@ -189,7 +196,7 @@ EMB_INLINE_CONSTEXPR deg_f32 convert_to(rad_f32 const& v) {
   return units::deg_f32(emb::to_deg(v.numval()));
 }
 
-#ifdef __cpp_variadic_templates
+#if defined (__cpp_variadic_templates) && defined (__cpp_concepts)
 
 template<>
 EMB_INLINE_CONSTEXPR eradps_f32 convert_to(rpm_f32 const& v, int32_t p) {
@@ -217,90 +224,90 @@ EMB_INLINE_CONSTEXPR rpm_f32 convert_to(eradps_f32 const& v, int32_t p) {
 
 /*============================================================================*/
 
-class motorspeed_f32 {
-public:
-  typedef float underlying_type;
-private:
-  int32_t p_;
-  eradps_f32 w_;
-public:
-  EMB_CONSTEXPR explicit motorspeed_f32(int32_t p) : p_(p), w_(0) {}
+// class motorspeed_f32 {
+// public:
+//   typedef float underlying_type;
+// private:
+//   int32_t p_;
+//   eradps_f32 w_;
+// public:
+//   EMB_CONSTEXPR explicit motorspeed_f32(int32_t p) : p_(p), w_(0) {}
 
-  EMB_CONSTEXPR motorspeed_f32(int32_t p, eradps_f32 w) : p_(p) { set(w); }
+//   EMB_CONSTEXPR motorspeed_f32(int32_t p, eradps_f32 w) : p_(p) { set(w); }
 
-  EMB_CONSTEXPR motorspeed_f32(int32_t p, rpm_f32 n) : p_(p) { set(n); }
+//   EMB_CONSTEXPR motorspeed_f32(int32_t p, rpm_f32 n) : p_(p) { set(n); }
 
-  template<typename Unit>
-  EMB_CONSTEXPR motorspeed_f32& operator=(Unit v) {
-    set(v);
-    return *this;
-  }
+//   template<typename Unit>
+//   EMB_CONSTEXPR motorspeed_f32& operator=(Unit v) {
+//     set(v);
+//     return *this;
+//   }
 
-  EMB_CONSTEXPR int32_t p() const { return p_; }
+//   EMB_CONSTEXPR int32_t p() const { return p_; }
 
-  EMB_CONSTEXPR eradps_f32 eradps() const { return w_; }
+//   EMB_CONSTEXPR eradps_f32 eradps() const { return w_; }
 
-  EMB_CONSTEXPR rpm_f32 rpm() const { return convert_to<rpm_f32>(w_, p_); }
-private:
-  EMB_CONSTEXPR void set(eradps_f32 w) { w_ = w; }
+//   EMB_CONSTEXPR rpm_f32 rpm() const { return convert_to<rpm_f32>(w_, p_); }
+// private:
+//   EMB_CONSTEXPR void set(eradps_f32 w) { w_ = w; }
 
-  EMB_CONSTEXPR void set(rpm_f32 n) { w_ = convert_to<eradps_f32>(n, p_); }
-};
+//   EMB_CONSTEXPR void set(rpm_f32 n) { w_ = convert_to<eradps_f32>(n, p_); }
+// };
 
-// NOTE: if lhs.p() != rhs.p() then comparison operator behaviour is undefined
-EMB_INLINE_CONSTEXPR bool
-operator==(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
-  assert(lhs.p() == rhs.p());
-  return lhs.eradps() == rhs.eradps();
-}
+// // NOTE: if lhs.p() != rhs.p() then comparison operator behaviour is undefined
+// EMB_INLINE_CONSTEXPR bool
+// operator==(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
+//   assert(lhs.p() == rhs.p());
+//   return lhs.eradps() == rhs.eradps();
+// }
 
-EMB_INLINE_CONSTEXPR bool
-operator!=(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
-  assert(lhs.p() == rhs.p());
-  return lhs.eradps() != rhs.eradps();
-}
+// EMB_INLINE_CONSTEXPR bool
+// operator!=(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
+//   assert(lhs.p() == rhs.p());
+//   return lhs.eradps() != rhs.eradps();
+// }
 
-EMB_INLINE_CONSTEXPR bool
-operator<(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
-  assert(lhs.p() == rhs.p());
-  return lhs.eradps() < rhs.eradps();
-}
+// EMB_INLINE_CONSTEXPR bool
+// operator<(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
+//   assert(lhs.p() == rhs.p());
+//   return lhs.eradps() < rhs.eradps();
+// }
 
-EMB_INLINE_CONSTEXPR bool
-operator>(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
-  assert(lhs.p() == rhs.p());
-  return lhs.eradps() > rhs.eradps();
-}
+// EMB_INLINE_CONSTEXPR bool
+// operator>(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
+//   assert(lhs.p() == rhs.p());
+//   return lhs.eradps() > rhs.eradps();
+// }
 
-EMB_INLINE_CONSTEXPR bool
-operator<=(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
-  assert(lhs.p() == rhs.p());
-  return lhs.eradps() <= rhs.eradps();
-}
+// EMB_INLINE_CONSTEXPR bool
+// operator<=(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
+//   assert(lhs.p() == rhs.p());
+//   return lhs.eradps() <= rhs.eradps();
+// }
 
-EMB_INLINE_CONSTEXPR bool
-operator>=(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
-  assert(lhs.p() == rhs.p());
-  return lhs.eradps() >= rhs.eradps();
-}
+// EMB_INLINE_CONSTEXPR bool
+// operator>=(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
+//   assert(lhs.p() == rhs.p());
+//   return lhs.eradps() >= rhs.eradps();
+// }
 
-template<typename V>
-EMB_INLINE_CONSTEXPR motorspeed_f32
-operator*(motorspeed_f32 const& lhs, V const& rhs) {
-  return motorspeed_f32(lhs.p(), lhs.eradps() * rhs);
-}
+// template<typename V>
+// EMB_INLINE_CONSTEXPR motorspeed_f32
+// operator*(motorspeed_f32 const& lhs, V const& rhs) {
+//   return motorspeed_f32(lhs.p(), lhs.eradps() * rhs);
+// }
 
-template<typename V>
-EMB_INLINE_CONSTEXPR motorspeed_f32
-operator*(V const& lhs, motorspeed_f32 const& rhs) {
-  return rhs * lhs;
-}
+// template<typename V>
+// EMB_INLINE_CONSTEXPR motorspeed_f32
+// operator*(V const& lhs, motorspeed_f32 const& rhs) {
+//   return rhs * lhs;
+// }
 
-template<typename V>
-EMB_INLINE_CONSTEXPR motorspeed_f32
-operator/(motorspeed_f32 const& lhs, V const& rhs) {
-  return motorspeed_f32(lhs.p(), lhs.eradps() / rhs);
-}
+// template<typename V>
+// EMB_INLINE_CONSTEXPR motorspeed_f32
+// operator/(motorspeed_f32 const& lhs, V const& rhs) {
+//   return motorspeed_f32(lhs.p(), lhs.eradps() / rhs);
+// }
 
 } // namespace units
 
