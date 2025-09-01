@@ -76,6 +76,22 @@ constexpr bool isodd(std::integral auto v) {
 
 #endif
 
+EMB_INLINE_CONSTEXPR float to_rad(float deg) {
+  return numbers::pi * deg / 180.0f;
+}
+
+EMB_INLINE_CONSTEXPR float to_deg(float rad) {
+  return 180.0f * rad / numbers::pi;
+}
+
+EMB_INLINE_CONSTEXPR float to_eradps(float n, int32_t p) {
+  return 2 * numbers::pi * float(p) * n / 60.0f;
+}
+
+EMB_INLINE_CONSTEXPR float to_rpm(float w, int32_t p) {
+  return 60.f * w / (2 * numbers::pi * float(p));
+}
+
 EMB_INLINE_CONSTEXPR float rem2pi(float v) {
 #ifdef __cpp_if_consteval
   if consteval {

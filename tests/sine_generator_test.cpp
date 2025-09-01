@@ -53,17 +53,17 @@ static_assert(test_sine_generator(
         0.125f,
         100.0f,
         1.0f,
-        emb::to_rad(emb::units::deg_f32{90.0f})},
-    emb::to_rad(emb::units::deg_f32{90.0f})));
+        emb::units::convert_to<emb::units::rad_f32>(emb::units::deg_f32{90.0f})},
+    emb::units::convert_to<emb::units::rad_f32>(emb::units::deg_f32{90.0f})));
 
 static_assert(test_sine_generator(
     emb::sine_generator<float>{
         0.1f,
         1.0f,
         4.2f,
-        emb::to_rad(emb::units::deg_f32{42.0f}),
+        emb::units::convert_to<emb::units::rad_f32>(emb::units::deg_f32{42.0f}),
         42.0f},
-    emb::to_rad(emb::units::deg_f32{42.0f})));
+    emb::units::convert_to<emb::units::rad_f32>(emb::units::deg_f32{42.0f})));
 
 } // namespace tests
 } // namespace internal

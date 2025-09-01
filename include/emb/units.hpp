@@ -106,6 +106,8 @@ operator-(named_unit<T, Unit> const& v) {
   return named_unit<T, Unit>(-v.numval());
 }
 
+/*============================================================================*/
+
 namespace tags {
 // speed
 struct rpm {};
@@ -149,168 +151,6 @@ concept AngleUnit =
     std::same_as<Unit, rad_f32> || std::same_as<Unit, deg_f32>;
 
 #endif
-
-} // namespace units
-
-EMB_INLINE_CONSTEXPR float to_rad(float deg) {
-  return numbers::pi * deg / 180.0f;
-}
-
-EMB_INLINE_CONSTEXPR float to_deg(float rad) {
-  return 180.0f * rad / numbers::pi;
-}
-
-EMB_INLINE_CONSTEXPR float to_eradps(float n, int32_t p) {
-  return 2 * numbers::pi * float(p) * n / 60.0f;
-}
-
-EMB_INLINE_CONSTEXPR float to_rpm(float w, int32_t p) {
-  return 60.f * w / (2 * numbers::pi * float(p));
-}
-
-#ifdef __cpp_concepts
-
-template<units::RadianUnit Unit>
-Unit rem2pi(Unit v) {
-  return Unit{rem2pi(v.numval())};
-}
-
-template<units::RadianUnit Unit>
-Unit rempi(Unit v) {
-  return Unit{rempi(v.numval())};
-}
-
-template<units::DegreeUnit Unit>
-Unit rem2pi(Unit v) {
-  float v_ = fmodf(v.numval(), to_deg(2 * numbers::pi));
-  if (v_ < 0) {
-    v_ += to_deg(2 * numbers::pi);
-  }
-  return Unit{v_};
-}
-
-template<units::DegreeUnit Unit>
-Unit rempi(Unit v) {
-  float v_ = fmodf(v.numval() + to_deg(numbers::pi), to_deg(2 * numbers::pi));
-  if (v_ < 0) {
-    v_ += to_deg(2 * numbers::pi);
-  }
-  return Unit{v_ - to_deg(numbers::pi)};
-}
-
-#endif
-
-EMB_INLINE_CONSTEXPR units::erad_f32 to_rad(units::edeg_f32 deg) {
-  return units::erad_f32(emb::to_rad(deg.numval()));
-}
-
-EMB_INLINE_CONSTEXPR units::edeg_f32 to_deg(units::erad_f32 rad) {
-  return units::edeg_f32(emb::to_deg(rad.numval()));
-}
-
-EMB_INLINE_CONSTEXPR units::rad_f32 to_rad(units::deg_f32 deg) {
-  return units::rad_f32(emb::to_rad(deg.numval()));
-}
-
-EMB_INLINE_CONSTEXPR units::deg_f32 to_deg(units::rad_f32 rad) {
-  return units::deg_f32(emb::to_deg(rad.numval()));
-}
-
-EMB_INLINE_CONSTEXPR units::eradps_f32 to_eradps(units::rpm_f32 n, int32_t p) {
-  return units::eradps_f32(emb::to_eradps(n.numval(), p));
-}
-
-EMB_INLINE_CONSTEXPR units::rpm_f32 to_rpm(units::eradps_f32 w, int32_t p) {
-  return units::rpm_f32(emb::to_rpm(w.numval(), p));
-}
-
-namespace units {
-
-/*============================================================================*/
-class motorspeed_f32 {
-public:
-  typedef float underlying_type;
-private:
-  int32_t p_;
-  eradps_f32 w_;
-public:
-  EMB_CONSTEXPR explicit motorspeed_f32(int32_t p) : p_(p), w_(0) {}
-
-  EMB_CONSTEXPR motorspeed_f32(int32_t p, eradps_f32 w) : p_(p) { set(w); }
-
-  EMB_CONSTEXPR motorspeed_f32(int32_t p, rpm_f32 n) : p_(p) { set(n); }
-
-  template<typename Unit>
-  EMB_CONSTEXPR motorspeed_f32& operator=(Unit v) {
-    set(v);
-    return *this;
-  }
-
-  EMB_CONSTEXPR int32_t p() const { return p_; }
-
-  EMB_CONSTEXPR eradps_f32 eradps() const { return w_; }
-
-  EMB_CONSTEXPR rpm_f32 rpm() const { return to_rpm(w_, p_); }
-private:
-  EMB_CONSTEXPR void set(eradps_f32 w) { w_ = w; }
-
-  EMB_CONSTEXPR void set(rpm_f32 n) { w_ = to_eradps(n, p_); }
-};
-
-// NOTE: if lhs.p() != rhs.p() then comparison operator behaviour is undefined
-EMB_INLINE_CONSTEXPR bool
-operator==(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
-  assert(lhs.p() == rhs.p());
-  return lhs.eradps() == rhs.eradps();
-}
-
-EMB_INLINE_CONSTEXPR bool
-operator!=(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
-  assert(lhs.p() == rhs.p());
-  return lhs.eradps() != rhs.eradps();
-}
-
-EMB_INLINE_CONSTEXPR bool
-operator<(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
-  assert(lhs.p() == rhs.p());
-  return lhs.eradps() < rhs.eradps();
-}
-
-EMB_INLINE_CONSTEXPR bool
-operator>(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
-  assert(lhs.p() == rhs.p());
-  return lhs.eradps() > rhs.eradps();
-}
-
-EMB_INLINE_CONSTEXPR bool
-operator<=(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
-  assert(lhs.p() == rhs.p());
-  return lhs.eradps() <= rhs.eradps();
-}
-
-EMB_INLINE_CONSTEXPR bool
-operator>=(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
-  assert(lhs.p() == rhs.p());
-  return lhs.eradps() >= rhs.eradps();
-}
-
-template<typename V>
-EMB_INLINE_CONSTEXPR motorspeed_f32
-operator*(motorspeed_f32 const& lhs, V const& rhs) {
-  return motorspeed_f32(lhs.p(), lhs.eradps() * rhs);
-}
-
-template<typename V>
-EMB_INLINE_CONSTEXPR motorspeed_f32
-operator*(V const& lhs, motorspeed_f32 const& rhs) {
-  return rhs * lhs;
-}
-
-template<typename V>
-EMB_INLINE_CONSTEXPR motorspeed_f32
-operator/(motorspeed_f32 const& lhs, V const& rhs) {
-  return motorspeed_f32(lhs.p(), lhs.eradps() / rhs);
-}
 
 /*============================================================================*/
 
@@ -375,7 +215,127 @@ EMB_INLINE_CONSTEXPR rpm_f32 convert_to(eradps_f32 const& v, int32_t p) {
 
 #endif
 
+/*============================================================================*/
+
+class motorspeed_f32 {
+public:
+  typedef float underlying_type;
+private:
+  int32_t p_;
+  eradps_f32 w_;
+public:
+  EMB_CONSTEXPR explicit motorspeed_f32(int32_t p) : p_(p), w_(0) {}
+
+  EMB_CONSTEXPR motorspeed_f32(int32_t p, eradps_f32 w) : p_(p) { set(w); }
+
+  EMB_CONSTEXPR motorspeed_f32(int32_t p, rpm_f32 n) : p_(p) { set(n); }
+
+  template<typename Unit>
+  EMB_CONSTEXPR motorspeed_f32& operator=(Unit v) {
+    set(v);
+    return *this;
+  }
+
+  EMB_CONSTEXPR int32_t p() const { return p_; }
+
+  EMB_CONSTEXPR eradps_f32 eradps() const { return w_; }
+
+  EMB_CONSTEXPR rpm_f32 rpm() const { return convert_to<rpm_f32>(w_, p_); }
+private:
+  EMB_CONSTEXPR void set(eradps_f32 w) { w_ = w; }
+
+  EMB_CONSTEXPR void set(rpm_f32 n) { w_ = convert_to<eradps_f32>(n, p_); }
+};
+
+// NOTE: if lhs.p() != rhs.p() then comparison operator behaviour is undefined
+EMB_INLINE_CONSTEXPR bool
+operator==(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
+  assert(lhs.p() == rhs.p());
+  return lhs.eradps() == rhs.eradps();
+}
+
+EMB_INLINE_CONSTEXPR bool
+operator!=(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
+  assert(lhs.p() == rhs.p());
+  return lhs.eradps() != rhs.eradps();
+}
+
+EMB_INLINE_CONSTEXPR bool
+operator<(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
+  assert(lhs.p() == rhs.p());
+  return lhs.eradps() < rhs.eradps();
+}
+
+EMB_INLINE_CONSTEXPR bool
+operator>(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
+  assert(lhs.p() == rhs.p());
+  return lhs.eradps() > rhs.eradps();
+}
+
+EMB_INLINE_CONSTEXPR bool
+operator<=(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
+  assert(lhs.p() == rhs.p());
+  return lhs.eradps() <= rhs.eradps();
+}
+
+EMB_INLINE_CONSTEXPR bool
+operator>=(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
+  assert(lhs.p() == rhs.p());
+  return lhs.eradps() >= rhs.eradps();
+}
+
+template<typename V>
+EMB_INLINE_CONSTEXPR motorspeed_f32
+operator*(motorspeed_f32 const& lhs, V const& rhs) {
+  return motorspeed_f32(lhs.p(), lhs.eradps() * rhs);
+}
+
+template<typename V>
+EMB_INLINE_CONSTEXPR motorspeed_f32
+operator*(V const& lhs, motorspeed_f32 const& rhs) {
+  return rhs * lhs;
+}
+
+template<typename V>
+EMB_INLINE_CONSTEXPR motorspeed_f32
+operator/(motorspeed_f32 const& lhs, V const& rhs) {
+  return motorspeed_f32(lhs.p(), lhs.eradps() / rhs);
+}
+
 } // namespace units
+
+#ifdef __cpp_concepts
+
+template<units::RadianUnit Unit>
+Unit rem2pi(Unit v) {
+  return Unit{rem2pi(v.numval())};
+}
+
+template<units::RadianUnit Unit>
+Unit rempi(Unit v) {
+  return Unit{rempi(v.numval())};
+}
+
+template<units::DegreeUnit Unit>
+Unit rem2pi(Unit v) {
+  float v_ = fmodf(v.numval(), to_deg(2 * numbers::pi));
+  if (v_ < 0) {
+    v_ += to_deg(2 * numbers::pi);
+  }
+  return Unit{v_};
+}
+
+template<units::DegreeUnit Unit>
+Unit rempi(Unit v) {
+  float v_ = fmodf(v.numval() + to_deg(numbers::pi), to_deg(2 * numbers::pi));
+  if (v_ < 0) {
+    v_ += to_deg(2 * numbers::pi);
+  }
+  return Unit{v_ - to_deg(numbers::pi)};
+}
+
+#endif
+
 } // namespace emb
 
 template<typename T, typename Unit>
