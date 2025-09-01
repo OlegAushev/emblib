@@ -314,6 +314,67 @@ operator/(motorspeed_f32 const& lhs, V const& rhs) {
 
 /*============================================================================*/
 
+#ifdef __cpp_variadic_templates
+
+template<typename To, typename From, typename... Args>
+EMB_INLINE_CONSTEXPR To convert_to(From const& v, Args... args);
+
+#else
+
+template<typename To, typename From>
+EMB_INLINE_CONSTEXPR To convert_to(From const& v);
+
+template<typename To, typename From, typename Arg>
+EMB_INLINE_CONSTEXPR To convert_to(From const& v, Arg arg);
+
+#endif
+
+template<>
+EMB_INLINE_CONSTEXPR erad_f32 convert_to(edeg_f32 const& v) {
+  return units::erad_f32(emb::to_rad(v.numval()));
+}
+
+template<>
+EMB_INLINE_CONSTEXPR edeg_f32 convert_to(erad_f32 const& v) {
+  return units::edeg_f32(emb::to_deg(v.numval()));
+}
+
+template<>
+EMB_INLINE_CONSTEXPR rad_f32 convert_to(deg_f32 const& v) {
+  return units::rad_f32(emb::to_rad(v.numval()));
+}
+
+template<>
+EMB_INLINE_CONSTEXPR deg_f32 convert_to(rad_f32 const& v) {
+  return units::deg_f32(emb::to_deg(v.numval()));
+}
+
+#ifdef __cpp_variadic_templates
+
+template<>
+EMB_INLINE_CONSTEXPR eradps_f32 convert_to(rpm_f32 const& v, int32_t p) {
+  return units::eradps_f32(emb::to_eradps(v.numval(), p));
+}
+
+template<>
+EMB_INLINE_CONSTEXPR rpm_f32 convert_to(eradps_f32 const& v, int32_t p) {
+  return units::rpm_f32(emb::to_rpm(v.numval(), p));
+}
+
+#else
+
+template<>
+EMB_INLINE_CONSTEXPR eradps_f32 convert_to(rpm_f32 const& v, int32_t p) {
+  return units::eradps_f32(emb::to_eradps(v.numval(), p));
+}
+
+template<>
+EMB_INLINE_CONSTEXPR rpm_f32 convert_to(eradps_f32 const& v, int32_t p) {
+  return units::rpm_f32(emb::to_rpm(v.numval(), p));
+}
+
+#endif
+
 } // namespace units
 } // namespace emb
 
