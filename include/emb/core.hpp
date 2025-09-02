@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef __TMS320C28XX__
+#define __c28x__
+#endif
+
 #if !defined(__c28x__) && !defined(__arm__) && !defined(__x86_64__)
 #error "emblib: arch not recognized"
 #endif
@@ -12,8 +16,7 @@
 #include <cstddef>
 #include <cassert>
 
-#ifdef __TMS320C28XX__
-#define __c28x__
+#ifdef __c28x__
 #include <emb/c28x.hpp>
 #endif
 

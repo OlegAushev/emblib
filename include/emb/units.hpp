@@ -10,6 +10,7 @@ template<typename T, typename Unit>
 class named_unit {
 public:
   typedef T underlying_type;
+  typedef Unit unit_type;
 private:
   underlying_type v_;
 public:
@@ -84,7 +85,8 @@ template<typename T, typename Unit, typename V>
 EMB_INLINE_CONSTEXPR named_unit<T, Unit>
 operator*(named_unit<T, Unit> const& lhs, V const& rhs) {
   return named_unit<T, Unit>(
-      lhs.numval() * static_cast<named_unit<T, Unit>::underlying_type>(rhs));
+      lhs.numval() *
+      static_cast<typename named_unit<T, Unit>::underlying_type>(rhs));
 }
 
 template<typename T, typename Unit, typename V>
@@ -97,7 +99,14 @@ template<typename T, typename Unit, typename V>
 EMB_INLINE_CONSTEXPR named_unit<T, Unit>
 operator/(named_unit<T, Unit> const& lhs, V const& rhs) {
   return named_unit<T, Unit>(
-      lhs.numval() / static_cast<named_unit<T, Unit>::underlying_type>(rhs));
+      lhs.numval() /
+      static_cast<typename named_unit<T, Unit>::underlying_type>(rhs));
+}
+
+template<typename T, typename Unit>
+EMB_INLINE_CONSTEXPR T
+operator/(named_unit<T, Unit> const& lhs, named_unit<T, Unit> const& rhs) {
+  return lhs.numval() / rhs.numval();
 }
 
 template<typename T, typename Unit>
@@ -105,8 +114,6 @@ EMB_INLINE_CONSTEXPR named_unit<T, Unit>
 operator-(named_unit<T, Unit> const& v) {
   return named_unit<T, Unit>(-v.numval());
 }
-
-/*============================================================================*/
 
 namespace tags {
 // speed
@@ -124,35 +131,76 @@ struct rad {};
 struct deg {};
 } // namespace tags
 
+#ifdef __cpp_alias_templates
+
+template<typename T>
+using rpm = named_unit<T, tags::rpm>;
+
+template<typename T>
+using eradps = named_unit<T, tags::eradps>;
+
+template<typename T>
+using erad = named_unit<T, tags::erad>;
+
+template<typename T>
+using edeg = named_unit<T, tags::edeg>;
+
+template<typename T>
+using rad = named_unit<T, tags::rad>;
+
+template<typename T>
+using deg = named_unit<T, tags::deg>;
+
+using rpm_f32 = rpm<float>;
+using eradps_f32 = eradps<float>;
+using erad_f32 = erad<float>;
+using edeg_f32 = edeg<float>;
+using rad_f32 = rad<float>;
+using deg_f32 = deg<float>;
+
+#else
+
 typedef named_unit<float, tags::rpm> rpm_f32;
 typedef named_unit<float, tags::eradps> eradps_f32;
-
 typedef named_unit<float, tags::erad> erad_f32;
 typedef named_unit<float, tags::edeg> edeg_f32;
 typedef named_unit<float, tags::rad> rad_f32;
 typedef named_unit<float, tags::deg> deg_f32;
 
-#ifdef __cpp_concepts
-
-template<typename Unit>
-concept RadianUnit =
-    std::same_as<Unit, erad_f32> || std::same_as<Unit, rad_f32>;
-
-template<typename Unit>
-concept DegreeUnit =
-    std::same_as<Unit, edeg_f32> || std::same_as<Unit, deg_f32>;
-
-template<typename Unit>
-concept EAngleUnit =
-    std::same_as<Unit, erad_f32> || std::same_as<Unit, edeg_f32>;
-
-template<typename Unit>
-concept AngleUnit =
-    std::same_as<Unit, rad_f32> || std::same_as<Unit, deg_f32>;
-
 #endif
 
-/*============================================================================*/
+#ifdef __cpp_concepts
+
+template<typename T>
+concept unit = std::same_as<
+    T,
+    named_unit<typename T::underlying_type, typename T::unit_type>>;
+
+template<typename T>
+concept unit_of_rotational_speed =
+    unit<T> && (std::same_as<typename T::unit_type, tags::rpm> ||
+                std::same_as<typename T::unit_type, tags::eradps>);
+
+template<typename T>
+concept unit_of_electrical_angle =
+    unit<T> && (std::same_as<typename T::unit_type, tags::erad> ||
+                std::same_as<typename T::unit_type, tags::edeg>);
+
+template<typename T>
+concept unit_of_angle =
+    unit<T> && (std::same_as<typename T::unit_type, tags::rad> ||
+                std::same_as<typename T::unit_type, tags::deg>);
+
+template<typename T>
+concept unit_of_radians =
+    unit<T> && (std::same_as<typename T::unit_type, tags::erad> ||
+                std::same_as<typename T::unit_type, tags::rad>);
+
+template<typename T>
+concept unit_of_degrees =
+    unit<T> && (std::same_as<typename T::unit_type, tags::edeg> ||
+                std::same_as<typename T::unit_type, tags::deg>);
+#endif
 
 #if defined (__cpp_variadic_templates) && defined (__cpp_concepts)
 
@@ -196,8 +244,6 @@ EMB_INLINE_CONSTEXPR deg_f32 convert_to(rad_f32 const& v) {
   return units::deg_f32(emb::to_deg(v.numval()));
 }
 
-#if defined (__cpp_variadic_templates) && defined (__cpp_concepts)
-
 template<>
 EMB_INLINE_CONSTEXPR eradps_f32 convert_to(rpm_f32 const& v, int32_t p) {
   return units::eradps_f32(emb::to_eradps(v.numval(), p));
@@ -207,124 +253,23 @@ template<>
 EMB_INLINE_CONSTEXPR rpm_f32 convert_to(eradps_f32 const& v, int32_t p) {
   return units::rpm_f32(emb::to_rpm(v.numval(), p));
 }
-
-#else
-
-template<>
-EMB_INLINE_CONSTEXPR eradps_f32 convert_to(rpm_f32 const& v, int32_t p) {
-  return units::eradps_f32(emb::to_eradps(v.numval(), p));
-}
-
-template<>
-EMB_INLINE_CONSTEXPR rpm_f32 convert_to(eradps_f32 const& v, int32_t p) {
-  return units::rpm_f32(emb::to_rpm(v.numval(), p));
-}
-
-#endif
-
-/*============================================================================*/
-
-// class motorspeed_f32 {
-// public:
-//   typedef float underlying_type;
-// private:
-//   int32_t p_;
-//   eradps_f32 w_;
-// public:
-//   EMB_CONSTEXPR explicit motorspeed_f32(int32_t p) : p_(p), w_(0) {}
-
-//   EMB_CONSTEXPR motorspeed_f32(int32_t p, eradps_f32 w) : p_(p) { set(w); }
-
-//   EMB_CONSTEXPR motorspeed_f32(int32_t p, rpm_f32 n) : p_(p) { set(n); }
-
-//   template<typename Unit>
-//   EMB_CONSTEXPR motorspeed_f32& operator=(Unit v) {
-//     set(v);
-//     return *this;
-//   }
-
-//   EMB_CONSTEXPR int32_t p() const { return p_; }
-
-//   EMB_CONSTEXPR eradps_f32 eradps() const { return w_; }
-
-//   EMB_CONSTEXPR rpm_f32 rpm() const { return convert_to<rpm_f32>(w_, p_); }
-// private:
-//   EMB_CONSTEXPR void set(eradps_f32 w) { w_ = w; }
-
-//   EMB_CONSTEXPR void set(rpm_f32 n) { w_ = convert_to<eradps_f32>(n, p_); }
-// };
-
-// // NOTE: if lhs.p() != rhs.p() then comparison operator behaviour is undefined
-// EMB_INLINE_CONSTEXPR bool
-// operator==(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
-//   assert(lhs.p() == rhs.p());
-//   return lhs.eradps() == rhs.eradps();
-// }
-
-// EMB_INLINE_CONSTEXPR bool
-// operator!=(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
-//   assert(lhs.p() == rhs.p());
-//   return lhs.eradps() != rhs.eradps();
-// }
-
-// EMB_INLINE_CONSTEXPR bool
-// operator<(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
-//   assert(lhs.p() == rhs.p());
-//   return lhs.eradps() < rhs.eradps();
-// }
-
-// EMB_INLINE_CONSTEXPR bool
-// operator>(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
-//   assert(lhs.p() == rhs.p());
-//   return lhs.eradps() > rhs.eradps();
-// }
-
-// EMB_INLINE_CONSTEXPR bool
-// operator<=(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
-//   assert(lhs.p() == rhs.p());
-//   return lhs.eradps() <= rhs.eradps();
-// }
-
-// EMB_INLINE_CONSTEXPR bool
-// operator>=(motorspeed_f32 const& lhs, motorspeed_f32 const& rhs) {
-//   assert(lhs.p() == rhs.p());
-//   return lhs.eradps() >= rhs.eradps();
-// }
-
-// template<typename V>
-// EMB_INLINE_CONSTEXPR motorspeed_f32
-// operator*(motorspeed_f32 const& lhs, V const& rhs) {
-//   return motorspeed_f32(lhs.p(), lhs.eradps() * rhs);
-// }
-
-// template<typename V>
-// EMB_INLINE_CONSTEXPR motorspeed_f32
-// operator*(V const& lhs, motorspeed_f32 const& rhs) {
-//   return rhs * lhs;
-// }
-
-// template<typename V>
-// EMB_INLINE_CONSTEXPR motorspeed_f32
-// operator/(motorspeed_f32 const& lhs, V const& rhs) {
-//   return motorspeed_f32(lhs.p(), lhs.eradps() / rhs);
-// }
 
 } // namespace units
 
 #ifdef __cpp_concepts
 
-template<units::RadianUnit Unit>
-Unit rem2pi(Unit v) {
+template<units::unit_of_radians Unit>
+constexpr Unit rem2pi(Unit v) {
   return Unit{rem2pi(v.numval())};
 }
 
-template<units::RadianUnit Unit>
-Unit rempi(Unit v) {
+template<units::unit_of_radians Unit>
+constexpr Unit rempi(Unit v) {
   return Unit{rempi(v.numval())};
 }
 
-template<units::DegreeUnit Unit>
-Unit rem2pi(Unit v) {
+template<units::unit_of_degrees Unit>
+Unit rem360(Unit v) {
   float v_ = fmodf(v.numval(), to_deg(2 * numbers::pi));
   if (v_ < 0) {
     v_ += to_deg(2 * numbers::pi);
@@ -332,8 +277,8 @@ Unit rem2pi(Unit v) {
   return Unit{v_};
 }
 
-template<units::DegreeUnit Unit>
-Unit rempi(Unit v) {
+template<units::unit_of_degrees Unit>
+Unit rem180(Unit v) {
   float v_ = fmodf(v.numval() + to_deg(numbers::pi), to_deg(2 * numbers::pi));
   if (v_ < 0) {
     v_ += to_deg(2 * numbers::pi);
@@ -348,5 +293,5 @@ Unit rempi(Unit v) {
 template<typename T, typename Unit>
 inline emb::units::named_unit<T, Unit>
 abs(emb::units::named_unit<T, Unit> const& v) {
-  return emb::units::named_unit<T, Unit>(abs(v.numval()));
+  return emb::units::named_unit<T, Unit>(std::abs(v.numval()));
 }
