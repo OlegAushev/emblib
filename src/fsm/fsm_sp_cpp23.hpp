@@ -77,7 +77,52 @@ public:
 
 namespace sp2 {
 
-//
+template<
+    typename DerivedContext,
+    typename StateEnum,
+    typename BaseState,
+    size_t StatesNumber,
+    typename LockGuard = void*>
+class abstract_fsm {
+private:
+  std::array<BaseState*, StatesNumber> states_;
+  BaseState* current_state_;
+  std::chrono::time_point<emb::chrono::steady_clock> enter_timepoint_;
+public:
+  template<typename Event>
+  constexpr void dispatch(Event event) {
+    DerivedContext& context{static_cast<DerivedContext&>(*this)};
+    if (std::optional<StateEnum> next_state{
+            current_state_->dispatch(context, std::forward<Event>(event))}) {
+      [[maybe_unused]] LockGuard lock_guard;
+      StateEnum const prev_state{state()};
+      current_state_->on_exit(context, *next_state);
+      current_state_ = states_[std::to_underlying(*next_state)];
+      enter_timepoint_ = emb::chrono::steady_clock::now();
+      current_state_->on_enter(context, prev_state);
+    }
+  }
+public:
+  abstract_fsm(StateEnum init_state) {
+    for (auto i{0uz}; i < StatesNumber; ++i) {
+      states_[i] = BaseState::create(static_cast<StateEnum>(i));
+    }
+    current_state_ = states_[std::to_underlying(init_state)];
+    enter_timepoint_ = emb::chrono::steady_clock::now();
+  }
+
+  virtual ~abstract_fsm() {
+    for (auto i{0uz}; i < StatesNumber; ++i) {
+      BaseState::destroy(static_cast<StateEnum>(i), states_[i]);
+    }
+  }
+
+  StateEnum state() const { return current_state_->id(); }
+
+  std::chrono::milliseconds time_since_state_enter() const {
+    return emb::chrono::steady_clock::now() - enter_timepoint_;
+  }
+};
 
 } // namespace sp2
 
