@@ -11,6 +11,8 @@
 namespace emb {
 namespace fsm {
 
+namespace sp1 {
+
 template<typename Object, typename State, typename LockGuard = void*>
 class abstract_state {
   static_assert(std::is_enum_v<State>);
@@ -70,6 +72,14 @@ public:
 
   State state() const { return state_->id(); }
 };
+
+} // namespace sp1
+
+namespace sp2 {
+
+//
+
+} // namespace sp2
 
 } // namespace fsm
 } // namespace emb
