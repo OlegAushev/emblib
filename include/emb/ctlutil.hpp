@@ -6,7 +6,7 @@
 namespace emb {
 namespace ctl {
 
-#if __cplusplus > 201100
+#if __cplusplus > 201100L
 
 template<typename ConcreteControl>
 class abstract_controllable {
@@ -36,9 +36,9 @@ public:
   }
 
   void revoke_control() {
-    ConcreteControl control{control_}; // make copy, critical section
+    ConcreteControl* control{control_}; // make copy, critical section
     if (control) {
-      control->release_control;
+      control->release_control();
     }
     control_ = nullptr;
   }
@@ -106,9 +106,9 @@ public:
   }
 
   void revoke_control() {
-    ConcreteControl control = control_; // make copy, critical section
+    ConcreteControl* control = control_; // make copy, critical section
     if (control) {
-      control->release_control;
+      control->release_control();
     }
     control_ = NULL;
   }
