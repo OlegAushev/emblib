@@ -12,7 +12,7 @@ namespace internal {
 namespace tests {
 
 constexpr bool test_movavg_filter(
-    MovingAverageFilter auto filt,
+    moving_average_filter_type auto filt,
     typename decltype(filt)::value_type init_output) {
   using value_type = decltype(filt)::value_type;
   using divider_type = decltype(filt)::divider_type;

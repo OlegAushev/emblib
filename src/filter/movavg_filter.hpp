@@ -171,18 +171,18 @@ public:
 } // namespace v1
 
 template<typename T>
-struct is_moving_average_filter : std::false_type {};
+struct is_moving_average_filter_type : std::false_type {};
 
 template<typename T, size_t WindowSize>
-struct is_moving_average_filter<movavg_filter<T, WindowSize>>
+struct is_moving_average_filter_type<movavg_filter<T, WindowSize>>
     : std::true_type {};
 
 template<typename T, size_t WindowSize>
-struct is_moving_average_filter<v1::movavg_filter<T, WindowSize>>
+struct is_moving_average_filter_type<v1::movavg_filter<T, WindowSize>>
     : std::true_type {};
 
 template<typename T>
-concept MovingAverageFilter = is_moving_average_filter<T>::value;
+concept moving_average_filter_type = is_moving_average_filter_type<T>::value;
 
 #endif
 

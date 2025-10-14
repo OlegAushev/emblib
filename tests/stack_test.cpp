@@ -8,7 +8,7 @@ namespace emb {
 namespace internal {
 namespace tests {
 
-constexpr bool test_stack(Stack auto s)
+constexpr bool test_stack(stack_type auto s)
   requires(std::same_as<typename decltype(s)::value_type, int>) {
   // int const cap{static_cast<int>(s.capacity())};
 

@@ -12,7 +12,7 @@ namespace internal {
 namespace tests {
 
 constexpr bool
-test_sine_generator(SineGenerator auto sine,
+test_sine_generator(sine_generator_type auto sine,
                     emb::units::rad_f32 init_phase) {
   using output_type = decltype(sine)::output_type;
 

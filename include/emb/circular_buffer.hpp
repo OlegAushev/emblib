@@ -240,16 +240,18 @@ public:
 } // namespace v1
 
 template<typename T>
-struct is_circular_buffer : std::false_type {};
+struct is_circular_buffer_type : std::false_type {};
 
 template<typename T, size_t Size>
-struct is_circular_buffer<emb::circular_buffer<T, Size>> : std::true_type {};
+struct is_circular_buffer_type<emb::circular_buffer<T, Size>>
+    : std::true_type {};
 
 template<typename T, size_t Size>
-struct is_circular_buffer<emb::v1::circular_buffer<T, Size>> : std::true_type {};
+struct is_circular_buffer_type<emb::v1::circular_buffer<T, Size>>
+    : std::true_type {};
 
 template<typename T>
-concept CircularBuffer = is_circular_buffer<T>::value;
+concept circular_buffer_type = is_circular_buffer_type<T>::value;
 
 #endif
 

@@ -8,7 +8,7 @@ namespace emb {
 namespace internal {
 namespace tests {
 
-constexpr bool test_queue(Queue auto q)
+constexpr bool test_queue(queue_type auto q)
   requires(std::same_as<typename decltype(q)::value_type, int>) {
   int const cap{static_cast<int>(q.capacity())};
 

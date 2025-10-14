@@ -162,16 +162,16 @@ public:
 } // namespace v1
 
 template<typename T>
-struct is_queue : std::false_type {};
+struct is_queue_type : std::false_type {};
 
 template<typename T, size_t Size>
-struct is_queue<emb::queue<T, Size>> : std::true_type {};
+struct is_queue_type<emb::queue<T, Size>> : std::true_type {};
 
 template<typename T, size_t Size>
-struct is_queue<emb::v1::queue<T, Size>> : std::true_type {};
+struct is_queue_type<emb::v1::queue<T, Size>> : std::true_type {};
 
 template<typename T>
-concept Queue = is_queue<T>::value;
+concept queue_type = is_queue_type<T>::value;
 
 #endif
 

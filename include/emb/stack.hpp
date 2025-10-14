@@ -128,16 +128,16 @@ public:
 } // namespace v1
 
 template<typename T>
-struct is_stack : std::false_type {};
+struct is_stack_type : std::false_type {};
 
 template<typename T, size_t Size>
-struct is_stack<emb::stack<T, Size>> : std::true_type {};
+struct is_stack_type<emb::stack<T, Size>> : std::true_type {};
 
 template<typename T, size_t Size>
-struct is_stack<emb::v1::stack<T, Size>> : std::true_type {};
+struct is_stack_type<emb::v1::stack<T, Size>> : std::true_type {};
 
 template<typename T>
-concept Stack = is_stack<T>::value;
+concept stack_type = is_stack_type<T>::value;
 
 #endif
 

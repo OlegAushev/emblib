@@ -65,13 +65,13 @@ public:
 #ifdef __cpp_concepts
 
 template<typename T>
-struct is_sine_generator : std::false_type {};
+struct is_sine_generator_type : std::false_type {};
 
 template<typename T>
-struct is_sine_generator<emb::sine_generator<T>> : std::true_type {};
+struct is_sine_generator_type<emb::sine_generator<T>> : std::true_type {};
 
 template<typename T>
-concept SineGenerator = is_sine_generator<T>::value;
+concept sine_generator_type = is_sine_generator_type<T>::value;
 
 #endif
 

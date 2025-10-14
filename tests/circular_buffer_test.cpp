@@ -8,7 +8,7 @@ namespace emb {
 namespace internal {
 namespace tests {
 
-constexpr bool test_circular_buffer(CircularBuffer auto buf)
+constexpr bool test_circular_buffer(circular_buffer_type auto buf)
   requires(std::same_as<typename decltype(buf)::value_type, int>) {
   int const cap{static_cast<int>(buf.capacity())};
 

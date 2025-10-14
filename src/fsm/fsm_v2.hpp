@@ -12,7 +12,7 @@
 
 namespace emb {
 namespace fsm {
-namespace v3 {
+namespace v2 {
 
 namespace detail {
 
@@ -27,14 +27,44 @@ concept fsm_policy =
         std::remove_cvref_t<typename T::template event_context_type<Ctx>>,
         std::remove_cv_t<Ctx>>;
 
-template<typename State, typename Context>
-concept entry_action = requires(Context& cxt) {
-  { State::on_entry(cxt) } -> std::same_as<void>;
+template<class T, class Context, class State>
+concept entry_action = requires(Context& cxt, State const& s) {
+  { T::on_entry(cxt, s) } -> std::same_as<void>;
 };
 
-template<typename State, typename Context>
-concept exit_action = requires(Context& cxt) {
-  { State::on_exit(cxt) } -> std::same_as<void>;
+template<class T, class Context, class State>
+concept exit_action = requires(Context& cxt, State const& s) {
+  { T::on_exit(cxt, s) } -> std::same_as<void>;
+};
+
+template<
+    typename T,
+    typename Context,
+    typename Policy,
+    typename State,
+    typename Event,
+    typename TransitionResult>
+concept event_handler =
+    detail::fsm_policy<Policy, Context> &&
+    requires(
+        typename Policy::template event_context_type<Context> ctx,
+        State const& s,
+        Event&& event) {
+      {
+        T::on_event(ctx, s, std::forward<Event>(event))
+      } -> std::convertible_to<TransitionResult>;
+    };
+
+template<typename T, typename Context, typename Policy, typename... States>
+concept fsm_transition_table = requires {
+  requires detail::fsm_policy<Policy, Context>;
+  requires(
+      Policy::entry_action ?
+          (detail::entry_action<T, Context, States> && ...) :
+          !(detail::entry_action<T, Context, States> || ...));
+  requires(
+      Policy::exit_action ? (detail::exit_action<T, Context, States> && ...) :
+                            !(detail::exit_action<T, Context, States> || ...));
 };
 
 template<typename State>
@@ -75,66 +105,16 @@ concept states_with_unique_id = requires {
   ();
 };
 
-template<typename Context, typename Policy, typename... States>
+template<typename... States>
 concept fsm_states = requires {
   requires sizeof...(States) > 0;
   requires(detail::state_with_id<States> && ...);
   requires detail::states_with_same_id_type<States...>;
   requires detail::states_with_unique_id<States...>;
-  requires detail::fsm_policy<Policy, Context>;
-  requires(
-      Policy::entry_action ? (detail::entry_action<States, Context> && ...) :
-                             !(detail::entry_action<States, Context> || ...));
-  requires(
-      Policy::exit_action ? (detail::exit_action<States, Context> && ...) :
-                            !(detail::exit_action<States, Context> || ...));
 };
 
 template<typename State, typename... States>
 concept one_of_fsm_states = std::disjunction_v<std::is_same<State, States>...>;
-
-template<
-    typename State,
-    typename Context,
-    typename Policy,
-    typename Event,
-    typename Result>
-concept state_event_handler =
-    detail::fsm_policy<Policy, Context> &&
-    requires(
-        typename Policy::template event_context_type<Context> ctx,
-        Event&& event) {
-      {
-        State::on_event(ctx, std::forward<Event>(event))
-      } -> std::convertible_to<Result>;
-    };
-
-template<typename Context, typename Policy, typename Event, typename Result>
-concept common_event_handler =
-    detail::fsm_policy<Policy, Context> &&
-    requires(
-        typename Policy::template event_context_type<Context> ctx,
-        Event&& event) {
-      {
-        on_event(ctx, std::forward<Event>(event))
-      } -> std::convertible_to<Result>;
-    };
-
-template<
-    typename Context,
-    typename Policy,
-    typename Event,
-    typename Result,
-    typename... States>
-concept event_handler = requires {
-  requires(
-      (static_cast<int>(
-           state_event_handler<States, Context, Policy, Event, Result>) +
-           static_cast<int>(
-               common_event_handler<Context, Policy, Event, Result>) ==
-       1) &&
-      ...);
-};
 
 } // namespace detail
 
@@ -159,15 +139,22 @@ struct mixed_policy {
   using event_context_type = Ctx&;
 };
 
-template<typename Derived, typename Policy, typename... States>
+template<
+    typename Derived,
+    typename Policy,
+    typename Transitions,
+    typename... States>
   requires detail::fsm_policy<Policy, Derived> &&
-           detail::fsm_states<Derived, Policy, States...>
+           detail::fsm_states<States...> &&
+           detail::fsm_transition_table<Transitions, Derived, Policy, States...>
 class finite_state_machine {
 public:
-  using fsm_type = finite_state_machine<Derived, Policy, States...>;
+  using fsm_type =
+      finite_state_machine<Derived, Policy, Transitions, States...>;
   using context_type = Derived;
   using event_context_type =
       typename Policy::template event_context_type<context_type>;
+  using transition_table = Transitions;
   using state_type = std::variant<States...>;
   using next_state_type = std::optional<state_type>;
 private:
@@ -185,32 +172,19 @@ public:
       : state_(std::forward<State>(initial_state)) {}
 
   template<typename Event>
-    requires(detail::event_handler<
-             context_type,
-             Policy,
-             Event,
-             next_state_type,
-             States...>)
+    requires(
+        detail::event_handler<
+            transition_table,
+            context_type,
+            Policy,
+            States,
+            Event,
+            next_state_type> &&
+        ...)
   constexpr void dispatch(Event&& event) {
     auto const visitor = [&](auto const& s) -> next_state_type {
-      using S = std::decay_t<decltype(s)>;
       event_context_type cxt = get_context();
-      if constexpr (detail::state_event_handler<
-                        S,
-                        context_type,
-                        Policy,
-                        Event,
-                        next_state_type>) {
-        return S::on_event(cxt, std::forward<Event>(event));
-      } else if constexpr (detail::common_event_handler<
-                               context_type,
-                               Policy,
-                               Event,
-                               next_state_type>) {
-        return on_event(cxt, std::forward<Event>(event));
-      } else {
-        return no_transition();
-      }
+      return transition_table::on_event(cxt, s, std::forward<Event>(event));
     };
 
     auto next_state = std::visit(visitor, state_);
@@ -284,10 +258,7 @@ private:
     if constexpr (Policy::entry_action) {
       context_type& cxt = get_context();
       std::visit(
-          [&](auto const& s) {
-            using S = std::decay_t<decltype(s)>;
-            S::on_entry(cxt);
-          },
+          [&](auto const& s) { transition_table::on_entry(cxt, s); },
           state_);
     }
   }
@@ -296,16 +267,13 @@ private:
     if constexpr (Policy::exit_action) {
       context_type& cxt = get_context();
       std::visit(
-          [&](auto const& s) {
-            using S = std::decay_t<decltype(s)>;
-            S::on_exit(cxt);
-          },
+          [&](auto const& s) { transition_table::on_exit(cxt, s); },
           state_);
     }
   }
 };
 
-} // namespace v3
+} // namespace v2
 } // namespace fsm
 } // namespace emb
 
