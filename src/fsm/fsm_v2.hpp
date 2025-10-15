@@ -49,7 +49,8 @@ concept event_handler =
     requires(
         typename Policy::template event_context_type<Context> ctx,
         State const& s,
-        Event&& event) {
+        Event&& event
+    ) {
       {
         T::on_event(ctx, s, std::forward<Event>(event))
       } -> std::convertible_to<TransitionResult>;
@@ -59,12 +60,13 @@ template<typename T, typename Context, typename Policy, typename... States>
 concept fsm_transition_table = requires {
   requires detail::fsm_policy<Policy, Context>;
   requires(
-      Policy::entry_action ?
-          (detail::entry_action<T, Context, States> && ...) :
-          !(detail::entry_action<T, Context, States> || ...));
+      Policy::entry_action ? (detail::entry_action<T, Context, States> && ...) :
+                             !(detail::entry_action<T, Context, States> || ...)
+  );
   requires(
       Policy::exit_action ? (detail::exit_action<T, Context, States> && ...) :
-                            !(detail::exit_action<T, Context, States> || ...));
+                            !(detail::exit_action<T, Context, States> || ...)
+  );
 };
 
 template<typename State>
@@ -180,7 +182,8 @@ public:
             States,
             Event,
             next_state_type> &&
-        ...)
+        ...
+    )
   constexpr void dispatch(Event&& event) {
     auto const visitor = [&](auto const& s) -> next_state_type {
       event_context_type cxt = get_context();
@@ -235,7 +238,8 @@ public:
           using S = std::decay_t<decltype(s)>;
           return S::id;
         },
-        state_);
+        state_
+    );
   }
 protected:
   constexpr void start_fsm() {
@@ -259,7 +263,8 @@ private:
       context_type& cxt = get_context();
       std::visit(
           [&](auto const& s) { transition_table::on_entry(cxt, s); },
-          state_);
+          state_
+      );
     }
   }
 
@@ -268,7 +273,8 @@ private:
       context_type& cxt = get_context();
       std::visit(
           [&](auto const& s) { transition_table::on_exit(cxt, s); },
-          state_);
+          state_
+      );
     }
   }
 };

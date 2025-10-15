@@ -84,10 +84,12 @@ concept fsm_states = requires {
   requires detail::fsm_policy<Policy, Context>;
   requires(
       Policy::entry_action ? (detail::entry_action<States, Context> && ...) :
-                             !(detail::entry_action<States, Context> || ...));
+                             !(detail::entry_action<States, Context> || ...)
+  );
   requires(
       Policy::exit_action ? (detail::exit_action<States, Context> && ...) :
-                            !(detail::exit_action<States, Context> || ...));
+                            !(detail::exit_action<States, Context> || ...)
+  );
 };
 
 template<typename State, typename... States>
@@ -103,7 +105,8 @@ concept state_event_handler =
     detail::fsm_policy<Policy, Context> &&
     requires(
         typename Policy::template event_context_type<Context> ctx,
-        Event&& event) {
+        Event&& event
+    ) {
       {
         State::on_event(ctx, std::forward<Event>(event))
       } -> std::convertible_to<Result>;
@@ -114,7 +117,8 @@ concept common_event_handler =
     detail::fsm_policy<Policy, Context> &&
     requires(
         typename Policy::template event_context_type<Context> ctx,
-        Event&& event) {
+        Event&& event
+    ) {
       {
         on_event(ctx, std::forward<Event>(event))
       } -> std::convertible_to<Result>;
@@ -129,11 +133,14 @@ template<
 concept event_handler = requires {
   requires(
       (static_cast<int>(
-           state_event_handler<States, Context, Policy, Event, Result>) +
+           state_event_handler<States, Context, Policy, Event, Result>
+       ) +
            static_cast<int>(
-               common_event_handler<Context, Policy, Event, Result>) ==
+               common_event_handler<Context, Policy, Event, Result>
+           ) ==
        1) &&
-      ...);
+      ...
+  );
 };
 
 } // namespace detail
@@ -261,7 +268,8 @@ public:
           using S = std::decay_t<decltype(s)>;
           return S::id;
         },
-        state_);
+        state_
+    );
   }
 protected:
   constexpr void start_fsm() {
@@ -288,7 +296,8 @@ private:
             using S = std::decay_t<decltype(s)>;
             S::on_entry(cxt);
           },
-          state_);
+          state_
+      );
     }
   }
 
@@ -300,7 +309,8 @@ private:
             using S = std::decay_t<decltype(s)>;
             S::on_exit(cxt);
           },
-          state_);
+          state_
+      );
     }
   }
 };
