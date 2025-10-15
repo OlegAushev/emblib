@@ -140,9 +140,13 @@ public:
     }
   }
 
-  bool contains(T const& v) const { return (lower_ <= v) && (v <= upper_); }
+  bool contains(T const& v) const {
+    return (lower_ <= v) && (v <= upper_);
+  }
 
-  T const& lower_bound() const { return lower_; }
+  T const& lower_bound() const {
+    return lower_;
+  }
 
   void set_lower_bound(T const& v) {
     if (v <= upper_) {
@@ -150,7 +154,9 @@ public:
     }
   }
 
-  T const& upper_bound() const { return upper_; }
+  T const& upper_bound() const {
+    return upper_;
+  }
 
   void set_upper_bound(T const& v) {
     if (v >= lower_) {
@@ -158,7 +164,9 @@ public:
     }
   }
 
-  T length() const { return upper_ - lower_; }
+  T length() const {
+    return upper_ - lower_;
+  }
 };
 
 template<typename T, typename Time>
@@ -177,22 +185,35 @@ public:
 
   void push(T const& v) {
     sum_ = clamp(
-        sum_ + v * ts_, output_range.lower_bound(), output_range.upper_bound());
+        sum_ + v * ts_,
+        output_range.lower_bound(),
+        output_range.upper_bound()
+    );
   }
 
   void add(T const& v) {
-    sum_ =
-        clamp(sum_ + v, output_range.lower_bound(), output_range.upper_bound());
+    sum_ = clamp(
+        sum_ + v,
+        output_range.lower_bound(),
+        output_range.upper_bound()
+    );
   }
 
-  T const& output() const { return sum_; }
+  T const& output() const {
+    return sum_;
+  }
 
   void reset() {
-    sum_ =
-        clamp(initval_, output_range.lower_bound(), output_range.upper_bound());
+    sum_ = clamp(
+        initval_,
+        output_range.lower_bound(),
+        output_range.upper_bound()
+    );
   }
 
-  void set_sampling_period(float ts) { ts_ = ts; }
+  void set_sampling_period(float ts) {
+    ts_ = ts;
+  }
 };
 
 class signed_pu {
@@ -206,7 +227,9 @@ public:
   EMB_CONSTEXPR signed_pu(float v, float base)
       : v_(emb::clamp(v / base, -1.0f, 1.0f)) {}
 
-  EMB_CONSTEXPR float numval() const { return v_; }
+  EMB_CONSTEXPR float numval() const {
+    return v_;
+  }
 
   EMB_CONSTEXPR signed_pu& operator+=(signed_pu const& rhs) {
     set(v_ + rhs.v_);
@@ -218,36 +241,50 @@ public:
     return *this;
   }
 private:
-  EMB_CONSTEXPR void set(float v) { v_ = emb::clamp(v, -1.0f, 1.0f); }
+  EMB_CONSTEXPR void set(float v) {
+    v_ = emb::clamp(v, -1.0f, 1.0f);
+  }
 };
 
-EMB_INLINE_CONSTEXPR bool
-operator==(signed_pu const& lhs, signed_pu const& rhs) {
+EMB_INLINE_CONSTEXPR bool operator==(
+    signed_pu const& lhs,
+    signed_pu const& rhs
+) {
   return lhs.numval() == rhs.numval();
 }
 
-EMB_INLINE_CONSTEXPR bool
-operator!=(signed_pu const& lhs, signed_pu const& rhs) {
+EMB_INLINE_CONSTEXPR bool operator!=(
+    signed_pu const& lhs,
+    signed_pu const& rhs
+) {
   return lhs.numval() != rhs.numval();
 }
 
-EMB_INLINE_CONSTEXPR bool
-operator<(signed_pu const& lhs, signed_pu const& rhs) {
+EMB_INLINE_CONSTEXPR bool operator<(
+    signed_pu const& lhs,
+    signed_pu const& rhs
+) {
   return lhs.numval() < rhs.numval();
 }
 
-EMB_INLINE_CONSTEXPR bool
-operator>(signed_pu const& lhs, signed_pu const& rhs) {
+EMB_INLINE_CONSTEXPR bool operator>(
+    signed_pu const& lhs,
+    signed_pu const& rhs
+) {
   return lhs.numval() > rhs.numval();
 }
 
-EMB_INLINE_CONSTEXPR bool
-operator<=(signed_pu const& lhs, signed_pu const& rhs) {
+EMB_INLINE_CONSTEXPR bool operator<=(
+    signed_pu const& lhs,
+    signed_pu const& rhs
+) {
   return lhs.numval() <= rhs.numval();
 }
 
-EMB_INLINE_CONSTEXPR bool
-operator>=(signed_pu const& lhs, signed_pu const& rhs) {
+EMB_INLINE_CONSTEXPR bool operator>=(
+    signed_pu const& lhs,
+    signed_pu const& rhs
+) {
   return lhs.numval() >= rhs.numval();
 }
 
@@ -286,7 +323,9 @@ public:
   EMB_CONSTEXPR unsigned_pu(float v, float base)
       : v_(emb::clamp(v / base, 0.0f, 1.0f)) {}
 
-  EMB_CONSTEXPR float numval() const { return v_; }
+  EMB_CONSTEXPR float numval() const {
+    return v_;
+  }
 
   EMB_CONSTEXPR unsigned_pu& operator+=(unsigned_pu const& rhs) {
     set(v_ + rhs.v_);
@@ -298,36 +337,50 @@ public:
     return *this;
   }
 private:
-  EMB_CONSTEXPR void set(float v) { v_ = emb::clamp(v, 0.0f, 1.0f); }
+  EMB_CONSTEXPR void set(float v) {
+    v_ = emb::clamp(v, 0.0f, 1.0f);
+  }
 };
 
-EMB_INLINE_CONSTEXPR bool
-operator==(unsigned_pu const& lhs, unsigned_pu const& rhs) {
+EMB_INLINE_CONSTEXPR bool operator==(
+    unsigned_pu const& lhs,
+    unsigned_pu const& rhs
+) {
   return lhs.numval() == rhs.numval();
 }
 
-EMB_INLINE_CONSTEXPR bool
-operator!=(unsigned_pu const& lhs, unsigned_pu const& rhs) {
+EMB_INLINE_CONSTEXPR bool operator!=(
+    unsigned_pu const& lhs,
+    unsigned_pu const& rhs
+) {
   return lhs.numval() != rhs.numval();
 }
 
-EMB_INLINE_CONSTEXPR bool
-operator<(unsigned_pu const& lhs, unsigned_pu const& rhs) {
+EMB_INLINE_CONSTEXPR bool operator<(
+    unsigned_pu const& lhs,
+    unsigned_pu const& rhs
+) {
   return lhs.numval() < rhs.numval();
 }
 
-EMB_INLINE_CONSTEXPR bool
-operator>(unsigned_pu const& lhs, unsigned_pu const& rhs) {
+EMB_INLINE_CONSTEXPR bool operator>(
+    unsigned_pu const& lhs,
+    unsigned_pu const& rhs
+) {
   return lhs.numval() > rhs.numval();
 }
 
-EMB_INLINE_CONSTEXPR bool
-operator<=(unsigned_pu const& lhs, unsigned_pu const& rhs) {
+EMB_INLINE_CONSTEXPR bool operator<=(
+    unsigned_pu const& lhs,
+    unsigned_pu const& rhs
+) {
   return lhs.numval() <= rhs.numval();
 }
 
-EMB_INLINE_CONSTEXPR bool
-operator>=(unsigned_pu const& lhs, unsigned_pu const& rhs) {
+EMB_INLINE_CONSTEXPR bool operator>=(
+    unsigned_pu const& lhs,
+    unsigned_pu const& rhs
+) {
   return lhs.numval() >= rhs.numval();
 }
 

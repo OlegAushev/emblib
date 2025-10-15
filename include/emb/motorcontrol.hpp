@@ -66,8 +66,10 @@ inline emb::array<float, 3> invclarke_transform(vec_alphabeta v) {
   return retv;
 }
 
-inline emb::array<emb::unsigned_pu, 3> calculate_sinpwm(vec_alphabeta v_s,
-                                                        float v_dc) {
+inline emb::array<emb::unsigned_pu, 3> calculate_sinpwm(
+    vec_alphabeta v_s,
+    float v_dc
+) {
   emb::array<float, 3> voltages = invclarke_transform(v_s);
   float const voltage_base = v_dc / 1.5f;
   emb::array<emb::unsigned_pu, 3> duty_cycles;
@@ -79,8 +81,10 @@ inline emb::array<emb::unsigned_pu, 3> calculate_sinpwm(vec_alphabeta v_s,
   return duty_cycles;
 }
 
-inline emb::array<emb::unsigned_pu, 3> calculate_svpwm(vec_alpha v_s,
-                                                       float v_dc) {
+inline emb::array<emb::unsigned_pu, 3> calculate_svpwm(
+    vec_alpha v_s,
+    float v_dc
+) {
   v_s.theta = rem2pi(v_s.theta);
   v_s.mag = clamp<float>(v_s.mag, 0, v_dc / numbers::sqrt3);
 
@@ -137,12 +141,13 @@ inline emb::array<emb::unsigned_pu, 3> calculate_svpwm(vec_alpha v_s,
   return duty_cycles;
 }
 
-inline emb::array<unsigned_pu, 3>
-compensate_deadtime_v1(emb::array<unsigned_pu, 3> const& dutycycles,
-                       emb::array<float, 3> const& currents,
-                       float current_threshold,
-                       float pwm_period,
-                       float deadtime) {
+inline emb::array<unsigned_pu, 3> compensate_deadtime_v1(
+    emb::array<unsigned_pu, 3> const& dutycycles,
+    emb::array<float, 3> const& currents,
+    float current_threshold,
+    float pwm_period,
+    float deadtime
+) {
   emb::array<unsigned_pu, 3> dc;
   emb::unsigned_pu const deadtime_dutycycle(deadtime / pwm_period);
 
@@ -160,12 +165,13 @@ compensate_deadtime_v1(emb::array<unsigned_pu, 3> const& dutycycles,
 }
 
 /// @brief DOI: 10.4028/www.scientific.net/AMM.416-417.536
-inline emb::array<unsigned_pu, 3>
-compensate_deadtime_v2(emb::array<unsigned_pu, 3> const& dutycycles,
-                       emb::array<float, 3> const& currents,
-                       float current_threshold,
-                       float pwm_period,
-                       float deadtime) {
+inline emb::array<unsigned_pu, 3> compensate_deadtime_v2(
+    emb::array<unsigned_pu, 3> const& dutycycles,
+    emb::array<float, 3> const& currents,
+    float current_threshold,
+    float pwm_period,
+    float deadtime
+) {
 #ifdef __c28x__
   return dutycycles;
 #else

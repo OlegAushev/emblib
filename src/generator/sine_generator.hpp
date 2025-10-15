@@ -28,7 +28,8 @@ public:
       output_type const& ampl,
       float const& freq,
       emb::units::rad_f32 const& init_phase = emb::units::rad_f32(0),
-      output_type bias = output_type())
+      output_type bias = output_type()
+  )
       : update_period_(update_period),
         ampl_(ampl),
         wfreq_(2 * emb::numbers::pi * freq),
@@ -38,7 +39,9 @@ public:
     reset();
   }
 
-  EMB_CONSTEXPR const_reference output() const { return output_; }
+  EMB_CONSTEXPR const_reference output() const {
+    return output_;
+  }
 
   EMB_CONSTEXPR void reset() {
     phase_ = init_phase_;
@@ -47,19 +50,30 @@ public:
 
   EMB_CONSTEXPR void update() {
     phase_ = emb::units::rad_f32(
-        emb::rem2pi(phase_.numval() + wfreq_ * update_period_));
+        emb::rem2pi(phase_.numval() + wfreq_ * update_period_)
+    );
     output_ = ampl_ * emb::sin(phase_.numval()) + bias_;
   }
 
-  EMB_CONSTEXPR float update_period() const { return update_period_; }
+  EMB_CONSTEXPR float update_period() const {
+    return update_period_;
+  }
 
-  EMB_CONSTEXPR const_reference ampl() const { return ampl_; }
+  EMB_CONSTEXPR const_reference ampl() const {
+    return ampl_;
+  }
 
-  EMB_CONSTEXPR const_reference bias() const { return bias_; }
+  EMB_CONSTEXPR const_reference bias() const {
+    return bias_;
+  }
 
-  EMB_CONSTEXPR float freq() const { return wfreq_ / (2 * emb::numbers::pi); }
+  EMB_CONSTEXPR float freq() const {
+    return wfreq_ / (2 * emb::numbers::pi);
+  }
 
-  emb::units::rad_f32 phase() const { return phase_; }
+  emb::units::rad_f32 phase() const {
+    return phase_;
+  }
 };
 
 #ifdef __cpp_concepts

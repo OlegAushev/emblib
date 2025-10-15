@@ -18,7 +18,9 @@ public:
 
   EMB_CONSTEXPR explicit named_unit(underlying_type const& v) : v_(v) {}
 
-  EMB_CONSTEXPR underlying_type const& numval() const { return v_; }
+  EMB_CONSTEXPR underlying_type const& numval() const {
+    return v_;
+  }
 
   EMB_CONSTEXPR named_unit& operator+=(named_unit const& rhs) {
     v_ += rhs.v_;
@@ -32,75 +34,99 @@ public:
 };
 
 template<typename T, typename Unit>
-EMB_INLINE_CONSTEXPR bool
-operator==(named_unit<T, Unit> const& lhs, named_unit<T, Unit> const& rhs) {
+EMB_INLINE_CONSTEXPR bool operator==(
+    named_unit<T, Unit> const& lhs,
+    named_unit<T, Unit> const& rhs
+) {
   return lhs.numval() == rhs.numval();
 }
 
 template<typename T, typename Unit>
-EMB_INLINE_CONSTEXPR bool
-operator!=(named_unit<T, Unit> const& lhs, named_unit<T, Unit> const& rhs) {
+EMB_INLINE_CONSTEXPR bool operator!=(
+    named_unit<T, Unit> const& lhs,
+    named_unit<T, Unit> const& rhs
+) {
   return lhs.numval() != rhs.numval();
 }
 
 template<typename T, typename Unit>
-EMB_INLINE_CONSTEXPR bool
-operator<(named_unit<T, Unit> const& lhs, named_unit<T, Unit> const& rhs) {
+EMB_INLINE_CONSTEXPR bool operator<(
+    named_unit<T, Unit> const& lhs,
+    named_unit<T, Unit> const& rhs
+) {
   return lhs.numval() < rhs.numval();
 }
 
 template<typename T, typename Unit>
-EMB_INLINE_CONSTEXPR bool
-operator>(named_unit<T, Unit> const& lhs, named_unit<T, Unit> const& rhs) {
+EMB_INLINE_CONSTEXPR bool operator>(
+    named_unit<T, Unit> const& lhs,
+    named_unit<T, Unit> const& rhs
+) {
   return lhs.numval() > rhs.numval();
 }
 
 template<typename T, typename Unit>
-EMB_INLINE_CONSTEXPR bool
-operator<=(named_unit<T, Unit> const& lhs, named_unit<T, Unit> const& rhs) {
+EMB_INLINE_CONSTEXPR bool operator<=(
+    named_unit<T, Unit> const& lhs,
+    named_unit<T, Unit> const& rhs
+) {
   return lhs.numval() <= rhs.numval();
 }
 
 template<typename T, typename Unit>
-EMB_INLINE_CONSTEXPR bool
-operator>=(named_unit<T, Unit> const& lhs, named_unit<T, Unit> const& rhs) {
+EMB_INLINE_CONSTEXPR bool operator>=(
+    named_unit<T, Unit> const& lhs,
+    named_unit<T, Unit> const& rhs
+) {
   return lhs.numval() >= rhs.numval();
 }
 
 template<typename T, typename Unit>
-EMB_INLINE_CONSTEXPR named_unit<T, Unit>
-operator+(named_unit<T, Unit> const& lhs, named_unit<T, Unit> const& rhs) {
+EMB_INLINE_CONSTEXPR named_unit<T, Unit> operator+(
+    named_unit<T, Unit> const& lhs,
+    named_unit<T, Unit> const& rhs
+) {
   named_unit<T, Unit> tmp = lhs;
   return tmp += rhs;
 }
 
 template<typename T, typename Unit>
-EMB_INLINE_CONSTEXPR named_unit<T, Unit>
-operator-(named_unit<T, Unit> const& lhs, named_unit<T, Unit> const& rhs) {
+EMB_INLINE_CONSTEXPR named_unit<T, Unit> operator-(
+    named_unit<T, Unit> const& lhs,
+    named_unit<T, Unit> const& rhs
+) {
   named_unit<T, Unit> tmp = lhs;
   return tmp -= rhs;
 }
 
 template<typename T, typename Unit, typename V>
-EMB_INLINE_CONSTEXPR named_unit<T, Unit>
-operator*(named_unit<T, Unit> const& lhs, V const& rhs) {
+EMB_INLINE_CONSTEXPR named_unit<T, Unit> operator*(
+    named_unit<T, Unit> const& lhs,
+    V const& rhs
+) {
   return named_unit<T, Unit>(
       lhs.numval() *
-      static_cast<typename named_unit<T, Unit>::underlying_type>(rhs));
+      static_cast<typename named_unit<T, Unit>::underlying_type>(rhs)
+  );
 }
 
 template<typename T, typename Unit, typename V>
-EMB_INLINE_CONSTEXPR named_unit<T, Unit>
-operator*(V const& lhs, named_unit<T, Unit> const& rhs) {
+EMB_INLINE_CONSTEXPR named_unit<T, Unit> operator*(
+    V const& lhs,
+    named_unit<T, Unit> const& rhs
+) {
   return rhs * lhs;
 }
 
 template<typename T, typename Unit, typename V>
-EMB_INLINE_CONSTEXPR named_unit<T, Unit>
-operator/(named_unit<T, Unit> const& lhs, V const& rhs) {
+EMB_INLINE_CONSTEXPR named_unit<T, Unit> operator/(
+    named_unit<T, Unit> const& lhs,
+    V const& rhs
+) {
   return named_unit<T, Unit>(
       lhs.numval() /
-      static_cast<typename named_unit<T, Unit>::underlying_type>(rhs));
+      static_cast<typename named_unit<T, Unit>::underlying_type>(rhs)
+  );
 }
 
 template<typename T, typename Unit>
@@ -110,8 +136,9 @@ operator/(named_unit<T, Unit> const& lhs, named_unit<T, Unit> const& rhs) {
 }
 
 template<typename T, typename Unit>
-EMB_INLINE_CONSTEXPR named_unit<T, Unit>
-operator-(named_unit<T, Unit> const& v) {
+EMB_INLINE_CONSTEXPR named_unit<T, Unit> operator-(
+    named_unit<T, Unit> const& v
+) {
   return named_unit<T, Unit>(-v.numval());
 }
 
@@ -187,22 +214,22 @@ concept unit_of_electrical_angle =
                 std::same_as<typename T::unit_type, tags::edeg>);
 
 template<typename T>
-concept unit_of_angle =
-    unit<T> && (std::same_as<typename T::unit_type, tags::rad> ||
-                std::same_as<typename T::unit_type, tags::deg>);
+concept unit_of_angle = unit<T> &&
+                        (std::same_as<typename T::unit_type, tags::rad> ||
+                         std::same_as<typename T::unit_type, tags::deg>);
 
 template<typename T>
-concept unit_of_radians =
-    unit<T> && (std::same_as<typename T::unit_type, tags::erad> ||
-                std::same_as<typename T::unit_type, tags::rad>);
+concept unit_of_radians = unit<T> &&
+                          (std::same_as<typename T::unit_type, tags::erad> ||
+                           std::same_as<typename T::unit_type, tags::rad>);
 
 template<typename T>
-concept unit_of_degrees =
-    unit<T> && (std::same_as<typename T::unit_type, tags::edeg> ||
-                std::same_as<typename T::unit_type, tags::deg>);
+concept unit_of_degrees = unit<T> &&
+                          (std::same_as<typename T::unit_type, tags::edeg> ||
+                           std::same_as<typename T::unit_type, tags::deg>);
 #endif
 
-#if defined (__cpp_variadic_templates) && defined (__cpp_concepts)
+#if defined(__cpp_variadic_templates) && defined(__cpp_concepts)
 
 template<typename To, typename From, typename... Args>
   requires(!std::same_as<To, From>)
@@ -291,7 +318,8 @@ Unit rem180(Unit v) {
 } // namespace emb
 
 template<typename T, typename Unit>
-inline emb::units::named_unit<T, Unit>
-abs(emb::units::named_unit<T, Unit> const& v) {
+inline emb::units::named_unit<T, Unit> abs(
+    emb::units::named_unit<T, Unit> const& v
+) {
   return emb::units::named_unit<T, Unit>(std::abs(v.numval()));
 }
