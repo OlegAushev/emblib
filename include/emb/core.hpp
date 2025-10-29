@@ -16,6 +16,11 @@
 #include <cstddef>
 #include <cassert>
 
+#ifdef __cpp_concepts
+#include <concepts>
+#include <type_traits>
+#endif
+
 #ifdef __c28x__
 #include <emb/c28x.hpp>
 #endif
@@ -81,4 +86,15 @@ inline void empty_function() {
 }
 
 } // namespace emb
+
+#ifdef __cpp_concepts
+
+namespace emb {
+
+template<typename T, typename ... U>
+concept either = std::disjunction_v<std::is_same<T, U>...>;
+} // namespace emb
+
+#endif
+
 #endif
