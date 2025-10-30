@@ -296,8 +296,8 @@ constexpr Unit rempi(Unit v) {
 }
 
 template<units::unit_of_degrees Unit>
-Unit rem360(Unit v) {
-  float v_ = fmodf(v.numval(), to_deg(2 * numbers::pi));
+constexpr Unit rem360(Unit v) {
+  float v_ = emb::fmod(v.numval(), to_deg(2 * numbers::pi));
   if (v_ < 0) {
     v_ += to_deg(2 * numbers::pi);
   }
@@ -305,8 +305,11 @@ Unit rem360(Unit v) {
 }
 
 template<units::unit_of_degrees Unit>
-Unit rem180(Unit v) {
-  float v_ = fmodf(v.numval() + to_deg(numbers::pi), to_deg(2 * numbers::pi));
+constexpr Unit rem180(Unit v) {
+  float v_ = emb::fmod(
+      v.numval() + to_deg(numbers::pi),
+      to_deg(2 * numbers::pi)
+  );
   if (v_ < 0) {
     v_ += to_deg(2 * numbers::pi);
   }

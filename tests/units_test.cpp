@@ -21,6 +21,12 @@ constexpr bool test_units_conversion() {
   EMB_CONSTEXPR_ASSERT(convert_to<deg_f32>(deg1) == deg1);
   EMB_CONSTEXPR_ASSERT(convert_to<rad_f32>(deg1) == rad_f32{emb::to_rad(v1)});
 
+  EMB_CONSTEXPR_ASSERT(emb::rem360(deg_f32{380.0f}) == deg_f32(20.0f));
+  EMB_CONSTEXPR_ASSERT(emb::rem360(deg_f32{-30.0f}) == deg_f32(330.0f));
+
+  EMB_CONSTEXPR_ASSERT(emb::rem180(deg_f32{200.0f}) == deg_f32(-160.0f));
+  EMB_CONSTEXPR_ASSERT(emb::rem180(deg_f32{-10.0f}) == deg_f32(-10.0f));
+
   float v2{3000.0f};
   int32_t p{4};
   rpm_f32 rpm1{v2};

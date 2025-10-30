@@ -33,12 +33,6 @@ inline float builtin_sinf(float x) {
 #endif
 }
 
-#ifdef __cpp_consteval
-consteval float cvl_fmodf(float x, float y) {
-  return x - static_cast<float>(static_cast<long long>(x / y)) * y;
-}
-#endif
-
 EMB_INLINE_CONSTEXPR float sin(float x) {
 #ifdef __cpp_if_consteval
   if !consteval {
@@ -48,6 +42,24 @@ EMB_INLINE_CONSTEXPR float sin(float x) {
   }
 #else
   return builtin_sinf(x);
+#endif
+}
+
+#ifdef __cpp_consteval
+consteval float fmod_trivial(float x, float y) {
+  return x - static_cast<float>(static_cast<long long>(x / y)) * y;
+}
+#endif
+
+EMB_INLINE_CONSTEXPR float fmod(float x, float y) {
+#ifdef __cpp_if_consteval
+  if !consteval {
+    return std::fmod(x, y);
+  } else {
+    return fmod_trivial(x, y);
+  }
+#else
+  return std::fmod(x, y);
 #endif
 }
 
@@ -93,15 +105,7 @@ EMB_INLINE_CONSTEXPR float to_rpm(float w, int32_t p) {
 }
 
 EMB_INLINE_CONSTEXPR float rem2pi(float v) {
-#ifdef __cpp_if_consteval
-  if consteval {
-    v = cvl_fmodf(v, 2 * numbers::pi);
-  } else {
-    v = fmodf(v, 2 * numbers::pi);
-  }
-#else
-  v = fmodf(v, 2 * numbers::pi);
-#endif
+  v = emb::fmod(v, 2 * numbers::pi);
   if (v < 0) {
     v += 2 * numbers::pi;
   }
@@ -109,15 +113,7 @@ EMB_INLINE_CONSTEXPR float rem2pi(float v) {
 }
 
 EMB_INLINE_CONSTEXPR float rempi(float v) {
-#ifdef __cpp_if_consteval
-  if consteval {
-    v = cvl_fmodf(v + numbers::pi, 2 * numbers::pi);
-  } else {
-    v = fmodf(v + numbers::pi, 2 * numbers::pi);
-  }
-#else
-  v = fmodf(v + numbers::pi, 2 * numbers::pi);
-#endif
+  v = emb::fmod(v + numbers::pi, 2 * numbers::pi);
   if (v < 0) {
     v += 2 * numbers::pi;
   }
