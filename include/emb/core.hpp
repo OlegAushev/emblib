@@ -87,12 +87,37 @@ inline void empty_function() {
 
 } // namespace emb
 
+#if __cplusplus >= 201100
+
+namespace emb {
+
+// Primary template - type not found case
+template<typename T, typename... Ts>
+struct type_index;
+
+// Base case: type found at position 0
+template<typename T, typename... Ts>
+struct type_index<T, T, Ts...> : std::integral_constant<std::size_t, 0> {};
+
+// Recursive case: increment index and continue searching
+template<typename T, typename U, typename... Ts>
+struct type_index<T, U, Ts...>
+    : std::integral_constant<std::size_t, 1 + type_index<T, Ts...>::value> {};
+
+// Helper template
+template<typename T, typename... Ts>
+inline constexpr std::size_t type_index_v = type_index<T, Ts...>::value;
+
+} // namespace emb
+
+#endif
+
 #ifdef __cpp_concepts
 
 namespace emb {
 
-template<typename T, typename ... U>
-concept either = std::disjunction_v<std::is_same<T, U>...>;
+template<typename T, typename... Ts>
+concept one_of = std::disjunction_v<std::is_same<T, Ts>...>;
 } // namespace emb
 
 #endif
