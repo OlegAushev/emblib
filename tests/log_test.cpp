@@ -13,7 +13,7 @@ enum class BarError { bar1, bar2, bar3 };
 enum class BazError { baz1, baz2, baz3 };
 
 constexpr bool test_systemlog() {
-  emb::log::basic_logger<16, FooError, BarError, BazError> log;
+  emb::log::basic_logger<16, void*, FooError, BarError, BazError> log;
   log.log(emb::log::level::error, BarError::bar2, 42u);
   EMB_CONSTEXPR_ASSERT(log.test(FooError::foo1) == std::nullopt);
   EMB_CONSTEXPR_ASSERT(log.test(BarError::bar2) == emb::log::level::error);
@@ -26,6 +26,14 @@ constexpr bool test_systemlog() {
   EMB_CONSTEXPR_ASSERT(log.test(FooError::foo1) == emb::log::level::notice);
   EMB_CONSTEXPR_ASSERT(log.test(FooError::foo2) == emb::log::level::warning);
   EMB_CONSTEXPR_ASSERT(log.test(BarError::bar2) == emb::log::level::error);
+
+  log.info(BazError::baz3);
+  EMB_CONSTEXPR_ASSERT(log.test(FooError::foo1) == emb::log::level::notice);
+  EMB_CONSTEXPR_ASSERT(log.test(FooError::foo2) == emb::log::level::warning);
+  EMB_CONSTEXPR_ASSERT(log.test(BarError::bar2) == emb::log::level::error);
+  EMB_CONSTEXPR_ASSERT(log.test(BazError::baz3) == emb::log::level::info);
+
+  // log.pop_message();
 
   return true;
 }

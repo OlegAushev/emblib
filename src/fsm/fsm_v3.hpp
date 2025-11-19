@@ -166,12 +166,16 @@ struct mixed_policy {
   using event_context_type = Ctx&;
 };
 
-template<typename Derived, typename Policy, typename... States>
+template<
+    typename Derived,
+    typename LockGuard,
+    typename Policy,
+    typename... States>
   requires detail::fsm_policy<Policy, Derived> &&
            detail::fsm_states<Derived, Policy, States...>
 class finite_state_machine {
 public:
-  using fsm_type = finite_state_machine<Derived, Policy, States...>;
+  using fsm_type = finite_state_machine<Derived, LockGuard, Policy, States...>;
   using context_type = Derived;
   using event_context_type =
       typename Policy::template event_context_type<context_type>;
@@ -199,6 +203,8 @@ public:
              next_state_type,
              States...>)
   constexpr void dispatch(Event&& event) {
+    [[maybe_unused]] LockGuard lock_guard;
+
     auto const visitor = [&](auto const& s) -> next_state_type {
       using S = std::decay_t<decltype(s)>;
       event_context_type cxt = get_context();
@@ -232,6 +238,7 @@ public:
   template<typename State, typename... Args>
     requires detail::one_of_fsm_states<State, States...>
   constexpr void force_transition(Args&&... args) {
+    [[maybe_unused]] LockGuard lock_guard;
     exit_state();
     state_ = state_type(std::in_place_type<State>, std::forward<Args>(args)...);
     enter_state();
