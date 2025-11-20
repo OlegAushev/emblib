@@ -1,7 +1,5 @@
 #ifdef __cpp_constexpr
 
-#include "tests.hpp"
-
 #include <emb/queue.hpp>
 
 namespace emb {
@@ -12,75 +10,74 @@ constexpr bool test_queue(queue_type auto q)
   requires(std::same_as<typename decltype(q)::value_type, int>) {
   int const cap{static_cast<int>(q.capacity())};
 
-  EMB_CONSTEXPR_ASSERT(q.empty());
+  assert(q.empty());
 
   q.push(1);
-  EMB_CONSTEXPR_ASSERT(
-      !q.empty() && q.size() == 1 && q.front() == 1 && q.back() == 1);
+  assert(!q.empty() && q.size() == 1 && q.front() == 1 && q.back() == 1);
 
   if (q.capacity() != 1) {
-    EMB_CONSTEXPR_ASSERT(!q.full());
+    assert(!q.full());
   } else {
-    EMB_CONSTEXPR_ASSERT(q.full());
+    assert(q.full());
   }
 
   q.pop();
-  EMB_CONSTEXPR_ASSERT(q.empty() && !q.full());
+  assert(q.empty() && !q.full());
 
   for (auto i{1}; i <= cap; ++i) {
     q.push(i);
-    EMB_CONSTEXPR_ASSERT(q.back() == i);
+    assert(q.back() == i);
   }
 
-  EMB_CONSTEXPR_ASSERT(q.full());
-  EMB_CONSTEXPR_ASSERT(q.front() == 1);
-  EMB_CONSTEXPR_ASSERT(q.back() == cap);
+  assert(q.full());
+  assert(q.front() == 1);
+  assert(q.back() == cap);
 
   q.pop();
-  EMB_CONSTEXPR_ASSERT(!q.full());
+  assert(!q.full());
 
   q.push(cap + 1);
-  EMB_CONSTEXPR_ASSERT(q.back() == cap + 1);
+  assert(q.back() == cap + 1);
 
   if (q.capacity() != 1) {
-    EMB_CONSTEXPR_ASSERT(q.front() == 2);
+    assert(q.front() == 2);
   } else {
-    EMB_CONSTEXPR_ASSERT(q.front() == cap + 1);
+    assert(q.front() == cap + 1);
   }
 
   int val{q.front()};
   while (q.size() > 1) {
-    EMB_CONSTEXPR_ASSERT(q.front() == val);
+    assert(q.front() == val);
     q.pop();
     ++val;
   }
 
-  EMB_CONSTEXPR_ASSERT(q.front() == cap + 1);
+  assert(q.front() == cap + 1);
 
   q.clear();
-  EMB_CONSTEXPR_ASSERT(q.empty());
+  assert(q.empty());
 
   for (auto i{1}; i <= cap; ++i) {
     q.push(i);
-    EMB_CONSTEXPR_ASSERT(q.back() == i);
+    assert(q.back() == i);
   }
 
-  EMB_CONSTEXPR_ASSERT(q.full());
-  EMB_CONSTEXPR_ASSERT(q.front() == 1);
-  EMB_CONSTEXPR_ASSERT(q.back() == cap);
+  assert(q.full());
+  assert(q.front() == 1);
+  assert(q.back() == cap);
 
   for (auto i{cap + 1}; i <= cap * 2; ++i) {
     q.pop();
     q.push(i);
-    EMB_CONSTEXPR_ASSERT(q.front() == i - cap + 1);
-    EMB_CONSTEXPR_ASSERT(q.back() == i);
+    assert(q.front() == i - cap + 1);
+    assert(q.back() == i);
   }
 
-  EMB_CONSTEXPR_ASSERT(q.back() == 2 * cap);
+  assert(q.back() == 2 * cap);
   if (q.capacity() != 1) {
-    EMB_CONSTEXPR_ASSERT(q.front() == cap + 1);
+    assert(q.front() == cap + 1);
   } else {
-    EMB_CONSTEXPR_ASSERT(q.front() == q.back());
+    assert(q.front() == q.back());
   }
 
   return true;

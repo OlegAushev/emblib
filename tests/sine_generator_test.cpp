@@ -1,7 +1,5 @@
 #ifdef __cpp_constexpr
 
-#include "tests.hpp"
-
 #include <emb/generator.hpp>
 
 #include <algorithm>
@@ -11,9 +9,10 @@ namespace emb {
 namespace internal {
 namespace tests {
 
-constexpr bool
-test_sine_generator(sine_generator_type auto sine,
-                    emb::units::rad_f32 init_phase) {
+constexpr bool test_sine_generator(
+    sine_generator_type auto sine,
+    emb::units::rad_f32 init_phase
+) {
   using output_type = decltype(sine)::output_type;
 
   std::array<float, 100> timebase;
@@ -33,11 +32,11 @@ test_sine_generator(sine_generator_type auto sine,
         float const w = 2 * emb::numbers::pi * sine.freq();
         float const phase = w * t + init_phase.numval();
         return sine.ampl() * emb::sin(phase) + sine.bias();
-      });
+      }
+  );
 
   for (auto i{0uz}; i < sine_ref.size(); ++i) {
-    EMB_CONSTEXPR_ASSERT(
-        fabs(sine.output() - sine_ref[i]) < 0.001f * sine.ampl());
+    assert(fabs(sine.output() - sine_ref[i]) < 0.001f * sine.ampl());
     sine.update();
   }
 
@@ -46,15 +45,18 @@ test_sine_generator(sine_generator_type auto sine,
 
 static_assert(test_sine_generator(
     emb::sine_generator<float>{0.1f, 1.0f, 1.0f},
-    emb::units::rad_f32{}));
+    emb::units::rad_f32{}
+));
 
 static_assert(test_sine_generator(
     emb::sine_generator<float>{
         0.125f,
         100.0f,
         1.0f,
-        emb::units::convert_to<emb::units::rad_f32>(emb::units::deg_f32{90.0f})},
-    emb::units::convert_to<emb::units::rad_f32>(emb::units::deg_f32{90.0f})));
+        emb::units::convert_to<emb::units::rad_f32>(emb::units::deg_f32{90.0f})
+    },
+    emb::units::convert_to<emb::units::rad_f32>(emb::units::deg_f32{90.0f})
+));
 
 static_assert(test_sine_generator(
     emb::sine_generator<float>{
@@ -62,8 +64,10 @@ static_assert(test_sine_generator(
         1.0f,
         4.2f,
         emb::units::convert_to<emb::units::rad_f32>(emb::units::deg_f32{42.0f}),
-        42.0f},
-    emb::units::convert_to<emb::units::rad_f32>(emb::units::deg_f32{42.0f})));
+        42.0f
+    },
+    emb::units::convert_to<emb::units::rad_f32>(emb::units::deg_f32{42.0f})
+));
 
 } // namespace tests
 } // namespace internal

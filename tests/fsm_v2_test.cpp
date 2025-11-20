@@ -1,7 +1,5 @@
 #ifdef __cpp_constexpr
 
-#include "tests.hpp"
-
 #include <emb/fsm.hpp>
 
 namespace emb {
@@ -125,45 +123,45 @@ struct SwitchVisitor {
 
 constexpr bool test_moore_fsm_v2() {
   Switch s;
-  EMB_CONSTEXPR_ASSERT(s.is_in_state<ClosedState>())
-  EMB_CONSTEXPR_ASSERT(s.state_id() == SwitchStateId::closed);
-  EMB_CONSTEXPR_ASSERT(s.closed_entries == 1);
-  EMB_CONSTEXPR_ASSERT(s.visit(SwitchVisitor{}) == SwitchStateId::closed);
+  assert(s.is_in_state<ClosedState>());
+  assert(s.state_id() == SwitchStateId::closed);
+  assert(s.closed_entries == 1);
+  assert(s.visit(SwitchVisitor{}) == SwitchStateId::closed);
 
   s.force_transition<OpenState>();
-  EMB_CONSTEXPR_ASSERT(s.is_in_state<OpenState>())
-  EMB_CONSTEXPR_ASSERT(s.state_id() == SwitchStateId::open);
-  EMB_CONSTEXPR_ASSERT(s.closed_entries == 1);
-  EMB_CONSTEXPR_ASSERT(s.open_entries == 1);
-  EMB_CONSTEXPR_ASSERT(s.visit(SwitchVisitor{}) == SwitchStateId::open);
+  assert(s.is_in_state<OpenState>());
+  assert(s.state_id() == SwitchStateId::open);
+  assert(s.closed_entries == 1);
+  assert(s.open_entries == 1);
+  assert(s.visit(SwitchVisitor{}) == SwitchStateId::open);
 
   s.dispatch(OpenEvent{});
-  EMB_CONSTEXPR_ASSERT(s.is_in_state<OpenState>())
-  EMB_CONSTEXPR_ASSERT(s.state_id() == SwitchStateId::open);
-  EMB_CONSTEXPR_ASSERT(s.closed_entries == 1);
-  EMB_CONSTEXPR_ASSERT(s.open_entries == 1);
-  EMB_CONSTEXPR_ASSERT(s.visit(SwitchVisitor{}) == SwitchStateId::open);
+  assert(s.is_in_state<OpenState>());
+  assert(s.state_id() == SwitchStateId::open);
+  assert(s.closed_entries == 1);
+  assert(s.open_entries == 1);
+  assert(s.visit(SwitchVisitor{}) == SwitchStateId::open);
 
   s.dispatch(CloseEvent{});
-  EMB_CONSTEXPR_ASSERT(s.is_in_state<ClosedState>())
-  EMB_CONSTEXPR_ASSERT(s.state_id() == SwitchStateId::closed);
-  EMB_CONSTEXPR_ASSERT(s.closed_entries == 2);
-  EMB_CONSTEXPR_ASSERT(s.open_entries == 1);
-  EMB_CONSTEXPR_ASSERT(s.visit(SwitchVisitor{}) == SwitchStateId::closed);
+  assert(s.is_in_state<ClosedState>());
+  assert(s.state_id() == SwitchStateId::closed);
+  assert(s.closed_entries == 2);
+  assert(s.open_entries == 1);
+  assert(s.visit(SwitchVisitor{}) == SwitchStateId::closed);
 
   s.dispatch(CloseEvent{});
-  EMB_CONSTEXPR_ASSERT(s.is_in_state<ClosedState>())
-  EMB_CONSTEXPR_ASSERT(s.state_id() == SwitchStateId::closed);
-  EMB_CONSTEXPR_ASSERT(s.closed_entries == 2);
-  EMB_CONSTEXPR_ASSERT(s.open_entries == 1);
-  EMB_CONSTEXPR_ASSERT(s.visit(SwitchVisitor{}) == SwitchStateId::closed);
+  assert(s.is_in_state<ClosedState>());
+  assert(s.state_id() == SwitchStateId::closed);
+  assert(s.closed_entries == 2);
+  assert(s.open_entries == 1);
+  assert(s.visit(SwitchVisitor{}) == SwitchStateId::closed);
 
   s.dispatch(OpenEvent{});
-  EMB_CONSTEXPR_ASSERT(s.is_in_state<OpenState>())
-  EMB_CONSTEXPR_ASSERT(s.state_id() == SwitchStateId::open);
-  EMB_CONSTEXPR_ASSERT(s.closed_entries == 2);
-  EMB_CONSTEXPR_ASSERT(s.open_entries == 2);
-  EMB_CONSTEXPR_ASSERT(s.visit(SwitchVisitor{}) == SwitchStateId::open);
+  assert(s.is_in_state<OpenState>());
+  assert(s.state_id() == SwitchStateId::open);
+  assert(s.closed_entries == 2);
+  assert(s.open_entries == 2);
+  assert(s.visit(SwitchVisitor{}) == SwitchStateId::open);
 
   return true;
 }
@@ -264,34 +262,34 @@ struct SwitchVisitor {
 
 constexpr bool test_mealy_fsm_v2() {
   Switch s;
-  EMB_CONSTEXPR_ASSERT(s.is_in_state<ClosedState>())
-  EMB_CONSTEXPR_ASSERT(s.state_id() == SwitchStateId::closed);
-  EMB_CONSTEXPR_ASSERT(s.visit(SwitchVisitor{}) == SwitchStateId::closed);
+  assert(s.is_in_state<ClosedState>());
+  assert(s.state_id() == SwitchStateId::closed);
+  assert(s.visit(SwitchVisitor{}) == SwitchStateId::closed);
 
   s.force_transition<OpenState>();
-  EMB_CONSTEXPR_ASSERT(s.is_in_state<OpenState>())
-  EMB_CONSTEXPR_ASSERT(s.state_id() == SwitchStateId::open);
-  EMB_CONSTEXPR_ASSERT(s.visit(SwitchVisitor{}) == SwitchStateId::open);
+  assert(s.is_in_state<OpenState>());
+  assert(s.state_id() == SwitchStateId::open);
+  assert(s.visit(SwitchVisitor{}) == SwitchStateId::open);
 
   s.dispatch(OpenEvent{});
-  EMB_CONSTEXPR_ASSERT(s.is_in_state<OpenState>())
-  EMB_CONSTEXPR_ASSERT(s.state_id() == SwitchStateId::open);
-  EMB_CONSTEXPR_ASSERT(s.visit(SwitchVisitor{}) == SwitchStateId::open);
+  assert(s.is_in_state<OpenState>());
+  assert(s.state_id() == SwitchStateId::open);
+  assert(s.visit(SwitchVisitor{}) == SwitchStateId::open);
 
   s.dispatch(CloseEvent{});
-  EMB_CONSTEXPR_ASSERT(s.is_in_state<ClosedState>())
-  EMB_CONSTEXPR_ASSERT(s.state_id() == SwitchStateId::closed);
-  EMB_CONSTEXPR_ASSERT(s.visit(SwitchVisitor{}) == SwitchStateId::closed);
+  assert(s.is_in_state<ClosedState>());
+  assert(s.state_id() == SwitchStateId::closed);
+  assert(s.visit(SwitchVisitor{}) == SwitchStateId::closed);
 
   s.dispatch(CloseEvent{});
-  EMB_CONSTEXPR_ASSERT(s.is_in_state<ClosedState>())
-  EMB_CONSTEXPR_ASSERT(s.state_id() == SwitchStateId::closed);
-  EMB_CONSTEXPR_ASSERT(s.visit(SwitchVisitor{}) == SwitchStateId::closed);
+  assert(s.is_in_state<ClosedState>());
+  assert(s.state_id() == SwitchStateId::closed);
+  assert(s.visit(SwitchVisitor{}) == SwitchStateId::closed);
 
   s.dispatch(OpenEvent{});
-  EMB_CONSTEXPR_ASSERT(s.is_in_state<OpenState>())
-  EMB_CONSTEXPR_ASSERT(s.state_id() == SwitchStateId::open);
-  EMB_CONSTEXPR_ASSERT(s.visit(SwitchVisitor{}) == SwitchStateId::open);
+  assert(s.is_in_state<OpenState>());
+  assert(s.state_id() == SwitchStateId::open);
+  assert(s.visit(SwitchVisitor{}) == SwitchStateId::open);
 
   return true;
 }
@@ -490,79 +488,79 @@ struct SwitchVisitor {
 
 constexpr bool test_mixed_fsm_v2() {
   Switch s;
-  EMB_CONSTEXPR_ASSERT(s.is_in_state<ClosedState>())
-  EMB_CONSTEXPR_ASSERT(s.state_id() == SwitchStateId::closed);
-  EMB_CONSTEXPR_ASSERT(s.closed_entries == 1);
-  EMB_CONSTEXPR_ASSERT(s.visit(SwitchVisitor{}) == SwitchStateId::closed);
+  assert(s.is_in_state<ClosedState>());
+  assert(s.state_id() == SwitchStateId::closed);
+  assert(s.closed_entries == 1);
+  assert(s.visit(SwitchVisitor{}) == SwitchStateId::closed);
 
   s.dispatch(UpdateEvent{});
-  EMB_CONSTEXPR_ASSERT(s.updates == 1);
+  assert(s.updates == 1);
 
   s.force_transition<OpenState>();
-  EMB_CONSTEXPR_ASSERT(s.is_in_state<OpenState>())
-  EMB_CONSTEXPR_ASSERT(s.state_id() == SwitchStateId::open);
-  EMB_CONSTEXPR_ASSERT(s.closed_entries == 1);
-  EMB_CONSTEXPR_ASSERT(s.closed_exits == 1);
-  EMB_CONSTEXPR_ASSERT(s.open_entries == 1);
-  EMB_CONSTEXPR_ASSERT(s.open_exits == 0);
-  EMB_CONSTEXPR_ASSERT(s.visit(SwitchVisitor{}) == SwitchStateId::open);
+  assert(s.is_in_state<OpenState>());
+  assert(s.state_id() == SwitchStateId::open);
+  assert(s.closed_entries == 1);
+  assert(s.closed_exits == 1);
+  assert(s.open_entries == 1);
+  assert(s.open_exits == 0);
+  assert(s.visit(SwitchVisitor{}) == SwitchStateId::open);
 
   s.dispatch(UpdateEvent{});
-  EMB_CONSTEXPR_ASSERT(s.updates == 2);
+  assert(s.updates == 2);
 
   s.dispatch(OpenEvent{});
-  EMB_CONSTEXPR_ASSERT(s.is_in_state<OpenState>())
-  EMB_CONSTEXPR_ASSERT(s.state_id() == SwitchStateId::open);
-  EMB_CONSTEXPR_ASSERT(s.closed_entries == 1);
-  EMB_CONSTEXPR_ASSERT(s.closed_exits == 1);
-  EMB_CONSTEXPR_ASSERT(s.open_entries == 1);
-  EMB_CONSTEXPR_ASSERT(s.open_exits == 0);
-  EMB_CONSTEXPR_ASSERT(s.visit(SwitchVisitor{}) == SwitchStateId::open);
+  assert(s.is_in_state<OpenState>());
+  assert(s.state_id() == SwitchStateId::open);
+  assert(s.closed_entries == 1);
+  assert(s.closed_exits == 1);
+  assert(s.open_entries == 1);
+  assert(s.open_exits == 0);
+  assert(s.visit(SwitchVisitor{}) == SwitchStateId::open);
 
   s.dispatch(UpdateEvent{});
-  EMB_CONSTEXPR_ASSERT(s.updates == 3);
+  assert(s.updates == 3);
 
   s.dispatch(CloseEvent{});
-  EMB_CONSTEXPR_ASSERT(s.is_in_state<ClosedState>())
-  EMB_CONSTEXPR_ASSERT(s.state_id() == SwitchStateId::closed);
-  EMB_CONSTEXPR_ASSERT(s.closed_entries == 2);
-  EMB_CONSTEXPR_ASSERT(s.closed_exits == 1);
-  EMB_CONSTEXPR_ASSERT(s.open_entries == 1);
-  EMB_CONSTEXPR_ASSERT(s.open_exits == 1);
-  EMB_CONSTEXPR_ASSERT(s.visit(SwitchVisitor{}) == SwitchStateId::closed);
+  assert(s.is_in_state<ClosedState>());
+  assert(s.state_id() == SwitchStateId::closed);
+  assert(s.closed_entries == 2);
+  assert(s.closed_exits == 1);
+  assert(s.open_entries == 1);
+  assert(s.open_exits == 1);
+  assert(s.visit(SwitchVisitor{}) == SwitchStateId::closed);
 
   s.dispatch(UpdateEvent{});
-  EMB_CONSTEXPR_ASSERT(s.updates == 4);
+  assert(s.updates == 4);
 
   s.dispatch(CloseEvent{});
-  EMB_CONSTEXPR_ASSERT(s.is_in_state<ClosedState>())
-  EMB_CONSTEXPR_ASSERT(s.state_id() == SwitchStateId::closed);
-  EMB_CONSTEXPR_ASSERT(s.closed_entries == 2);
-  EMB_CONSTEXPR_ASSERT(s.closed_exits == 1);
-  EMB_CONSTEXPR_ASSERT(s.open_entries == 1);
-  EMB_CONSTEXPR_ASSERT(s.open_exits == 1);
-  EMB_CONSTEXPR_ASSERT(s.visit(SwitchVisitor{}) == SwitchStateId::closed);
+  assert(s.is_in_state<ClosedState>());
+  assert(s.state_id() == SwitchStateId::closed);
+  assert(s.closed_entries == 2);
+  assert(s.closed_exits == 1);
+  assert(s.open_entries == 1);
+  assert(s.open_exits == 1);
+  assert(s.visit(SwitchVisitor{}) == SwitchStateId::closed);
 
   s.dispatch(UpdateEvent{});
-  EMB_CONSTEXPR_ASSERT(s.updates == 5);
+  assert(s.updates == 5);
 
   s.dispatch(OpenEvent{});
-  EMB_CONSTEXPR_ASSERT(s.is_in_state<OpenState>())
-  EMB_CONSTEXPR_ASSERT(s.state_id() == SwitchStateId::open);
-  EMB_CONSTEXPR_ASSERT(s.closed_entries == 2);
-  EMB_CONSTEXPR_ASSERT(s.closed_exits == 2);
-  EMB_CONSTEXPR_ASSERT(s.open_entries == 2);
-  EMB_CONSTEXPR_ASSERT(s.open_exits == 1);
-  EMB_CONSTEXPR_ASSERT(s.visit(SwitchVisitor{}) == SwitchStateId::open);
+  assert(s.is_in_state<OpenState>());
+  assert(s.state_id() == SwitchStateId::open);
+  assert(s.closed_entries == 2);
+  assert(s.closed_exits == 2);
+  assert(s.open_entries == 2);
+  assert(s.open_exits == 1);
+  assert(s.visit(SwitchVisitor{}) == SwitchStateId::open);
 
   s.dispatch(DestroyEvent{});
-  EMB_CONSTEXPR_ASSERT(s.is_in_state<DestroyedState>())
-  EMB_CONSTEXPR_ASSERT(s.state_id() == SwitchStateId::destroyed);
-  EMB_CONSTEXPR_ASSERT(s.closed_entries == 2);
-  EMB_CONSTEXPR_ASSERT(s.closed_exits == 2);
-  EMB_CONSTEXPR_ASSERT(s.open_entries == 2);
-  EMB_CONSTEXPR_ASSERT(s.open_exits == 2);
-  EMB_CONSTEXPR_ASSERT(s.visit(SwitchVisitor{}) == SwitchStateId::destroyed);
+  assert(s.is_in_state<DestroyedState>());
+  assert(s.state_id() == SwitchStateId::destroyed);
+  assert(s.closed_entries == 2);
+  assert(s.closed_exits == 2);
+  assert(s.open_entries == 2);
+  assert(s.open_exits == 2);
+  assert(s.visit(SwitchVisitor{}) == SwitchStateId::destroyed);
 
   return true;
 }

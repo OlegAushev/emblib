@@ -1,7 +1,5 @@
 #ifdef __cpp_constexpr
 
-#include "tests.hpp"
-
 #include <emb/filter.hpp>
 #include <emb/units.hpp>
 
@@ -13,14 +11,15 @@ namespace tests {
 
 constexpr bool test_movavg_filter(
     moving_average_filter_type auto filt,
-    typename decltype(filt)::value_type init_output) {
+    typename decltype(filt)::value_type init_output
+) {
   using value_type = decltype(filt)::value_type;
   using divider_type = decltype(filt)::divider_type;
 
-  EMB_CONSTEXPR_ASSERT(filt.output() == init_output);
+  assert(filt.output() == init_output);
 
   filt.set_output(value_type{-42});
-  EMB_CONSTEXPR_ASSERT(filt.output() == value_type{-42});
+  assert(filt.output() == value_type{-42});
 
   std::array<value_type, 7> input{
       value_type{10},
@@ -29,7 +28,8 @@ constexpr bool test_movavg_filter(
       value_type{7},
       value_type{6},
       value_type{5},
-      value_type{4}};
+      value_type{4}
+  };
   size_t idx{0};
   value_type sum{0};
 
@@ -38,8 +38,9 @@ constexpr bool test_movavg_filter(
     filt.push(val);
     idx = (idx + 1) % input.size();
     sum += val;
-    EMB_CONSTEXPR_ASSERT(
-        filt.output() == sum / static_cast<divider_type>(filt.data().size()));
+    assert(
+        filt.output() == sum / static_cast<divider_type>(filt.data().size())
+    );
   }
 
   for (auto i{0uz}; i < 2 * filt.window_size() + filt.window_size() / 2; ++i) {
@@ -49,11 +50,10 @@ constexpr bool test_movavg_filter(
   }
 
   sum = std::accumulate(filt.data().begin(), filt.data().end(), value_type{0});
-  EMB_CONSTEXPR_ASSERT(
-      filt.output() == sum / static_cast<divider_type>(filt.window_size()));
+  assert(filt.output() == sum / static_cast<divider_type>(filt.window_size()));
 
   filt.reset();
-  EMB_CONSTEXPR_ASSERT(filt.output() == init_output);
+  assert(filt.output() == init_output);
 
   return true;
 }
@@ -92,13 +92,16 @@ static_assert(test_movavg_filter(emb::v1::movavg_filter<int, 10>{42}, 42));
 
 static_assert(test_movavg_filter(
     emb::movavg_filter<emb::units::erad_f32, 4>{},
-    emb::units::erad_f32{0}));
+    emb::units::erad_f32{0}
+));
 static_assert(test_movavg_filter(
     emb::movavg_filter<emb::units::erad_f32>{4},
-    emb::units::erad_f32{0}));
+    emb::units::erad_f32{0}
+));
 static_assert(test_movavg_filter(
     emb::v1::movavg_filter<emb::units::erad_f32, 4>{},
-    emb::units::erad_f32{0}));
+    emb::units::erad_f32{0}
+));
 
 } // namespace tests
 } // namespace internal

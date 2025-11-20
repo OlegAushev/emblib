@@ -1,7 +1,5 @@
 #ifdef __cpp_constexpr
 
-#include "tests.hpp"
-
 #include <emb/log.hpp>
 
 namespace emb {
@@ -15,23 +13,23 @@ enum class BazError { baz1, baz2, baz3 };
 constexpr bool test_systemlog() {
   emb::log::basic_logger<16, void*, FooError, BarError, BazError> log;
   log.log(emb::log::level::error, BarError::bar2, 42u);
-  EMB_CONSTEXPR_ASSERT(log.test(FooError::foo1) == std::nullopt);
-  EMB_CONSTEXPR_ASSERT(log.test(BarError::bar2) == emb::log::level::error);
+  assert(log.test(FooError::foo1) == std::nullopt);
+  assert(log.test(BarError::bar2) == emb::log::level::error);
 
   log.notice(FooError::foo1, 3.1416f);
-  EMB_CONSTEXPR_ASSERT(log.test(FooError::foo1) == emb::log::level::notice);
-  EMB_CONSTEXPR_ASSERT(log.test(BarError::bar2) == emb::log::level::error);
+  assert(log.test(FooError::foo1) == emb::log::level::notice);
+  assert(log.test(BarError::bar2) == emb::log::level::error);
 
   log.warning(FooError::foo2);
-  EMB_CONSTEXPR_ASSERT(log.test(FooError::foo1) == emb::log::level::notice);
-  EMB_CONSTEXPR_ASSERT(log.test(FooError::foo2) == emb::log::level::warning);
-  EMB_CONSTEXPR_ASSERT(log.test(BarError::bar2) == emb::log::level::error);
+  assert(log.test(FooError::foo1) == emb::log::level::notice);
+  assert(log.test(FooError::foo2) == emb::log::level::warning);
+  assert(log.test(BarError::bar2) == emb::log::level::error);
 
   log.info(BazError::baz3);
-  EMB_CONSTEXPR_ASSERT(log.test(FooError::foo1) == emb::log::level::notice);
-  EMB_CONSTEXPR_ASSERT(log.test(FooError::foo2) == emb::log::level::warning);
-  EMB_CONSTEXPR_ASSERT(log.test(BarError::bar2) == emb::log::level::error);
-  EMB_CONSTEXPR_ASSERT(log.test(BazError::baz3) == emb::log::level::info);
+  assert(log.test(FooError::foo1) == emb::log::level::notice);
+  assert(log.test(FooError::foo2) == emb::log::level::warning);
+  assert(log.test(BarError::bar2) == emb::log::level::error);
+  assert(log.test(BazError::baz3) == emb::log::level::info);
 
   // log.pop_message();
 
