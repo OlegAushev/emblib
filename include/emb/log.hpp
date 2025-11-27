@@ -23,8 +23,14 @@ template<size_t Capacity, typename LockGuard, typename... Events>
 class basic_logger {
 private:
   using flags_container_inner_type = std::array<std::bitset<32>, num_levels>;
+
   using flags_container_type =
       std::array<flags_container_inner_type, sizeof...(Events)>;
+
+  template<typename Event>
+  static constexpr size_t group_index() {
+    return type_index_v<Event, Events...>;
+  }
 
   static constexpr size_t level_index(level lvl) {
     return static_cast<size_t>(std::to_underlying(lvl));
@@ -35,11 +41,14 @@ private:
     return static_cast<size_t>(std::to_underlying(event));
   }
 public:
+  using event_type = std::variant<Events...>;
+
   using payload_type =
       std::variant<std::monostate, bool, uint32_t, int32_t, float>;
+
   struct logged_data_type {
     level lvl;
-    std::variant<Events...> event;
+    event_type event;
     payload_type payload;
   };
 private:
@@ -50,9 +59,7 @@ public:
     requires one_of<Event, Events...>
   constexpr void log(level lvl, Event event, payload_type payload = {}) {
     [[maybe_unused]] LockGuard lock_guard;
-    flags_[type_index_v<Event, Events...>][level_index(lvl)].set(
-        event_index(event)
-    );
+    flags_[group_index<Event>()][level_index(lvl)].set(event_index(event));
     if (!data_.full()) {
       data_.push({lvl, event, payload});
     }
@@ -62,9 +69,7 @@ public:
     requires one_of<Event, Events...>
   constexpr void clear(level lvl, Event event) {
     [[maybe_unused]] LockGuard lock_guard;
-    flags_[type_index_v<Event, Events...>][level_index(lvl)].reset(
-        event_index(event)
-    );
+    flags_[group_index<Event>()][level_index(lvl)].reset(event_index(event));
   }
 
   template<typename Event>
@@ -117,19 +122,15 @@ public:
     logged_data_type ret = data_.front();
     data_.pop();
     if (ret.lvl == level::info) {
-      // auto event_idx = std::visit(visitor{}, ret.event);
-      // flags_[event_idx][level_index(ret.lvl)].reset(
-      //   event_index(event)
+      auto group_idx = ret.event.index();
+      auto event_idx = std::visit(
+          [](auto ev) { return event_index(ev); },
+          ret.event
+      );
+      flags_[group_idx][level_index(ret.lvl)].reset(event_idx);
     }
     return ret;
   }
-private:
-  // struct visitor {
-  //   template<typename Evs>
-  //   size_t operator()(Evs event) {
-  //     return type_index_v<Evs, Events...>;
-  //   }
-  // };
 };
 
 } // namespace log
