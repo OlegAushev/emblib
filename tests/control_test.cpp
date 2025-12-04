@@ -1,6 +1,6 @@
 #ifdef __cpp_constexpr
 
-#include <emb/control_system.hpp>
+#include <emb/control.hpp>
 #include <emb/units.hpp>
 
 namespace emb {
@@ -18,21 +18,21 @@ class knob;
 class throttle;
 class drive;
 
-using startmux_type = emb::ctlsys::
-    control_multiplexer<drive, bool, dummy_mutex, button, throttle>;
+using startmux_type = emb::control::
+    command_multiplexer<bool, dummy_mutex, drive, button, throttle>;
 using speedmux_type =
-    emb::ctlsys::control_multiplexer<drive, float, dummy_mutex, knob, throttle>;
+    emb::control::command_multiplexer<float, dummy_mutex, drive, knob, throttle>;
 
 class drive {
 private:
   bool should_start_ = false;
   float speed_ref_ = 0.0f;
 public:
-  constexpr void update_setpoint(bool should_start) {
+  constexpr void accept(bool should_start) {
     should_start_ = should_start;
   }
 
-  constexpr void update_setpoint(float ref) {
+  constexpr void accept(float ref) {
     speed_ref_ = ref;
   }
 
@@ -52,13 +52,13 @@ private:
 public:
   constexpr explicit button(startmux_type& startmux) : startmux_(startmux) {}
 
-  constexpr bool setpoint(emb::ctlsys::control_variable_tag<bool>) const {
+  constexpr bool get(emb::control::command_tag<bool>) const {
     return pressed_;
   }
 
   constexpr void toggle() {
     pressed_ = !pressed_;
-    startmux_.try_update_setpoint(*this, pressed_);
+    startmux_.try_send(*this, pressed_);
   }
 };
 
@@ -69,13 +69,13 @@ private:
 public:
   constexpr explicit knob(speedmux_type& speedmux) : speedmux_(speedmux) {}
 
-  constexpr float setpoint(emb::ctlsys::control_variable_tag<float>) const {
+  constexpr float get(emb::control::command_tag<float>) const {
     return val_;
   }
 
   constexpr void set(float val) {
     val_ = val;
-    speedmux_.try_update_setpoint(*this, val_);
+    speedmux_.try_send(*this, val_);
   }
 };
 
@@ -89,19 +89,19 @@ public:
   constexpr throttle(startmux_type& startmux, speedmux_type& speedmux)
       : startmux_(startmux), speedmux_(speedmux) {}
 
-  constexpr bool setpoint(emb::ctlsys::control_variable_tag<bool>) const {
+  constexpr bool get(emb::control::command_tag<bool>) const {
     return should_start_;
   }
 
-  constexpr float setpoint(emb::ctlsys::control_variable_tag<float>) const {
+  constexpr float get(emb::control::command_tag<float>) const {
     return speed_ref_;
   }
 
   constexpr void set(bool should_start, float val) {
     should_start_ = should_start;
     speed_ref_ = val;
-    startmux_.try_update_setpoint(*this, should_start_);
-    speedmux_.try_update_setpoint(*this, speed_ref_);
+    startmux_.try_send(*this, should_start_);
+    speedmux_.try_send(*this, speed_ref_);
   }
 };
 
@@ -138,6 +138,22 @@ constexpr bool test_control_device() {
 
   startmux.activate(trtl);
   assert(!drv.should_start());
+
+  auto start_control = startmux.source();
+  startmux.activate(btn);
+  assert(drv.should_start());
+
+  startmux.activate(start_control);
+  assert(!drv.should_start());
+
+  auto speed_control = speedmux.source();
+  speedmux.deactivate();
+  assert(drv.speed_ref() == 0.0f);
+  speedmux.activate(speed_control);
+  assert(drv.speed_ref() == 1.0f);
+  speed_control = std::monostate{};
+  speedmux.activate(speed_control);
+  assert(drv.speed_ref() == 0.0f);
 
   return true;
 }
