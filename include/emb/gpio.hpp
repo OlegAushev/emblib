@@ -1,7 +1,6 @@
 #pragma once
 
 #include <emb/core.hpp>
-#include <emb/noncopyable.hpp>
 #include <emb/scopedenum.hpp>
 
 namespace emb {
@@ -9,7 +8,7 @@ namespace gpio {
 
 #if __cplusplus >= 201100
 
-enum class level : int {
+enum class level : int32_t {
   low = 0,
   high = 1
 };
@@ -22,10 +21,31 @@ constexpr level operator!(level lvl) {
   }
 }
 
-enum class state : int {
+enum class state : int32_t {
   inactive = 0,
   active = 1
 };
+
+#ifdef __cpp_concepts
+
+template<typename T>
+concept input = requires(const T t) {
+    { t.read() } -> std::same_as<state>;
+    { t.read_level() } -> std::same_as<level>;
+};
+
+template<typename T>
+concept output = requires(T t, const T ct, state s, level lvl) {
+    { ct.read() } -> std::same_as<state>;
+    { t.set(s) } -> std::same_as<void>;
+    { t.set() } -> std::same_as<void>;
+    { t.reset() } -> std::same_as<void>;
+    { t.toggle() } -> std::same_as<void>;
+    { ct.read_level() } -> std::same_as<level>;
+    { t.set_level(lvl) } -> std::same_as<void>;
+};
+
+#else
 
 class input {
 public:
@@ -48,6 +68,8 @@ public:
   virtual level read_level() const = 0;
   virtual void set_level(level lvl) = 0;
 };
+
+#endif
 
 #else
 // clang-format off

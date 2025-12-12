@@ -15,30 +15,29 @@ namespace emb {
 template<class Derived>
 class singleton {
 private:
-  static inline Derived* instance_{nullptr};
-  static inline bool initialized_{false};
+  static inline Derived* instance_ = nullptr;
 protected:
-  singleton(Derived* self) {
-    assert(!initialized_);
-    instance_ = self;
-    initialized_ = true;
+  singleton() {
+    assert(!exists());
+    instance_ = static_cast<Derived*>(this);
   }
 
   ~singleton() {
-    initialized_ = false;
     instance_ = nullptr;
   }
 public:
-  static Derived* instance() {
-    assert(initialized_);
+  [[nodiscard]] static Derived* instance() {
+    assert(exists());
     return instance_;
   }
 
-  static bool initialized() { return initialized_; }
+  [[nodiscard]] static bool exists() {
+    return instance_ != nullptr;
+  }
 };
 
 template<class Derived, size_t DerivedCount>
-class singleton_array {
+class [[deprecated]] singleton_array {
 private:
   static inline Derived* instance_[DerivedCount]{};
   static inline bool initialized_[DerivedCount]{};
