@@ -2,7 +2,7 @@
 
 #if __cplusplus >= 202300
 
-#include <emb/mutex.hpp>
+#include <emb/core.hpp>
 
 #include <concepts>
 #include <variant>
@@ -23,18 +23,20 @@ concept command_sink = requires(T& sink, Command const& cmd) {
   { sink.accept(cmd) } -> std::same_as<void>;
 };
 
-template<typename Command, typename Mutex, typename Sink, typename... Sources>
+template<
+    typename Command,
+    typename ScopedLock,
+    typename Sink,
+    typename... Sources>
 class command_multiplexer {
 public:
   using command_type = Command;
-  using mutex_type = Mutex;
+  using scoped_lock_type = ScopedLock;
   using sink_type = Sink;
   using source_type = std::variant<std::monostate, Sources const*...>;
 private:
   sink_type& sink_;
   source_type source_;
-  mutex_type mutable mutex_;
-
 public:
   constexpr explicit command_multiplexer(sink_type& obj)
     requires command_sink<sink_type, command_type>
@@ -46,6 +48,7 @@ public:
   command_multiplexer& operator=(command_multiplexer&&) = delete;
 
   constexpr source_type source() const {
+    [[maybe_unused]] scoped_lock_type lock{};
     return source_;
   }
 
@@ -53,13 +56,13 @@ public:
     requires command_source<Device, command_type> &&
              emb::one_of<Device, Sources...>
   constexpr void activate(Device const& device) {
-    emb::lock_guard<mutex_type> lock(mutex_);
+    [[maybe_unused]] scoped_lock_type lock{};
     source_ = &device;
     sink_.accept(device.get(command_tag<command_type>{}));
   }
 
   constexpr void activate(source_type const& source) {
-    emb::lock_guard<mutex_type> lock(mutex_);
+    [[maybe_unused]] scoped_lock_type lock{};
     source_ = source;
     auto visitor = [](auto const& s) -> command_type {
       if constexpr (std::same_as<
@@ -74,7 +77,7 @@ public:
   }
 
   constexpr void deactivate() {
-    emb::lock_guard<mutex_type> lock(mutex_);
+    [[maybe_unused]] scoped_lock_type lock{};
     source_ = std::monostate{};
     sink_.accept(command_type{});
   }
@@ -83,7 +86,7 @@ public:
     requires command_source<Device, command_type> &&
              emb::one_of<Device, Sources...>
   constexpr bool is_active(Device const& device) const {
-    emb::lock_guard<mutex_type> lock(mutex_);
+    [[maybe_unused]] scoped_lock_type lock{};
     return is_active_unlocked(device);
   }
 
@@ -91,7 +94,7 @@ public:
     requires command_source<Device, command_type> &&
              emb::one_of<Device, Sources...>
   constexpr bool try_send(Device const& sender, command_type const& cmd) {
-    emb::lock_guard<mutex_type> lock(mutex_);
+    [[maybe_unused]] scoped_lock_type lock{};
     if (!is_active_unlocked(sender)) {
       return false;
     }
