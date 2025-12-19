@@ -156,6 +156,10 @@ struct edeg {};
 struct rad {};
 
 struct deg {};
+
+// chrono
+struct hz {};
+
 } // namespace tags
 
 #ifdef __cpp_alias_templates
@@ -178,12 +182,16 @@ using rad = named_unit<T, tags::rad>;
 template<typename T>
 using deg = named_unit<T, tags::deg>;
 
+template<typename T>
+using hz = named_unit<T, tags::hz>;
+
 using rpm_f32 = rpm<float>;
 using eradps_f32 = eradps<float>;
 using erad_f32 = erad<float>;
 using edeg_f32 = edeg<float>;
 using rad_f32 = rad<float>;
 using deg_f32 = deg<float>;
+using hz_f32 = hz<float>;
 
 #else
 

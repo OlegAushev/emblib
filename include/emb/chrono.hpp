@@ -97,6 +97,11 @@ public:
   }
 };
 
+using nanoseconds_i32  = std::chrono::duration<int32_t, std::nano>;
+using microseconds_i32 = std::chrono::duration<int32_t, std::micro>;
+using milliseconds_i32 = std::chrono::duration<int32_t, std::milli>;
+using seconds_i32      = std::chrono::duration<int32_t>;
+
 #else
 
 namespace impl {
