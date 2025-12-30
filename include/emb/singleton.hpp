@@ -37,7 +37,7 @@ public:
 };
 
 template<class Derived, size_t DerivedCount>
-class [[deprecated]] singleton_array {
+class singleton_array {
 private:
   static inline Derived* instance_[DerivedCount]{};
   static inline bool initialized_[DerivedCount]{};
