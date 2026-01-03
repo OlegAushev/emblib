@@ -19,7 +19,7 @@ inline namespace v2 {
 
 template<typename T, size_t WindowSize = 0>
   requires std::is_arithmetic_v<T> ||
-           std::is_arithmetic_v<typename T::underlying_type>
+           std::is_arithmetic_v<typename T::value_type>
 class movavg_filter {
 private:
   template<typename V, bool B>
@@ -32,7 +32,7 @@ private:
 
   template<typename V>
   struct get_arithmetic_type<V, false> {
-    using type = typename V::underlying_type;
+    using type = typename V::value_type;
   };
 
   template<typename V, bool B>
@@ -108,7 +108,7 @@ private:
 
   template<typename V, typename Unit>
   struct get_arithmetic_type<units::named_unit<V, Unit> > {
-    typedef typename units::named_unit<V, Unit>::underlying_type type;
+    typedef typename units::named_unit<V, Unit>::value_type type;
   };
 
   template<typename V>

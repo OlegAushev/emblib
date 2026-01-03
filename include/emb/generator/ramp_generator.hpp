@@ -1,15 +1,17 @@
 #pragma once
 
-#include <algorithm>
 #include <emb/algorithm.hpp>
 #include <emb/core.hpp>
+#include <emb/units.hpp>
+
+#include <algorithm>
 
 namespace emb {
 
 template<typename T>
 class ramp_generator {
 private:
-  float update_period_;
+  units::sec_f32 update_period_;
   T slope_;
   T step_;
 
@@ -18,7 +20,7 @@ private:
   T output_;
 public:
   ramp_generator(
-      float update_period,
+      units::sec_f32 update_period,
       T const& slope,
       T const& init_output = T()
   )
@@ -48,12 +50,12 @@ public:
     set_output(init_output_);
   }
 
-  void configure(float update_period, T slope) {
-    assert(update_period > 0);
+  void configure(units::sec_f32 update_period, T slope) {
+    assert(update_period.value() > 0);
     assert(slope > T(0));
     update_period_ = update_period;
     slope_ = slope;
-    step_ = update_period * slope;
+    step_ = update_period.value() * slope;
   }
 
   void update() {

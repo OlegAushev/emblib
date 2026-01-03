@@ -38,6 +38,12 @@ constexpr bool test_units_conversion() {
       edeg_f32{emb::to_deg(emb::numbers::pi)}
   );
 
+  hz_f32 freq{100};
+  assert(1 / freq == sec_f32{1.0f / 100.0f});
+
+  sec_f32 per{0.0001f};
+  assert(1 / per == hz_f32(1 / 0.0001f));
+
   return true;
 }
 

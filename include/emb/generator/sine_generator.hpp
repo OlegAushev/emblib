@@ -45,14 +45,14 @@ public:
 
   EMB_CONSTEXPR void reset() {
     phase_ = init_phase_;
-    output_ = ampl_ * emb::sin(phase_.numval()) + bias_;
+    output_ = ampl_ * emb::sin(phase_.value()) + bias_;
   }
 
   EMB_CONSTEXPR void update() {
     phase_ = emb::units::rad_f32(
-        emb::rem2pi(phase_.numval() + wfreq_ * update_period_)
+        emb::rem2pi(phase_.value() + wfreq_ * update_period_)
     );
-    output_ = ampl_ * emb::sin(phase_.numval()) + bias_;
+    output_ = ampl_ * emb::sin(phase_.value()) + bias_;
   }
 
   EMB_CONSTEXPR float update_period() const {

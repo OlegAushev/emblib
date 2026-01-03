@@ -223,7 +223,7 @@ public:
   EMB_CONSTEXPR signed_pu(float v, float base)
       : v_(emb::clamp(v / base, -1.0f, 1.0f)) {}
 
-  EMB_CONSTEXPR float numval() const {
+  EMB_CONSTEXPR float value() const {
     return v_;
   }
 
@@ -246,42 +246,42 @@ EMB_INLINE_CONSTEXPR bool operator==(
     signed_pu const& lhs,
     signed_pu const& rhs
 ) {
-  return lhs.numval() == rhs.numval();
+  return lhs.value() == rhs.value();
 }
 
 EMB_INLINE_CONSTEXPR bool operator!=(
     signed_pu const& lhs,
     signed_pu const& rhs
 ) {
-  return lhs.numval() != rhs.numval();
+  return lhs.value() != rhs.value();
 }
 
 EMB_INLINE_CONSTEXPR bool operator<(
     signed_pu const& lhs,
     signed_pu const& rhs
 ) {
-  return lhs.numval() < rhs.numval();
+  return lhs.value() < rhs.value();
 }
 
 EMB_INLINE_CONSTEXPR bool operator>(
     signed_pu const& lhs,
     signed_pu const& rhs
 ) {
-  return lhs.numval() > rhs.numval();
+  return lhs.value() > rhs.value();
 }
 
 EMB_INLINE_CONSTEXPR bool operator<=(
     signed_pu const& lhs,
     signed_pu const& rhs
 ) {
-  return lhs.numval() <= rhs.numval();
+  return lhs.value() <= rhs.value();
 }
 
 EMB_INLINE_CONSTEXPR bool operator>=(
     signed_pu const& lhs,
     signed_pu const& rhs
 ) {
-  return lhs.numval() >= rhs.numval();
+  return lhs.value() >= rhs.value();
 }
 
 EMB_INLINE_CONSTEXPR signed_pu
@@ -297,7 +297,7 @@ operator-(signed_pu const& lhs, signed_pu const& rhs) {
 }
 
 EMB_INLINE_CONSTEXPR signed_pu operator*(signed_pu const& lhs, float rhs) {
-  return signed_pu(lhs.numval() * rhs);
+  return signed_pu(lhs.value() * rhs);
 }
 
 EMB_INLINE_CONSTEXPR signed_pu operator*(float lhs, signed_pu const& rhs) {
@@ -305,7 +305,7 @@ EMB_INLINE_CONSTEXPR signed_pu operator*(float lhs, signed_pu const& rhs) {
 }
 
 EMB_INLINE_CONSTEXPR signed_pu operator/(signed_pu const& lhs, float rhs) {
-  return signed_pu(lhs.numval() / rhs);
+  return signed_pu(lhs.value() / rhs);
 }
 
 class unsigned_pu {
@@ -319,7 +319,7 @@ public:
   EMB_CONSTEXPR unsigned_pu(float v, float base)
       : v_(emb::clamp(v / base, 0.0f, 1.0f)) {}
 
-  EMB_CONSTEXPR float numval() const {
+  EMB_CONSTEXPR float value() const {
     return v_;
   }
 
@@ -342,42 +342,42 @@ EMB_INLINE_CONSTEXPR bool operator==(
     unsigned_pu const& lhs,
     unsigned_pu const& rhs
 ) {
-  return lhs.numval() == rhs.numval();
+  return lhs.value() == rhs.value();
 }
 
 EMB_INLINE_CONSTEXPR bool operator!=(
     unsigned_pu const& lhs,
     unsigned_pu const& rhs
 ) {
-  return lhs.numval() != rhs.numval();
+  return lhs.value() != rhs.value();
 }
 
 EMB_INLINE_CONSTEXPR bool operator<(
     unsigned_pu const& lhs,
     unsigned_pu const& rhs
 ) {
-  return lhs.numval() < rhs.numval();
+  return lhs.value() < rhs.value();
 }
 
 EMB_INLINE_CONSTEXPR bool operator>(
     unsigned_pu const& lhs,
     unsigned_pu const& rhs
 ) {
-  return lhs.numval() > rhs.numval();
+  return lhs.value() > rhs.value();
 }
 
 EMB_INLINE_CONSTEXPR bool operator<=(
     unsigned_pu const& lhs,
     unsigned_pu const& rhs
 ) {
-  return lhs.numval() <= rhs.numval();
+  return lhs.value() <= rhs.value();
 }
 
 EMB_INLINE_CONSTEXPR bool operator>=(
     unsigned_pu const& lhs,
     unsigned_pu const& rhs
 ) {
-  return lhs.numval() >= rhs.numval();
+  return lhs.value() >= rhs.value();
 }
 
 EMB_INLINE_CONSTEXPR unsigned_pu
@@ -393,7 +393,7 @@ operator-(unsigned_pu const& lhs, unsigned_pu const& rhs) {
 }
 
 EMB_INLINE_CONSTEXPR unsigned_pu operator*(unsigned_pu const& lhs, float rhs) {
-  return unsigned_pu(lhs.numval() * rhs);
+  return unsigned_pu(lhs.value() * rhs);
 }
 
 EMB_INLINE_CONSTEXPR unsigned_pu operator*(float lhs, unsigned_pu const& rhs) {
@@ -401,7 +401,7 @@ EMB_INLINE_CONSTEXPR unsigned_pu operator*(float lhs, unsigned_pu const& rhs) {
 }
 
 EMB_INLINE_CONSTEXPR unsigned_pu operator/(unsigned_pu const& lhs, float rhs) {
-  return unsigned_pu(lhs.numval() / rhs);
+  return unsigned_pu(lhs.value() / rhs);
 }
 
 } // namespace emb

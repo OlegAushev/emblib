@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../src/filter/exp_filter.hpp"
-#include "../../src/filter/expmed_filter.hpp"
-#include "../../src/filter/med_filter.hpp"
-#include "../../src/filter/movavg_filter.hpp"
+#include <emb/filter/exp_filter.hpp>
+#include <emb/filter/expmed_filter.hpp>
+#include <emb/filter/med_filter.hpp>
+#include <emb/filter/movavg_filter.hpp>

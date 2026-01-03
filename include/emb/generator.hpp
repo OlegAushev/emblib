@@ -1,4 +1,4 @@
 #pragma once
 
-#include "../../src/generator/ramp_generator.hpp"
-#include "../../src/generator/sine_generator.hpp"
+#include <emb/generator/ramp_generator.hpp>
+#include <emb/generator/sine_generator.hpp>
