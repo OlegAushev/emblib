@@ -26,7 +26,7 @@ constexpr bool test_units_conversion() {
   assert(emb::rem180(deg_f32{-10.0f}) == deg_f32(-10.0f));
 
   float v2{3000.0f};
-  int32_t p{4};
+  [[maybe_unused]] int32_t p{4};
   rpm_f32 rpm1{v2};
   assert(convert_to<rpm_f32>(rpm1) == rpm1);
   assert(convert_to<eradps_f32>(rpm1, p) == eradps_f32{emb::to_eradps(v2, p)});
@@ -38,10 +38,10 @@ constexpr bool test_units_conversion() {
       edeg_f32{emb::to_deg(emb::numbers::pi)}
   );
 
-  hz_f32 freq{100};
+  [[maybe_unused]] hz_f32 freq{100};
   assert(1 / freq == sec_f32{1.0f / 100.0f});
 
-  sec_f32 per{0.0001f};
+  [[maybe_unused]] sec_f32 per{0.0001f};
   assert(1 / per == hz_f32(1 / 0.0001f));
 
   return true;

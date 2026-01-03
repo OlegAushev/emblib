@@ -38,9 +38,9 @@ constexpr bool test_movavg_filter(
     filt.push(val);
     idx = (idx + 1) % input.size();
     sum += val;
-    assert(
-        filt.output() == sum / static_cast<divider_type>(filt.data().size())
-    );
+    [[maybe_unused]] auto out = sum /
+                                static_cast<divider_type>(filt.data().size());
+    assert(filt.output() == out);
   }
 
   for (auto i{0uz}; i < 2 * filt.window_size() + filt.window_size() / 2; ++i) {

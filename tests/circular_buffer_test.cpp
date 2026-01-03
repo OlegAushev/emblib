@@ -41,9 +41,11 @@ constexpr bool test_circular_buffer(circular_buffer_type auto buf)
   auto val = buf.back();
   auto size = buf.size();
   while (!buf.empty()) {
-    assert(buf.size() == size--);
+    assert(buf.size() == size);
+    --size;
     assert(buf.front() == 1);
-    assert(buf.back() == val--);
+    assert(buf.back() == val);
+    --val;
     buf.pop_back();
   }
 

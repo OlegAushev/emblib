@@ -20,7 +20,7 @@ private:
   T output_;
 public:
   ramp_generator(
-      units::sec_f32 update_period,
+      units::sec_f32 const& update_period,
       T const& slope,
       T const& init_output = T()
   )
@@ -50,7 +50,7 @@ public:
     set_output(init_output_);
   }
 
-  void configure(units::sec_f32 update_period, T slope) {
+  void configure(units::sec_f32 const& update_period, T const& slope) {
     assert(update_period.value() > 0);
     assert(slope > T(0));
     update_period_ = update_period;

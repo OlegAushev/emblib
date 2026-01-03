@@ -14,7 +14,7 @@ public:
   typedef T output_type;
   typedef output_type const& const_reference;
 private:
-  float update_period_;
+  units::sec_f32 update_period_;
   output_type ampl_;
   float wfreq_;
   emb::units::rad_f32 init_phase_;
@@ -24,18 +24,18 @@ private:
   output_type output_;
 public:
   EMB_CONSTEXPR sine_generator(
-      float update_period,
+      units::sec_f32 const& update_period,
       output_type const& ampl,
-      float const& freq,
+      units::hz_f32 const& freq,
       emb::units::rad_f32 const& init_phase = emb::units::rad_f32(0),
       output_type bias = output_type()
   )
       : update_period_(update_period),
         ampl_(ampl),
-        wfreq_(2 * emb::numbers::pi * freq),
+        wfreq_(2 * emb::numbers::pi * freq.value()),
         init_phase_(init_phase),
         bias_(bias) {
-    assert(update_period > 0);
+    assert(update_period.value() > 0);
     reset();
   }
 
@@ -50,12 +50,12 @@ public:
 
   EMB_CONSTEXPR void update() {
     phase_ = emb::units::rad_f32(
-        emb::rem2pi(phase_.value() + wfreq_ * update_period_)
+        emb::rem2pi(phase_.value() + wfreq_ * update_period_.value())
     );
     output_ = ampl_ * emb::sin(phase_.value()) + bias_;
   }
 
-  EMB_CONSTEXPR float update_period() const {
+  EMB_CONSTEXPR units::sec_f32 update_period() const {
     return update_period_;
   }
 
