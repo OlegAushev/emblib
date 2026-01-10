@@ -56,7 +56,7 @@ private:
   queue<logged_data_type, Capacity> data_;
 public:
   template<typename Event>
-    requires one_of<Event, Events...>
+    requires same_as_any<Event, Events...>
   constexpr void log(level lvl, Event event, payload_type payload = {}) {
     [[maybe_unused]] LockGuard lock_guard;
     flags_[group_index<Event>()][level_index(lvl)].set(event_index(event));
@@ -66,44 +66,44 @@ public:
   }
 
   template<typename Event>
-    requires one_of<Event, Events...>
+    requires same_as_any<Event, Events...>
   constexpr void clear(level lvl, Event event) {
     [[maybe_unused]] LockGuard lock_guard;
     flags_[group_index<Event>()][level_index(lvl)].reset(event_index(event));
   }
 
   template<typename Event>
-    requires one_of<Event, Events...>
+    requires same_as_any<Event, Events...>
   constexpr void info(Event event, payload_type payload = {}) {
     log(level::info, event, payload);
   }
 
   template<typename Event>
-    requires one_of<Event, Events...>
+    requires same_as_any<Event, Events...>
   constexpr void notice(Event event, payload_type payload = {}) {
     log(level::notice, event, payload);
   }
 
   template<typename Event>
-    requires one_of<Event, Events...>
+    requires same_as_any<Event, Events...>
   constexpr void warning(Event event, payload_type payload = {}) {
     log(level::warning, event, payload);
   }
 
   template<typename Event>
-    requires one_of<Event, Events...>
+    requires same_as_any<Event, Events...>
   constexpr void error(Event event, payload_type payload = {}) {
     log(level::error, event, payload);
   }
 
   template<typename Event>
-    requires one_of<Event, Events...>
+    requires same_as_any<Event, Events...>
   constexpr void critical(Event event, payload_type payload = {}) {
     log(level::critical, event, payload);
   }
 
   template<typename Event>
-    requires one_of<Event, Events...>
+    requires same_as_any<Event, Events...>
   constexpr std::optional<level> test(Event event) {
     for (auto lvl = levels_list.rbegin(); lvl != levels_list.rend(); ++lvl) {
       if (flags_[type_index_v<Event, Events...>][level_index(*lvl)]

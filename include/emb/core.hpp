@@ -117,7 +117,7 @@ inline constexpr std::size_t type_index_v = type_index<T, Ts...>::value;
 namespace emb {
 
 template<typename T, typename... Ts>
-concept one_of = std::disjunction_v<std::is_same<T, Ts>...>;
+concept same_as_any = (... || std::same_as<T, Ts>);
 
 } // namespace emb
 

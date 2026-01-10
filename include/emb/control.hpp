@@ -54,7 +54,7 @@ public:
 
   template<typename Device>
     requires command_source<Device, command_type> &&
-             emb::one_of<Device, Sources...>
+             emb::same_as_any<Device, Sources...>
   constexpr void activate(Device const& device) {
     [[maybe_unused]] scoped_lock_type lock{};
     source_ = &device;
@@ -84,7 +84,7 @@ public:
 
   template<typename Device>
     requires command_source<Device, command_type> &&
-             emb::one_of<Device, Sources...>
+             emb::same_as_any<Device, Sources...>
   constexpr bool is_active(Device const& device) const {
     [[maybe_unused]] scoped_lock_type lock{};
     return is_active_unlocked(device);
@@ -92,7 +92,7 @@ public:
 
   template<typename Device>
     requires command_source<Device, command_type> &&
-             emb::one_of<Device, Sources...>
+             emb::same_as_any<Device, Sources...>
   constexpr bool try_send(Device const& sender, command_type const& cmd) {
     [[maybe_unused]] scoped_lock_type lock{};
     if (!is_active_unlocked(sender)) {
@@ -105,7 +105,7 @@ public:
 private:
   template<typename Source>
     requires command_source<Source, command_type> &&
-             emb::one_of<Source, Sources...>
+             emb::same_as_any<Source, Sources...>
   constexpr bool is_active_unlocked(Source const& source) const {
     auto ptr = std::get_if<Source const*>(&source_);
     return ptr && *ptr == &source;
