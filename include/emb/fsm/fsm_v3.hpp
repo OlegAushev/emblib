@@ -130,18 +130,10 @@ template<
     typename Event,
     typename Result,
     typename... States>
-concept event_handler = requires {
-  requires(
-      (static_cast<int>(
-           state_event_handler<States, Context, Policy, Event, Result>
-       ) +
-           static_cast<int>(
-               common_event_handler<Context, Policy, Event, Result>
-           ) ==
-       1) &&
-      ...
-  );
-};
+concept event_handler =
+    ((state_event_handler<States, Context, Policy, Event, Result> ||
+      common_event_handler<Context, Policy, Event, Result>) &&
+     ...);
 
 } // namespace detail
 
