@@ -108,6 +108,21 @@ struct type_index<T, U, Ts...>
 template<typename T, typename... Ts>
 inline constexpr std::size_t type_index_v = type_index<T, Ts...>::value;
 
+// Compile-time type list
+template<typename... Ts>
+struct type_list {};
+
+// Check if type T is in type_list
+template<typename T, typename List>
+struct is_in_type_list : std::false_type {};
+
+template<typename T, typename... Ts>
+struct is_in_type_list<T, type_list<Ts...>>
+    : std::bool_constant<(... || std::is_same_v<T, Ts>)> {};
+
+template<typename T, typename List>
+inline constexpr bool is_in_type_list_v = is_in_type_list<T, List>::value;
+
 } // namespace emb
 
 #endif
@@ -118,6 +133,9 @@ namespace emb {
 
 template<typename T, typename... Ts>
 concept same_as_any = (... || std::same_as<T, Ts>);
+
+template<typename T, typename List>
+concept in_type_list = is_in_type_list_v<T, List>;
 
 } // namespace emb
 
