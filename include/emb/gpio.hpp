@@ -3,6 +3,10 @@
 #include <emb/core.hpp>
 #include <emb/scopedenum.hpp>
 
+#ifdef __cpp_concepts
+#include <concepts>
+#endif
+
 namespace emb {
 namespace gpio {
 

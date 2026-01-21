@@ -16,11 +16,6 @@
 #include <cstddef>
 #include <cassert>
 
-#ifdef __cpp_concepts
-#include <concepts>
-#include <type_traits>
-#endif
-
 #ifdef __c28x__
 #include <emb/c28x.hpp>
 #endif
@@ -86,59 +81,4 @@ inline void empty_function() {
 }
 
 } // namespace emb
-
-#if __cplusplus >= 201100
-
-namespace emb {
-
-// Primary template - type not found case
-template<typename T, typename... Ts>
-struct type_index;
-
-// Base case: type found at position 0
-template<typename T, typename... Ts>
-struct type_index<T, T, Ts...> : std::integral_constant<std::size_t, 0> {};
-
-// Recursive case: increment index and continue searching
-template<typename T, typename U, typename... Ts>
-struct type_index<T, U, Ts...>
-    : std::integral_constant<std::size_t, 1 + type_index<T, Ts...>::value> {};
-
-// Helper template
-template<typename T, typename... Ts>
-inline constexpr std::size_t type_index_v = type_index<T, Ts...>::value;
-
-// Compile-time type list
-template<typename... Ts>
-struct type_list {};
-
-// Check if type T is in type_list
-template<typename T, typename List>
-struct is_in_type_list : std::false_type {};
-
-template<typename T, typename... Ts>
-struct is_in_type_list<T, type_list<Ts...>>
-    : std::bool_constant<(... || std::is_same_v<T, Ts>)> {};
-
-template<typename T, typename List>
-inline constexpr bool is_in_type_list_v = is_in_type_list<T, List>::value;
-
-} // namespace emb
-
-#endif
-
-#ifdef __cpp_concepts
-
-namespace emb {
-
-template<typename T, typename... Ts>
-concept same_as_any = (... || std::same_as<T, Ts>);
-
-template<typename T, typename List>
-concept in_type_list = is_in_type_list_v<T, List>;
-
-} // namespace emb
-
-#endif
-
 #endif
