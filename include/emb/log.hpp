@@ -1,6 +1,7 @@
 #pragma once
 
 #include <emb/core.hpp>
+#include <emb/meta.hpp>
 #include <emb/queue.hpp>
 
 #include <array>
