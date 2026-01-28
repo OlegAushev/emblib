@@ -75,7 +75,7 @@ template<auto Address, auto Mask, typename Policy = rw>
   requires reg_address<decltype(Address)> &&
            reg_width<decltype(Mask)> &&
            (Mask != 0)
-struct field {
+struct bits {
   using value_type = decltype(Mask);
   using pointer = value_type volatile*;
   using const_pointer = value_type const volatile*;
