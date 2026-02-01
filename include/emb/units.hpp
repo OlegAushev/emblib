@@ -271,6 +271,24 @@ EMB_INLINE_CONSTEXPR rpm_f32 convert_to(eradps_f32 const& v, int32_t p) {
   return units::rpm_f32(emb::to_rpm(v.value(), p));
 }
 
+template<typename T>
+EMB_INLINE_CONSTEXPR eradps<T>
+operator/(erad<T> const& lhs, sec<T> const& rhs) {
+  return eradps<T>(lhs.value() / rhs.value());
+}
+
+template<typename T>
+EMB_INLINE_CONSTEXPR erad<T>
+operator*(eradps<T> const& lhs, sec<T> const& rhs) {
+  return erad<T>(lhs.value() * rhs.value());
+}
+
+template<typename T>
+EMB_INLINE_CONSTEXPR erad<T>
+operator*(sec<T> const& lhs, eradps<T> const& rhs) {
+  return rhs * lhs;
+}
+
 #ifdef __cpp_concepts
 
 template<typename T, typename V>
