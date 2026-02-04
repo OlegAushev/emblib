@@ -28,13 +28,13 @@ concept fsm_policy =
         std::remove_cv_t<Ctx>>;
 
 template<class T, class Context, class State>
-concept entry_action = requires(Context& cxt, State const& s) {
-  { T::on_entry(cxt, s) } -> std::same_as<void>;
+concept entry_action = requires(Context& ctx, State const& s) {
+  { T::on_entry(ctx, s) } -> std::same_as<void>;
 };
 
 template<class T, class Context, class State>
-concept exit_action = requires(Context& cxt, State const& s) {
-  { T::on_exit(cxt, s) } -> std::same_as<void>;
+concept exit_action = requires(Context& ctx, State const& s) {
+  { T::on_exit(ctx, s) } -> std::same_as<void>;
 };
 
 template<
@@ -188,8 +188,8 @@ public:
   constexpr void dispatch(Event&& event) {
     [[maybe_unused]] LockGuard lock_guard;
     auto const visitor = [&](auto const& s) -> next_state_type {
-      event_context_type cxt = get_context();
-      return transition_table::on_event(cxt, s, std::forward<Event>(event));
+      event_context_type ctx = get_context();
+      return transition_table::on_event(ctx, s, std::forward<Event>(event));
     };
 
     auto next_state = std::visit(visitor, state_);
@@ -263,9 +263,9 @@ private:
 
   constexpr void enter_state() {
     if constexpr (Policy::entry_action) {
-      context_type& cxt = get_context();
+      context_type& ctx = get_context();
       std::visit(
-          [&](auto const& s) { transition_table::on_entry(cxt, s); },
+          [&](auto const& s) { transition_table::on_entry(ctx, s); },
           state_
       );
     }
@@ -273,9 +273,9 @@ private:
 
   constexpr void exit_state() {
     if constexpr (Policy::exit_action) {
-      context_type& cxt = get_context();
+      context_type& ctx = get_context();
       std::visit(
-          [&](auto const& s) { transition_table::on_exit(cxt, s); },
+          [&](auto const& s) { transition_table::on_exit(ctx, s); },
           state_
       );
     }

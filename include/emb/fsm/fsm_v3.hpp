@@ -28,13 +28,13 @@ concept fsm_policy =
         std::remove_cv_t<Ctx>>;
 
 template<typename State, typename Context>
-concept entry_action = requires(Context& cxt) {
-  { State::on_entry(cxt) } -> std::same_as<void>;
+concept entry_action = requires(Context& ctx) {
+  { State::on_entry(ctx) } -> std::same_as<void>;
 };
 
 template<typename State, typename Context>
-concept exit_action = requires(Context& cxt) {
-  { State::on_exit(cxt) } -> std::same_as<void>;
+concept exit_action = requires(Context& ctx) {
+  { State::on_exit(ctx) } -> std::same_as<void>;
 };
 
 template<typename State>
@@ -199,20 +199,20 @@ public:
 
     auto const visitor = [&](auto const& s) -> next_state_type {
       using S = std::decay_t<decltype(s)>;
-      event_context_type cxt = get_context();
+      event_context_type ctx = get_context();
       if constexpr (detail::state_event_handler<
                         S,
                         context_type,
                         Policy,
                         Event,
                         next_state_type>) {
-        return S::on_event(cxt, std::forward<Event>(event));
+        return S::on_event(ctx, std::forward<Event>(event));
       } else if constexpr (detail::common_event_handler<
                                context_type,
                                Policy,
                                Event,
                                next_state_type>) {
-        return on_event(cxt, std::forward<Event>(event));
+        return on_event(ctx, std::forward<Event>(event));
       } else {
         return no_transition();
       }
@@ -289,11 +289,11 @@ private:
 
   constexpr void enter_state() {
     if constexpr (Policy::entry_action) {
-      context_type& cxt = get_context();
+      context_type& ctx = get_context();
       std::visit(
           [&](auto const& s) {
             using S = std::decay_t<decltype(s)>;
-            S::on_entry(cxt);
+            S::on_entry(ctx);
           },
           state_
       );
@@ -302,11 +302,11 @@ private:
 
   constexpr void exit_state() {
     if constexpr (Policy::exit_action) {
-      context_type& cxt = get_context();
+      context_type& ctx = get_context();
       std::visit(
           [&](auto const& s) {
             using S = std::decay_t<decltype(s)>;
-            S::on_exit(cxt);
+            S::on_exit(ctx);
           },
           state_
       );
