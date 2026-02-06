@@ -21,7 +21,8 @@ concept fsm_policy =
     requires {
       { T::entry_action } -> std::convertible_to<bool>;
       { T::exit_action } -> std::convertible_to<bool>;
-    } && requires { typename T::template event_context_type<Ctx>; } &&
+    } &&
+    requires { typename T::template event_context_type<Ctx>; } &&
     std::is_lvalue_reference_v<typename T::template event_context_type<Ctx>> &&
     std::is_same_v<
         std::remove_cvref_t<typename T::template event_context_type<Ctx>>,
@@ -88,24 +89,24 @@ concept states_with_same_id_type =
             decltype(std::tuple_element_t<0, std::tuple<States...>>::id)>>...>;
 
 template<typename... States>
-concept states_with_unique_id = requires {
-  requires[]() constexpr->bool {
-    if constexpr (sizeof...(States) <= 1) {
-      return true;
-    } else {
-      constexpr std::array ids = {States::id...};
-      for (std::size_t i = 0; i < ids.size(); ++i) {
-        for (std::size_t j = i + 1; j < ids.size(); ++j) {
-          if (ids[i] == ids[j]) {
-            return false;
-          }
+consteval bool are_id_unique() {
+  if constexpr (sizeof...(States) <= 1) {
+    return true;
+  } else {
+    constexpr std::array ids = {States::id...};
+    for (std::size_t i = 0; i < ids.size(); ++i) {
+      for (std::size_t j = i + 1; j < ids.size(); ++j) {
+        if (ids[i] == ids[j]) {
+          return false;
         }
       }
-      return true;
     }
+    return true;
   }
-  ();
-};
+}
+
+template<typename... States>
+concept states_with_unique_id = are_id_unique<States...>();
 
 template<typename... States>
 concept fsm_states = requires {
@@ -238,7 +239,7 @@ public:
   [[nodiscard]] constexpr auto state_id() const {
     return std::visit(
         [](auto const& s) {
-          using S = std::decay_t<decltype(s)>;
+          using S = std::remove_cvref_t<decltype(s)>;
           return S::id;
         },
         state_
