@@ -2,6 +2,8 @@
 
 #if __cplusplus >= 202300
 
+#include <emb/meta.hpp>
+
 #include <array>
 #include <concepts>
 #include <optional>
@@ -163,12 +165,20 @@ template<
     typename Derived,
     typename LockGuard,
     typename Policy,
+    typename StateList>
+class finite_state_machine;
+
+template<
+    typename Derived,
+    typename LockGuard,
+    typename Policy,
     typename... States>
   requires detail::fsm_policy<Policy, Derived> &&
            detail::fsm_states<Derived, Policy, States...>
-class finite_state_machine {
+class finite_state_machine<Derived, LockGuard, Policy, typelist<States...>> {
 public:
-  using fsm_type = finite_state_machine<Derived, LockGuard, Policy, States...>;
+  using fsm_type =
+      finite_state_machine<Derived, LockGuard, Policy, typelist<States...>>;
   using context_type = Derived;
   using event_context_type =
       typename Policy::template event_context_type<context_type>;

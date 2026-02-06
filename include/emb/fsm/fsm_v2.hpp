@@ -2,6 +2,8 @@
 
 #if __cplusplus >= 202300
 
+#include <emb/meta.hpp>
+
 #include <array>
 #include <concepts>
 #include <optional>
