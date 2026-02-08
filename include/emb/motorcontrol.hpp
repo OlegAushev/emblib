@@ -1,10 +1,11 @@
 #pragma once
 
-#include <emb/array.hpp>
 #include <emb/core.hpp>
 #include <emb/math.hpp>
 #include <emb/scopedenum.hpp>
 #include <emb/units.hpp>
+
+#include <array>
 
 namespace emb {
 
@@ -44,7 +45,7 @@ inline vec_alphabeta clarke_transform(float a, float b, float c) {
   return retv;
 }
 
-inline vec_alphabeta clarke_transform(emb::array<float, 3> const& v) {
+inline vec_alphabeta clarke_transform(std::array<float, 3> const& v) {
   vec_alphabeta retv;
   retv.alpha = v[0];
   retv.beta = (v[1] - v[2]) * numbers::inv_sqrt3;
@@ -58,21 +59,21 @@ inline vec_alphabeta clarke_transform(float a, float b) {
   return retv;
 }
 
-inline emb::array<float, 3> invclarke_transform(vec_alphabeta v) {
-  emb::array<float, 3> retv;
+inline std::array<float, 3> invclarke_transform(vec_alphabeta v) {
+  std::array<float, 3> retv;
   retv[0] = v.alpha;
   retv[1] = (-v.alpha + emb::numbers::sqrt3 * v.beta) * 0.5f;
   retv[2] = (-v.alpha - emb::numbers::sqrt3 * v.beta) * 0.5f;
   return retv;
 }
 
-inline emb::array<emb::unsigned_pu, 3> calculate_sinpwm(
+inline std::array<emb::unsigned_pu, 3> calculate_sinpwm(
     vec_alphabeta v_s,
     float v_dc
 ) {
-  emb::array<float, 3> voltages = invclarke_transform(v_s);
+  std::array<float, 3> voltages = invclarke_transform(v_s);
   float const voltage_base = v_dc / 1.5f;
-  emb::array<emb::unsigned_pu, 3> duty_cycles;
+  std::array<emb::unsigned_pu, 3> duty_cycles;
 
   for (size_t i = 0; i < 3; ++i) {
     duty_cycles[i] = emb::unsigned_pu(voltages[i] / voltage_base);
@@ -81,7 +82,7 @@ inline emb::array<emb::unsigned_pu, 3> calculate_sinpwm(
   return duty_cycles;
 }
 
-inline emb::array<emb::unsigned_pu, 3> calculate_svpwm(
+inline std::array<emb::unsigned_pu, 3> calculate_svpwm(
     vec_alpha v_s,
     float v_dc
 ) {
@@ -97,7 +98,7 @@ inline emb::array<emb::unsigned_pu, 3> calculate_svpwm(
   float const tb2 = numbers::sqrt3 * (v_s.mag / v_dc) * emb::sin(theta);
   float const tb0 = (1.f - tb1 - tb2) / 2.f;
 
-  emb::array<float, 3> pulse_durations;
+  std::array<float, 3> pulse_durations;
   switch (sector) {
   case 0:
     pulse_durations[0] = tb1 + tb2 + tb0;
@@ -133,7 +134,7 @@ inline emb::array<emb::unsigned_pu, 3> calculate_svpwm(
     break;
   }
 
-  emb::array<emb::unsigned_pu, 3> duty_cycles;
+  std::array<emb::unsigned_pu, 3> duty_cycles;
   for (size_t i = 0; i < 3; ++i) {
     duty_cycles[i] = emb::unsigned_pu(pulse_durations[i]);
   }
@@ -141,14 +142,14 @@ inline emb::array<emb::unsigned_pu, 3> calculate_svpwm(
   return duty_cycles;
 }
 
-inline emb::array<unsigned_pu, 3> compensate_deadtime_v1(
-    emb::array<unsigned_pu, 3> const& dutycycles,
-    emb::array<float, 3> const& currents,
+inline std::array<unsigned_pu, 3> compensate_deadtime_v1(
+    std::array<unsigned_pu, 3> const& dutycycles,
+    std::array<float, 3> const& currents,
     float current_threshold,
     float pwm_period,
     float deadtime
 ) {
-  emb::array<unsigned_pu, 3> dc;
+  std::array<unsigned_pu, 3> dc;
   emb::unsigned_pu const deadtime_dutycycle(deadtime / pwm_period);
 
   for (size_t i = 0; i < 3; ++i) {
@@ -165,9 +166,9 @@ inline emb::array<unsigned_pu, 3> compensate_deadtime_v1(
 }
 
 /// @brief DOI: 10.4028/www.scientific.net/AMM.416-417.536
-inline emb::array<unsigned_pu, 3> compensate_deadtime_v2(
-    emb::array<unsigned_pu, 3> const& dutycycles,
-    emb::array<float, 3> const& currents,
+inline std::array<unsigned_pu, 3> compensate_deadtime_v2(
+    std::array<unsigned_pu, 3> const& dutycycles,
+    std::array<float, 3> const& currents,
     float current_threshold,
     float pwm_period,
     float deadtime

@@ -1,10 +1,11 @@
 #pragma once
 
-#include <algorithm>
 #include <emb/algorithm.hpp>
-#include <emb/array.hpp>
 #include <emb/circular_buffer.hpp>
 #include <emb/core.hpp>
+
+#include <algorithm>
+#include <array>
 
 namespace emb {
 
@@ -30,7 +31,7 @@ public:
 
   void push(T const& input_v) {
     window_.push_back(input_v);
-    emb::array<T, WindowSize> window_sorted = {};
+    std::array<T, WindowSize> window_sorted = {};
     std::copy(window_.begin(), window_.end(), window_sorted.begin());
     std::sort(window_sorted.begin(), window_sorted.end());
     T const median_v = window_sorted[WindowSize / 2];

@@ -1,15 +1,16 @@
 #pragma once
 
-#include <emb/array.hpp>
 #include <emb/core.hpp>
 #include <emb/numbers.hpp>
+
+#include <array>
 
 namespace emb {
 
 namespace internal {
 
 #ifdef __cpp_inline_variables
-inline constexpr emb::array<float, 129> sincos_lookup_table{
+inline constexpr std::array<float, 129> sincos_lookup_table{
     0.0f,
     0.012271538285719931f,
     0.024541228522912288f,
