@@ -51,12 +51,12 @@ public:
   void configure(float sampling_period, float time_constant) {
     sampling_period_ = sampling_period;
     time_constant_ = time_constant;
-    smooth_factor_ = emb::clamp(sampling_period / time_constant, 0.0f, 1.0f);
+    smooth_factor_ = std::clamp(sampling_period / time_constant, 0.0f, 1.0f);
   }
 
   void set_sampling_period(float ts) {
     sampling_period_ = ts;
-    smooth_factor_ = emb::clamp(sampling_period_ / time_constant_, 0.0f, 1.0f);
+    smooth_factor_ = std::clamp(sampling_period_ / time_constant_, 0.0f, 1.0f);
   }
 
   float smooth_factor() const { return smooth_factor_; }

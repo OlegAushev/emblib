@@ -5,6 +5,8 @@
 #include <emb/core.hpp>
 #include <emb/numbers.hpp>
 
+#include <algorithm>
+
 #ifdef __c28x__
 #include <math.h>
 #endif
@@ -180,7 +182,7 @@ public:
   }
 
   void push(T const& v) {
-    sum_ = clamp(
+    sum_ = std::clamp(
         sum_ + v * ts_,
         output_range.lower_bound(),
         output_range.upper_bound()
@@ -188,7 +190,7 @@ public:
   }
 
   void add(T const& v) {
-    sum_ = clamp(
+    sum_ = std::clamp(
         sum_ + v,
         output_range.lower_bound(),
         output_range.upper_bound()
@@ -200,7 +202,7 @@ public:
   }
 
   void reset() {
-    sum_ = clamp(
+    sum_ = std::clamp(
         initval_,
         output_range.lower_bound(),
         output_range.upper_bound()
@@ -218,10 +220,10 @@ private:
 public:
   EMB_CONSTEXPR signed_pu() : v_(0.0f) {}
 
-  EMB_CONSTEXPR explicit signed_pu(float v) : v_(emb::clamp(v, -1.0f, 1.0f)) {}
+  EMB_CONSTEXPR explicit signed_pu(float v) : v_(std::clamp(v, -1.0f, 1.0f)) {}
 
   EMB_CONSTEXPR signed_pu(float v, float base)
-      : v_(emb::clamp(v / base, -1.0f, 1.0f)) {}
+      : v_(std::clamp(v / base, -1.0f, 1.0f)) {}
 
   EMB_CONSTEXPR float value() const {
     return v_;
@@ -238,7 +240,7 @@ public:
   }
 private:
   EMB_CONSTEXPR void set(float v) {
-    v_ = emb::clamp(v, -1.0f, 1.0f);
+    v_ = std::clamp(v, -1.0f, 1.0f);
   }
 };
 
@@ -314,10 +316,10 @@ private:
 public:
   EMB_CONSTEXPR unsigned_pu() : v_(0.0f) {}
 
-  EMB_CONSTEXPR explicit unsigned_pu(float v) : v_(emb::clamp(v, 0.0f, 1.0f)) {}
+  EMB_CONSTEXPR explicit unsigned_pu(float v) : v_(std::clamp(v, 0.0f, 1.0f)) {}
 
   EMB_CONSTEXPR unsigned_pu(float v, float base)
-      : v_(emb::clamp(v / base, 0.0f, 1.0f)) {}
+      : v_(std::clamp(v / base, 0.0f, 1.0f)) {}
 
   EMB_CONSTEXPR float value() const {
     return v_;
@@ -334,7 +336,7 @@ public:
   }
 private:
   EMB_CONSTEXPR void set(float v) {
-    v_ = emb::clamp(v, 0.0f, 1.0f);
+    v_ = std::clamp(v, 0.0f, 1.0f);
   }
 };
 

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <emb/core.hpp>
-#include <emb/scopedenum.hpp>
 
 #ifdef __cpp_concepts
 #include <concepts>

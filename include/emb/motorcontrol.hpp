@@ -2,9 +2,9 @@
 
 #include <emb/core.hpp>
 #include <emb/math.hpp>
-#include <emb/scopedenum.hpp>
 #include <emb/units.hpp>
 
+#include <algorithm>
 #include <array>
 
 namespace emb {
@@ -87,7 +87,7 @@ inline std::array<emb::unsigned_pu, 3> calculate_svpwm(
     float v_dc
 ) {
   v_s.theta = rem2pi(v_s.theta);
-  v_s.mag = clamp<float>(v_s.mag, 0, v_dc / numbers::sqrt3);
+  v_s.mag = std::clamp<float>(v_s.mag, 0, v_dc / numbers::sqrt3);
 
   int32_t const sector = static_cast<int32_t>(v_s.theta / (numbers::pi / 3.0f));
   float const theta = v_s.theta - float(sector) * (numbers::pi / 3.0f);

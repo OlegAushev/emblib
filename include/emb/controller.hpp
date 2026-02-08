@@ -1,8 +1,9 @@
 #pragma once
 
-#include "float.h"
-#include <emb/algorithm.hpp>
 #include <emb/core.hpp>
+
+#include <algorithm>
+#include <float.h>
 
 namespace emb {
 
@@ -44,7 +45,7 @@ public:
 
   virtual void push(float ref, float meas) {
     float out = kp_ * p_controller<Logic>::_error(ref, meas);
-    out_ = emb::clamp(out, lower_limit_, upper_limit_);
+    out_ = std::clamp(out, lower_limit_, upper_limit_);
   }
 
   virtual void reset() { out_ = 0; }
@@ -167,11 +168,11 @@ public:
 
   virtual void push(float ref, float meas) EMB_OVERRIDE {
     float error = abstract_pi_controller<Logic>::_error(ref, meas);
-    float out = emb::clamp(error * this->_kp + this->_out_i, -FLT_MAX, FLT_MAX);
-    this->out_ = emb::clamp(out, this->_lower_limit, this->_upper_limit);
+    float out = std::clamp(error * this->_kp + this->_out_i, -FLT_MAX, FLT_MAX);
+    this->out_ = std::clamp(out, this->_lower_limit, this->_upper_limit);
     float out_i =
         this->out_i_ + this->ki_ * this->ts_ * error - kc_ * (out - this->out_);
-    this->out_i_ = emb::clamp(out_i, -FLT_MAX, FLT_MAX);
+    this->out_i_ = std::clamp(out_i, -FLT_MAX, FLT_MAX);
   }
 };
 
