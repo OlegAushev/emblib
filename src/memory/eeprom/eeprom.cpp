@@ -28,7 +28,7 @@ storage::~storage() {
 emb::mem::status storage::write(size_t page,
                                 uint8_t const* buf,
                                 size_t len,
-                                EMB_MILLISECONDS timeout) {
+                                std::chrono::milliseconds timeout) {
   assert(page < available_page_count);
   assert(len < available_page_bytes);
 
@@ -77,7 +77,7 @@ write_end:
 }
 
 emb::mem::status
-storage::read(size_t page, uint8_t* buf, size_t len, EMB_MILLISECONDS timeout) {
+storage::read(size_t page, uint8_t* buf, size_t len, std::chrono::milliseconds timeout) {
   assert(page < available_page_count);
   assert(len < available_page_bytes);
 

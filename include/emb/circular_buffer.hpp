@@ -1,22 +1,11 @@
 #pragma once
 
-#include <emb/core.hpp>
-
-#ifdef __cpp_concepts
-#define EMB_CIRCULAR_BUFFER_V2
-#endif
-
-#ifdef EMB_CIRCULAR_BUFFER_V2
+#include <algorithm>
 #include <array>
 #include <type_traits>
 #include <vector>
-#endif
 
 namespace emb {
-
-#ifdef EMB_CIRCULAR_BUFFER_V2
-
-inline namespace v2 {
 
 template<typename T, size_t Capacity = 0>
 class circular_buffer {
@@ -128,117 +117,6 @@ public:
   }
 };
 
-} // namespace v2
-
-namespace v1 {
-
-#endif
-
-template<typename T, size_t Capacity>
-class circular_buffer {
-public:
-  typedef T value_type;
-  typedef size_t size_type;
-  typedef value_type& reference;
-  typedef value_type const& const_reference;
-  typedef value_type* pointer;
-  typedef value_type const* const_pointer;
-private:
-  value_type data_[Capacity]
-#if __cplusplus >= 201100
-      {}
-#endif
-  ;
-  size_type front_;
-  size_type back_;
-  bool full_;
-public:
-  EMB_CONSTEXPR circular_buffer() : front_(0), back_(0), full_(false) {}
-
-  EMB_CONSTEXPR void clear() {
-    front_ = 0;
-    back_ = 0;
-    full_ = false;
-  }
-
-  EMB_CONSTEXPR bool empty() const { return (!full_ && (front_ == back_)); }
-
-  EMB_CONSTEXPR bool full() const { return full_; }
-
-  EMB_CONSTEXPR size_type capacity() const { return Capacity; }
-
-  EMB_CONSTEXPR size_type size() const {
-    size_type size = Capacity;
-    if (!full_) {
-      if (back_ >= front_) {
-        size = back_ - front_;
-      } else {
-        size = Capacity + back_ - front_;
-      }
-    }
-    return size;
-  }
-
-  EMB_CONSTEXPR void push_back(value_type const& value) {
-    data_[back_] = value;
-    if (full_) {
-      front_ = (front_ + 1) % Capacity;
-    }
-    back_ = (back_ + 1) % Capacity;
-    full_ = (front_ == back_);
-  }
-
-  EMB_CONSTEXPR reference front() {
-    assert(!empty());
-    return data_[front_];
-  }
-
-  EMB_CONSTEXPR const_reference front() const {
-    assert(!empty());
-    return data_[front_];
-  }
-
-  EMB_CONSTEXPR reference back() {
-    assert(!empty());
-    return data_[(back_ + Capacity - 1) % Capacity];
-  }
-
-  EMB_CONSTEXPR const_reference back() const {
-    assert(!empty());
-    return data_[(back_ + Capacity - 1) % Capacity];
-  }
-
-  EMB_CONSTEXPR void pop_front() {
-    assert(!empty());
-    full_ = false;
-    front_ = (front_ + 1) % Capacity;
-  }
-
-  EMB_CONSTEXPR void pop_back() {
-    assert(!empty());
-    full_ = false;
-    back_ = (back_ + Capacity - 1) % Capacity;
-  }
-
-  EMB_CONSTEXPR const_pointer data() const { return data_; }
-
-  EMB_CONSTEXPR const_pointer begin() const { return data_; }
-
-  EMB_CONSTEXPR const_pointer end() const { return data_ + Capacity; }
-
-  EMB_CONSTEXPR void fill(value_type const& value) {
-    clear();
-    for (size_t i = 0; i < Capacity; ++i) {
-      data_[i] = value;
-    }
-    full_ = true;
-  }
-};
-
-#ifdef EMB_CIRCULAR_BUFFER_V2
-
-} // namespace v1
-
 template<typename T>
 struct is_circular_buffer_type : std::false_type {};
 
@@ -246,13 +124,7 @@ template<typename T, size_t Size>
 struct is_circular_buffer_type<emb::circular_buffer<T, Size>>
     : std::true_type {};
 
-template<typename T, size_t Size>
-struct is_circular_buffer_type<emb::v1::circular_buffer<T, Size>>
-    : std::true_type {};
-
 template<typename T>
 concept circular_buffer_type = is_circular_buffer_type<T>::value;
-
-#endif
 
 } // namespace emb

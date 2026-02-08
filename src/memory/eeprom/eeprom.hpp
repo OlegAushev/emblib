@@ -15,12 +15,12 @@ public:
                                 size_t offset,
                                 uint8_t* buf,
                                 size_t len,
-                                EMB_MILLISECONDS timeout) = 0;
+                                std::chrono::milliseconds timeout) = 0;
   virtual emb::mem::status write(size_t page,
                                  size_t offset,
                                  uint8_t const* buf,
                                  size_t len,
-                                 EMB_MILLISECONDS timeout) = 0;
+                                 std::chrono::milliseconds timeout) = 0;
   virtual size_t page_bytes() const = 0;
   virtual size_t page_count() const = 0;
 };
@@ -49,12 +49,12 @@ public:
           uint32_t (*calc_crc32_func_)(uint8_t const*, size_t));
   ~storage();
   emb::mem::status
-  read(size_t page, uint8_t* buf, size_t len, EMB_MILLISECONDS timeout);
+  read(size_t page, uint8_t* buf, size_t len, std::chrono::milliseconds timeout);
   emb::mem::status
-  write(size_t page, uint8_t const* buf, size_t len, EMB_MILLISECONDS timeout);
+  write(size_t page, uint8_t const* buf, size_t len, std::chrono::milliseconds timeout);
 
   template<typename T>
-  emb::mem::status read(size_t page, T& data, EMB_MILLISECONDS timeout) {
+  emb::mem::status read(size_t page, T& data, std::chrono::milliseconds timeout) {
 #ifdef __c28x__
     uint8_t data_bytes[2 * sizeof(T)];
     status sts = read(page, data_bytes, 2 * sizeof(T), timeout);
@@ -68,7 +68,7 @@ public:
   }
 
   template<typename T>
-  emb::mem::status write(size_t page, T const& data, EMB_MILLISECONDS timeout) {
+  emb::mem::status write(size_t page, T const& data, std::chrono::milliseconds timeout) {
 #ifdef __c28x__
     uint8_t data_bytes[2 * sizeof(T)];
     emb::c28x::to_bytes<T>(data_bytes, data);

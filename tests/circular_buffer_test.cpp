@@ -115,19 +115,15 @@ constexpr bool test_circular_buffer(circular_buffer_type auto buf)
 
 static_assert(test_circular_buffer(emb::circular_buffer<int, 1>{}));
 static_assert(test_circular_buffer(emb::circular_buffer<int>{1}));
-static_assert(test_circular_buffer(emb::v1::circular_buffer<int, 1>{}));
 
 static_assert(test_circular_buffer(emb::circular_buffer<int, 2>{}));
 static_assert(test_circular_buffer(emb::circular_buffer<int>{2}));
-static_assert(test_circular_buffer(emb::v1::circular_buffer<int, 2>{}));
 
 static_assert(test_circular_buffer(emb::circular_buffer<int, 5>{}));
 static_assert(test_circular_buffer(emb::circular_buffer<int>{5}));
-static_assert(test_circular_buffer(emb::v1::circular_buffer<int, 5>{}));
 
 static_assert(test_circular_buffer(emb::circular_buffer<int, 10>{}));
 static_assert(test_circular_buffer(emb::circular_buffer<int>{10}));
-static_assert(test_circular_buffer(emb::v1::circular_buffer<int, 10>{}));
 
 } // namespace tests
 } // namespace internal

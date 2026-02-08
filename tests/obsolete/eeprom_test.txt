@@ -20,7 +20,7 @@ public:
                                 size_t addr,
                                 uint8_t* buf,
                                 size_t len,
-                                EMB_MILLISECONDS timeout) EMB_OVERRIDE {
+                                std::chrono::milliseconds timeout) EMB_OVERRIDE {
     for (size_t i = 0; i < len; ++i) {
       if (((addr + i) % 2) == 0) {
         buf[i] = uint8_t(_data[page][(addr + i) / 2] & 0x00FF);
@@ -35,7 +35,7 @@ public:
                                  size_t addr,
                                  uint8_t const* buf,
                                  size_t len,
-                                 EMB_MILLISECONDS timeout) EMB_OVERRIDE {
+                                 std::chrono::milliseconds timeout) EMB_OVERRIDE {
     for (size_t i = 0; i < len; ++i) {
       if (((addr + i) % 2) == 0) {
         _data[page][(addr + i) / 2] =
@@ -93,15 +93,15 @@ void emb::tests::eeprom_test() {
   TestingEepromStruct1 s1_src = {42, emb::numbers::pi, 12, -100, true};
   TestingEepromStruct2 s2_src = {1.f, -2.f, 3.f, -4.f, 5.f};
 
-  eeprom.write<TestingEepromStruct1>(0, s1_src, EMB_MILLISECONDS(-1));
-  eeprom.write<TestingEepromStruct2>(2, s2_src, EMB_MILLISECONDS(-1));
+  eeprom.write<TestingEepromStruct1>(0, s1_src, std::chrono::milliseconds(-1));
+  eeprom.write<TestingEepromStruct2>(2, s2_src, std::chrono::milliseconds(-1));
 
   TestingEepromStruct1 s1_dest = {};
   TestingEepromStruct2 s2_dest = {};
   EMB_MAYBE_UNUSED emb::mem::status read_sts1 =
-      eeprom.read<TestingEepromStruct1>(0, s1_dest, EMB_MILLISECONDS(-1));
+      eeprom.read<TestingEepromStruct1>(0, s1_dest, std::chrono::milliseconds(-1));
   EMB_MAYBE_UNUSED emb::mem::status read_sts2 =
-      eeprom.read<TestingEepromStruct2>(2, s2_dest, EMB_MILLISECONDS(-1));
+      eeprom.read<TestingEepromStruct2>(2, s2_dest, std::chrono::milliseconds(-1));
 
   EMB_ASSERT_EQUAL(s1_src, s1_dest);
   EMB_ASSERT_EQUAL(s2_src, s2_dest);

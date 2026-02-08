@@ -60,35 +60,27 @@ constexpr bool test_movavg_filter(
 
 static_assert(test_movavg_filter(emb::movavg_filter<int, 1>{}, 0));
 static_assert(test_movavg_filter(emb::movavg_filter<int>{1}, 0));
-static_assert(test_movavg_filter(emb::v1::movavg_filter<int, 1>{}, 0));
 
 static_assert(test_movavg_filter(emb::movavg_filter<int, 2>{}, 0));
 static_assert(test_movavg_filter(emb::movavg_filter<int>{2}, 0));
-static_assert(test_movavg_filter(emb::v1::movavg_filter<int, 2>{}, 0));
 
 static_assert(test_movavg_filter(emb::movavg_filter<int, 5>{}, 0));
 static_assert(test_movavg_filter(emb::movavg_filter<int>{5}, 0));
-static_assert(test_movavg_filter(emb::v1::movavg_filter<int, 5>{}, 0));
 
 static_assert(test_movavg_filter(emb::movavg_filter<int, 10>{}, 0));
 static_assert(test_movavg_filter(emb::movavg_filter<int>{10}, 0));
-static_assert(test_movavg_filter(emb::v1::movavg_filter<int, 10>{}, 0));
 
 static_assert(test_movavg_filter(emb::movavg_filter<int, 1>{42}, 42));
 static_assert(test_movavg_filter(emb::movavg_filter<int>{1, 42}, 42));
-static_assert(test_movavg_filter(emb::v1::movavg_filter<int, 1>{42}, 42));
 
 static_assert(test_movavg_filter(emb::movavg_filter<int, 2>{42}, 42));
 static_assert(test_movavg_filter(emb::movavg_filter<int>{2, 42}, 42));
-static_assert(test_movavg_filter(emb::v1::movavg_filter<int, 2>{42}, 42));
 
 static_assert(test_movavg_filter(emb::movavg_filter<int, 5>{42}, 42));
 static_assert(test_movavg_filter(emb::movavg_filter<int>{5, 42}, 42));
-static_assert(test_movavg_filter(emb::v1::movavg_filter<int, 5>{42}, 42));
 
 static_assert(test_movavg_filter(emb::movavg_filter<int, 10>{42}, 42));
 static_assert(test_movavg_filter(emb::movavg_filter<int>{10, 42}, 42));
-static_assert(test_movavg_filter(emb::v1::movavg_filter<int, 10>{42}, 42));
 
 static_assert(test_movavg_filter(
     emb::movavg_filter<emb::units::erad_f32, 4>{},
@@ -96,10 +88,6 @@ static_assert(test_movavg_filter(
 ));
 static_assert(test_movavg_filter(
     emb::movavg_filter<emb::units::erad_f32>{4},
-    emb::units::erad_f32{0}
-));
-static_assert(test_movavg_filter(
-    emb::v1::movavg_filter<emb::units::erad_f32, 4>{},
     emb::units::erad_f32{0}
 ));
 

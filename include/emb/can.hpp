@@ -1,7 +1,5 @@
 #pragma once
 
-#if __cplusplus >= 201100
-
 #include <array>
 #include <cstdint>
 
@@ -13,19 +11,3 @@ struct can_frame {
   uint8_t len;
   canpayload_t payload;
 };
-
-#else
-
-#include <emb/array.hpp>
-#include <stdint.h>
-
-typedef emb::array<uint8_t, 8> canpayload_t;
-typedef uint32_t canid_t;
-
-struct can_frame {
-  canid_t id;
-  uint8_t len;
-  canpayload_t payload;
-};
-
-#endif
