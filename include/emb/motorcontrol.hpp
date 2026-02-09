@@ -41,36 +41,34 @@ inline vec_alphabeta invpark_transform(vec_dq v, float sine, float cosine) {
 inline vec_alphabeta clarke_transform(float a, float b, float c) {
   vec_alphabeta retv;
   retv.alpha = a;
-  retv.beta = (b - c) * numbers::inv_sqrt3;
+  retv.beta = (b - c) * std::numbers::inv_sqrt3_v<float>;
   return retv;
 }
 
 inline vec_alphabeta clarke_transform(std::array<float, 3> const& v) {
   vec_alphabeta retv;
   retv.alpha = v[0];
-  retv.beta = (v[1] - v[2]) * numbers::inv_sqrt3;
+  retv.beta = (v[1] - v[2]) * std::numbers::inv_sqrt3_v<float>;
   return retv;
 }
 
 inline vec_alphabeta clarke_transform(float a, float b) {
   vec_alphabeta retv;
   retv.alpha = a;
-  retv.beta = (a + 2 * b) * numbers::inv_sqrt3;
+  retv.beta = (a + 2 * b) * std::numbers::inv_sqrt3_v<float>;
   return retv;
 }
 
 inline std::array<float, 3> invclarke_transform(vec_alphabeta v) {
   std::array<float, 3> retv;
   retv[0] = v.alpha;
-  retv[1] = (-v.alpha + emb::numbers::sqrt3 * v.beta) * 0.5f;
-  retv[2] = (-v.alpha - emb::numbers::sqrt3 * v.beta) * 0.5f;
+  retv[1] = (-v.alpha + std::numbers::sqrt3_v<float> * v.beta) * 0.5f;
+  retv[2] = (-v.alpha - std::numbers::sqrt3_v<float> * v.beta) * 0.5f;
   return retv;
 }
 
-inline std::array<emb::unsigned_pu, 3> calculate_sinpwm(
-    vec_alphabeta v_s,
-    float v_dc
-) {
+inline std::array<emb::unsigned_pu, 3>
+calculate_sinpwm(vec_alphabeta v_s, float v_dc) {
   std::array<float, 3> voltages = invclarke_transform(v_s);
   float const voltage_base = v_dc / 1.5f;
   std::array<emb::unsigned_pu, 3> duty_cycles;
@@ -82,20 +80,24 @@ inline std::array<emb::unsigned_pu, 3> calculate_sinpwm(
   return duty_cycles;
 }
 
-inline std::array<emb::unsigned_pu, 3> calculate_svpwm(
-    vec_alpha v_s,
-    float v_dc
-) {
+inline std::array<emb::unsigned_pu, 3>
+calculate_svpwm(vec_alpha v_s, float v_dc) {
   v_s.theta = rem2pi(v_s.theta);
-  v_s.mag = std::clamp<float>(v_s.mag, 0, v_dc / numbers::sqrt3);
+  v_s.mag = std::clamp<float>(v_s.mag, 0, v_dc / std::numbers::sqrt3_v<float>);
 
-  int32_t const sector = static_cast<int32_t>(v_s.theta / (numbers::pi / 3.0f));
-  float const theta = v_s.theta - float(sector) * (numbers::pi / 3.0f);
+  int32_t const sector = static_cast<int32_t>(
+      v_s.theta / (std::numbers::pi_v<float> / 3.0f)
+  );
+  float const theta = v_s.theta -
+                      float(sector) * (std::numbers::pi_v<float> / 3.0f);
 
   // base vector times calculation
-  float const tb1 = numbers::sqrt3 * (v_s.mag / v_dc) *
-                    emb::sin((numbers::pi / 3.0f) - theta);
-  float const tb2 = numbers::sqrt3 * (v_s.mag / v_dc) * emb::sin(theta);
+  float const tb1 = std::numbers::sqrt3_v<float> *
+                    (v_s.mag / v_dc) *
+                    emb::sin((std::numbers::pi_v<float> / 3.0f) - theta);
+  float const tb2 = std::numbers::sqrt3_v<float> *
+                    (v_s.mag / v_dc) *
+                    emb::sin(theta);
   float const tb0 = (1.f - tb1 - tb2) / 2.f;
 
   std::array<float, 3> pulse_durations;
@@ -130,8 +132,7 @@ inline std::array<emb::unsigned_pu, 3> calculate_svpwm(
     pulse_durations[1] = tb0;
     pulse_durations[2] = tb1 + tb0;
     break;
-  default:
-    break;
+  default: break;
   }
 
   std::array<emb::unsigned_pu, 3> duty_cycles;

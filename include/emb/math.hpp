@@ -1,15 +1,10 @@
 #pragma once
 
 #include "../../src/math/trigonometric.hpp"
-#include <emb/algorithm.hpp>
-#include <emb/core.hpp>
-#include <emb/numbers.hpp>
 
 #include <algorithm>
-
-#ifdef __c28x__
-#include <math.h>
-#endif
+#include <concepts>
+#include <numbers>
 
 #ifdef __arm__
 extern "C" {
@@ -24,9 +19,6 @@ extern "C" {
 namespace emb {
 
 inline float builtin_sinf(float x) {
-#ifdef __c28x__
-  return sinf(x);
-#endif
 #ifdef __arm__
   return arm_sin_f32(x);
 #endif
@@ -35,50 +27,32 @@ inline float builtin_sinf(float x) {
 #endif
 }
 
-EMB_INLINE_CONSTEXPR float sin(float x) {
-#ifdef __cpp_if_consteval
+constexpr float sin(float x) {
   if !consteval {
     return builtin_sinf(x);
   } else {
     return lookup_sinf(x);
   }
-#else
-  return builtin_sinf(x);
-#endif
 }
 
-#ifdef __cpp_consteval
-consteval float fmod_trivial(float x, float y) {
-  return x - static_cast<float>(static_cast<long long>(x / y)) * y;
+template<std::floating_point T>
+consteval T fmod_trivial(T x, T y) {
+  return x - static_cast<T>(static_cast<long long>(x / y)) * y;
 }
-#endif
 
-EMB_INLINE_CONSTEXPR float fmod(float x, float y) {
-#ifdef __cpp_if_consteval
+template<std::floating_point T>
+constexpr T fmod(T x, T y) {
   if !consteval {
     return std::fmod(x, y);
   } else {
     return fmod_trivial(x, y);
   }
-#else
-  return std::fmod(x, y);
-#endif
 }
 
 template<typename T = int, typename V>
-EMB_INLINE_CONSTEXPR T sgn(V v) {
+constexpr T sgn(V v) {
   return T((V(0) < v) - (v < V(0)));
 }
-
-#if __cplusplus < 202000
-
-EMB_INLINE_CONSTEXPR bool ispow2(unsigned int v) {
-  return v && ((v & (v - 1)) == 0);
-}
-
-#endif
-
-#ifdef __cpp_concepts
 
 constexpr bool iseven(std::integral auto v) {
   return v % 2 == 0;
@@ -88,38 +62,42 @@ constexpr bool isodd(std::integral auto v) {
   return !iseven(v);
 }
 
-#endif
-
-EMB_INLINE_CONSTEXPR float to_rad(float deg) {
-  return numbers::pi * deg / 180.0f;
+template<std::floating_point T>
+constexpr T to_rad(T deg) {
+  return std::numbers::pi_v<T> * deg / T{180};
 }
 
-EMB_INLINE_CONSTEXPR float to_deg(float rad) {
-  return 180.0f * rad / numbers::pi;
+template<std::floating_point T>
+constexpr T to_deg(T rad) {
+  return T{180} * rad / std::numbers::pi_v<T>;
 }
 
-EMB_INLINE_CONSTEXPR float to_eradps(float n, int32_t p) {
-  return 2 * numbers::pi * float(p) * n / 60.0f;
+template<std::floating_point T, std::integral P>
+constexpr T to_eradps(T n, P p) {
+  return 2 * std::numbers::pi_v<T> * static_cast<T>(p) * n / 60;
 }
 
-EMB_INLINE_CONSTEXPR float to_rpm(float w, int32_t p) {
-  return 60.f * w / (2 * numbers::pi * float(p));
+template<std::floating_point T, std::integral P>
+constexpr T to_rpm(T w, P p) {
+  return 60 * w / (2 * std::numbers::pi_v<T> * static_cast<T>(p));
 }
 
-EMB_INLINE_CONSTEXPR float rem2pi(float v) {
-  v = emb::fmod(v, 2 * numbers::pi);
+template<std::floating_point T>
+constexpr T rem2pi(T v) {
+  v = emb::fmod(v, 2 * std::numbers::pi_v<T>);
   if (v < 0) {
-    v += 2 * numbers::pi;
+    v += 2 * std::numbers::pi_v<T>;
   }
   return v;
 }
 
-EMB_INLINE_CONSTEXPR float rempi(float v) {
-  v = emb::fmod(v + numbers::pi, 2 * numbers::pi);
+template<std::floating_point T>
+constexpr T rempi(T v) {
+  v = emb::fmod(v + std::numbers::pi_v<T>, 2 * std::numbers::pi_v<T>);
   if (v < 0) {
-    v += 2 * numbers::pi;
+    v += 2 * std::numbers::pi_v<T>;
   }
-  return v - numbers::pi;
+  return v - std::numbers::pi_v<T>;
 }
 
 template<typename T>
@@ -218,95 +196,75 @@ class signed_pu {
 private:
   float v_;
 public:
-  EMB_CONSTEXPR signed_pu() : v_(0.0f) {}
+  constexpr signed_pu() : v_(0.0f) {}
 
-  EMB_CONSTEXPR explicit signed_pu(float v) : v_(std::clamp(v, -1.0f, 1.0f)) {}
+  constexpr explicit signed_pu(float v) : v_(std::clamp(v, -1.0f, 1.0f)) {}
 
-  EMB_CONSTEXPR signed_pu(float v, float base)
+  constexpr signed_pu(float v, float base)
       : v_(std::clamp(v / base, -1.0f, 1.0f)) {}
 
-  EMB_CONSTEXPR float value() const {
+  constexpr float value() const {
     return v_;
   }
 
-  EMB_CONSTEXPR signed_pu& operator+=(signed_pu const& rhs) {
+  constexpr signed_pu& operator+=(signed_pu const& rhs) {
     set(v_ + rhs.v_);
     return *this;
   }
 
-  EMB_CONSTEXPR signed_pu& operator-=(signed_pu const& rhs) {
+  constexpr signed_pu& operator-=(signed_pu const& rhs) {
     set(v_ - rhs.v_);
     return *this;
   }
 private:
-  EMB_CONSTEXPR void set(float v) {
+  constexpr void set(float v) {
     v_ = std::clamp(v, -1.0f, 1.0f);
   }
 };
 
-EMB_INLINE_CONSTEXPR bool operator==(
-    signed_pu const& lhs,
-    signed_pu const& rhs
-) {
+constexpr bool operator==(signed_pu const& lhs, signed_pu const& rhs) {
   return lhs.value() == rhs.value();
 }
 
-EMB_INLINE_CONSTEXPR bool operator!=(
-    signed_pu const& lhs,
-    signed_pu const& rhs
-) {
+constexpr bool operator!=(signed_pu const& lhs, signed_pu const& rhs) {
   return lhs.value() != rhs.value();
 }
 
-EMB_INLINE_CONSTEXPR bool operator<(
-    signed_pu const& lhs,
-    signed_pu const& rhs
-) {
+constexpr bool operator<(signed_pu const& lhs, signed_pu const& rhs) {
   return lhs.value() < rhs.value();
 }
 
-EMB_INLINE_CONSTEXPR bool operator>(
-    signed_pu const& lhs,
-    signed_pu const& rhs
-) {
+constexpr bool operator>(signed_pu const& lhs, signed_pu const& rhs) {
   return lhs.value() > rhs.value();
 }
 
-EMB_INLINE_CONSTEXPR bool operator<=(
-    signed_pu const& lhs,
-    signed_pu const& rhs
-) {
+constexpr bool operator<=(signed_pu const& lhs, signed_pu const& rhs) {
   return lhs.value() <= rhs.value();
 }
 
-EMB_INLINE_CONSTEXPR bool operator>=(
-    signed_pu const& lhs,
-    signed_pu const& rhs
-) {
+constexpr bool operator>=(signed_pu const& lhs, signed_pu const& rhs) {
   return lhs.value() >= rhs.value();
 }
 
-EMB_INLINE_CONSTEXPR signed_pu
-operator+(signed_pu const& lhs, signed_pu const& rhs) {
+constexpr signed_pu operator+(signed_pu const& lhs, signed_pu const& rhs) {
   signed_pu tmp = lhs;
   return tmp += rhs;
 }
 
-EMB_INLINE_CONSTEXPR signed_pu
-operator-(signed_pu const& lhs, signed_pu const& rhs) {
+constexpr signed_pu operator-(signed_pu const& lhs, signed_pu const& rhs) {
   signed_pu tmp = lhs;
   return tmp -= rhs;
 }
 
-EMB_INLINE_CONSTEXPR signed_pu operator*(signed_pu const& lhs, float rhs) {
+constexpr signed_pu operator*(signed_pu const& lhs, float rhs) {
   return signed_pu(lhs.value() * rhs);
 }
 
-EMB_INLINE_CONSTEXPR signed_pu operator*(float lhs, signed_pu const& rhs) {
+constexpr signed_pu operator*(float lhs, signed_pu const& rhs) {
   return rhs * lhs;
 }
 
-EMB_INLINE_CONSTEXPR signed_pu operator/(signed_pu const& lhs, float rhs) {
+constexpr signed_pu operator/(signed_pu const& lhs, float rhs) {
   return signed_pu(lhs.value() / rhs);
 }
 
@@ -314,95 +272,77 @@ class unsigned_pu {
 private:
   float v_;
 public:
-  EMB_CONSTEXPR unsigned_pu() : v_(0.0f) {}
+  constexpr unsigned_pu() : v_(0.0f) {}
 
-  EMB_CONSTEXPR explicit unsigned_pu(float v) : v_(std::clamp(v, 0.0f, 1.0f)) {}
+  constexpr explicit unsigned_pu(float v) : v_(std::clamp(v, 0.0f, 1.0f)) {}
 
-  EMB_CONSTEXPR unsigned_pu(float v, float base)
+  constexpr unsigned_pu(float v, float base)
       : v_(std::clamp(v / base, 0.0f, 1.0f)) {}
 
-  EMB_CONSTEXPR float value() const {
+  constexpr float value() const {
     return v_;
   }
 
-  EMB_CONSTEXPR unsigned_pu& operator+=(unsigned_pu const& rhs) {
+  constexpr unsigned_pu& operator+=(unsigned_pu const& rhs) {
     set(v_ + rhs.v_);
     return *this;
   }
 
-  EMB_CONSTEXPR unsigned_pu& operator-=(unsigned_pu const& rhs) {
+  constexpr unsigned_pu& operator-=(unsigned_pu const& rhs) {
     set(v_ - rhs.v_);
     return *this;
   }
 private:
-  EMB_CONSTEXPR void set(float v) {
+  constexpr void set(float v) {
     v_ = std::clamp(v, 0.0f, 1.0f);
   }
 };
 
-EMB_INLINE_CONSTEXPR bool operator==(
-    unsigned_pu const& lhs,
-    unsigned_pu const& rhs
-) {
+constexpr bool operator==(unsigned_pu const& lhs, unsigned_pu const& rhs) {
   return lhs.value() == rhs.value();
 }
 
-EMB_INLINE_CONSTEXPR bool operator!=(
-    unsigned_pu const& lhs,
-    unsigned_pu const& rhs
-) {
+constexpr bool operator!=(unsigned_pu const& lhs, unsigned_pu const& rhs) {
   return lhs.value() != rhs.value();
 }
 
-EMB_INLINE_CONSTEXPR bool operator<(
-    unsigned_pu const& lhs,
-    unsigned_pu const& rhs
-) {
+constexpr bool operator<(unsigned_pu const& lhs, unsigned_pu const& rhs) {
   return lhs.value() < rhs.value();
 }
 
-EMB_INLINE_CONSTEXPR bool operator>(
-    unsigned_pu const& lhs,
-    unsigned_pu const& rhs
-) {
+constexpr bool operator>(unsigned_pu const& lhs, unsigned_pu const& rhs) {
   return lhs.value() > rhs.value();
 }
 
-EMB_INLINE_CONSTEXPR bool operator<=(
-    unsigned_pu const& lhs,
-    unsigned_pu const& rhs
-) {
+constexpr bool operator<=(unsigned_pu const& lhs, unsigned_pu const& rhs) {
   return lhs.value() <= rhs.value();
 }
 
-EMB_INLINE_CONSTEXPR bool operator>=(
-    unsigned_pu const& lhs,
-    unsigned_pu const& rhs
-) {
+constexpr bool operator>=(unsigned_pu const& lhs, unsigned_pu const& rhs) {
   return lhs.value() >= rhs.value();
 }
 
-EMB_INLINE_CONSTEXPR unsigned_pu
+constexpr unsigned_pu
 operator+(unsigned_pu const& lhs, unsigned_pu const& rhs) {
   unsigned_pu tmp = lhs;
   return tmp += rhs;
 }
 
-EMB_INLINE_CONSTEXPR unsigned_pu
+constexpr unsigned_pu
 operator-(unsigned_pu const& lhs, unsigned_pu const& rhs) {
   unsigned_pu tmp = lhs;
   return tmp -= rhs;
 }
 
-EMB_INLINE_CONSTEXPR unsigned_pu operator*(unsigned_pu const& lhs, float rhs) {
+constexpr unsigned_pu operator*(unsigned_pu const& lhs, float rhs) {
   return unsigned_pu(lhs.value() * rhs);
 }
 
-EMB_INLINE_CONSTEXPR unsigned_pu operator*(float lhs, unsigned_pu const& rhs) {
+constexpr unsigned_pu operator*(float lhs, unsigned_pu const& rhs) {
   return rhs * lhs;
 }
 
-EMB_INLINE_CONSTEXPR unsigned_pu operator/(unsigned_pu const& lhs, float rhs) {
+constexpr unsigned_pu operator/(unsigned_pu const& lhs, float rhs) {
   return unsigned_pu(lhs.value() / rhs);
 }
 

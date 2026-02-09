@@ -1,119 +1,119 @@
 #pragma once
 
-#include <emb/core.hpp>
 #include <emb/math.hpp>
+
+#include <concepts>
 
 namespace emb {
 namespace units {
 
-template<typename T, typename Unit>
+template<std::floating_point T, typename Unit>
 class named_unit {
 public:
-  typedef T value_type;
-  typedef Unit unit_type;
+  using value_type = T;
+  using unit_type = Unit;
 private:
   value_type v_;
 public:
-  EMB_CONSTEXPR named_unit() : v_(value_type(0)) {}
+  constexpr named_unit() : v_(value_type{0}) {}
 
-  EMB_CONSTEXPR explicit named_unit(value_type const& v) : v_(v) {}
+  constexpr explicit named_unit(value_type const& v) : v_(v) {}
 
-  EMB_CONSTEXPR value_type const& value() const {
+  constexpr value_type const& value() const {
     return v_;
   }
 
-  EMB_CONSTEXPR named_unit& operator+=(named_unit const& rhs) {
+  constexpr named_unit& operator+=(named_unit const& rhs) {
     v_ += rhs.v_;
     return *this;
   }
 
-  EMB_CONSTEXPR named_unit& operator-=(named_unit const& rhs) {
+  constexpr named_unit& operator-=(named_unit const& rhs) {
     v_ -= rhs.v_;
     return *this;
   }
 };
 
-template<typename T, typename Unit>
-EMB_INLINE_CONSTEXPR bool
+template<std::floating_point T, typename Unit>
+constexpr bool
 operator==(named_unit<T, Unit> const& lhs, named_unit<T, Unit> const& rhs) {
   return lhs.value() == rhs.value();
 }
 
-template<typename T, typename Unit>
-EMB_INLINE_CONSTEXPR bool
+template<std::floating_point T, typename Unit>
+constexpr bool
 operator!=(named_unit<T, Unit> const& lhs, named_unit<T, Unit> const& rhs) {
   return lhs.value() != rhs.value();
 }
 
-template<typename T, typename Unit>
-EMB_INLINE_CONSTEXPR bool
+template<std::floating_point T, typename Unit>
+constexpr bool
 operator<(named_unit<T, Unit> const& lhs, named_unit<T, Unit> const& rhs) {
   return lhs.value() < rhs.value();
 }
 
-template<typename T, typename Unit>
-EMB_INLINE_CONSTEXPR bool
+template<std::floating_point T, typename Unit>
+constexpr bool
 operator>(named_unit<T, Unit> const& lhs, named_unit<T, Unit> const& rhs) {
   return lhs.value() > rhs.value();
 }
 
-template<typename T, typename Unit>
-EMB_INLINE_CONSTEXPR bool
+template<std::floating_point T, typename Unit>
+constexpr bool
 operator<=(named_unit<T, Unit> const& lhs, named_unit<T, Unit> const& rhs) {
   return lhs.value() <= rhs.value();
 }
 
-template<typename T, typename Unit>
-EMB_INLINE_CONSTEXPR bool
+template<std::floating_point T, typename Unit>
+constexpr bool
 operator>=(named_unit<T, Unit> const& lhs, named_unit<T, Unit> const& rhs) {
   return lhs.value() >= rhs.value();
 }
 
-template<typename T, typename Unit>
-EMB_INLINE_CONSTEXPR named_unit<T, Unit>
+template<std::floating_point T, typename Unit>
+constexpr named_unit<T, Unit>
 operator+(named_unit<T, Unit> const& lhs, named_unit<T, Unit> const& rhs) {
   named_unit<T, Unit> tmp = lhs;
   return tmp += rhs;
 }
 
-template<typename T, typename Unit>
-EMB_INLINE_CONSTEXPR named_unit<T, Unit>
+template<std::floating_point T, typename Unit>
+constexpr named_unit<T, Unit>
 operator-(named_unit<T, Unit> const& lhs, named_unit<T, Unit> const& rhs) {
   named_unit<T, Unit> tmp = lhs;
   return tmp -= rhs;
 }
 
-template<typename T, typename Unit, typename V>
-EMB_INLINE_CONSTEXPR named_unit<T, Unit>
-operator*(named_unit<T, Unit> const& lhs, V rhs) {
+template<std::floating_point T, typename Unit, typename V>
+  requires std::is_arithmetic_v<V>
+constexpr named_unit<T, Unit> operator*(named_unit<T, Unit> const& lhs, V rhs) {
   return named_unit<T, Unit>(
       lhs.value() * static_cast<typename named_unit<T, Unit>::value_type>(rhs)
   );
 }
 
-template<typename T, typename Unit, typename V>
-EMB_INLINE_CONSTEXPR named_unit<T, Unit>
-operator*(V lhs, named_unit<T, Unit> const& rhs) {
+template<std::floating_point T, typename Unit, typename V>
+  requires std::is_arithmetic_v<V>
+constexpr named_unit<T, Unit> operator*(V lhs, named_unit<T, Unit> const& rhs) {
   return rhs * lhs;
 }
 
-template<typename T, typename Unit, typename V>
-EMB_INLINE_CONSTEXPR named_unit<T, Unit>
-operator/(named_unit<T, Unit> const& lhs, V rhs) {
+template<std::floating_point T, typename Unit, typename V>
+  requires std::is_arithmetic_v<V>
+constexpr named_unit<T, Unit> operator/(named_unit<T, Unit> const& lhs, V rhs) {
   return named_unit<T, Unit>(
       lhs.value() / static_cast<typename named_unit<T, Unit>::value_type>(rhs)
   );
 }
 
-template<typename T, typename Unit>
-EMB_INLINE_CONSTEXPR T
+template<std::floating_point T, typename Unit>
+constexpr T
 operator/(named_unit<T, Unit> const& lhs, named_unit<T, Unit> const& rhs) {
   return lhs.value() / rhs.value();
 }
 
-template<typename T, typename Unit>
-EMB_INLINE_CONSTEXPR named_unit<T, Unit>
-operator-(named_unit<T, Unit> const& v) {
+template<std::floating_point T, typename Unit>
+constexpr named_unit<T, Unit> operator-(named_unit<T, Unit> const& v) {
   return named_unit<T, Unit>(-v.value());
 }
 
@@ -139,30 +139,28 @@ struct sec {};
 
 } // namespace tags
 
-#ifdef __cpp_alias_templates
-
-template<typename T>
+template<std::floating_point T>
 using rpm = named_unit<T, tags::rpm>;
 
-template<typename T>
+template<std::floating_point T>
 using eradps = named_unit<T, tags::eradps>;
 
-template<typename T>
+template<std::floating_point T>
 using erad = named_unit<T, tags::erad>;
 
-template<typename T>
+template<std::floating_point T>
 using edeg = named_unit<T, tags::edeg>;
 
-template<typename T>
+template<std::floating_point T>
 using rad = named_unit<T, tags::rad>;
 
-template<typename T>
+template<std::floating_point T>
 using deg = named_unit<T, tags::deg>;
 
-template<typename T>
+template<std::floating_point T>
 using hz = named_unit<T, tags::hz>;
 
-template<typename T>
+template<std::floating_point T>
 using sec = named_unit<T, tags::sec>;
 
 using rpm_f32 = rpm<float>;
@@ -173,21 +171,6 @@ using rad_f32 = rad<float>;
 using deg_f32 = deg<float>;
 using hz_f32 = hz<float>;
 using sec_f32 = sec<float>;
-
-#else
-
-typedef named_unit<float, tags::rpm> rpm_f32;
-typedef named_unit<float, tags::eradps> eradps_f32;
-typedef named_unit<float, tags::erad> erad_f32;
-typedef named_unit<float, tags::edeg> edeg_f32;
-typedef named_unit<float, tags::rad> rad_f32;
-typedef named_unit<float, tags::deg> deg_f32;
-typedef named_unit<float, tags::hz> hz_f32;
-typedef named_unit<float, tags::sec> sec_f32;
-
-#endif
-
-#ifdef __cpp_concepts
 
 template<typename T>
 concept unit =
@@ -217,107 +200,81 @@ template<typename T>
 concept unit_of_degrees = unit<T> &&
                           (std::same_as<typename T::unit_type, tags::edeg> ||
                            std::same_as<typename T::unit_type, tags::deg>);
-#endif
 
-#if defined(__cpp_variadic_templates) && defined(__cpp_concepts)
-
-template<typename To, typename From, typename... Args>
-  requires(!std::same_as<To, From>)
-EMB_INLINE_CONSTEXPR To convert_to(From const& v, Args... args);
+// template<typename To, typename From, typename... Args>
+//   requires(!std::same_as<To, From>)
+// constexpr To convert_to(From const& v, Args... args);
 
 template<typename To, typename From, typename... Args>
   requires std::same_as<To, From>
-EMB_INLINE_CONSTEXPR To convert_to(From const& v, Args... args) {
+constexpr To convert_to(From const& v, Args... args) {
   return v;
 }
 
-#else
-
-template<typename To, typename From>
-EMB_INLINE_CONSTEXPR To convert_to(From const& v);
-
-template<typename To, typename From, typename Arg>
-EMB_INLINE_CONSTEXPR To convert_to(From const& v, Arg arg);
-
-#endif
-
-template<>
-EMB_INLINE_CONSTEXPR erad_f32 convert_to(edeg_f32 const& v) {
-  return units::erad_f32(emb::to_rad(v.value()));
+template<typename To, std::floating_point T>
+  requires std::same_as<To, erad<T>>
+constexpr erad<T> convert_to(edeg<T> const& v) {
+  return units::erad<T>(emb::to_rad(v.value()));
 }
 
-template<>
-EMB_INLINE_CONSTEXPR edeg_f32 convert_to(erad_f32 const& v) {
-  return units::edeg_f32(emb::to_deg(v.value()));
+template<typename To, std::floating_point T>
+  requires std::same_as<To, edeg<T>>
+constexpr edeg<T> convert_to(erad<T> const& v) {
+  return units::edeg<T>(emb::to_deg(v.value()));
 }
 
-template<>
-EMB_INLINE_CONSTEXPR rad_f32 convert_to(deg_f32 const& v) {
-  return units::rad_f32(emb::to_rad(v.value()));
+template<typename To, std::floating_point T>
+  requires std::same_as<To, rad<T>>
+constexpr rad<T> convert_to(deg<T> const& v) {
+  return units::rad<T>(emb::to_rad(v.value()));
 }
 
-template<>
-EMB_INLINE_CONSTEXPR deg_f32 convert_to(rad_f32 const& v) {
-  return units::deg_f32(emb::to_deg(v.value()));
+template<typename To, std::floating_point T>
+  requires std::same_as<To, deg<T>>
+constexpr deg<T> convert_to(rad<T> const& v) {
+  return units::deg<T>(emb::to_deg(v.value()));
 }
 
-template<>
-EMB_INLINE_CONSTEXPR eradps_f32 convert_to(rpm_f32 const& v, int32_t p) {
-  return units::eradps_f32(emb::to_eradps(v.value(), p));
+template<typename To, std::floating_point T, std::integral P>
+  requires std::same_as<To, eradps<T>>
+constexpr eradps<T> convert_to(rpm<T> const& v, P p) {
+  return units::eradps<T>(emb::to_eradps(v.value(), p));
 }
 
-template<>
-EMB_INLINE_CONSTEXPR rpm_f32 convert_to(eradps_f32 const& v, int32_t p) {
-  return units::rpm_f32(emb::to_rpm(v.value(), p));
+template<typename To, std::floating_point T, std::integral P>
+  requires std::same_as<To, rpm<T>>
+constexpr rpm<T> convert_to(eradps<T> const& v, P p) {
+  return units::rpm<T>(emb::to_rpm(v.value(), p));
 }
 
-template<typename T>
-EMB_INLINE_CONSTEXPR eradps<T>
-operator/(erad<T> const& lhs, sec<T> const& rhs) {
+template<std::floating_point T>
+constexpr eradps<T> operator/(erad<T> const& lhs, sec<T> const& rhs) {
   return eradps<T>(lhs.value() / rhs.value());
 }
 
-template<typename T>
-EMB_INLINE_CONSTEXPR erad<T>
-operator*(eradps<T> const& lhs, sec<T> const& rhs) {
+template<std::floating_point T>
+constexpr erad<T> operator*(eradps<T> const& lhs, sec<T> const& rhs) {
   return erad<T>(lhs.value() * rhs.value());
 }
 
-template<typename T>
-EMB_INLINE_CONSTEXPR erad<T>
-operator*(sec<T> const& lhs, eradps<T> const& rhs) {
+template<std::floating_point T>
+constexpr erad<T> operator*(sec<T> const& lhs, eradps<T> const& rhs) {
   return rhs * lhs;
 }
 
-#ifdef __cpp_concepts
-
-template<typename T, typename V>
-  requires std::floating_point<T> && std::is_arithmetic_v<V>
-EMB_INLINE_CONSTEXPR sec<T> operator/(V lhs, hz<T> const& rhs) {
+template<std::floating_point T, typename V>
+  requires std::is_arithmetic_v<V>
+constexpr sec<T> operator/(V lhs, hz<T> const& rhs) {
   return sec<T>(static_cast<T>(lhs) / rhs.value());
 }
 
-template<typename T, typename V>
-  requires std::floating_point<T> && std::is_arithmetic_v<V>
-EMB_INLINE_CONSTEXPR hz<T> operator/(V lhs, sec<T> const& rhs) {
+template<std::floating_point T, typename V>
+  requires std::is_arithmetic_v<V>
+constexpr hz<T> operator/(V lhs, sec<T> const& rhs) {
   return hz<T>(static_cast<T>(lhs) / rhs.value());
 }
 
-#else
-
-EMB_INLINE_CONSTEXPR sec_f32 operator/(float lhs, hz_f32 const& rhs) {
-  return sec_f32(lhs / rhs.value());
-}
-
-EMB_INLINE_CONSTEXPR hz_f32 operator/(float lhs, sec_f32 const& rhs) {
-  return hz_f32(lhs / rhs.value());
-}
-
-#endif
-
 } // namespace units
-
-#ifdef __cpp_concepts
 
 template<units::unit_of_radians Unit>
 constexpr Unit rem2pi(Unit v) {
@@ -331,31 +288,28 @@ constexpr Unit rempi(Unit v) {
 
 template<units::unit_of_degrees Unit>
 constexpr Unit rem360(Unit v) {
-  float v_ = emb::fmod(v.value(), to_deg(2 * numbers::pi));
+  using value_type = Unit::value_type;
+  value_type v_ = emb::fmod(
+      v.value(),
+      to_deg(2 * std::numbers::pi_v<value_type>)
+  );
   if (v_ < 0) {
-    v_ += to_deg(2 * numbers::pi);
+    v_ += to_deg(2 * std::numbers::pi_v<value_type>);
   }
   return Unit{v_};
 }
 
 template<units::unit_of_degrees Unit>
 constexpr Unit rem180(Unit v) {
-  float v_ = emb::fmod(
-      v.value() + to_deg(numbers::pi),
-      to_deg(2 * numbers::pi)
+  using value_type = Unit::value_type;
+  value_type v_ = emb::fmod(
+      v.value() + to_deg(std::numbers::pi_v<value_type>),
+      to_deg(2 * std::numbers::pi_v<value_type>)
   );
   if (v_ < 0) {
-    v_ += to_deg(2 * numbers::pi);
+    v_ += to_deg(2 * std::numbers::pi_v<value_type>);
   }
-  return Unit{v_ - to_deg(numbers::pi)};
+  return Unit{v_ - to_deg(std::numbers::pi_v<value_type>)};
 }
-
-#endif
 
 } // namespace emb
-
-template<typename T, typename Unit>
-inline emb::units::named_unit<T, Unit>
-abs(emb::units::named_unit<T, Unit> const& v) {
-  return emb::units::named_unit<T, Unit>(std::abs(v.value()));
-}

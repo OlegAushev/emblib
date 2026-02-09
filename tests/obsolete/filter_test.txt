@@ -19,11 +19,11 @@ void emb::tests::filter_test() {
   emb::array<float, 10> filter_array;
   emb::movavg_filter<float, 10> mvavg_filter_f32(filter_array);
   for (int i = 0; i < int(mvavg_filter_f32.size()); ++i) {
-    mvavg_filter_f32.push(emb::numbers::pi * float(1 + (i % 2)));
+    mvavg_filter_f32.push(std::numbers::pi_v<float> * float(1 + (i % 2)));
   }
-  EMB_ASSERT_EQUAL(mvavg_filter_f32.output(), emb::numbers::pi * 1.5f);
-  mvavg_filter_f32.set_output(emb::numbers::pi);
-  EMB_ASSERT_EQUAL(mvavg_filter_f32.output(), emb::numbers::pi);
+  EMB_ASSERT_EQUAL(mvavg_filter_f32.output(), std::numbers::pi_v<float> * 1.5f);
+  mvavg_filter_f32.set_output(std::numbers::pi_v<float>);
+  EMB_ASSERT_EQUAL(mvavg_filter_f32.output(), std::numbers::pi_v<float>);
 
   /* MedianFilter */
   emb::med_filter<int, 5> med_filter_1;

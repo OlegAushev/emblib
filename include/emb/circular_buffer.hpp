@@ -29,15 +29,15 @@ private:
 public:
   constexpr circular_buffer()
     requires(Capacity > 0)
-      : data_{}, capacity_{Capacity}, front_{0}, back_{0}, full_{false} {}
+      : data_{}, capacity_(Capacity), front_(0), back_(0), full_(false) {}
 
   constexpr explicit circular_buffer(size_type capacity)
     requires(Capacity == 0)
       : data_(capacity),
-        capacity_{capacity},
-        front_{0},
-        back_{0},
-        full_{false} {}
+        capacity_(capacity),
+        front_(0),
+        back_(0),
+        full_(false) {}
 
   constexpr void clear() {
     front_ = 0;
@@ -45,11 +45,17 @@ public:
     full_ = false;
   }
 
-  constexpr bool empty() const { return (!full_ && (front_ == back_)); }
+  constexpr bool empty() const {
+    return (!full_ && (front_ == back_));
+  }
 
-  constexpr bool full() const { return full_; }
+  constexpr bool full() const {
+    return full_;
+  }
 
-  constexpr size_type capacity() const { return capacity_; }
+  constexpr size_type capacity() const {
+    return capacity_;
+  }
 
   constexpr size_type size() const {
     size_type size{capacity_};
@@ -104,11 +110,17 @@ public:
     back_ = (back_ + capacity_ - 1) % capacity_;
   }
 
-  constexpr auto data() const { return data_.data(); }
+  constexpr auto data() const {
+    return data_.data();
+  }
 
-  constexpr auto begin() const { return data_.begin(); }
+  constexpr auto begin() const {
+    return data_.begin();
+  }
 
-  constexpr auto end() const { return data_.end(); }
+  constexpr auto end() const {
+    return data_.end();
+  }
 
   constexpr void fill(value_type const& value) {
     clear();
@@ -121,8 +133,8 @@ template<typename T>
 struct is_circular_buffer_type : std::false_type {};
 
 template<typename T, size_t Size>
-struct is_circular_buffer_type<emb::circular_buffer<T, Size>>
-    : std::true_type {};
+struct is_circular_buffer_type<emb::circular_buffer<T, Size>> : std::true_type {
+};
 
 template<typename T>
 concept circular_buffer_type = is_circular_buffer_type<T>::value;

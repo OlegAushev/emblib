@@ -32,7 +32,7 @@ public:
   )
       : update_period_(update_period),
         ampl_(ampl),
-        wfreq_(2 * emb::numbers::pi * freq.value()),
+        wfreq_(2 * std::numbers::pi_v<float> * freq.value()),
         init_phase_(init_phase),
         bias_(bias) {
     assert(update_period.value() > 0);
@@ -68,7 +68,7 @@ public:
   }
 
   EMB_CONSTEXPR float freq() const {
-    return wfreq_ / (2 * emb::numbers::pi);
+    return wfreq_ / (2 * std::numbers::pi_v<float>);
   }
 
   emb::units::rad_f32 phase() const {

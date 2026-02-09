@@ -29,7 +29,7 @@ constexpr bool test_sine_generator(
       timebase.end(),
       sine_ref.begin(),
       [&](units::sec_f32 t) -> output_type {
-        float const w = 2 * emb::numbers::pi * sine.freq();
+        float const w = 2 * std::numbers::pi_v<float> * sine.freq();
         float const phase = w * t.value() + init_phase.value();
         return sine.ampl() * emb::sin(phase) + sine.bias();
       }

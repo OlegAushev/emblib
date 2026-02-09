@@ -1,9 +1,8 @@
 #pragma once
 
-#include <emb/core.hpp>
-#include <emb/numbers.hpp>
-
 #include <array>
+#include <cstddef>
+#include <numbers>
 
 namespace emb {
 
@@ -145,8 +144,8 @@ inline constexpr std::array<float, 129> sincos_lookup_table{
 #endif
 } // namespace internal
 
-EMB_INLINE_CONSTEXPR float lookup_sinf(float x) {
-  x /= (emb::numbers::pi / 2.0f);
+constexpr float lookup_sinf(float x) {
+  x /= (std::numbers::pi_v<float> / 2.0f);
 
   int sign = x < 0.0f;
   x = sign ? -x : x;
