@@ -1,8 +1,5 @@
 #pragma once
 
-#if __cplusplus >= 202300
-
-#include <emb/core.hpp>
 #include <emb/meta.hpp>
 
 #include <concepts>
@@ -115,5 +112,3 @@ private:
 
 } // namespace control
 } // namespace emb
-
-#endif

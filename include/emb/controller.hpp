@@ -1,87 +1,93 @@
 #pragma once
 
-#include <emb/core.hpp>
-
 #include <algorithm>
+#include <concepts>
 #include <float.h>
 
 namespace emb {
 
-#if __cplusplus >= 201100
+namespace controller_policy {
+
+struct non_inverting {
+  template<std::floating_point T>
+  static constexpr T error(T ref, T meas) {
+    return ref - meas;
+  }
+};
+
+struct inverting {
+  template<std::floating_point T>
+  static constexpr T error(T ref, T meas) {
+    return meas - ref;
+  }
+};
+
+}
+
 enum class controller_logic {
   direct,
   inverse
 };
-#else
-// clang-format off
-SCOPED_ENUM_DECLARE_BEGIN(controller_logic){
-  direct,
-  inverse
-} SCOPED_ENUM_DECLARE_END(controller_logic)
-// clang-format on
-#endif
 
-#if __cplusplus >= 201100
-template<controller_logic Logic>
-#else
-    template<controller_logic::enum_type Logic>
-#endif
+template<std::floating_point T, typename Policy>
 class p_controller {
-protected:
-  float kp_;          // proportional gain
-  float lower_limit_; // output lower limit
-  float upper_limit_; // output upper limit
-  float out_;         // output;
-
-  static float _error(float ref, float meas);
 public:
-  p_controller(float kp, float lower_limit, float upper_limit)
+  using value_type = T;
+protected:
+  value_type kp_;
+  value_type lower_limit_;
+  value_type upper_limit_;
+  value_type out_;
+public:
+  constexpr p_controller(
+      value_type kp,
+      value_type lower_limit,
+      value_type upper_limit
+  )
       : kp_(kp),
         lower_limit_(lower_limit),
         upper_limit_(upper_limit),
         out_(0) {}
 
-  virtual ~p_controller() {}
-
-  virtual void push(float ref, float meas) {
-    float out = kp_ * p_controller<Logic>::_error(ref, meas);
+  constexpr void push(value_type ref, value_type meas) {
+    value_type out = kp_ * Policy::template error<value_type>(ref, meas);
     out_ = std::clamp(out, lower_limit_, upper_limit_);
   }
 
-  virtual void reset() { out_ = 0; }
+  constexpr void reset() {
+    out_ = 0;
+  }
 
-  float output() const { return out_; }
+  constexpr value_type output() const {
+    return out_;
+  }
 
-  void set_lower_limit(float value) { lower_limit_ = value; }
+  constexpr void set_lower_limit(value_type value) {
+    lower_limit_ = value;
+  }
 
-  void set_upper_limit(float value) { upper_limit_ = value; }
+  constexpr void set_upper_limit(value_type value) {
+    upper_limit_ = value;
+  }
 
-  float lower_limit() const { return lower_limit_; }
+  constexpr value_type lower_limit() const {
+    return lower_limit_;
+  }
 
-  float upper_limit() const { return upper_limit_; }
+  constexpr value_type upper_limit() const {
+    return upper_limit_;
+  }
 
-  void set_kp(float value) { kp_ = value; }
+  constexpr void set_kp(value_type value) {
+    kp_ = value;
+  }
 
-  float kp() const { return kp_; }
+  constexpr value_type kp() const {
+    return kp_;
+  }
 };
 
-template<>
-inline float p_controller<controller_logic::direct>::_error(float ref,
-                                                            float meas) {
-  return ref - meas;
-}
-
-template<>
-inline float p_controller<controller_logic::inverse>::_error(float ref,
-                                                             float meas) {
-  return meas - ref;
-}
-
-#if __cplusplus >= 201100
 template<controller_logic Logic>
-#else
-template<controller_logic::enum_type Logic>
-#endif
 class abstract_pi_controller {
 protected:
   float kp_;          // proportional gain
@@ -148,11 +154,7 @@ inline float abstract_pi_controller<controller_logic::inverse>::_error(
   return meas - ref;
 }
 
-#if __cplusplus >= 201100
 template<controller_logic Logic>
-#else
-template<controller_logic::enum_type Logic>
-#endif
 class backcalc_pi_controller : public abstract_pi_controller<Logic> {
 protected:
   float kc_; // anti-windup gain
@@ -166,7 +168,7 @@ public:
       : abstract_pi_controller<Logic>(kp, ki, ts, lower_limit, upper_limit),
         kc_(kc) {}
 
-  virtual void push(float ref, float meas) EMB_OVERRIDE {
+  virtual void push(float ref, float meas) override {
     float error = abstract_pi_controller<Logic>::_error(ref, meas);
     float out = std::clamp(error * this->_kp + this->_out_i, -FLT_MAX, FLT_MAX);
     this->out_ = std::clamp(out, this->_lower_limit, this->_upper_limit);
@@ -176,11 +178,7 @@ public:
   }
 };
 
-#if __cplusplus >= 201100
 template<controller_logic Logic>
-#else
-template<controller_logic::enum_type Logic>
-#endif
 class clamping_pi_controller : public abstract_pi_controller<Logic> {
 protected:
   float error_;
@@ -190,7 +188,7 @@ public:
       : abstract_pi_controller<Logic>(kp, ki, ts, lower_limit, upper_limit),
         error_(0) {}
 
-  virtual void push(float ref, float meas) EMB_OVERRIDE {
+  virtual void push(float ref, float meas) override {
     float error = abstract_pi_controller<Logic>::_error(ref, meas);
     float out_p = error * this->kp_;
     float out_i =
@@ -214,7 +212,7 @@ public:
     }
   }
 
-  virtual void reset() EMB_OVERRIDE {
+  virtual void reset() override {
     this->out_i_ = 0;
     error_ = 0;
     this->out_ = 0;
