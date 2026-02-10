@@ -1,8 +1,10 @@
 #pragma once
 
+#include <emb/units.hpp>
+
 #include <algorithm>
 #include <concepts>
-#include <float.h>
+#include <limits>
 
 namespace emb {
 
@@ -22,12 +24,7 @@ struct inverting {
   }
 };
 
-}
-
-enum class controller_logic {
-  direct,
-  inverse
-};
+} // namespace controller_policy
 
 template<std::floating_point T, typename Policy>
 class p_controller {
@@ -87,21 +84,26 @@ public:
   }
 };
 
-template<controller_logic Logic>
-class abstract_pi_controller {
-protected:
-  float kp_;          // proportional gain
-  float ki_;          // integral gain
-  float ts_;          // sampling period
-  float out_i_;       // integrator sum;
-  float lower_limit_; // output lower limit
-  float upper_limit_; // output upper limit
-  float out_;         // output;
-
-  static float _error(float ref, float meas);
+template<std::floating_point T>
+class pi_controller_base {
 public:
-  abstract_pi_controller(
-      float kp, float ki, float ts, float lower_limit, float upper_limit)
+  using value_type = T;
+protected:
+  value_type kp_;
+  value_type ki_;
+  units::sec<value_type> ts_;
+  value_type out_i_;
+  value_type lower_limit_;
+  value_type upper_limit_;
+  value_type out_;
+public:
+  constexpr pi_controller_base(
+      value_type kp,
+      value_type ki,
+      units::sec<value_type> ts,
+      value_type lower_limit,
+      value_type upper_limit
+  )
       : kp_(kp),
         ki_(ki),
         ts_(ts),
@@ -110,112 +112,152 @@ public:
         upper_limit_(upper_limit),
         out_(0) {}
 
-  virtual ~abstract_pi_controller() {}
+  constexpr value_type output() const {
+    return out_;
+  }
 
-  virtual void push(float ref, float meas) = 0;
+  constexpr void set_lower_limit(value_type value) {
+    lower_limit_ = value;
+  }
 
-  virtual void reset() {
+  constexpr void set_upper_limit(value_type value) {
+    upper_limit_ = value;
+  }
+
+  constexpr value_type lower_limit() const {
+    return lower_limit_;
+  }
+
+  constexpr value_type upper_limit() const {
+    return upper_limit_;
+  }
+
+  constexpr void set_kp(value_type value) {
+    kp_ = value;
+  }
+
+  constexpr void set_ki(value_type value) {
+    ki_ = value;
+  }
+
+  constexpr value_type kp() const {
+    return kp_;
+  }
+
+  constexpr value_type ki() const {
+    return ki_;
+  }
+
+  constexpr value_type integral() const {
+    return out_i_;
+  }
+
+  constexpr void set_sampling_period(units::sec<value_type> value) {
+    ts_ = value;
+  }
+};
+
+template<std::floating_point T, typename Policy>
+class backcalc_pi_controller : public pi_controller_base<T> {
+public:
+  using value_type = T;
+  using base_type = pi_controller_base<T>;
+protected:
+  using base_type::kp_;
+  using base_type::ki_;
+  using base_type::ts_;
+  using base_type::out_i_;
+  using base_type::lower_limit_;
+  using base_type::upper_limit_;
+  using base_type::out_;
+
+  value_type kc_; // anti-windup gain
+public:
+  constexpr backcalc_pi_controller(
+      value_type kp,
+      value_type ki,
+      units::sec<value_type> ts,
+      value_type kc,
+      value_type lower_limit,
+      value_type upper_limit
+  )
+      : base_type(kp, ki, ts, lower_limit, upper_limit), kc_(kc) {}
+
+  constexpr void push(value_type ref, value_type meas) {
+    value_type error = Policy::template error<value_type>(ref, meas);
+    value_type out = std::clamp(
+        error * kp_ + out_i_,
+        -std::numeric_limits<value_type>::max(),
+        std::numeric_limits<value_type>::max()
+    );
+    out_ = std::clamp(out, lower_limit_, upper_limit_);
+    value_type out_i = out_i_ + ki_ * ts_.value() * error - kc_ * (out - out_);
+    out_i_ = std::clamp(
+        out_i,
+        -std::numeric_limits<value_type>::max(),
+        std::numeric_limits<value_type>::max()
+    );
+  }
+
+  constexpr void reset() {
     out_i_ = 0;
     out_ = 0;
   }
-
-  float output() const { return out_; }
-
-  void set_lower_limit(float value) { lower_limit_ = value; }
-
-  void set_upper_limit(float value) { upper_limit_ = value; }
-
-  float lower_limit() const { return lower_limit_; }
-
-  float upper_limit() const { return upper_limit_; }
-
-  void set_kp(float value) { kp_ = value; }
-
-  void set_ki(float value) { ki_ = value; }
-
-  float kp() const { return kp_; }
-
-  float ki() const { return ki_; }
-
-  float integral() const { return out_i_; }
-
-  void set_sampling_period(float value) { ts_ = value; }
 };
 
-template<>
-inline float abstract_pi_controller<controller_logic::direct>::_error(
-    float ref, float meas) {
-  return ref - meas;
-}
-
-template<>
-inline float abstract_pi_controller<controller_logic::inverse>::_error(
-    float ref, float meas) {
-  return meas - ref;
-}
-
-template<controller_logic Logic>
-class backcalc_pi_controller : public abstract_pi_controller<Logic> {
-protected:
-  float kc_; // anti-windup gain
+template<std::floating_point T, typename Policy>
+class clamping_pi_controller : public pi_controller_base<T> {
 public:
-  backcalc_pi_controller(float kp,
-                         float ki,
-                         float ts,
-                         float kc,
-                         float lower_limit,
-                         float upper_limit)
-      : abstract_pi_controller<Logic>(kp, ki, ts, lower_limit, upper_limit),
-        kc_(kc) {}
-
-  virtual void push(float ref, float meas) override {
-    float error = abstract_pi_controller<Logic>::_error(ref, meas);
-    float out = std::clamp(error * this->_kp + this->_out_i, -FLT_MAX, FLT_MAX);
-    this->out_ = std::clamp(out, this->_lower_limit, this->_upper_limit);
-    float out_i =
-        this->out_i_ + this->ki_ * this->ts_ * error - kc_ * (out - this->out_);
-    this->out_i_ = std::clamp(out_i, -FLT_MAX, FLT_MAX);
-  }
-};
-
-template<controller_logic Logic>
-class clamping_pi_controller : public abstract_pi_controller<Logic> {
+  using value_type = T;
+  using base_type = pi_controller_base<T>;
 protected:
-  float error_;
-public:
-  clamping_pi_controller(
-      float kp, float ki, float ts, float lower_limit, float upper_limit)
-      : abstract_pi_controller<Logic>(kp, ki, ts, lower_limit, upper_limit),
-        error_(0) {}
+  using base_type::kp_;
+  using base_type::ki_;
+  using base_type::ts_;
+  using base_type::out_i_;
+  using base_type::lower_limit_;
+  using base_type::upper_limit_;
+  using base_type::out_;
 
-  virtual void push(float ref, float meas) override {
-    float error = abstract_pi_controller<Logic>::_error(ref, meas);
-    float out_p = error * this->kp_;
-    float out_i =
-        (error + error_) * 0.5f * this->ki_ * this->ts_ + this->out_i_;
+  value_type error_;
+public:
+  constexpr clamping_pi_controller(
+      value_type kp,
+      value_type ki,
+      units::sec<value_type> ts,
+      value_type lower_limit,
+      value_type upper_limit
+  )
+      : base_type(kp, ki, ts, lower_limit, upper_limit), error_(0) {}
+
+  constexpr void push(value_type ref, value_type meas) {
+    value_type error = Policy::template error<value_type>(ref, meas);
+    value_type out_p = error * kp_;
+    value_type out_i = (error + error_) * value_type(0.5) * ki_ * ts_.value() +
+                       out_i_;
     error_ = error;
-    float out = out_p + out_i;
+    value_type out = out_p + out_i;
 
-    if (out > this->upper_limit_) {
-      this->out_ = this->upper_limit_;
-      if (out_p < this->upper_limit_) {
-        this->out_i_ = this->upper_limit_ - out_p;
+    if (out > upper_limit_) {
+      out_ = upper_limit_;
+      if (out_p < upper_limit_) {
+        out_i_ = upper_limit_ - out_p;
       }
-    } else if (out < this->lower_limit_) {
-      this->out_ = this->lower_limit_;
-      if (out_p > this->lower_limit_) {
-        this->out_i_ = this->lower_limit_ - out_p;
+    } else if (out < lower_limit_) {
+      out_ = lower_limit_;
+      if (out_p > lower_limit_) {
+        out_i_ = lower_limit_ - out_p;
       }
     } else {
-      this->out_ = out;
-      this->out_i_ = out_i;
+      out_ = out;
+      out_i_ = out_i;
     }
   }
 
-  virtual void reset() override {
-    this->out_i_ = 0;
+  constexpr void reset() {
+    out_i_ = 0;
     error_ = 0;
-    this->out_ = 0;
+    out_ = 0;
   }
 };
 
