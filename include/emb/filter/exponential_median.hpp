@@ -85,5 +85,15 @@ public:
   }
 };
 
+template<typename T>
+struct is_exponential_median_filter_type : std::false_type {};
+
+template<typename T, size_t WindowSize, typename Duration>
+struct is_exponential_median_filter_type<exponential_median<T, WindowSize, Duration>>
+    : std::true_type {};
+
+template<typename T>
+concept exponential_median_filter_type = is_exponential_median_filter_type<T>::value;
+
 } // namespace filter
 } // namespace emb

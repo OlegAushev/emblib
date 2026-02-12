@@ -49,5 +49,14 @@ public:
   }
 };
 
+template<typename T>
+struct is_median_filter_type : std::false_type {};
+
+template<typename T, size_t WindowSize>
+struct is_median_filter_type<median<T, WindowSize>> : std::true_type {};
+
+template<typename T>
+concept median_filter_type = is_median_filter_type<T>::value;
+
 } // namespace filter
 } // namespace emb
