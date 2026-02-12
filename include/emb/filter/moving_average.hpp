@@ -8,55 +8,28 @@
 #include <emb/units.hpp>
 
 namespace emb {
+namespace filter {
 
-template<typename T, size_t WindowSize = 0>
-  requires std::is_arithmetic_v<T> ||
-           std::is_arithmetic_v<typename T::value_type>
-class movavg_filter {
-private:
-  template<typename V, bool B>
-  struct get_arithmetic_type;
-
-  template<typename V>
-  struct get_arithmetic_type<V, true> {
-    using type = V;
-  };
-
-  template<typename V>
-  struct get_arithmetic_type<V, false> {
-    using type = typename V::value_type;
-  };
-
-  template<typename V, bool B>
-  using get_arithmetic_type_t = typename get_arithmetic_type<V, B>::type;
+template<typename T, size_t WindowSize>
+class moving_average {
 public:
   using value_type = T;
   using size_type = size_t;
   using reference = value_type&;
   using const_reference = value_type const&;
-  using pointer = value_type*;
-  using const_pointer = value_type const*;
   using underlying_type = emb::circular_buffer<value_type, WindowSize>;
   using divider_type =
-      get_arithmetic_type_t<value_type, std::is_arithmetic_v<value_type>>;
+      decltype(std::declval<value_type>() / std::declval<value_type>());
+  static constexpr size_t window_size = WindowSize;
 private:
   underlying_type data_;
   value_type sum_;
   value_type init_output_;
   value_type output_;
 public:
-  constexpr explicit movavg_filter(
+  constexpr explicit moving_average(
       value_type const& init_output = value_type{})
-    requires(WindowSize > 0)
       : init_output_(init_output) {
-    reset();
-  }
-
-  constexpr explicit movavg_filter(
-      size_type capacity,
-      value_type const& init_output = value_type{})
-    requires(WindowSize == 0)
-      : data_(capacity), init_output_(init_output) {
     reset();
   }
 
@@ -82,18 +55,17 @@ public:
   constexpr void reset() { set_output(init_output_); }
 
   constexpr underlying_type const& data() const { return data_; }
-
-  constexpr size_type window_size() const { return data_.capacity(); }
 };
 
 template<typename T>
 struct is_moving_average_filter_type : std::false_type {};
 
 template<typename T, size_t WindowSize>
-struct is_moving_average_filter_type<movavg_filter<T, WindowSize>>
+struct is_moving_average_filter_type<moving_average<T, WindowSize>>
     : std::true_type {};
 
 template<typename T>
 concept moving_average_filter_type = is_moving_average_filter_type<T>::value;
 
+}
 } // namespace emb

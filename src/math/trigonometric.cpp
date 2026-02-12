@@ -2,7 +2,7 @@
 
 namespace emb {
 
-namespace internal {
+namespace detail {
 
 #ifndef __cpp_inline_variables
 const emb::array<float, 129> sincos_lookup_table{
@@ -137,6 +137,6 @@ const emb::array<float, 129> sincos_lookup_table{
     1.0f};
 #endif
 
-} // namespace internal
+} // namespace detail
 
 } // namespace emb

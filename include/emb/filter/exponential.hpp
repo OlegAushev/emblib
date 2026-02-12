@@ -10,6 +10,8 @@ template<typename T, typename Duration>
 class exponential {
 public:
   using value_type = T;
+  using reference = value_type&;
+  using const_reference = value_type const&;
   using duration_type = Duration;
   using factor_type =
       decltype(std::declval<Duration>() / std::declval<Duration>());
@@ -20,7 +22,7 @@ private:
   value_type init_output_;
   value_type output_;
 public:
-  exponential(
+  constexpr exponential(
       duration_type sampling_period,
       duration_type time_constant,
       value_type const& init_output = value_type()
@@ -30,23 +32,23 @@ public:
     reset();
   }
 
-  void push(value_type const& input_v) {
+  constexpr void push(value_type const& input_v) {
     output_ = output_ + smooth_factor_ * (input_v - output_);
   }
 
-  value_type output() const {
+  constexpr const_reference output() const {
     return output_;
   }
 
-  void set_output(value_type const& output_v) {
+  constexpr void set_output(value_type const& output_v) {
     output_ = output_v;
   }
 
-  void reset() {
+  constexpr void reset() {
     set_output(init_output_);
   }
 
-  void configure(duration_type sampling_period, duration_type time_constant) {
+  constexpr void configure(duration_type sampling_period, duration_type time_constant) {
     sampling_period_ = sampling_period;
     time_constant_ = time_constant;
     smooth_factor_ = std::clamp(
@@ -56,7 +58,7 @@ public:
     );
   }
 
-  void set_sampling_period(duration_type ts) {
+  constexpr void set_sampling_period(duration_type ts) {
     sampling_period_ = ts;
     smooth_factor_ = std::clamp(
         sampling_period_ / time_constant_,
@@ -65,7 +67,7 @@ public:
     );
   }
 
-  factor_type smooth_factor() const {
+  constexpr factor_type smooth_factor() const {
     return smooth_factor_;
   }
 };

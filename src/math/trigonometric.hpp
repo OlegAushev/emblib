@@ -6,7 +6,7 @@
 
 namespace emb {
 
-namespace internal {
+namespace detail {
 
 #ifdef __cpp_inline_variables
 inline constexpr std::array<float, 129> sincos_lookup_table{
@@ -142,7 +142,7 @@ inline constexpr std::array<float, 129> sincos_lookup_table{
 #else
   extern const emb::array<float, 129> sincos_lookup_table;
 #endif
-} // namespace internal
+} // namespace detail
 
 constexpr float lookup_sinf(float x) {
   x /= (std::numbers::pi_v<float> / 2.0f);
@@ -163,8 +163,8 @@ constexpr float lookup_sinf(float x) {
   size_t zf = static_cast<size_t>(z);
   z -= static_cast<float>(zf);
 
-  float sint = internal::sincos_lookup_table[zf];
-  float cost = internal::sincos_lookup_table[128 - zf];
+  float sint = detail::sincos_lookup_table[zf];
+  float cost = detail::sincos_lookup_table[128 - zf];
 
   float zz = z * z;
   float ss =
