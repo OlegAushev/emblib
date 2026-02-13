@@ -43,7 +43,7 @@ constexpr bool test_exponential_filter(
   assert(filter.output() != init_output);
 
   // Test smooth_factor is in valid range [0, 1]
-  auto const factor = filter.smooth_factor();
+  [[maybe_unused]] auto const factor = filter.smooth_factor();
   assert(factor >= decltype(factor)(0));
   assert(factor <= decltype(factor)(1));
 

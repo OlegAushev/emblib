@@ -46,7 +46,7 @@ constexpr bool test_median_filter(
   }
 
   // Output should be within the range of input values
-  value_type const output = filter.output();
+  [[maybe_unused]] value_type const output = filter.output();
   value_type min_val = input[0];
   value_type max_val = input[0];
   for (auto const& val : input) {

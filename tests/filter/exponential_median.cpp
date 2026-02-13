@@ -40,7 +40,7 @@ constexpr bool test_exponential_median_filter(
   }
 
   // Output should be within range of input values
-  value_type const output = filter.output();
+  [[maybe_unused]] value_type const output = filter.output();
   value_type min_val = input[0];
   value_type max_val = input[0];
   for (auto const& val : input) {
@@ -50,7 +50,7 @@ constexpr bool test_exponential_median_filter(
   assert(output >= min_val && output <= max_val);
 
   // Test smooth_factor is in valid range [0, 1]
-  auto const factor = filter.smooth_factor();
+  [[maybe_unused]] auto const factor = filter.smooth_factor();
   assert(factor >= decltype(factor)(0));
   assert(factor <= decltype(factor)(1));
 
