@@ -14,7 +14,7 @@ namespace foc {
 using dq_controller_type =
     clamping_pi_controller<float, controller_policy::non_inverting>;
 
-struct dq_input {
+struct dq_control_input {
   vec_dq reference;
   vec_dq measured;
   float vDC;
@@ -32,7 +32,7 @@ public:
   )
       : iD_(iD), iQ_(iQ), vD_limit_factor_(vD_limit_factor) {}
 
-  vec_dq operator()(dq_input const& in) {
+  vec_dq operator()(dq_control_input const& in) {
     // D-axis controller
     float const vD_comp = 0.0f;
     float const vD_avail = in.vDC /
