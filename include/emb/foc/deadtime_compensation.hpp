@@ -27,11 +27,6 @@ public:
 
   std::array<unsigned_pu, 3>
   operator()(std::array<unsigned_pu, 3> const& dutycycles) const {
-    if (dutycycles[0].value() == 0.5f
-     && dutycycles[1].value() == 0.5f
-     && dutycycles[2].value() == 0.5f) {
-      return dutycycles;
-    }
     return compensate_deadtime_v2(
         dutycycles, currents_, current_threshold_, pwm_period_, deadtime_
     );

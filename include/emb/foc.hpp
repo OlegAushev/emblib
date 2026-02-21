@@ -1,7 +1,7 @@
 #pragma once
 
 #include <emb/foc/clarke.hpp>
-#include <emb/foc/deadtime.hpp>
+#include <emb/foc/deadtime_compensation.hpp>
 #include <emb/foc/dq_controller.hpp>
 #include <emb/foc/park.hpp>
 #include <emb/foc/pipe.hpp>
