@@ -1,9 +1,8 @@
 #pragma once
 
 #include <emb/controller.hpp>
-#include <emb/foc/pipe.hpp>
+#include <emb/foc/types.hpp>
 #include <emb/math.hpp>
-#include <emb/motorcontrol.hpp>
 
 #include <cmath>
 #include <numbers>

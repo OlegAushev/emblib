@@ -1,15 +1,14 @@
 #pragma once
 
-#include <emb/foc/pipe.hpp>
+#include <emb/foc/types.hpp>
 #include <emb/math.hpp>
-#include <emb/motorcontrol.hpp>
 
 namespace emb {
 namespace foc {
 
 struct to_polar_fn {
-  static vec_alpha operator()(vec_alphabeta const& ab) {
-    vec_alpha result;
+  static vec_polar operator()(vec_ab const& ab) {
+    vec_polar result;
     arm_sqrt_f32(ab.alpha * ab.alpha + ab.beta * ab.beta, &result.mag);
     arm_atan2_f32(ab.beta, ab.alpha, &result.theta);
     return result;
