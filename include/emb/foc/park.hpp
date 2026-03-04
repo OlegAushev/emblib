@@ -5,14 +5,14 @@
 namespace emb {
 namespace foc {
 
-inline vec_dq park_transform(vec_ab v, float sine, float cosine) {
+constexpr vec_dq park_transform(vec_ab v, float sine, float cosine) {
   vec_dq retv;
   retv.d = (v.alpha * cosine) + (v.beta * sine);
   retv.q = (v.beta * cosine) - (v.alpha * sine);
   return retv;
 }
 
-inline vec_ab invpark_transform(vec_dq v, float sine, float cosine) {
+constexpr vec_ab invpark_transform(vec_dq v, float sine, float cosine) {
   vec_ab retv;
   retv.alpha = (v.d * cosine) - (v.q * sine);
   retv.beta = (v.q * cosine) + (v.d * sine);

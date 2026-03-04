@@ -8,28 +8,28 @@
 namespace emb {
 namespace foc {
 
-inline vec_ab clarke_transform(float a, float b, float c) {
+constexpr vec_ab clarke_transform(float a, float b, float c) {
   vec_ab retv;
   retv.alpha = a;
   retv.beta = (b - c) * std::numbers::inv_sqrt3_v<float>;
   return retv;
 }
 
-inline vec_ab clarke_transform(std::array<float, 3> const& v) {
+constexpr vec_ab clarke_transform(std::array<float, 3> const& v) {
   vec_ab retv;
   retv.alpha = v[0];
   retv.beta = (v[1] - v[2]) * std::numbers::inv_sqrt3_v<float>;
   return retv;
 }
 
-inline vec_ab clarke_transform(float a, float b) {
+constexpr vec_ab clarke_transform(float a, float b) {
   vec_ab retv;
   retv.alpha = a;
   retv.beta = (a + 2 * b) * std::numbers::inv_sqrt3_v<float>;
   return retv;
 }
 
-inline std::array<float, 3> invclarke_transform(vec_ab v) {
+constexpr std::array<float, 3> invclarke_transform(vec_ab v) {
   std::array<float, 3> retv;
   retv[0] = v.alpha;
   retv[1] = (-v.alpha + std::numbers::sqrt3_v<float> * v.beta) * 0.5f;
