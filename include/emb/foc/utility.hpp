@@ -9,7 +9,7 @@ namespace emb {
 namespace foc {
 
 constexpr float calculate_stator_current(emb::foc::vec_ab const& i_ab) {
-  return emb::sqrtf(i_ab.alpha * i_ab.alpha + i_ab.beta * i_ab.beta);
+  return emb::sqrt(i_ab.alpha * i_ab.alpha + i_ab.beta * i_ab.beta);
 }
 
 constexpr float calculate_dc_current(

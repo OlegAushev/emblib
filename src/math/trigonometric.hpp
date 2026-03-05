@@ -8,7 +8,6 @@ namespace emb {
 
 namespace detail {
 
-#ifdef __cpp_inline_variables
 inline constexpr std::array<float, 129> sincos_lookup_table{
     0.0f,
     0.012271538285719931f,
@@ -139,12 +138,10 @@ inline constexpr std::array<float, 129> sincos_lookup_table{
     0.99969881869620425f,
     0.9999247018391445f,
     1.0f};
-#else
-  extern const emb::array<float, 129> sincos_lookup_table;
-#endif
+
 } // namespace detail
 
-constexpr float lookup_sinf(float x) {
+constexpr float lookup_sin(float x) {
   x /= (std::numbers::pi_v<float> / 2.0f);
 
   int sign = x < 0.0f;
@@ -176,6 +173,48 @@ constexpr float lookup_sinf(float x) {
 
   float sin_v = (sign ^ per) ? -sint * cc - cost * ss : sint * cc + cost * ss;
   return sin_v;
+}
+
+constexpr float lookup_cos(float x) {
+  return lookup_sin(x + std::numbers::pi_v<float> / 2.0f);
+}
+
+constexpr float fast_atan2(float y, float x) {
+  constexpr float pi = std::numbers::pi_v<float>;
+  constexpr float half_pi = pi / 2.0f;
+
+  if (x == 0.0f && y == 0.0f) {
+    return 0.0f;
+  }
+
+  float ax = x < 0.0f ? -x : x;
+  float ay = y < 0.0f ? -y : y;
+
+  // reduce to atan(a) where a in [0, 1]
+  bool swap = ay > ax;
+  float a = swap ? ax / ay : ay / ax;
+
+  // minimax polynomial for atan(a) on [0, 1], max error ~1.5e-5
+  float a2 = a * a;
+  float r = a * (1.0f
+      + a2 * (-0.3333314528f
+      + a2 * (0.1999355085f
+      + a2 * (-0.1420889944f
+      + a2 * (0.1065626393f
+      + a2 * (-0.0752896400f
+      + a2 * 0.0429096138f))))));
+
+  if (swap) {
+    r = half_pi - r;
+  }
+  if (x < 0.0f) {
+    r = pi - r;
+  }
+  if (y < 0.0f) {
+    r = -r;
+  }
+
+  return r;
 }
 
 } // namespace emb

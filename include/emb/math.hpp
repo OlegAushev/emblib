@@ -21,20 +21,58 @@ extern "C" {
 namespace emb {
 
 // sin -------------------------------------------------------------------------
-inline float builtin_sinf(float x) {
+inline float builtin_sin(float x) {
 #ifdef __arm__
   return arm_sin_f32(x);
 #endif
 #ifdef __x86_64__
-  return std::sinf(x);
+  return std::sin(x);
 #endif
 }
 
 constexpr float sin(float x) {
   if !consteval {
-    return builtin_sinf(x);
+    return builtin_sin(x);
   } else {
-    return lookup_sinf(x);
+    return lookup_sin(x);
+  }
+}
+
+// cos -------------------------------------------------------------------------
+inline float builtin_cos(float x) {
+#ifdef __arm__
+  return arm_cos_f32(x);
+#endif
+#ifdef __x86_64__
+  return std::cos(x);
+#endif
+}
+
+constexpr float cos(float x) {
+  if !consteval {
+    return builtin_cos(x);
+  } else {
+    return lookup_cos(x);
+  }
+}
+
+// atan2 -----------------------------------------------------------------------
+inline float builtin_atan2(float y, float x) {
+#ifdef __arm__
+  float ret;
+  arm_atan2_f32(y, x, &ret);
+  return ret;
+#endif
+#ifdef __x86_64__
+  return std::atan2(y, x);
+#endif
+}
+
+constexpr float atan2(float y, float x) {
+  if !consteval {
+    return builtin_atan2(y, x);
+  } else {
+    return fast_atan2(y, x);
   }
 }
 
@@ -54,7 +92,7 @@ constexpr float fast_rsqrt(float arg) {
   return y;
 }
 
-inline float builtin_rsqrtf(float arg) {
+inline float builtin_rsqrt(float arg) {
 #ifdef __arm__
   float ret;
   arm_sqrt_f32(arg, &ret);
@@ -65,21 +103,21 @@ inline float builtin_rsqrtf(float arg) {
 #endif
 }
 
-constexpr float rsqrtf(float arg) {
+constexpr float rsqrt(float arg) {
   if !consteval {
-    return builtin_rsqrtf(arg);
+    return builtin_rsqrt(arg);
   } else {
     return fast_rsqrt(arg);
   }
 }
 
-constexpr float fast_sqrtf(float arg) {
+constexpr float fast_sqrt(float arg) {
   assert(arg >= 0.0f);
   if (arg < FLT_MIN) return 0.0f;
   return arg * fast_rsqrt(arg);
 }
 
-inline float builtin_sqrtf(float arg) {
+inline float builtin_sqrt(float arg) {
 #ifdef __arm__
   float ret;
   arm_sqrt_f32(arg, &ret);
@@ -90,11 +128,11 @@ inline float builtin_sqrtf(float arg) {
 #endif
 }
 
-constexpr float sqrtf(float arg) {
+constexpr float sqrt(float arg) {
   if !consteval {
-    return builtin_sqrtf(arg);
+    return builtin_sqrt(arg);
   } else {
-    return fast_sqrtf(arg);
+    return fast_sqrt(arg);
   }
 }
 

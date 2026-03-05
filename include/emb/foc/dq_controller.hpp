@@ -48,7 +48,7 @@ public:
     float const vQ_comp = 0.0f;
     float const vDC_over_sqrt3 = vDC_ / std::numbers::sqrt3_v<float>;
     if (std::fabs(vD) < vDC_over_sqrt3) {
-      float const vQ_avail = emb::sqrtf(
+      float const vQ_avail = emb::sqrt(
           vDC_over_sqrt3 * vDC_over_sqrt3 - vD * vD
       );
       iQ_.set_lower_limit(-vQ_avail - vQ_comp);

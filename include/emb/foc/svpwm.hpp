@@ -30,7 +30,7 @@ calculate_svpwm(vec_polar v_s, float v_dc) {
                     emb::sin(theta);
   float const tb0 = (1.f - tb1 - tb2) / 2.f;
 
-  std::array<float, 3> pulse_durations;
+  std::array<float, 3> pulse_durations{};
   switch (sector) {
   case 0:
     pulse_durations[0] = tb1 + tb2 + tb0;
