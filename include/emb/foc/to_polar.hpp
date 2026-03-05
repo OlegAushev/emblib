@@ -7,10 +7,10 @@ namespace emb {
 namespace foc {
 
 struct to_polar_fn {
-  static vec_polar operator()(vec_ab const& ab) {
+  static vec_polar operator()(vec_ab const& arg) {
     vec_polar result;
-    arm_sqrt_f32(ab.alpha * ab.alpha + ab.beta * ab.beta, &result.mag);
-    arm_atan2_f32(ab.beta, ab.alpha, &result.theta);
+    result.mag = emb::sqrtf(arg.alpha * arg.alpha + arg.beta * arg.beta);
+    arm_atan2_f32(arg.beta, arg.alpha, &result.theta);
     return result;
   }
 };

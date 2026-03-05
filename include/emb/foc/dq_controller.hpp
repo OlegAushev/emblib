@@ -33,7 +33,7 @@ public:
         iQ_(iQ),
         vD_limit_factor_(vD_limit_factor) {}
 
-  vec_dq operator()(vec_dq const& measured) {
+  constexpr vec_dq operator()(vec_dq const& measured) {
     // D-axis controller
     float const vD_comp = 0.0f;
     float const vD_avail = vDC_ /
@@ -48,8 +48,9 @@ public:
     float const vQ_comp = 0.0f;
     float const vDC_over_sqrt3 = vDC_ / std::numbers::sqrt3_v<float>;
     if (std::fabs(vD) < vDC_over_sqrt3) {
-      float vQ_avail;
-      arm_sqrt_f32(vDC_over_sqrt3 * vDC_over_sqrt3 - vD * vD, &vQ_avail);
+      float const vQ_avail = emb::sqrtf(
+          vDC_over_sqrt3 * vDC_over_sqrt3 - vD * vD
+      );
       iQ_.set_lower_limit(-vQ_avail - vQ_comp);
       iQ_.set_upper_limit(vQ_avail - vQ_comp);
     } else {

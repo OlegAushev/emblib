@@ -3,6 +3,8 @@
 #include "../../src/math/trigonometric.hpp"
 
 #include <algorithm>
+#include <bit>
+#include <cfloat>
 #include <concepts>
 #include <numbers>
 
@@ -18,6 +20,7 @@ extern "C" {
 
 namespace emb {
 
+// sin -------------------------------------------------------------------------
 inline float builtin_sinf(float x) {
 #ifdef __arm__
   return arm_sin_f32(x);
@@ -35,6 +38,67 @@ constexpr float sin(float x) {
   }
 }
 
+// rsqrt/sqrt -------------------------------------------------------------
+constexpr float fast_rsqrt(float arg) {
+  assert(arg >= FLT_MIN);
+
+  const float x2 = arg * 0.5f;
+
+  auto i = std::bit_cast<uint32_t>(arg);
+  i = 0x5f3759df - (i >> 1);
+  float y = std::bit_cast<float>(i);
+
+  y = y * (1.5f - (x2 * y * y));
+  y = y * (1.5f - (x2 * y * y));
+
+  return y;
+}
+
+inline float builtin_rsqrtf(float arg) {
+#ifdef __arm__
+  float ret;
+  arm_sqrt_f32(arg, &ret);
+  return 1.0f / ret;
+#endif
+#ifdef __x86_64__
+  return 1.0f / std::sqrtf(arg);
+#endif
+}
+
+constexpr float rsqrtf(float arg) {
+  if !consteval {
+    return builtin_rsqrtf(arg);
+  } else {
+    return fast_rsqrt(arg);
+  }
+}
+
+constexpr float fast_sqrtf(float arg) {
+  assert(arg >= 0.0f);
+  if (arg < FLT_MIN) return 0.0f;
+  return arg * fast_rsqrt(arg);
+}
+
+inline float builtin_sqrtf(float arg) {
+#ifdef __arm__
+  float ret;
+  arm_sqrt_f32(arg, &ret);
+  return ret;
+#endif
+#ifdef __x86_64__
+  return std::sqrtf(arg);
+#endif
+}
+
+constexpr float sqrtf(float arg) {
+  if !consteval {
+    return builtin_sqrtf(arg);
+  } else {
+    return fast_sqrtf(arg);
+  }
+}
+
+// fmod ------------------------------------------------------------------------
 template<std::floating_point T>
 consteval T fmod_trivial(T x, T y) {
   return x - static_cast<T>(static_cast<long long>(x / y)) * y;
@@ -49,15 +113,18 @@ constexpr T fmod(T x, T y) {
   }
 }
 
+// sgn -------------------------------------------------------------------------
 template<typename T = int, typename V>
 constexpr T sgn(V v) {
   return T((V(0) < v) - (v < V(0)));
 }
 
+// iseven ----------------------------------------------------------------------
 constexpr bool iseven(std::integral auto v) {
   return v % 2 == 0;
 }
 
+// isodd -----------------------------------------------------------------------
 constexpr bool isodd(std::integral auto v) {
   return !iseven(v);
 }
