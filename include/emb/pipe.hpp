@@ -21,7 +21,7 @@ struct tap_fn {
 
   template<typename T>
   constexpr T operator()(T&& value) const {
-    func(value);
+    std::invoke(func, value);
     return std::forward<T>(value);
   }
 };
@@ -42,6 +42,22 @@ public:
     return value;
   }
 };
+
+template<typename F>
+struct transform_fn {
+  F func;
+
+  template<typename T>
+  constexpr auto operator()(T&& value) const
+      -> std::invoke_result_t<F const&, T> {
+    return std::invoke(func, std::forward<T>(value));
+  }
+};
+
+template<typename F>
+constexpr transform_fn<std::decay_t<F>> transform(F&& f) {
+  return {std::forward<F>(f)};
+}
 
 } // namespace pipe
 } // namespace emb
