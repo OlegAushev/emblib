@@ -48,34 +48,26 @@ public:
 class button {
 private:
   bool pressed_ = false;
-  startmux_type& startmux_;
 public:
-  constexpr explicit button(startmux_type& startmux) : startmux_(startmux) {}
-
   constexpr bool get(emb::control::command_tag<bool>) const {
     return pressed_;
   }
 
   constexpr void toggle() {
     pressed_ = !pressed_;
-    startmux_.try_send(*this, pressed_);
   }
 };
 
 class knob {
 private:
   float val_ = 0.0f;
-  speedmux_type& speedmux_;
 public:
-  constexpr explicit knob(speedmux_type& speedmux) : speedmux_(speedmux) {}
-
   constexpr float get(emb::control::command_tag<float>) const {
     return val_;
   }
 
   constexpr void set(float val) {
     val_ = val;
-    speedmux_.try_send(*this, val_);
   }
 };
 
@@ -83,12 +75,7 @@ class throttle {
 private:
   bool should_start_ = false;
   float speed_ref_ = 0.0f;
-  startmux_type& startmux_;
-  speedmux_type& speedmux_;
 public:
-  constexpr throttle(startmux_type& startmux, speedmux_type& speedmux)
-      : startmux_(startmux), speedmux_(speedmux) {}
-
   constexpr bool get(emb::control::command_tag<bool>) const {
     return should_start_;
   }
@@ -100,8 +87,6 @@ public:
   constexpr void set(bool should_start, float val) {
     should_start_ = should_start;
     speed_ref_ = val;
-    startmux_.try_send(*this, should_start_);
-    speedmux_.try_send(*this, speed_ref_);
   }
 };
 
@@ -110,9 +95,9 @@ constexpr bool test_control_device() {
   startmux_type startmux(drv);
   speedmux_type speedmux(drv);
 
-  button btn(startmux);
-  knob kb(speedmux);
-  throttle trtl(startmux, speedmux);
+  button btn;
+  knob kb;
+  throttle trtl;
 
   assert(!startmux.is_active(btn));
   assert(!startmux.is_active(trtl));
@@ -121,6 +106,7 @@ constexpr bool test_control_device() {
   assert(!speedmux.is_active(trtl));
 
   btn.toggle();
+  startmux.update();
   assert(!drv.should_start());
 
   startmux.activate(btn);
@@ -133,6 +119,7 @@ constexpr bool test_control_device() {
 
   speedmux.activate(trtl);
   trtl.set(false, 1.0f);
+  speedmux.update();
   assert(drv.should_start());
   assert(drv.speed_ref() == 1.0f);
 

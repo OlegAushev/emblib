@@ -56,12 +56,36 @@ public:
   constexpr void activate(Device const& device) {
     [[maybe_unused]] scoped_lock_type lock{};
     source_ = &device;
-    sink_.accept(device.get(command_tag<command_type>{}));
+    update_unlocked();
   }
 
   constexpr void activate(source_type const& source) {
     [[maybe_unused]] scoped_lock_type lock{};
     source_ = source;
+    update_unlocked();
+  }
+
+  constexpr void deactivate() {
+    [[maybe_unused]] scoped_lock_type lock{};
+    source_ = std::monostate{};
+    sink_.accept(command_type{});
+  }
+
+  constexpr void update() {
+    [[maybe_unused]] scoped_lock_type lock{};
+    update_unlocked();
+  }
+
+  template<typename Device>
+    requires command_source<Device, command_type> &&
+             emb::same_as_any<Device, Sources...>
+  constexpr bool is_active(Device const& device) const {
+    [[maybe_unused]] scoped_lock_type lock{};
+    return is_active_unlocked(device);
+  }
+
+private:
+  constexpr void update_unlocked() {
     auto visitor = [](auto const& s) -> command_type {
       if constexpr (std::same_as<
                         std::remove_cvref_t<decltype(s)>,
@@ -74,33 +98,6 @@ public:
     sink_.accept(std::visit(visitor, source_));
   }
 
-  constexpr void deactivate() {
-    [[maybe_unused]] scoped_lock_type lock{};
-    source_ = std::monostate{};
-    sink_.accept(command_type{});
-  }
-
-  template<typename Device>
-    requires command_source<Device, command_type> &&
-             emb::same_as_any<Device, Sources...>
-  constexpr bool is_active(Device const& device) const {
-    [[maybe_unused]] scoped_lock_type lock{};
-    return is_active_unlocked(device);
-  }
-
-  template<typename Device>
-    requires command_source<Device, command_type> &&
-             emb::same_as_any<Device, Sources...>
-  constexpr bool try_send(Device const& sender, command_type const& cmd) {
-    [[maybe_unused]] scoped_lock_type lock{};
-    if (!is_active_unlocked(sender)) {
-      return false;
-    }
-    sink_.accept(cmd);
-    return true;
-  }
-
-private:
   template<typename Source>
     requires command_source<Source, command_type> &&
              emb::same_as_any<Source, Sources...>
