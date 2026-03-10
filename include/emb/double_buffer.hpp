@@ -19,14 +19,6 @@ public:
     front_ = back;
   }
 
-  template <typename F>
-  void update(F&& f) {
-    uint8_t back = 1 - front_;
-    buf_[back] = f(buf_[front_]);
-    std::atomic_signal_fence(std::memory_order_release);
-    front_ = back;
-  }
-
   T load() const {
     uint8_t front = front_;
     std::atomic_signal_fence(std::memory_order_acquire);

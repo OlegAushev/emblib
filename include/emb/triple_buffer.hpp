@@ -20,7 +20,7 @@ public:
     write_ = shared_.exchange(write_, std::memory_order_relaxed);
   }
 
-  T load() {
+  T load() const {
     read_ = shared_.exchange(read_, std::memory_order_relaxed);
     std::atomic_signal_fence(std::memory_order_acquire);
     return buf_[read_];
@@ -28,9 +28,9 @@ public:
 
 private:
   T buf_[3]{};
-  std::atomic<uint8_t> shared_{0};
+  std::atomic<uint8_t> mutable shared_{0};
   uint8_t write_ = 1;
-  uint8_t read_ = 2;
+  uint8_t mutable read_ = 2;
 };
 
 } // namespace emb
