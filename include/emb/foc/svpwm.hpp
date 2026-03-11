@@ -73,13 +73,35 @@ calculate_svpwm(vec_polar v_s, float v_dc) {
   return duty_cycles;
 }
 
-class svpwm {
-  float vDC_;
-public:
-  constexpr svpwm(float vDC) : vDC_(vDC) {}
+inline std::array<emb::unsigned_pu, 3>
+calculate_svpwm_v2(std::array<float, 3> const& Vs, float Vdc) {
+  // normalization: [−1, +1]
+  float const inv = 2.f / Vdc;
+  float const Va = Vs[0] * inv;
+  float const Vb = Vs[1] * inv;
+  float const Vc = Vs[2] * inv;
 
-  std::array<unsigned_pu, 3> operator()(vec_polar v) const {
-    return calculate_svpwm(v, vDC_);
+  auto const [Vmin, Vmax] = std::minmax({Va, Vb, Vc});
+
+  // common-mode offset
+  float const Voff = -0.5f * (Vmax + Vmin);
+
+  // duty cycles
+  std::array<emb::unsigned_pu, 3> duty;
+  duty[0] = emb::unsigned_pu((Va + Voff + 1.f) * 0.5f);
+  duty[1] = emb::unsigned_pu((Vb + Voff + 1.f) * 0.5f);
+  duty[2] = emb::unsigned_pu((Vc + Voff + 1.f) * 0.5f);
+  return duty;
+}
+
+class svpwm {
+private:
+  float Vdc_;
+public:
+  constexpr svpwm(float Vdc) : Vdc_(Vdc) {}
+
+  std::array<unsigned_pu, 3> operator()(vec_polar V) const {
+    return calculate_svpwm(V, Vdc_);
   }
 };
 

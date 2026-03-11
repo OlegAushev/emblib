@@ -4,6 +4,7 @@
 #include <emb/foc/deadtime_compensation.hpp>
 #include <emb/foc/dq_controller.hpp>
 #include <emb/foc/park.hpp>
+#include <emb/foc/pwm.hpp>
 #include <emb/foc/sinpwm.hpp>
 #include <emb/foc/svpwm.hpp>
 #include <emb/foc/to_polar.hpp>

@@ -1,5 +1,9 @@
 #pragma once
 
+#include <emb/math.hpp>
+
+#include <array>
+
 namespace emb {
 namespace foc {
 

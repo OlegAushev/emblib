@@ -20,6 +20,7 @@ constexpr vec_ab invpark_transform(vec_dq v_dq, float sine, float cosine) {
 }
 
 class park {
+private:
   float sine_;
   float cosine_;
 public:
@@ -31,6 +32,7 @@ public:
 };
 
 class invpark {
+private:
   float sine_;
   float cosine_;
 public:

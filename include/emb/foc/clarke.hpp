@@ -45,5 +45,13 @@ struct clarke_fn {
 
 inline constexpr clarke_fn clarke;
 
+struct invclarke_fn {
+  static constexpr std::array<float, 3> operator()(vec_ab arg) {
+    return invclarke_transform(arg);
+  }
+};
+
+inline constexpr invclarke_fn invclarke;
+
 } // namespace foc
 } // namespace emb
