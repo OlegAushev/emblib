@@ -33,20 +33,20 @@ struct dpwm1 {
 struct dpwm0 {
   static constexpr float offset(float Va, float Vb, float Vc) {
     auto const [mn, mx] = std::minmax({Va, Vb, Vc});
-    bool const even_sector = (Va >= Vb && Vb >= Vc)
-                          || (Vb >= Vc && Vc >= Va)
-                          || (Vc >= Va && Va >= Vb);
-    return even_sector ? (-1.f - mn) : (1.f - mx);
+    bool const clamp_low = (Va >= Vb && Vb >= Vc)
+                        || (Vb >= Vc && Vc >= Va)
+                        || (Vc >= Va && Va >= Vb);
+    return clamp_low ? (-1.f - mn) : (1.f - mx);
   }
 };
 
 struct dpwm2 {
   static constexpr float offset(float Va, float Vb, float Vc) {
     auto const [mn, mx] = std::minmax({Va, Vb, Vc});
-    bool const even_sector = (Va >= Vb && Vb >= Vc)
-                          || (Vb >= Vc && Vc >= Va)
-                          || (Vc >= Va && Va >= Vb);
-    return even_sector ? (1.f - mx) : (-1.f - mn);
+    bool const clamp_high = (Va >= Vb && Vb >= Vc)
+                         || (Vb >= Vc && Vc >= Va)
+                         || (Vc >= Va && Va >= Vb);
+    return clamp_high ? (1.f - mx) : (-1.f - mn);
   }
 };
 

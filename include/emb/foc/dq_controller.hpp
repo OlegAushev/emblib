@@ -14,15 +14,15 @@ class dq_compensation {
   float Ld_;
   float Lq_;
   float Psi_;
-  emb::units::eradps_f32 speed_;
+  float omega_;
 public:
   dq_compensation(some_motor auto const& motor, emb::units::eradps_f32 speed)
-      : Ld_(motor.Ld), Lq_(motor.Lq), Psi_(motor.Psi), speed_(speed) {}
+      : Ld_(motor.Ld), Lq_(motor.Lq), Psi_(motor.Psi), omega_(speed.value()) {}
 
   constexpr vec_dq operator()(vec_dq const& Imeas) const {
     return {
-      .d = -speed_.value() * Lq_ * Imeas.q,
-      .q =  speed_.value() * (Ld_ * Imeas.d + Psi_),
+      .d = -omega_ * Lq_ * Imeas.q,
+      .q =  omega_ * (Ld_ * Imeas.d + Psi_),
     };
   }
 };
@@ -44,14 +44,14 @@ public:
       float vDC,
       dq_controller_type& iD,
       dq_controller_type& iQ,
-      float vD_limit_factor = 1.0f
+      emb::unsigned_pu Vd_limit_factor
   )
       : Iref_(Iref),
         Vcomp_(Vcomp),
         Vdc_(vDC),
         Id_(iD),
         Iq_(iQ),
-        Vd_limit_factor_(vD_limit_factor) {}
+        Vd_limit_factor_(Vd_limit_factor.value()) {}
 
   constexpr vec_dq operator()(vec_dq const& Imeas) {
     // D-axis controller
