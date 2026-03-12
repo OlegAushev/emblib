@@ -17,18 +17,18 @@ private:
 public:
   constexpr named_unit() : v_(value_type{0}) {}
 
-  constexpr explicit named_unit(value_type const& v) : v_(v) {}
+  constexpr explicit named_unit(value_type v) : v_(v) {}
 
-  constexpr value_type const& value() const {
+  constexpr value_type value() const {
     return v_;
   }
 
-  constexpr named_unit& operator+=(named_unit const& rhs) {
+  constexpr named_unit& operator+=(named_unit rhs) {
     v_ += rhs.v_;
     return *this;
   }
 
-  constexpr named_unit& operator-=(named_unit const& rhs) {
+  constexpr named_unit& operator-=(named_unit rhs) {
     v_ -= rhs.v_;
     return *this;
   }
@@ -36,57 +36,55 @@ public:
 
 template<std::floating_point T, typename Unit>
 constexpr bool
-operator==(named_unit<T, Unit> const& lhs, named_unit<T, Unit> const& rhs) {
+operator==(named_unit<T, Unit> lhs, named_unit<T, Unit> rhs) {
   return lhs.value() == rhs.value();
 }
 
 template<std::floating_point T, typename Unit>
 constexpr bool
-operator!=(named_unit<T, Unit> const& lhs, named_unit<T, Unit> const& rhs) {
+operator!=(named_unit<T, Unit> lhs, named_unit<T, Unit> rhs) {
   return lhs.value() != rhs.value();
 }
 
 template<std::floating_point T, typename Unit>
 constexpr bool
-operator<(named_unit<T, Unit> const& lhs, named_unit<T, Unit> const& rhs) {
+operator<(named_unit<T, Unit> lhs, named_unit<T, Unit> rhs) {
   return lhs.value() < rhs.value();
 }
 
 template<std::floating_point T, typename Unit>
 constexpr bool
-operator>(named_unit<T, Unit> const& lhs, named_unit<T, Unit> const& rhs) {
+operator>(named_unit<T, Unit> lhs, named_unit<T, Unit> rhs) {
   return lhs.value() > rhs.value();
 }
 
 template<std::floating_point T, typename Unit>
 constexpr bool
-operator<=(named_unit<T, Unit> const& lhs, named_unit<T, Unit> const& rhs) {
+operator<=(named_unit<T, Unit> lhs, named_unit<T, Unit> rhs) {
   return lhs.value() <= rhs.value();
 }
 
 template<std::floating_point T, typename Unit>
 constexpr bool
-operator>=(named_unit<T, Unit> const& lhs, named_unit<T, Unit> const& rhs) {
+operator>=(named_unit<T, Unit> lhs, named_unit<T, Unit> rhs) {
   return lhs.value() >= rhs.value();
 }
 
 template<std::floating_point T, typename Unit>
 constexpr named_unit<T, Unit>
-operator+(named_unit<T, Unit> const& lhs, named_unit<T, Unit> const& rhs) {
-  named_unit<T, Unit> tmp = lhs;
-  return tmp += rhs;
+operator+(named_unit<T, Unit> lhs, named_unit<T, Unit> rhs) {
+  return lhs += rhs;
 }
 
 template<std::floating_point T, typename Unit>
 constexpr named_unit<T, Unit>
-operator-(named_unit<T, Unit> const& lhs, named_unit<T, Unit> const& rhs) {
-  named_unit<T, Unit> tmp = lhs;
-  return tmp -= rhs;
+operator-(named_unit<T, Unit> lhs, named_unit<T, Unit> rhs) {
+  return lhs -= rhs;
 }
 
 template<std::floating_point T, typename Unit, typename V>
   requires std::is_arithmetic_v<V>
-constexpr named_unit<T, Unit> operator*(named_unit<T, Unit> const& lhs, V rhs) {
+constexpr named_unit<T, Unit> operator*(named_unit<T, Unit> lhs, V rhs) {
   return named_unit<T, Unit>(
       lhs.value() * static_cast<typename named_unit<T, Unit>::value_type>(rhs)
   );
@@ -94,13 +92,13 @@ constexpr named_unit<T, Unit> operator*(named_unit<T, Unit> const& lhs, V rhs) {
 
 template<std::floating_point T, typename Unit, typename V>
   requires std::is_arithmetic_v<V>
-constexpr named_unit<T, Unit> operator*(V lhs, named_unit<T, Unit> const& rhs) {
+constexpr named_unit<T, Unit> operator*(V lhs, named_unit<T, Unit> rhs) {
   return rhs * lhs;
 }
 
 template<std::floating_point T, typename Unit, typename V>
   requires std::is_arithmetic_v<V>
-constexpr named_unit<T, Unit> operator/(named_unit<T, Unit> const& lhs, V rhs) {
+constexpr named_unit<T, Unit> operator/(named_unit<T, Unit> lhs, V rhs) {
   return named_unit<T, Unit>(
       lhs.value() / static_cast<typename named_unit<T, Unit>::value_type>(rhs)
   );
@@ -108,12 +106,12 @@ constexpr named_unit<T, Unit> operator/(named_unit<T, Unit> const& lhs, V rhs) {
 
 template<std::floating_point T, typename Unit>
 constexpr T
-operator/(named_unit<T, Unit> const& lhs, named_unit<T, Unit> const& rhs) {
+operator/(named_unit<T, Unit> lhs, named_unit<T, Unit> rhs) {
   return lhs.value() / rhs.value();
 }
 
 template<std::floating_point T, typename Unit>
-constexpr named_unit<T, Unit> operator-(named_unit<T, Unit> const& v) {
+constexpr named_unit<T, Unit> operator-(named_unit<T, Unit> v) {
   return named_unit<T, Unit>(-v.value());
 }
 
@@ -136,6 +134,11 @@ struct deg {};
 struct hz {};
 
 struct sec {};
+
+// electrical
+struct amp {};
+
+struct volt {};
 
 } // namespace tags
 
@@ -163,6 +166,12 @@ using hz = named_unit<T, tags::hz>;
 template<std::floating_point T>
 using sec = named_unit<T, tags::sec>;
 
+template<std::floating_point T>
+using amp = named_unit<T, tags::amp>;
+
+template<std::floating_point T>
+using volt = named_unit<T, tags::volt>;
+
 using rpm_f32 = rpm<float>;
 using eradps_f32 = eradps<float>;
 using erad_f32 = erad<float>;
@@ -171,6 +180,8 @@ using rad_f32 = rad<float>;
 using deg_f32 = deg<float>;
 using hz_f32 = hz<float>;
 using sec_f32 = sec<float>;
+using amp_f32 = amp<float>;
+using volt_f32 = volt<float>;
 
 template<typename T>
 concept unit =
@@ -207,70 +218,70 @@ concept unit_of_degrees = unit<T> &&
 
 template<typename To, typename From, typename... Args>
   requires std::same_as<To, From>
-constexpr To convert_to(From const& v, Args... args) {
+constexpr To convert_to(From v, Args... args) {
   return v;
 }
 
 template<typename To, std::floating_point T>
   requires std::same_as<To, erad<T>>
-constexpr erad<T> convert_to(edeg<T> const& v) {
+constexpr erad<T> convert_to(edeg<T> v) {
   return units::erad<T>(emb::to_rad(v.value()));
 }
 
 template<typename To, std::floating_point T>
   requires std::same_as<To, edeg<T>>
-constexpr edeg<T> convert_to(erad<T> const& v) {
+constexpr edeg<T> convert_to(erad<T> v) {
   return units::edeg<T>(emb::to_deg(v.value()));
 }
 
 template<typename To, std::floating_point T>
   requires std::same_as<To, rad<T>>
-constexpr rad<T> convert_to(deg<T> const& v) {
+constexpr rad<T> convert_to(deg<T> v) {
   return units::rad<T>(emb::to_rad(v.value()));
 }
 
 template<typename To, std::floating_point T>
   requires std::same_as<To, deg<T>>
-constexpr deg<T> convert_to(rad<T> const& v) {
+constexpr deg<T> convert_to(rad<T> v) {
   return units::deg<T>(emb::to_deg(v.value()));
 }
 
 template<typename To, std::floating_point T, std::integral P>
   requires std::same_as<To, eradps<T>>
-constexpr eradps<T> convert_to(rpm<T> const& v, P p) {
+constexpr eradps<T> convert_to(rpm<T> v, P p) {
   return units::eradps<T>(emb::to_eradps(v.value(), p));
 }
 
 template<typename To, std::floating_point T, std::integral P>
   requires std::same_as<To, rpm<T>>
-constexpr rpm<T> convert_to(eradps<T> const& v, P p) {
+constexpr rpm<T> convert_to(eradps<T> v, P p) {
   return units::rpm<T>(emb::to_rpm(v.value(), p));
 }
 
 template<std::floating_point T>
-constexpr eradps<T> operator/(erad<T> const& lhs, sec<T> const& rhs) {
+constexpr eradps<T> operator/(erad<T> lhs, sec<T> rhs) {
   return eradps<T>(lhs.value() / rhs.value());
 }
 
 template<std::floating_point T>
-constexpr erad<T> operator*(eradps<T> const& lhs, sec<T> const& rhs) {
+constexpr erad<T> operator*(eradps<T> lhs, sec<T> rhs) {
   return erad<T>(lhs.value() * rhs.value());
 }
 
 template<std::floating_point T>
-constexpr erad<T> operator*(sec<T> const& lhs, eradps<T> const& rhs) {
+constexpr erad<T> operator*(sec<T> lhs, eradps<T> rhs) {
   return rhs * lhs;
 }
 
 template<std::floating_point T, typename V>
   requires std::is_arithmetic_v<V>
-constexpr sec<T> operator/(V lhs, hz<T> const& rhs) {
+constexpr sec<T> operator/(V lhs, hz<T> rhs) {
   return sec<T>(static_cast<T>(lhs) / rhs.value());
 }
 
 template<std::floating_point T, typename V>
   requires std::is_arithmetic_v<V>
-constexpr hz<T> operator/(V lhs, sec<T> const& rhs) {
+constexpr hz<T> operator/(V lhs, sec<T> rhs) {
   return hz<T>(static_cast<T>(lhs) / rhs.value());
 }
 
