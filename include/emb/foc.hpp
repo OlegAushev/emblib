@@ -18,5 +18,6 @@ using emb::pipe::operator|;
 using emb::pipe::tap;
 using emb::pipe::store_to;
 using emb::pipe::transform;
+using emb::pipe::with;
 } // namespace foc
 } // namespace emb

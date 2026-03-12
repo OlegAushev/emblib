@@ -8,13 +8,6 @@
 namespace emb {
 namespace foc {
 
-constexpr vec_ab clarke_transform(float a, float b, float c) {
-  return {
-      .alpha = a,
-      .beta = (b - c) * std::numbers::inv_sqrt3_v<float>
-  };
-}
-
 constexpr vec_ab clarke_transform(std::array<float, 3> const& arg) {
   return {
       .alpha = arg[0],
@@ -22,12 +15,19 @@ constexpr vec_ab clarke_transform(std::array<float, 3> const& arg) {
   };
 }
 
-constexpr vec_ab clarke_transform(float a, float b) {
-  return {
-      .alpha = a,
-      .beta = (a + 2 * b) * std::numbers::inv_sqrt3_v<float>
-  };
-}
+// constexpr vec_ab clarke_transform(float a, float b, float c) {
+//   return {
+//       .alpha = a,
+//       .beta = (b - c) * std::numbers::inv_sqrt3_v<float>
+//   };
+// }
+
+// constexpr vec_ab clarke_transform(float a, float b) {
+//   return {
+//       .alpha = a,
+//       .beta = (a + 2 * b) * std::numbers::inv_sqrt3_v<float>
+//   };
+// }
 
 constexpr std::array<float, 3> invclarke_transform(vec_ab arg) {
   return {
@@ -36,22 +36,6 @@ constexpr std::array<float, 3> invclarke_transform(vec_ab arg) {
       (-arg.alpha - std::numbers::sqrt3_v<float> * arg.beta) * 0.5f
   };
 }
-
-struct clarke_fn {
-  static constexpr vec_ab operator()(std::array<float, 3> const& arg) {
-    return clarke_transform(arg);
-  }
-};
-
-inline constexpr clarke_fn clarke;
-
-struct invclarke_fn {
-  static constexpr std::array<float, 3> operator()(vec_ab arg) {
-    return invclarke_transform(arg);
-  }
-};
-
-inline constexpr invclarke_fn invclarke;
 
 } // namespace foc
 } // namespace emb

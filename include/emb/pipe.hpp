@@ -2,6 +2,7 @@
 
 #include <concepts>
 #include <functional>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 
@@ -13,6 +14,46 @@ template<typename T, typename Function>
 constexpr auto operator|(T&& t, Function&& f)
     -> std::invoke_result_t<Function, T> {
   return std::invoke(std::forward<Function>(f), std::forward<T>(t));
+}
+
+template<typename T, typename... Extra>
+struct bundle {
+  T value;
+  std::tuple<Extra...> extra;
+};
+
+template<typename... Extra>
+constexpr auto with(Extra&&... args) {
+  return [...args = std::forward<Extra>(args)](auto&& value)
+      -> bundle<std::decay_t<decltype(value)>, std::decay_t<Extra>...> {
+    return {std::forward<decltype(value)>(value), {args...}};
+  };
+}
+
+template<typename T, typename... Extra, typename Function>
+  requires(!std::invocable<Function, bundle<T, Extra...> const&>
+        && std::invocable<Function, T const&, Extra const&...>)
+constexpr auto operator|(bundle<T, Extra...> const& b, Function&& f)
+    -> std::invoke_result_t<Function, T const&, Extra const&...> {
+  return std::apply(
+      [&](auto const&... a) -> decltype(auto) {
+        return std::invoke(std::forward<Function>(f), b.value, a...);
+      },
+      b.extra);
+}
+
+template<typename T, typename... Extra, typename Function>
+  requires(!std::invocable<Function, bundle<T, Extra...>>
+        && std::invocable<Function, T, Extra...>)
+constexpr auto operator|(bundle<T, Extra...>&& b, Function&& f)
+    -> std::invoke_result_t<Function, T, Extra...> {
+  return std::apply(
+      [&](auto&&... a) -> decltype(auto) {
+        return std::invoke(std::forward<Function>(f),
+                           std::move(b.value),
+                           std::forward<decltype(a)>(a)...);
+      },
+      std::move(b.extra));
 }
 
 template<typename F>

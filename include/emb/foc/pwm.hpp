@@ -74,7 +74,7 @@ struct dpwmmax {
 
 template<typename Mode>
 constexpr std::array<emb::unsigned_pu, 3>
-duty_cycles(std::array<float, 3> const& Vs, float Vdc) {
+modulate(std::array<float, 3> const& Vs, float Vdc) {
   if (Vdc <= 0.f) {
     return {unsigned_pu{0.5f}, unsigned_pu{0.5f}, unsigned_pu{0.5f}};
   }
@@ -95,19 +95,6 @@ duty_cycles(std::array<float, 3> const& Vs, float Vdc) {
   duty[2] = emb::unsigned_pu{(Vc + Voff + 1.f) * 0.5f};
   return duty;
 }
-
-template<typename Mode>
-class modulator {
-private:
-  float Vdc_;
-public:
-  constexpr explicit modulator(float Vdc) : Vdc_(Vdc) {}
-
-  constexpr std::array<emb::unsigned_pu, 3>
-  operator()(std::array<float, 3> const& Vs) const {
-    return duty_cycles<Mode>(Vs, Vdc_);
-  }
-};
 
 } // namespace foc
 } // namespace emb
