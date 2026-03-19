@@ -58,6 +58,10 @@ public:
     step_ = update_period.value() * slope;
   }
 
+  void set_update_period(units::sec_f32 const& update_period) {
+    configure(update_period, slope_);
+  }
+
   void update() {
     if (output_ < target_) {
       output_ = std::min(output_ + step_, target_);
