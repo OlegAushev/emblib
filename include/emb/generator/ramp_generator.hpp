@@ -11,7 +11,7 @@ namespace emb {
 template<typename T>
 class ramp_generator {
 private:
-  units::sec_f32 update_period_;
+  units::sec_f32 ts_;
   T slope_;
   T step_;
 
@@ -20,12 +20,12 @@ private:
   T output_;
 public:
   ramp_generator(
-      units::sec_f32 const& update_period,
+      units::sec_f32 const& ts,
       T const& slope,
-      T const& init_output = T()
+      T const& init_output = T{}
   )
       : init_output_(init_output) {
-    configure(update_period, slope);
+    set_slope(ts, slope);
     reset();
   }
 
@@ -50,16 +50,16 @@ public:
     set_output(init_output_);
   }
 
-  void configure(units::sec_f32 const& update_period, T const& slope) {
-    assert(update_period.value() > 0);
+  void set_slope(units::sec_f32 const& ts, T const& slope) {
+    assert(ts.value() > 0);
     assert(slope > T(0));
-    update_period_ = update_period;
+    ts_ = ts;
     slope_ = slope;
-    step_ = update_period.value() * slope;
+    step_ = ts.value() * slope;
   }
 
-  void set_update_period(units::sec_f32 const& update_period) {
-    configure(update_period, slope_);
+  void set_timestep(units::sec_f32 const& ts) {
+    set_slope(ts, slope_);
   }
 
   void update() {
@@ -70,7 +70,7 @@ public:
     }
   }
 
-  bool steady() const {
+  bool at_target() const {
     return output_ == target_;
   }
 };

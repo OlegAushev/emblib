@@ -34,7 +34,7 @@ public:
       value_type const& init_output = value_type()
   )
       : init_output_(init_output) {
-    configure(sampling_period, time_constant);
+    set_smoothing(sampling_period, time_constant);
     reset();
   }
 
@@ -61,7 +61,8 @@ public:
     set_output(init_output_);
   }
 
-  constexpr void configure(duration_type sampling_period, duration_type time_constant) {
+  constexpr void
+  set_smoothing(duration_type sampling_period, duration_type time_constant) {
     sampling_period_ = sampling_period;
     time_constant_ = time_constant;
     smooth_factor_ = std::clamp(
@@ -71,7 +72,7 @@ public:
     );
   }
 
-  constexpr void set_sampling_period(duration_type ts) {
+  constexpr void set_timestep(duration_type ts) {
     sampling_period_ = ts;
     smooth_factor_ = std::clamp(
         sampling_period_ / time_constant_,
@@ -89,11 +90,12 @@ template<typename T>
 struct is_exponential_median_filter_type : std::false_type {};
 
 template<typename T, size_t WindowSize, typename Duration>
-struct is_exponential_median_filter_type<exponential_median<T, WindowSize, Duration>>
-    : std::true_type {};
+struct is_exponential_median_filter_type<
+    exponential_median<T, WindowSize, Duration>> : std::true_type {};
 
 template<typename T>
-concept exponential_median_filter_type = is_exponential_median_filter_type<T>::value;
+concept exponential_median_filter_type =
+    is_exponential_median_filter_type<T>::value;
 
 } // namespace filter
 } // namespace emb

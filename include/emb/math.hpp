@@ -292,7 +292,7 @@ public:
     );
   }
 
-  void set_sampling_period(float ts) {
+  void set_timestep(float ts) {
     ts_ = ts;
   }
 };
