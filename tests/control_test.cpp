@@ -106,7 +106,7 @@ constexpr bool test_control_device() {
   assert(!speedmux.is_active(trtl));
 
   btn.toggle();
-  startmux.update();
+  startmux.poll();
   assert(!drv.should_start());
 
   startmux.activate(btn);
@@ -119,7 +119,7 @@ constexpr bool test_control_device() {
 
   speedmux.activate(trtl);
   trtl.set(false, 1.0f);
-  speedmux.update();
+  speedmux.poll();
   assert(drv.should_start());
   assert(drv.speed_ref() == 1.0f);
 

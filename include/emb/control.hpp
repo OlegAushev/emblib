@@ -56,13 +56,13 @@ public:
   constexpr void activate(Device const& device) {
     [[maybe_unused]] scoped_lock_type lock{};
     source_ = &device;
-    update_unlocked();
+    poll_unlocked();
   }
 
   constexpr void activate(source_type const& source) {
     [[maybe_unused]] scoped_lock_type lock{};
     source_ = source;
-    update_unlocked();
+    poll_unlocked();
   }
 
   constexpr void deactivate() {
@@ -71,9 +71,9 @@ public:
     sink_.accept(command_type{});
   }
 
-  constexpr void update() {
+  constexpr void poll() {
     [[maybe_unused]] scoped_lock_type lock{};
-    update_unlocked();
+    poll_unlocked();
   }
 
   template<typename Device>
@@ -85,7 +85,7 @@ public:
   }
 
 private:
-  constexpr void update_unlocked() {
+  constexpr void poll_unlocked() {
     auto visitor = [](auto const& s) -> command_type {
       if constexpr (std::same_as<
                         std::remove_cvref_t<decltype(s)>,
