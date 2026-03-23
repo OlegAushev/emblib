@@ -9,11 +9,11 @@ namespace emb {
 namespace control {
 
 template<typename>
-struct command_tag {};
+struct command {};
 
 template<typename T, typename Command>
 concept command_source = requires(T& t) {
-  { t.get(command_tag<Command>{}) } -> std::convertible_to<Command>;
+  { t.get(command<Command>{}) } -> std::convertible_to<Command>;
 };
 
 template<typename T, typename Command>
@@ -92,7 +92,7 @@ private:
                         std::monostate>) {
         return command_type{};
       } else {
-        return s->get(command_tag<command_type>{});
+        return s->get(command<command_type>{});
       }
     };
     sink_.accept(std::visit(visitor, source_));

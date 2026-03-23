@@ -49,7 +49,7 @@ class button {
 private:
   bool pressed_ = false;
 public:
-  constexpr bool get(emb::control::command_tag<bool>) const {
+  constexpr bool get(emb::control::command<bool>) const {
     return pressed_;
   }
 
@@ -62,7 +62,7 @@ class knob {
 private:
   float val_ = 0.0f;
 public:
-  constexpr float get(emb::control::command_tag<float>) const {
+  constexpr float get(emb::control::command<float>) const {
     return val_;
   }
 
@@ -76,11 +76,11 @@ private:
   bool should_start_ = false;
   float speed_ref_ = 0.0f;
 public:
-  constexpr bool get(emb::control::command_tag<bool>) const {
+  constexpr bool get(emb::control::command<bool>) const {
     return should_start_;
   }
 
-  constexpr float get(emb::control::command_tag<float>) const {
+  constexpr float get(emb::control::command<float>) const {
     return speed_ref_;
   }
 
