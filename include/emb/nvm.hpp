@@ -13,10 +13,11 @@ namespace nvm {
 
 enum class error {
   timeout,
+  bus_error,
+  invalid_argument,
+  access_denied,
   hash_mismatch,
-  size_mismatch,
   crc_mismatch,
-  not_found
 };
 
 template<size_t N>
