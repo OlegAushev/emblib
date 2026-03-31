@@ -18,38 +18,36 @@ public:
 
 static_assert(std::chrono::is_clock_v<steady_clock>);
 
-class watchdog {
+class timeout {
 public:
   using duration = steady_clock::duration;
   using time_point = steady_clock::time_point;
 private:
-  duration timeout_;
+  duration duration_;
   time_point start_;
 public:
-  watchdog(duration timeout = duration{0})
-      : timeout_{timeout}, start_{emb::chrono::steady_clock::now()} {}
+  explicit timeout(duration d)
+      : duration_(d), start_(emb::chrono::steady_clock::now()) {}
 
-  bool good() const {
-    if (timeout_.count() < 0) {
-      return true;
-    }
-    if ((steady_clock::now() - start_) > timeout_) {
-      return false;
-    }
-    return true;
+  static timeout infinite() {
+    return timeout(duration::max());
   }
 
-  bool bad() const {
-    return !good();
+  bool expired() const {
+    return (emb::chrono::steady_clock::now() - start_) > duration_;
+  }
+
+  duration elapsed() const {
+    return emb::chrono::steady_clock::now() - start_;
   }
 
   void reset() {
-    start_ = steady_clock::now();
+    start_ = emb::chrono::steady_clock::now();
   }
 
-  void reset(duration timeout) {
-    timeout_ = timeout;
-    start_ = steady_clock::now();
+  void reset(duration d) {
+    duration_ = d;
+    start_ = emb::chrono::steady_clock::now();
   }
 };
 
