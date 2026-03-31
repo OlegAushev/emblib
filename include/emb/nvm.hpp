@@ -269,6 +269,17 @@ public:
     using P = parameter<Name>;
     return set<Name>(P::default_value);
   }
+
+  auto erase() -> std::expected<void, error> {
+    for (size_t off = Layout.base; off < Layout.base + size; ++off) {
+      auto r = storage_.template write<std::byte>(
+          typename Storage::addr_type(off),
+          std::byte{0}
+      );
+      if (!r) return r;
+    }
+    return {};
+  }
 };
 
 } // namespace nvm
