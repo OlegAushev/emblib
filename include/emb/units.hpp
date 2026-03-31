@@ -12,7 +12,7 @@ class named_unit {
 public:
   using value_type = T;
   using unit_type = Unit;
-private:
+public:
   value_type v_;
 public:
   constexpr named_unit() : v_(value_type{0}) {}
