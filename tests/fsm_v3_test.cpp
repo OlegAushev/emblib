@@ -34,7 +34,6 @@ struct ClosedState {
 
 class Switch : public emb::fsm::v3::finite_state_machine<
                    Switch,
-                   void*,
                    emb::fsm::v3::moore_policy,
                    emb::typelist<OpenState, ClosedState>> {
 public:
@@ -159,7 +158,6 @@ struct ClosedState {
 
 class Switch : public emb::fsm::v3::finite_state_machine<
                    Switch,
-                   void*,
                    emb::fsm::v3::mealy_policy,
                    emb::typelist<OpenState, ClosedState>> {
 public:
@@ -290,7 +288,6 @@ struct DestroyedState {
 
 class Switch : public emb::fsm::v3::finite_state_machine<
                    Switch,
-                   void*,
                    emb::fsm::v3::mixed_policy,
                    emb::typelist<OpenState, ClosedState, DestroyedState>> {
 public:

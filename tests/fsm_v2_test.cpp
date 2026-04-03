@@ -53,7 +53,6 @@ struct Transitions {
 
 class Switch : public emb::fsm::v2::finite_state_machine<
                    Switch,
-                   void*,
                    emb::fsm::v2::moore_policy,
                    Transitions,
                    OpenState,
@@ -203,7 +202,6 @@ struct Transitions {
 
 class Switch : public emb::fsm::v2::finite_state_machine<
                    Switch,
-                   void*,
                    emb::fsm::v2::mealy_policy,
                    Transitions,
                    OpenState,
@@ -384,7 +382,6 @@ struct Transitions {
 
 class Switch : public emb::fsm::v2::finite_state_machine<
                    Switch,
-                   void*,
                    emb::fsm::v2::mixed_policy,
                    Transitions,
                    OpenState,
