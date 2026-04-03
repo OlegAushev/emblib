@@ -7,21 +7,15 @@ namespace emb {
 namespace internal {
 namespace tests {
 
-class dummy_lock {
-public:
-  constexpr void lock() {}
-  constexpr void unlock() {}
-};
-
 class button;
 class knob;
 class throttle;
 class drive;
 
-using startmux_type = emb::control::
-    command_multiplexer<bool, dummy_lock, drive, button, throttle>;
+using startmux_type =
+    emb::control::command_multiplexer<bool, drive, button, throttle>;
 using speedmux_type =
-    emb::control::command_multiplexer<float, dummy_lock, drive, knob, throttle>;
+    emb::control::command_multiplexer<float, drive, knob, throttle>;
 
 class drive {
 private:

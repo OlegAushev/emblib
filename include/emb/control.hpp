@@ -23,13 +23,11 @@ concept command_sink = requires(T& sink, Command const& cmd) {
 
 template<
     typename Command,
-    typename ScopedLock,
     typename Sink,
     typename... Sources>
 class command_multiplexer {
 public:
   using command_type = Command;
-  using scoped_lock_type = ScopedLock;
   using sink_type = Sink;
   using source_type = std::variant<std::monostate, Sources const*...>;
 private:
@@ -46,7 +44,6 @@ public:
   command_multiplexer& operator=(command_multiplexer&&) = delete;
 
   constexpr source_type source() const {
-    [[maybe_unused]] scoped_lock_type lock{};
     return source_;
   }
 
@@ -54,38 +51,21 @@ public:
     requires command_source<Device, command_type> &&
              emb::same_as_any<Device, Sources...>
   constexpr void activate(Device const& device) {
-    [[maybe_unused]] scoped_lock_type lock{};
     source_ = &device;
-    poll_unlocked();
+    poll();
   }
 
   constexpr void activate(source_type const& source) {
-    [[maybe_unused]] scoped_lock_type lock{};
     source_ = source;
-    poll_unlocked();
+    poll();
   }
 
   constexpr void deactivate() {
-    [[maybe_unused]] scoped_lock_type lock{};
     source_ = std::monostate{};
     sink_.accept(command_type{});
   }
 
   constexpr void poll() {
-    [[maybe_unused]] scoped_lock_type lock{};
-    poll_unlocked();
-  }
-
-  template<typename Device>
-    requires command_source<Device, command_type> &&
-             emb::same_as_any<Device, Sources...>
-  constexpr bool is_active(Device const& device) const {
-    [[maybe_unused]] scoped_lock_type lock{};
-    return is_active_unlocked(device);
-  }
-
-private:
-  constexpr void poll_unlocked() {
     auto visitor = [](auto const& s) -> command_type {
       if constexpr (std::same_as<
                         std::remove_cvref_t<decltype(s)>,
@@ -98,12 +78,12 @@ private:
     sink_.accept(std::visit(visitor, source_));
   }
 
-  template<typename Source>
-    requires command_source<Source, command_type> &&
-             emb::same_as_any<Source, Sources...>
-  constexpr bool is_active_unlocked(Source const& source) const {
-    auto ptr = std::get_if<Source const*>(&source_);
-    return ptr && *ptr == &source;
+  template<typename Device>
+    requires command_source<Device, command_type> &&
+             emb::same_as_any<Device, Sources...>
+  constexpr bool is_active(Device const& device) const {
+    auto ptr = std::get_if<Device const*>(&source_);
+    return ptr && *ptr == &device;
   }
 };
 
