@@ -7,104 +7,91 @@
 #include <bit>
 #include <concepts>
 #include <cstdint>
-#include <limits>
+#include <type_traits>
 
 namespace emb {
 namespace mmio {
 
 template<typename T>
-concept reg_address =
-    emb::same_as_any<T, uint8_t, uint16_t, uint32_t, uint64_t, uintptr_t>;
+concept some_register =
+    emb::same_as_any<T, uint8_t, uint16_t, uint32_t, uint64_t>;
 
 template<typename T>
-concept reg_width = emb::same_as_any<T, uint8_t, uint16_t, uint32_t, uint64_t>;
+using mask_type = std::type_identity_t<T>;
 
-template<auto Address, reg_width Width = uint32_t>
-  requires reg_address<decltype(Address)>
-struct reg {
-  using value_type = Width;
+template<some_register T>
+[[nodiscard]] auto read(T const volatile& reg, mask_type<T> mask) -> T {
+  return static_cast<T>((reg & mask) >> std::countr_zero(mask));
+}
 
-  static value_type read() {
-    return *reinterpret_cast<value_type const volatile*>(Address);
-  }
+template<some_register T>
+void write(T volatile& reg, mask_type<T> mask, mask_type<T> value) {
+  reg = static_cast<T>(
+      (reg & ~mask) | ((value << std::countr_zero(mask)) & mask)
+  );
+}
 
-  static void write(value_type value) {
-    *reinterpret_cast<value_type volatile*>(Address) = value;
-  }
-};
+template<some_register T>
+void set(T volatile& reg, mask_type<T> mask) {
+  reg = static_cast<T>(reg | mask);
+}
 
-struct ro {
-  template<typename T>
-  static T read(T const volatile* reg, T mask, unsigned offset) {
-    return (*reg & mask) >> offset;
-  }
-};
+template<some_register T>
+void clear(T volatile& reg, mask_type<T> mask) {
+  reg = static_cast<T>(reg & ~mask);
+}
 
-struct rw : public ro {
-  template<typename T>
-  static void write(T volatile* reg, T mask, unsigned offset, T value) {
-    *reg = (*reg & ~mask) | ((value << offset) & mask);
-  }
+template<some_register T>
+void toggle(T volatile& reg, mask_type<T> mask) {
+  reg = static_cast<T>(reg ^ mask);
+}
 
-  template<typename T>
-  static void set(T volatile* reg, T mask) {
-    *reg = *reg | mask;
-  }
+template<some_register T>
+[[nodiscard]] auto test_any(T const volatile& reg, mask_type<T> mask) -> bool {
+  return (reg & mask) != 0;
+}
 
-  template<typename T>
-  static void clear(T volatile* reg, T mask) {
-    *reg = *reg & ~mask;
-  }
-};
+template<some_register T>
+[[nodiscard]] auto test_all(T const volatile& reg, mask_type<T> mask) -> bool {
+  return (reg & mask) == mask;
+}
 
-struct rc_w0 : public ro {
-  template<typename T>
-  static void clear(T volatile* reg, T mask) {
-    *reg = ~mask;
-  }
-};
+template<some_register T>
+inline void clear_w1(T volatile& reg, mask_type<T> mask) {
+  reg = static_cast<T>(mask);
+}
 
-struct rc_w1 : public ro {
-  template<typename T>
-  static void clear(T volatile* reg, T mask) {
-    *reg = mask;
-  }
-};
+template<some_register T>
+inline void clear_w0(T volatile& reg, mask_type<T> mask) {
+  reg = static_cast<T>(~mask);
+}
 
-template<auto Address, auto Mask, typename Policy = rw>
-  requires reg_address<decltype(Address)> &&
-           reg_width<decltype(Mask)> &&
-           (Mask != 0)
+template<auto Mask>
+  requires(Mask != 0)
 struct bits {
   using value_type = decltype(Mask);
-  using pointer = value_type volatile*;
-  using const_pointer = value_type const volatile*;
-  using policy_type = Policy;
-
-  static constexpr auto address = Address;
   static constexpr value_type mask = Mask;
   static constexpr unsigned offset = std::countr_zero(mask);
 
-  static value_type read() {
-    return policy_type::read(
-        reinterpret_cast<const_pointer>(address),
-        mask,
-        offset
-    );
-  }
+  value_type encoded;
 
-  static void write(value_type value) {
-    policy_type::write(reinterpret_cast<pointer>(address), mask, offset, value);
-  }
-
-  static void set() {
-    policy_type::set(reinterpret_cast<pointer>(address), mask);
-  }
-
-  static void clear() {
-    policy_type::clear(reinterpret_cast<pointer>(address), mask);
-  }
+  constexpr explicit bits(value_type v)
+      : encoded(value_type((v << offset) & mask)) {}
 };
+
+template<some_register T, typename First, typename... Rest>
+void modify(T volatile& reg, First first, Rest... rest) {
+  constexpr auto mask_or = static_cast<T>(
+      (First::mask | ... | Rest::mask)
+  ); // binary fold — ok с пустым Rest
+  constexpr auto mask_sum = static_cast<T>(
+      (static_cast<T>(First::mask) + ... + static_cast<T>(Rest::mask))
+  );
+
+  static_assert(mask_or == mask_sum, "overlapping field masks");
+
+  reg = static_cast<T>((reg & ~mask_or) | (first.encoded | ... | rest.encoded));
+}
 
 } // namespace mmio
 } // namespace emb
