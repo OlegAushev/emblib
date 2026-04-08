@@ -1,7 +1,5 @@
 #pragma once
 
-#ifdef __cpp_concepts
-
 #include <emb/meta.hpp>
 
 #include <bit>
@@ -57,12 +55,12 @@ template<some_register T>
 }
 
 template<some_register T>
-inline void clear_w1(T volatile& reg, mask_type<T> mask) {
+void clear_w1(T volatile& reg, mask_type<T> mask) {
   reg = static_cast<T>(mask);
 }
 
 template<some_register T>
-inline void clear_w0(T volatile& reg, mask_type<T> mask) {
+void clear_w0(T volatile& reg, mask_type<T> mask) {
   reg = static_cast<T>(~mask);
 }
 
@@ -95,5 +93,3 @@ void modify(T volatile& reg, First first, Rest... rest) {
 
 } // namespace mmio
 } // namespace emb
-
-#endif
