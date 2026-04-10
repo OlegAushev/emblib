@@ -297,13 +297,24 @@ constexpr Unit rempi(Unit v) {
   return Unit{rempi(v.value())};
 }
 
+template<units::unit_of_radians Unit>
+constexpr Unit rem2pi_fast(Unit v) {
+  return Unit{rem2pi_fast(v.value())};
+}
+
+template<units::unit_of_radians Unit>
+constexpr Unit rempi_fast(Unit v) {
+  return Unit{rempi_fast(v.value())};
+}
+
 template<units::unit_of_degrees Unit>
 constexpr Unit rem360(Unit v) {
   using T = Unit::value_type;
-  constexpr T inv_360 = T{1} / T{360};
-  T norm = v.value() * inv_360;
-  norm -= static_cast<T>(static_cast<int32_t>(norm) - (norm < T{0}));
-  return Unit{norm * T{360}};
+  T val = emb::fmod(v.value(), T{360});
+  if (val < 0) {
+    val += T{360};
+  }
+  return Unit{val};
 }
 
 template<units::unit_of_degrees Unit>
@@ -311,6 +322,23 @@ constexpr Unit rem180(Unit v) {
   using T = Unit::value_type;
   constexpr Unit offset{T{180}};
   return rem360(v + offset) - offset;
+}
+
+template<units::unit_of_degrees Unit>
+constexpr Unit rem360_fast(Unit v) {
+  using T = Unit::value_type;
+  constexpr T inv_360 = T{1} / T{360};
+  T norm = v.value() * inv_360;
+  norm -= static_cast<T>(static_cast<int32_t>(norm) - (norm < T{0}));
+  if (norm >= T{1}) norm -= T{1};
+  return Unit{norm * T{360}};
+}
+
+template<units::unit_of_degrees Unit>
+constexpr Unit rem180_fast(Unit v) {
+  using T = Unit::value_type;
+  constexpr Unit offset{T{180}};
+  return rem360_fast(v + offset) - offset;
 }
 
 } // namespace emb

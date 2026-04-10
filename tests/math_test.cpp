@@ -46,6 +46,19 @@ constexpr bool test_math() {
   assert(near(emb::rempi(pi + 0.5f), -pi + 0.5f));
   assert(near(emb::rempi(-pi + 0.5f), -pi + 0.5f));
 
+  // rem2pi_fast
+  assert(near(emb::rem2pi_fast(0.0f), 0.0f));
+  assert(near(emb::rem2pi_fast(two_pi), 0.0f));
+  assert(near(emb::rem2pi_fast(-two_pi), 0.0f));
+  assert(near(emb::rem2pi_fast(4 * pi), 0.0f));
+  assert(near(emb::rem2pi_fast(two_pi + 1.0f), 1.0f));
+  assert(near(emb::rem2pi_fast(-1.0f), two_pi - 1.0f));
+
+  // rempi_fast
+  assert(near(emb::rempi_fast(0.0f), 0.0f));
+  assert(near(emb::rempi_fast(pi + 0.5f), -pi + 0.5f));
+  assert(near(emb::rempi_fast(-pi + 0.5f), -pi + 0.5f));
+
   return true;
 }
 
