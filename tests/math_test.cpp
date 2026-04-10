@@ -7,7 +7,7 @@ namespace internal {
 namespace tests {
 
 constexpr bool test_math() {
-  constexpr auto near = [](float a, float b) {
+  [[maybe_unused]] constexpr auto near = [](float a, float b) {
     return (a - b) < 1e-4f && (b - a) < 1e-4f;
   };
 
@@ -35,8 +35,8 @@ constexpr bool test_math() {
   assert(near(emb::to_rpm(2 * std::numbers::pi_v<float>, 1), 60.0f));
 
   // rem2pi
-  constexpr float pi = std::numbers::pi_v<float>;
-  constexpr float two_pi = 2 * pi;
+  [[maybe_unused]] constexpr float pi = std::numbers::pi_v<float>;
+  [[maybe_unused]] constexpr float two_pi = 2 * pi;
   assert(near(emb::norm2pi(0.0f), 0.0f));
   assert(near(emb::norm2pi(two_pi + 1.0f), 1.0f));
   assert(near(emb::norm2pi(-1.0f), two_pi - 1.0f));
