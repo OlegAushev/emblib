@@ -37,27 +37,27 @@ constexpr bool test_math() {
   // rem2pi
   constexpr float pi = std::numbers::pi_v<float>;
   constexpr float two_pi = 2 * pi;
-  assert(near(emb::rem2pi(0.0f), 0.0f));
-  assert(near(emb::rem2pi(two_pi + 1.0f), 1.0f));
-  assert(near(emb::rem2pi(-1.0f), two_pi - 1.0f));
+  assert(near(emb::norm2pi(0.0f), 0.0f));
+  assert(near(emb::norm2pi(two_pi + 1.0f), 1.0f));
+  assert(near(emb::norm2pi(-1.0f), two_pi - 1.0f));
 
   // rempi
-  assert(near(emb::rempi(0.0f), 0.0f));
-  assert(near(emb::rempi(pi + 0.5f), -pi + 0.5f));
-  assert(near(emb::rempi(-pi + 0.5f), -pi + 0.5f));
+  assert(near(emb::normpi(0.0f), 0.0f));
+  assert(near(emb::normpi(pi + 0.5f), -pi + 0.5f));
+  assert(near(emb::normpi(-pi + 0.5f), -pi + 0.5f));
 
   // rem2pi_fast
-  assert(near(emb::rem2pi_fast(0.0f), 0.0f));
-  assert(near(emb::rem2pi_fast(two_pi), 0.0f));
-  assert(near(emb::rem2pi_fast(-two_pi), 0.0f));
-  assert(near(emb::rem2pi_fast(4 * pi), 0.0f));
-  assert(near(emb::rem2pi_fast(two_pi + 1.0f), 1.0f));
-  assert(near(emb::rem2pi_fast(-1.0f), two_pi - 1.0f));
+  assert(near(emb::norm2pi_fast(0.0f), 0.0f));
+  assert(near(emb::norm2pi_fast(two_pi), 0.0f));
+  assert(near(emb::norm2pi_fast(-two_pi), 0.0f));
+  assert(near(emb::norm2pi_fast(4 * pi), 0.0f));
+  assert(near(emb::norm2pi_fast(two_pi + 1.0f), 1.0f));
+  assert(near(emb::norm2pi_fast(-1.0f), two_pi - 1.0f));
 
   // rempi_fast
-  assert(near(emb::rempi_fast(0.0f), 0.0f));
-  assert(near(emb::rempi_fast(pi + 0.5f), -pi + 0.5f));
-  assert(near(emb::rempi_fast(-pi + 0.5f), -pi + 0.5f));
+  assert(near(emb::normpi_fast(0.0f), 0.0f));
+  assert(near(emb::normpi_fast(pi + 0.5f), -pi + 0.5f));
+  assert(near(emb::normpi_fast(-pi + 0.5f), -pi + 0.5f));
 
   return true;
 }

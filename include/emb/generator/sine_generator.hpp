@@ -50,7 +50,7 @@ public:
 
   EMB_CONSTEXPR void update() {
     phase_ = emb::units::rad_f32(
-        emb::rem2pi(phase_.value() + wfreq_ * update_period_.value())
+        emb::norm2pi(phase_.value() + wfreq_ * update_period_.value())
     );
     output_ = ampl_ * emb::sin(phase_.value()) + bias_;
   }

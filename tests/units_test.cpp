@@ -21,25 +21,25 @@ constexpr bool test_units_conversion() {
   assert(convert_to<deg_f32>(deg1) == deg1);
   assert(convert_to<rad_f32>(deg1) == rad_f32{emb::to_rad(v1)});
 
-  assert(emb::rem360(deg_f32{380.0f}) == deg_f32(20.0f));
-  assert(emb::rem360(deg_f32{-30.0f}) == deg_f32(330.0f));
+  assert(emb::norm360(deg_f32{380.0f}) == deg_f32(20.0f));
+  assert(emb::norm360(deg_f32{-30.0f}) == deg_f32(330.0f));
 
-  assert(emb::rem180(deg_f32{200.0f}) == deg_f32(-160.0f));
-  assert(emb::rem180(deg_f32{-10.0f}) == deg_f32(-10.0f));
+  assert(emb::norm180(deg_f32{200.0f}) == deg_f32(-160.0f));
+  assert(emb::norm180(deg_f32{-10.0f}) == deg_f32(-10.0f));
 
   constexpr auto near = [](float a, float b) {
     return (a - b) < 1e-4f && (b - a) < 1e-4f;
   };
 
   // rem360_fast
-  assert(near(emb::rem360_fast(deg_f32{380.0f}).value(), 20.0f));
-  assert(near(emb::rem360_fast(deg_f32{-30.0f}).value(), 330.0f));
-  assert(near(emb::rem360_fast(deg_f32{360.0f}).value(), 0.0f));
-  assert(near(emb::rem360_fast(deg_f32{720.0f}).value(), 0.0f));
+  assert(near(emb::norm360_fast(deg_f32{380.0f}).value(), 20.0f));
+  assert(near(emb::norm360_fast(deg_f32{-30.0f}).value(), 330.0f));
+  assert(near(emb::norm360_fast(deg_f32{360.0f}).value(), 0.0f));
+  assert(near(emb::norm360_fast(deg_f32{720.0f}).value(), 0.0f));
 
   // rem180_fast
-  assert(near(emb::rem180_fast(deg_f32{200.0f}).value(), -160.0f));
-  assert(near(emb::rem180_fast(deg_f32{-10.0f}).value(), -10.0f));
+  assert(near(emb::norm180_fast(deg_f32{200.0f}).value(), -160.0f));
+  assert(near(emb::norm180_fast(deg_f32{-10.0f}).value(), -10.0f));
 
   float v2{3000.0f};
   [[maybe_unused]] int32_t p{4};

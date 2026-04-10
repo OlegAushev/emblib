@@ -188,7 +188,7 @@ constexpr T to_rpm(T w, P p) {
 }
 
 template<std::floating_point T>
-constexpr T rem2pi(T v) {
+constexpr T norm2pi(T v) {
   constexpr T two_pi = 2 * std::numbers::pi_v<T>;
   v = emb::fmod(v, two_pi);
   if (v < 0) {
@@ -198,12 +198,12 @@ constexpr T rem2pi(T v) {
 }
 
 template<std::floating_point T>
-constexpr T rempi(T v) {
-  return rem2pi(v + std::numbers::pi_v<T>) - std::numbers::pi_v<T>;
+constexpr T normpi(T v) {
+  return norm2pi(v + std::numbers::pi_v<T>) - std::numbers::pi_v<T>;
 }
 
 template<std::floating_point T>
-constexpr T rem2pi_fast(T v) {
+constexpr T norm2pi_fast(T v) {
   constexpr T two_pi = 2 * std::numbers::pi_v<T>;
   constexpr T inv_two_pi = 1 / (2 * std::numbers::pi_v<T>);
 
@@ -214,8 +214,8 @@ constexpr T rem2pi_fast(T v) {
 }
 
 template<std::floating_point T>
-constexpr T rempi_fast(T v) {
-  return rem2pi_fast(v + std::numbers::pi_v<T>) - std::numbers::pi_v<T>;
+constexpr T normpi_fast(T v) {
+  return norm2pi_fast(v + std::numbers::pi_v<T>) - std::numbers::pi_v<T>;
 }
 
 template<typename T>

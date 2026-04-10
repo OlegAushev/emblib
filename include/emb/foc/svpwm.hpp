@@ -12,7 +12,7 @@ namespace foc {
 
 inline std::array<emb::unsigned_pu, 3>
 calculate_svpwm(vec_polar v_s, float v_dc) {
-  v_s.theta = rem2pi(v_s.theta);
+  v_s.theta = norm2pi(v_s.theta);
   v_s.mag = std::clamp<float>(v_s.mag, 0, v_dc / std::numbers::sqrt3_v<float>);
 
   int32_t const sector = static_cast<int32_t>(

@@ -288,27 +288,27 @@ constexpr hz<T> operator/(V lhs, sec<T> rhs) {
 } // namespace units
 
 template<units::unit_of_radians Unit>
-constexpr Unit rem2pi(Unit v) {
-  return Unit{rem2pi(v.value())};
+constexpr Unit norm2pi(Unit v) {
+  return Unit{norm2pi(v.value())};
 }
 
 template<units::unit_of_radians Unit>
-constexpr Unit rempi(Unit v) {
-  return Unit{rempi(v.value())};
+constexpr Unit normpi(Unit v) {
+  return Unit{normpi(v.value())};
 }
 
 template<units::unit_of_radians Unit>
-constexpr Unit rem2pi_fast(Unit v) {
-  return Unit{rem2pi_fast(v.value())};
+constexpr Unit norm2pi_fast(Unit v) {
+  return Unit{norm2pi_fast(v.value())};
 }
 
 template<units::unit_of_radians Unit>
-constexpr Unit rempi_fast(Unit v) {
-  return Unit{rempi_fast(v.value())};
+constexpr Unit normpi_fast(Unit v) {
+  return Unit{normpi_fast(v.value())};
 }
 
 template<units::unit_of_degrees Unit>
-constexpr Unit rem360(Unit v) {
+constexpr Unit norm360(Unit v) {
   using T = Unit::value_type;
   T val = emb::fmod(v.value(), T{360});
   if (val < 0) {
@@ -318,14 +318,14 @@ constexpr Unit rem360(Unit v) {
 }
 
 template<units::unit_of_degrees Unit>
-constexpr Unit rem180(Unit v) {
+constexpr Unit norm180(Unit v) {
   using T = Unit::value_type;
   constexpr Unit offset{T{180}};
-  return rem360(v + offset) - offset;
+  return norm360(v + offset) - offset;
 }
 
 template<units::unit_of_degrees Unit>
-constexpr Unit rem360_fast(Unit v) {
+constexpr Unit norm360_fast(Unit v) {
   using T = Unit::value_type;
   constexpr T inv_360 = T{1} / T{360};
   T norm = v.value() * inv_360;
@@ -335,10 +335,10 @@ constexpr Unit rem360_fast(Unit v) {
 }
 
 template<units::unit_of_degrees Unit>
-constexpr Unit rem180_fast(Unit v) {
+constexpr Unit norm180_fast(Unit v) {
   using T = Unit::value_type;
   constexpr Unit offset{T{180}};
-  return rem360_fast(v + offset) - offset;
+  return norm360_fast(v + offset) - offset;
 }
 
 } // namespace emb
