@@ -299,28 +299,18 @@ constexpr Unit rempi(Unit v) {
 
 template<units::unit_of_degrees Unit>
 constexpr Unit rem360(Unit v) {
-  using value_type = Unit::value_type;
-  value_type v_ = emb::fmod(
-      v.value(),
-      to_deg(2 * std::numbers::pi_v<value_type>)
-  );
-  if (v_ < 0) {
-    v_ += to_deg(2 * std::numbers::pi_v<value_type>);
-  }
-  return Unit{v_};
+  using T = Unit::value_type;
+  constexpr T inv_360 = T{1} / T{360};
+  T norm = v.value() * inv_360;
+  norm -= static_cast<T>(static_cast<int32_t>(norm) - (norm < T{0}));
+  return Unit{norm * T{360}};
 }
 
 template<units::unit_of_degrees Unit>
 constexpr Unit rem180(Unit v) {
-  using value_type = Unit::value_type;
-  value_type v_ = emb::fmod(
-      v.value() + to_deg(std::numbers::pi_v<value_type>),
-      to_deg(2 * std::numbers::pi_v<value_type>)
-  );
-  if (v_ < 0) {
-    v_ += to_deg(2 * std::numbers::pi_v<value_type>);
-  }
-  return Unit{v_ - to_deg(std::numbers::pi_v<value_type>)};
+  using T = Unit::value_type;
+  constexpr Unit offset{T{180}};
+  return rem360(v + offset) - offset;
 }
 
 } // namespace emb

@@ -189,20 +189,17 @@ constexpr T to_rpm(T w, P p) {
 
 template<std::floating_point T>
 constexpr T rem2pi(T v) {
-  v = emb::fmod(v, 2 * std::numbers::pi_v<T>);
-  if (v < 0) {
-    v += 2 * std::numbers::pi_v<T>;
-  }
-  return v;
+  constexpr T two_pi = 2 * std::numbers::pi_v<T>;
+  constexpr T inv_two_pi = 1 / (2 * std::numbers::pi_v<T>);
+
+  T norm = v * inv_two_pi;
+  norm = norm - static_cast<T>(static_cast<int32_t>(norm) - (norm < T{0}));
+  return norm * two_pi;
 }
 
 template<std::floating_point T>
 constexpr T rempi(T v) {
-  v = emb::fmod(v + std::numbers::pi_v<T>, 2 * std::numbers::pi_v<T>);
-  if (v < 0) {
-    v += 2 * std::numbers::pi_v<T>;
-  }
-  return v - std::numbers::pi_v<T>;
+  return rem2pi(v + std::numbers::pi_v<T>) - std::numbers::pi_v<T>;
 }
 
 template<typename T>
