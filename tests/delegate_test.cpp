@@ -17,17 +17,22 @@ public:
   constexpr foo(int a, int b) : a_(a), b_(b) {}
 
   constexpr int add(int c) { return a_ + b_ + c; }
+
+  constexpr int sum() const { return a_ + b_; }
 };
 
 constexpr bool test_delegate() {
-  // [[maybe_unused]] auto add_delegate =
-  //     emb::delegate<int(int, int)>::bind<&add>();
-  // assert(add_delegate(1, 2) == 3);
+  [[maybe_unused]] auto add_delegate =
+      emb::delegate<int(int, int)>::bind<&add>();
+  assert(add_delegate(1, 2) == 3);
 
-  // [[maybe_unused]] static foo f(-1, 5);
-  // [[maybe_unused]] auto foo_delegate =
-  //     emb::delegate<int(int)>::bind<&foo::add>(&f);
-  // assert(foo_delegate(6) == 10);
+  [[maybe_unused]] foo f(-1, 5);
+  [[maybe_unused]] auto foo_add_delegate =
+      emb::delegate<int(int)>::bind<&foo::add>(&f);
+  assert(foo_add_delegate(6) == 10);
+  [[maybe_unused]] auto foo_sum_delegate =
+      emb::delegate<int()>::bind<&foo::sum>(&f);
+  assert(foo_sum_delegate() == 4);
 
   return true;
 }
