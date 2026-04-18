@@ -1,7 +1,6 @@
 #pragma once
 
 #include <concepts>
-#include <tuple>
 #include <type_traits>
 
 #include <cstddef>
@@ -46,8 +45,7 @@ struct typelist_at;
 
 template<typename... Ts, size_t I>
 struct typelist_at<typelist<Ts...>, I> {
-  static_assert(I < sizeof...(Ts), "typelist_at: index out of range");
-  using type = std::tuple_element_t<I, std::tuple<Ts...>>;
+  using type = Ts...[I];
 };
 
 template<typename List, size_t I>
