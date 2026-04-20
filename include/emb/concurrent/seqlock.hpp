@@ -5,6 +5,13 @@
 
 namespace emb {
 
+// Lock-free primitive for sharing data between ISR and thread context
+// (or between two priority levels) without disabling interrupts.
+// Uses signal fences — not suitable for multi-core (SMP) systems.
+// Constraints:
+//   - exactly one writer, multiple writers need separate mutual exclusion
+//   - reader priority must not be higher than writer priority
+//   - protected data must be safe to read in a torn/inconsistent state
 template <typename T>
   requires(std::is_trivially_copyable_v<T>)
 class seqlock {
