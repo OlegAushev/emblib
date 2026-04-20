@@ -32,6 +32,9 @@ struct B {};
 struct C {};
 
 // size
+static_assert(typelist<>::size == 0);
+static_assert(typelist<A>::size == 1);
+static_assert(typelist<A, B, C>::size == 3);
 static_assert(typelist_size_v<typelist<>> == 0);
 static_assert(typelist_size_v<typelist<A>> == 1);
 static_assert(typelist_size_v<typelist<A, B, C>> == 3);

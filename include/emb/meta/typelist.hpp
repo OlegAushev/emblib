@@ -8,7 +8,9 @@
 namespace emb {
 
 template<typename... Ts>
-struct typelist {};
+struct typelist {
+  static constexpr size_t size = sizeof...(Ts);
+};
 
 // -- size --
 
