@@ -5,9 +5,9 @@
 
 namespace emb {
 
-/// Wait-free double buffer for single-writer / multi-reader
-///
-/// Invariant: writer must not commit more than once during a single load().
+// Wait-free double buffer for single-writer / multi-reader
+//
+// Invariant: writer must not commit more than once during a single load().
 template <typename T>
   requires(std::is_trivially_copyable_v<T>)
 class double_buffer {

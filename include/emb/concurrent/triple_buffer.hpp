@@ -5,11 +5,11 @@
 
 namespace emb {
 
-/// Wait-free triple buffer for single-writer / single-reader.
-///
-/// No constraint on writer commit rate — the reader always gets
-/// the latest committed value without torn reads.
-/// Requires hardware atomics (LDREX/STREX on Cortex-M).
+// Wait-free triple buffer for single-writer / single-reader.
+//
+// No constraint on writer commit rate — the reader always gets
+// the latest committed value without torn reads.
+// Requires hardware atomics (LDREX/STREX on Cortex-M).
 template <typename T>
   requires(std::is_trivially_copyable_v<T>)
 class triple_buffer {
