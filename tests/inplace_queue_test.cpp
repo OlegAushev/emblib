@@ -1,13 +1,14 @@
 #ifdef __cpp_constexpr
 
-#include <emb/queue.hpp>
+#include <emb/inplace_queue.hpp>
 
 namespace emb {
 namespace internal {
 namespace tests {
 
-constexpr bool test_queue(queue_type auto q)
-  requires(std::same_as<typename decltype(q)::value_type, int>) {
+template<typename Q>
+constexpr bool test_inplace_queue(Q q)
+  requires(std::same_as<typename Q::value_type, int>) {
   int const cap{static_cast<int>(q.capacity())};
 
   assert(q.empty());
@@ -83,21 +84,10 @@ constexpr bool test_queue(queue_type auto q)
   return true;
 }
 
-static_assert(test_queue(emb::queue<int, 1>{}));
-static_assert(test_queue(emb::queue<int>{1}));
-static_assert(test_queue(emb::v1::queue<int, 1>{}));
-
-static_assert(test_queue(emb::queue<int, 2>{}));
-static_assert(test_queue(emb::queue<int>{2}));
-static_assert(test_queue(emb::v1::queue<int, 2>{}));
-
-static_assert(test_queue(emb::queue<int, 5>{}));
-static_assert(test_queue(emb::queue<int>{5}));
-static_assert(test_queue(emb::v1::queue<int, 5>{}));
-
-static_assert(test_queue(emb::queue<int, 10>{}));
-static_assert(test_queue(emb::queue<int>{10}));
-static_assert(test_queue(emb::v1::queue<int, 10>{}));
+static_assert(test_inplace_queue(emb::inplace_queue<int, 1>{}));
+static_assert(test_inplace_queue(emb::inplace_queue<int, 2>{}));
+static_assert(test_inplace_queue(emb::inplace_queue<int, 5>{}));
+static_assert(test_inplace_queue(emb::inplace_queue<int, 10>{}));
 
 } // namespace tests
 } // namespace internal
