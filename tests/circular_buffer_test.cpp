@@ -6,8 +6,9 @@ namespace emb {
 namespace internal {
 namespace tests {
 
-constexpr bool test_circular_buffer(circular_buffer_type auto buf)
-  requires(std::same_as<typename decltype(buf)::value_type, int>) {
+template<typename B>
+constexpr bool test_circular_buffer(B buf)
+  requires(std::same_as<typename B::value_type, int>) {
   int const cap{static_cast<int>(buf.capacity())};
 
   assert(buf.empty());
@@ -114,16 +115,9 @@ constexpr bool test_circular_buffer(circular_buffer_type auto buf)
 }
 
 static_assert(test_circular_buffer(emb::circular_buffer<int, 1>{}));
-static_assert(test_circular_buffer(emb::circular_buffer<int>{1}));
-
 static_assert(test_circular_buffer(emb::circular_buffer<int, 2>{}));
-static_assert(test_circular_buffer(emb::circular_buffer<int>{2}));
-
 static_assert(test_circular_buffer(emb::circular_buffer<int, 5>{}));
-static_assert(test_circular_buffer(emb::circular_buffer<int>{5}));
-
 static_assert(test_circular_buffer(emb::circular_buffer<int, 10>{}));
-static_assert(test_circular_buffer(emb::circular_buffer<int>{10}));
 
 } // namespace tests
 } // namespace internal

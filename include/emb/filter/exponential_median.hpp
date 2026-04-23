@@ -41,7 +41,9 @@ public:
   constexpr void push(value_type const& input_v) {
     window_.push_back(input_v);
     std::array<value_type, window_size> window_sorted = {};
-    std::copy(window_.begin(), window_.end(), window_sorted.begin());
+    for (size_t i = 0; i < window_.size(); ++i) {
+      window_sorted[i] = window_[i];
+    }
     std::sort(window_sorted.begin(), window_sorted.end());
     value_type const median_v = window_sorted[window_size / 2];
 

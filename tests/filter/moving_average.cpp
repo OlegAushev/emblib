@@ -47,7 +47,10 @@ constexpr bool test_moving_average_filter(
     idx = (idx + 1) % input.size();
   }
 
-  sum = std::accumulate(filter.data().begin(), filter.data().end(), value_type{0});
+  sum = value_type{0};
+  for (size_t i = 0; i < filter.data().size(); ++i) {
+    sum += filter.data()[i];
+  }
   assert(filter.output() == sum / static_cast<divider_type>(capacity));
 
   filter.reset();
