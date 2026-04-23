@@ -144,7 +144,7 @@ public:
   }
 
   constexpr void push(value_type const& value)
-    requires std::is_copy_constructible_v<value_type> {
+    requires std::is_copy_constructible_v<T> {
     ASSUME(!full());
     std::construct_at(slot_ptr(size_), value);
     ++size_;
@@ -166,7 +166,7 @@ public:
   }
 
   [[nodiscard]] constexpr bool try_push(value_type const& value)
-    requires std::is_copy_constructible_v<value_type> {
+    requires std::is_copy_constructible_v<T> {
     if (full()) return false;
     push(value);
     return true;
