@@ -9,7 +9,7 @@
 
 namespace emb {
 
-template<typename T, size_t Capacity>
+template<typename T, std::size_t Capacity>
 class inplace_queue;
 
 template<typename T, size_t Capacity>
@@ -19,7 +19,7 @@ template<typename T, size_t Capacity>
 class inplace_queue<T, Capacity> {
 public:
   using value_type = T;
-  using size_type = size_t;
+  using size_type = std::size_t;
   using reference = value_type&;
   using const_reference = value_type const&;
   using pointer = value_type*;
