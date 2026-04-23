@@ -1,7 +1,8 @@
 #pragma once
 
+#include <emb/assert.hpp>
+
 #include <array>
-#include <cassert>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -63,26 +64,36 @@ public:
     return size_;
   }
 
-  [[nodiscard]] constexpr const_reference front() const {
-    assert(!empty());
+  [[nodiscard]] constexpr reference front() {
+    ASSUME(!empty());
     return data_[front_];
   }
 
+  [[nodiscard]] constexpr const_reference front() const {
+    ASSUME(!empty());
+    return data_[front_];
+  }
+
+  [[nodiscard]] constexpr reference back() {
+    ASSUME(!empty());
+    return data_[index_of(size_ - 1)];
+  }
+
   [[nodiscard]] constexpr const_reference back() const {
-    assert(!empty());
+    ASSUME(!empty());
     return data_[index_of(size_ - 1)];
   }
 
   constexpr void push(value_type const& value)
     requires std::is_copy_assignable_v<value_type> {
-    assert(!full());
+    ASSUME(!full());
     data_[index_of(size_)] = value;
     ++size_;
   }
 
   constexpr void push(value_type&& value)
     requires std::is_move_assignable_v<value_type> {
-    assert(!full());
+    ASSUME(!full());
     data_[index_of(size_)] = std::move(value);
     ++size_;
   }
@@ -90,7 +101,7 @@ public:
   template<typename... Args>
   constexpr void emplace(Args&&... args)
     requires std::is_constructible_v<value_type, Args...> {
-    assert(!full());
+    ASSUME(!full());
     std::construct_at(&data_[index_of(size_)], std::forward<Args>(args)...);
     ++size_;
   }
@@ -110,7 +121,7 @@ public:
   }
 
   constexpr void pop() {
-    assert(!empty());
+    ASSUME(!empty());
     front_ = (front_ + 1) % capacity_;
     --size_;
   }
@@ -123,14 +134,14 @@ public:
   }
 };
 
-template<typename T, size_t Capacity>
+template<typename T, std::size_t Capacity>
   requires(!std::is_default_constructible_v<T>
            || !std::is_trivially_destructible_v<T>)
        && (Capacity > 0)
 class inplace_queue<T, Capacity> {
 public:
   using value_type = T;
-  using size_type = size_t;
+  using size_type = std::size_t;
   using reference = value_type&;
   using const_reference = value_type const&;
   using pointer = value_type*;
@@ -141,6 +152,7 @@ private:
   union slot {
     no_value_t no_value;
     value_type value;
+    constexpr slot() : no_value{} {}
     constexpr ~slot() {}
   };
 
@@ -244,26 +256,36 @@ public:
     return size_;
   }
 
-  [[nodiscard]] constexpr const_reference front() const {
-    assert(!empty());
+  [[nodiscard]] constexpr reference front() {
+    ASSUME(!empty());
     return *slot_ptr(front_);
   }
 
+  [[nodiscard]] constexpr const_reference front() const {
+    ASSUME(!empty());
+    return *slot_ptr(front_);
+  }
+
+  [[nodiscard]] constexpr reference back() {
+    ASSUME(!empty());
+    return *slot_ptr(index_of(size_ - 1));
+  }
+
   [[nodiscard]] constexpr const_reference back() const {
-    assert(!empty());
+    ASSUME(!empty());
     return *slot_ptr(index_of(size_ - 1));
   }
 
   constexpr void push(value_type const& value)
     requires std::is_copy_constructible_v<value_type> {
-    assert(!full());
+    ASSUME(!full());
     std::construct_at(slot_ptr(index_of(size_)), value);
     ++size_;
   }
 
   constexpr void push(value_type&& value)
     requires std::is_move_constructible_v<T> {
-    assert(!full());
+    ASSUME(!full());
     std::construct_at(slot_ptr(index_of(size_)), std::move(value));
     ++size_;
   }
@@ -271,7 +293,7 @@ public:
   template<typename... Args>
   constexpr void emplace(Args&&... args)
     requires std::is_constructible_v<T, Args...> {
-    assert(!full());
+    ASSUME(!full());
     std::construct_at(slot_ptr(index_of(size_)), std::forward<Args>(args)...);
     ++size_;
   }
@@ -291,7 +313,7 @@ public:
   }
 
   constexpr void pop() {
-    assert(!empty());
+    ASSUME(!empty());
     std::destroy_at(slot_ptr(front_));
     front_ = (front_ + 1) % capacity_;
     --size_;
