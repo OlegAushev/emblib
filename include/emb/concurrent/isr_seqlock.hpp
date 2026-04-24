@@ -16,7 +16,8 @@ namespace emb {
 template <typename T>
   requires(std::is_trivially_copyable_v<T>)
 class isr_seqlock {
-  uint32_t volatile seq_ = 0;
+  using seq_type = std::atomic_unsigned_lock_free::value_type;
+  seq_type volatile seq_ = 0;
   T value_{};
 public:
   isr_seqlock() = default;
@@ -24,7 +25,7 @@ public:
   isr_seqlock& operator=(isr_seqlock const&) = delete;
 
   void store(T const& desired) {
-    uint32_t s = seq_;
+    seq_type s = seq_;
     seq_ = s + 1;
     std::atomic_signal_fence(std::memory_order::release);
     value_ = desired;
@@ -34,7 +35,7 @@ public:
 
   template <typename F>
   void update(F&& f) {
-    uint32_t s = seq_;
+    seq_type s = seq_;
     seq_ = s + 1;
     std::atomic_signal_fence(std::memory_order::release);
     value_ = std::forward<F>(f)(value_);
@@ -44,7 +45,7 @@ public:
 
   T load() const {
     T snapshot;
-    uint32_t s1, s2;
+    seq_type s1, s2;
     do {
       s1 = seq_;
       std::atomic_signal_fence(std::memory_order::acquire);
