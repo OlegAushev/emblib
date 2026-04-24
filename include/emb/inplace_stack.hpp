@@ -182,18 +182,11 @@ public:
   }
 
   [[nodiscard]] constexpr std::optional<value_type> try_pop()
-    requires std::is_move_constructible_v<T> || std::is_copy_constructible_v<T>
-  {
+    requires std::is_move_constructible_v<T> {
     if (empty()) return std::nullopt;
-    if constexpr (std::is_move_constructible_v<T>) {
-      std::optional<value_type> result{std::move(*slot_ptr(size_ - 1))};
-      pop();
-      return result;
-    } else {
-      std::optional<value_type> result{*slot_ptr(size_ - 1)};
-      pop();
-      return result;
-    }
+    std::optional<value_type> result{std::move(*slot_ptr(size_ - 1))};
+    pop();
+    return result;
   }
 
 private:

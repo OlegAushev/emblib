@@ -243,34 +243,19 @@ public:
   }
 
   [[nodiscard]] constexpr std::optional<value_type> try_pop_front()
-    requires std::is_move_constructible_v<T> || std::is_copy_constructible_v<T>
-  {
+    requires std::is_move_constructible_v<T> {
     if (empty()) return std::nullopt;
-    if constexpr (std::is_move_constructible_v<T>) {
-      std::optional<value_type> result{std::move(*slot_ptr(front_))};
-      pop_front();
-      return result;
-    } else {
-      std::optional<value_type> result{*slot_ptr(front_)};
-      pop_front();
-      return result;
-    }
+    std::optional<value_type> result{std::move(*slot_ptr(front_))};
+    pop_front();
+    return result;
   }
 
   [[nodiscard]] constexpr std::optional<value_type> try_pop_back()
-    requires std::is_move_constructible_v<T> || std::is_copy_constructible_v<T>
-  {
+    requires std::is_move_constructible_v<T> {
     if (empty()) return std::nullopt;
-    size_type const back_idx = index_of(size_ - 1);
-    if constexpr (std::is_move_constructible_v<T>) {
-      std::optional<value_type> result{std::move(*slot_ptr(back_idx))};
-      pop_back();
-      return result;
-    } else {
-      std::optional<value_type> result{*slot_ptr(back_idx)};
-      pop_back();
-      return result;
-    }
+    std::optional<value_type> result{std::move(*slot_ptr(index_of(size_ - 1)))};
+    pop_back();
+    return result;
   }
 
   constexpr void fill(value_type const& value)
