@@ -104,7 +104,7 @@ public:
   [[nodiscard]] size_type size() const {
     auto const f = front_.load(std::memory_order::acquire);
     auto const b = back_.load(std::memory_order::acquire);
-    return static_cast<size_type>(b - f);
+    return size_type(b - f);
   }
 
   // Producer-side. Returns false if the queue is full.
@@ -150,7 +150,7 @@ public:
 
 private:
   constexpr size_type index_of(atomic_index_type::value_type abs_idx) const {
-    return static_cast<size_type>(abs_idx) & mask_;
+    return size_type(abs_idx) & mask_;
   }
 
   constexpr pointer slot_ptr(size_type i) {
