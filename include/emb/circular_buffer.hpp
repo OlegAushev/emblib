@@ -167,12 +167,12 @@ public:
 
   constexpr void push_back(value_type const& value)
     requires std::is_copy_constructible_v<T> {
-    write_back_with([&](pointer p) { std::construct_at(p, value); });
+    emplace_back(value);
   }
 
   constexpr void push_back(value_type&& value)
     requires std::is_move_constructible_v<T> {
-    write_back_with([&](pointer p) { std::construct_at(p, std::move(value)); });
+    emplace_back(std::move(value));
   }
 
   template<typename... Args>
@@ -185,14 +185,12 @@ public:
 
   constexpr void push_front(value_type const& value)
     requires std::is_copy_constructible_v<T> {
-    write_front_with([&](pointer p) { std::construct_at(p, value); });
+    emplace_front(value);
   }
 
   constexpr void push_front(value_type&& value)
     requires std::is_move_constructible_v<T> {
-    write_front_with([&](pointer p) {
-      std::construct_at(p, std::move(value));
-    });
+    emplace_front(std::move(value));
   }
 
   template<typename... Args>

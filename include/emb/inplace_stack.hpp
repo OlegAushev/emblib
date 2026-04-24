@@ -145,16 +145,12 @@ public:
 
   constexpr void push(value_type const& value)
     requires std::is_copy_constructible_v<T> {
-    ASSUME(!full());
-    std::construct_at(slot_ptr(size_), value);
-    ++size_;
+    emplace(value);
   }
 
   constexpr void push(value_type&& value)
     requires std::is_move_constructible_v<T> {
-    ASSUME(!full());
-    std::construct_at(slot_ptr(size_), std::move(value));
-    ++size_;
+    emplace(std::move(value));
   }
 
   template<typename... Args>
