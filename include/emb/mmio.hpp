@@ -91,5 +91,11 @@ void modify(T volatile& reg, First first, Rest... rest) {
   reg = static_cast<T>((reg & ~mask_or) | (first.encoded | ... | rest.encoded));
 }
 
+template<some_register T>
+void set_or_clear(T volatile& reg, mask_type<T> mask, bool cond) {
+  if (cond) set(reg, mask);
+  else      clear(reg, mask);
+}
+
 } // namespace mmio
 } // namespace emb
