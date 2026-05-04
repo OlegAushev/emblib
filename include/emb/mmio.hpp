@@ -11,57 +11,71 @@ namespace emb {
 namespace mmio {
 
 template<typename T>
-concept some_register =
-    emb::same_as_any<T, uint8_t, uint16_t, uint32_t, uint64_t>;
+concept some_register = emb::
+    same_as_any<std::remove_cv_t<T>, uint8_t, uint16_t, uint32_t, uint64_t>;
 
 template<typename T>
-using mask_type = std::type_identity_t<T>;
+using mask_type = std::type_identity_t<std::remove_cv_t<T>>;
 
 template<some_register T>
-[[nodiscard]] auto read(T const volatile& reg, mask_type<T> mask) -> T {
-  return static_cast<T>((reg & mask) >> std::countr_zero(mask));
+[[nodiscard]] auto read(T const& reg, mask_type<T> mask)
+    -> std::remove_cv_t<T> {
+  using U = std::remove_cv_t<T>;
+  return static_cast<U>((reg & mask) >> std::countr_zero(mask));
 }
 
 template<some_register T>
-void write(T volatile& reg, mask_type<T> mask, mask_type<T> value) {
-  reg = static_cast<T>(
+  requires(!std::is_const_v<T>)
+void write(T& reg, mask_type<T> mask, mask_type<T> value) {
+  using U = std::remove_cv_t<T>;
+  reg = static_cast<U>(
       (reg & ~mask) | ((value << std::countr_zero(mask)) & mask)
   );
 }
 
 template<some_register T>
-void set(T volatile& reg, mask_type<T> mask) {
-  reg = static_cast<T>(reg | mask);
+  requires(!std::is_const_v<T>)
+void set(T& reg, mask_type<T> mask) {
+  using U = std::remove_cv_t<T>;
+  reg = static_cast<U>(reg | mask);
 }
 
 template<some_register T>
-void clear(T volatile& reg, mask_type<T> mask) {
-  reg = static_cast<T>(reg & ~mask);
+  requires(!std::is_const_v<T>)
+void clear(T& reg, mask_type<T> mask) {
+  using U = std::remove_cv_t<T>;
+  reg = static_cast<U>(reg & ~mask);
 }
 
 template<some_register T>
-void toggle(T volatile& reg, mask_type<T> mask) {
-  reg = static_cast<T>(reg ^ mask);
+  requires(!std::is_const_v<T>)
+void toggle(T& reg, mask_type<T> mask) {
+  using U = std::remove_cv_t<T>;
+  reg = static_cast<U>(reg ^ mask);
 }
 
 template<some_register T>
-[[nodiscard]] auto test_any(T const volatile& reg, mask_type<T> mask) -> bool {
+[[nodiscard]] auto test_any(T const& reg, mask_type<T> mask) -> bool {
   return (reg & mask) != 0;
 }
 
 template<some_register T>
-[[nodiscard]] auto test_all(T const volatile& reg, mask_type<T> mask) -> bool {
+[[nodiscard]] auto test_all(T const& reg, mask_type<T> mask) -> bool {
   return (reg & mask) == mask;
 }
 
 template<some_register T>
-void clear_w1(T volatile& reg, mask_type<T> mask) {
-  reg = static_cast<T>(mask);
+  requires(!std::is_const_v<T>)
+void clear_w1(T& reg, mask_type<T> mask) {
+  using U = std::remove_cv_t<T>;
+  reg = static_cast<U>(mask);
 }
 
 template<some_register T>
-void clear_w0(T volatile& reg, mask_type<T> mask) {
-  reg = static_cast<T>(~mask);
+  requires(!std::is_const_v<T>)
+void clear_w0(T& reg, mask_type<T> mask) {
+  using U = std::remove_cv_t<T>;
+  reg = static_cast<U>(~mask);
 }
 
 template<auto Mask>
@@ -78,21 +92,22 @@ struct bits {
 };
 
 template<some_register T, typename First, typename... Rest>
-void modify(T volatile& reg, First first, Rest... rest) {
-  constexpr auto mask_or = static_cast<T>(
-      (First::mask | ... | Rest::mask)
-  ); // binary fold — ok с пустым Rest
-  constexpr auto mask_sum = static_cast<T>(
-      (static_cast<T>(First::mask) + ... + static_cast<T>(Rest::mask))
+  requires(!std::is_const_v<T>)
+void modify(T& reg, First first, Rest... rest) {
+  using U = std::remove_cv_t<T>;
+  constexpr auto mask_or = static_cast<U>((First::mask | ... | Rest::mask));
+  constexpr auto mask_sum = static_cast<U>(
+      (static_cast<U>(First::mask) + ... + static_cast<U>(Rest::mask))
   );
 
   static_assert(mask_or == mask_sum, "overlapping field masks");
 
-  reg = static_cast<T>((reg & ~mask_or) | (first.encoded | ... | rest.encoded));
+  reg = static_cast<U>((reg & ~mask_or) | (first.encoded | ... | rest.encoded));
 }
 
 template<some_register T>
-void set_or_clear(T volatile& reg, mask_type<T> mask, bool cond) {
+  requires(!std::is_const_v<T>)
+void set_or_clear(T& reg, mask_type<T> mask, bool cond) {
   if (cond) set(reg, mask);
   else      clear(reg, mask);
 }
