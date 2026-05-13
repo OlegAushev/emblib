@@ -146,22 +146,22 @@ public:
   }
 
   [[nodiscard]] constexpr reference front() {
-    ASSUME(!empty());
+    ASSUME(size_ != 0);
     return *slot_ptr(0);
   }
 
   [[nodiscard]] constexpr const_reference front() const {
-    ASSUME(!empty());
+    ASSUME(size_ != 0);
     return *slot_ptr(0);
   }
 
   [[nodiscard]] constexpr reference back() {
-    ASSUME(!empty());
+    ASSUME(size_ != 0);
     return *slot_ptr(size_ - 1);
   }
 
   [[nodiscard]] constexpr const_reference back() const {
-    ASSUME(!empty());
+    ASSUME(size_ != 0);
     return *slot_ptr(size_ - 1);
   }
 
@@ -210,7 +210,7 @@ public:
   template<typename... Args>
   constexpr void emplace_back(Args&&... args)
     requires std::is_constructible_v<T, Args...> {
-    ASSUME(!full());
+    ASSUME(size_ != capacity_);
     std::construct_at(slot_ptr(size_), std::forward<Args>(args)...);
     ++size_;
   }
@@ -230,7 +230,7 @@ public:
   }
 
   constexpr void pop_back() {
-    ASSUME(!empty());
+    ASSUME(size_ != 0);
     destroy_slot(size_ - 1);
     --size_;
   }

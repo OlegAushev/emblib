@@ -134,12 +134,12 @@ public:
   }
 
   [[nodiscard]] constexpr reference top() {
-    ASSUME(!empty());
+    ASSUME(size_ != 0);
     return *slot_ptr(size_ - 1);
   }
 
   [[nodiscard]] constexpr const_reference top() const {
-    ASSUME(!empty());
+    ASSUME(size_ != 0);
     return *slot_ptr(size_ - 1);
   }
 
@@ -156,7 +156,7 @@ public:
   template<typename... Args>
   constexpr void emplace(Args&&... args)
     requires std::is_constructible_v<T, Args...> {
-    ASSUME(!full());
+    ASSUME(size_ != capacity_);
     std::construct_at(slot_ptr(size_), std::forward<Args>(args)...);
     ++size_;
   }
@@ -176,7 +176,7 @@ public:
   }
 
   constexpr void pop() {
-    ASSUME(!empty());
+    ASSUME(size_ != 0);
     destroy_slot(size_ - 1);
     --size_;
   }
