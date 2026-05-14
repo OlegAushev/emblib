@@ -3,7 +3,7 @@
 #include <emb/chrono.hpp>
 #include <emb/core.hpp>
 #include <emb/delegate.hpp>
-#include <emb/static_vector.hpp>
+#include <emb/inplace_vector.hpp>
 
 namespace emb {
 namespace scheduler {
@@ -28,8 +28,8 @@ private:
     std::chrono::time_point<emb::chrono::steady_clock> exec_timepoint;
   };
 
-  static inline emb::static_vector<periodic_task, max_simple_tasks> tasks_;
-  static inline emb::static_vector<adaptive_periodic_task, max_adaptive_tasks>
+  static inline emb::inplace_vector<periodic_task, max_simple_tasks> tasks_;
+  static inline emb::inplace_vector<adaptive_periodic_task, max_adaptive_tasks>
       adaptive_tasks_;
 
   static inline std::chrono::time_point<emb::chrono::steady_clock>
