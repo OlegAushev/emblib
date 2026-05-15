@@ -1,13 +1,16 @@
 #pragma once
 
-#include <emb/chrono.hpp>
 #include <emb/core.hpp>
 #include <emb/delegate.hpp>
 #include <emb/inplace_vector.hpp>
 
+#include <chrono>
+
 namespace emb {
 namespace scheduler {
 
+template<typename Clock>
+  requires std::chrono::is_clock_v<Clock>
 class basic_scheduler {
 public:
   class adaptive_task_context;
@@ -19,21 +22,20 @@ private:
   struct periodic_task {
     emb::delegate<void()> func;
     std::chrono::milliseconds period;
-    std::chrono::time_point<emb::chrono::steady_clock> exec_timepoint;
+    Clock::time_point exec_timepoint;
   };
 
   struct adaptive_periodic_task {
     emb::delegate<void(adaptive_task_context)> func;
     std::chrono::milliseconds period;
-    std::chrono::time_point<emb::chrono::steady_clock> exec_timepoint;
+    Clock::time_point exec_timepoint;
   };
 
   static inline emb::inplace_vector<periodic_task, max_simple_tasks> tasks_;
   static inline emb::inplace_vector<adaptive_periodic_task, max_adaptive_tasks>
       adaptive_tasks_;
 
-  static inline std::chrono::time_point<emb::chrono::steady_clock>
-      delayed_task_start_{};
+  static inline Clock::time_point delayed_task_start_{};
   static inline std::chrono::milliseconds delayed_task_delay_{0};
   static inline emb::delegate<void()> delayed_task_;
 
@@ -58,7 +60,7 @@ public:
     tasks_.push_back(
         {emb::delegate<void()>::template bind<F>(),
          period,
-         emb::chrono::steady_clock::now()}
+         Clock::now()}
     );
   }
 
@@ -67,7 +69,7 @@ public:
     tasks_.push_back(
         {emb::delegate<void()>::template bind<M>(obj),
          period,
-         emb::chrono::steady_clock::now()}
+         Clock::now()}
     );
   }
 
@@ -76,7 +78,7 @@ public:
     tasks_.push_back(
         {emb::delegate<void()>::template bind<M>(obj),
          period,
-         emb::chrono::steady_clock::now()}
+         Clock::now()}
     );
   }
 
@@ -85,7 +87,7 @@ public:
     adaptive_tasks_.push_back(
         {emb::delegate<void(adaptive_task_context)>::template bind<F>(),
          period,
-         emb::chrono::steady_clock::now()}
+         Clock::now()}
     );
   }
 
@@ -94,7 +96,7 @@ public:
     adaptive_tasks_.push_back(
         {emb::delegate<void(adaptive_task_context)>::template bind<M>(obj),
          period,
-         emb::chrono::steady_clock::now()}
+         Clock::now()}
     );
   }
 
@@ -104,7 +106,7 @@ public:
     adaptive_tasks_.push_back(
         {emb::delegate<void(adaptive_task_context)>::template bind<M>(obj),
          period,
-         emb::chrono::steady_clock::now()}
+         Clock::now()}
     );
   }
 
@@ -112,14 +114,14 @@ public:
   static void add_delayed_task(std::chrono::milliseconds delay) {
     delayed_task_ = emb::delegate<void()>::template bind<F>();
     delayed_task_delay_ = delay;
-    delayed_task_start_ = emb::chrono::steady_clock::now();
+    delayed_task_start_ = Clock::now();
   }
 
   template<auto M, typename T>
   static void add_delayed_task(T* obj, std::chrono::milliseconds delay) {
     delayed_task_ = emb::delegate<void()>::template bind<M>(obj);
     delayed_task_delay_ = delay;
-    delayed_task_start_ = emb::chrono::steady_clock::now();
+    delayed_task_start_ = Clock::now();
   }
 
   template<auto M, typename T>
@@ -127,11 +129,11 @@ public:
                                std::chrono::milliseconds delay) {
     delayed_task_ = emb::delegate<void()>::template bind<M>(obj);
     delayed_task_delay_ = delay;
-    delayed_task_start_ = emb::chrono::steady_clock::now();
+    delayed_task_start_ = Clock::now();
   }
 
   static void run() {
-    auto now = emb::chrono::steady_clock::now();
+    auto now = Clock::now();
 
     for (size_t i = 0; i < tasks_.size(); ++i) {
       if (now >= tasks_[i].exec_timepoint + tasks_[i].period) {
@@ -157,7 +159,7 @@ public:
   }
 
   static void reset() {
-    auto now = emb::chrono::steady_clock::now();
+    auto now = Clock::now();
     for (size_t i = 0; i < tasks_.size(); ++i) {
       tasks_[i].exec_timepoint = now;
     }
