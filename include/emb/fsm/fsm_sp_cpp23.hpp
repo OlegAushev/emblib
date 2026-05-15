@@ -13,15 +13,15 @@ namespace fsm {
 
 namespace sp1 {
 
-template<typename Object, typename State, typename LockGuard = void*>
+template<typename Clock, typename Object, typename State, typename LockGuard = void*>
 class abstract_state {
   static_assert(std::is_enum_v<State>);
 private:
   State const id_;
-  std::chrono::time_point<emb::chrono::steady_clock> enter_timepoint_;
+  std::chrono::time_point<Clock> enter_timepoint_;
 protected:
   abstract_state(State id)
-      : id_{id}, enter_timepoint_{emb::chrono::steady_clock::now()} {}
+      : id_{id}, enter_timepoint_{Clock::now()} {}
 
   static void change_state(Object* object, State state) {
     [[maybe_unused]] LockGuard lock_guard;
@@ -29,7 +29,7 @@ protected:
     State const next_state{state};
     object->state_->finalize(object, next_state);
     object->change_state(state);
-    object->state_->enter_timepoint_ = emb::chrono::steady_clock::now();
+    object->state_->enter_timepoint_ = Clock::now();
     object->state_->initiate(object, prev_state);
   }
 
@@ -41,7 +41,7 @@ public:
   State id() const { return id_; }
 
   std::chrono::milliseconds time_since_enter() const {
-    return emb::chrono::steady_clock::now() - enter_timepoint_;
+    return Clock::now() - enter_timepoint_;
   }
 };
 
@@ -78,6 +78,7 @@ public:
 namespace sp2 {
 
 template<
+    typename Clock,
     typename DerivedContext,
     typename StateEnum,
     typename BaseState,
@@ -87,7 +88,7 @@ class abstract_fsm {
 private:
   std::array<BaseState*, StatesNumber> states_;
   BaseState* current_state_;
-  std::chrono::time_point<emb::chrono::steady_clock> enter_timepoint_;
+  std::chrono::time_point<Clock> enter_timepoint_;
 public:
   template<typename Event>
   constexpr void dispatch(Event event) {
@@ -98,7 +99,7 @@ public:
       StateEnum const prev_state{state()};
       current_state_->on_exit(context, *next_state);
       current_state_ = states_[std::to_underlying(*next_state)];
-      enter_timepoint_ = emb::chrono::steady_clock::now();
+      enter_timepoint_ = Clock::now();
       current_state_->on_enter(context, prev_state);
     }
   }
@@ -108,7 +109,7 @@ public:
       states_[i] = BaseState::create(static_cast<StateEnum>(i));
     }
     current_state_ = states_[std::to_underlying(init_state)];
-    enter_timepoint_ = emb::chrono::steady_clock::now();
+    enter_timepoint_ = Clock::now();
   }
 
   virtual ~abstract_fsm() {
@@ -120,7 +121,7 @@ public:
   StateEnum state() const { return current_state_->id(); }
 
   std::chrono::milliseconds time_since_state_enter() const {
-    return emb::chrono::steady_clock::now() - enter_timepoint_;
+    return Clock::now() - enter_timepoint_;
   }
 };
 

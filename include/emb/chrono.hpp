@@ -5,56 +5,46 @@
 namespace emb {
 namespace chrono {
 
-class steady_clock {
-public:
-  using duration = std::chrono::milliseconds;
-  using rep = duration::rep;
-  using period = duration::period;
-  using time_point = std::chrono::time_point<steady_clock, duration>;
-  static constexpr bool is_steady = true;
-public:
-  static std::chrono::time_point<steady_clock> now();
-};
-
-static_assert(std::chrono::is_clock_v<steady_clock>);
-
+template<typename Clock>
+  requires std::chrono::is_clock_v<Clock>
 class timeout {
 public:
-  using duration = steady_clock::duration;
-  using time_point = steady_clock::time_point;
+  using duration = Clock::duration;
+  using time_point = Clock::time_point;
 private:
   duration duration_;
   time_point start_;
 public:
-  explicit timeout(duration d)
-      : duration_(d), start_(emb::chrono::steady_clock::now()) {}
+  explicit timeout(duration d) : duration_(d), start_(Clock::now()) {}
 
   static timeout infinite() {
     return timeout(duration::max());
   }
 
   bool expired() const {
-    return (emb::chrono::steady_clock::now() - start_) > duration_;
+    return (Clock::now() - start_) > duration_;
   }
 
   duration elapsed() const {
-    return emb::chrono::steady_clock::now() - start_;
+    return Clock::now() - start_;
   }
 
   void reset() {
-    start_ = emb::chrono::steady_clock::now();
+    start_ = Clock::now();
   }
 
   void reset(duration d) {
     duration_ = d;
-    start_ = emb::chrono::steady_clock::now();
+    start_ = Clock::now();
   }
 };
 
+template<typename Clock>
+  requires std::chrono::is_clock_v<Clock>
 class triggered_action {
 public:
-  using duration = steady_clock::duration;
-  using time_point = steady_clock::time_point;
+  using duration = Clock::duration;
+  using time_point = Clock::time_point;
 private:
   bool (*trigger_)();
   duration delay_;
@@ -64,17 +54,17 @@ private:
   time_point trigger_timepoint_;
 public:
   triggered_action(bool (*trigger)(), duration delay, void (*action)())
-      : trigger_{trigger},
-        delay_{delay},
-        action_{action},
-        trigger_detected_{false},
-        trigger_timepoint_{emb::chrono::steady_clock::now()} {
+      : trigger_(trigger),
+        delay_(delay),
+        action_(action),
+        trigger_detected_(false),
+        trigger_timepoint_(Clock::now()) {
     check_and_execute();
   }
 
   void check_and_execute() {
     if (trigger_()) {
-      auto now{emb::chrono::steady_clock::now()};
+      auto now = Clock::now();
       if (!trigger_detected_) {
         trigger_detected_ = true;
         trigger_timepoint_ = now;
