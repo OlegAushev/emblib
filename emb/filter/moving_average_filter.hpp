@@ -8,10 +8,9 @@
 #include <emb/units.hpp>
 
 namespace emb {
-namespace filter {
 
 template<typename T, size_t WindowSize>
-class moving_average {
+class moving_average_filter {
 public:
   using value_type = T;
   using size_type = size_t;
@@ -27,8 +26,9 @@ private:
   value_type init_output_;
   value_type output_;
 public:
-  constexpr explicit moving_average(
-      value_type const& init_output = value_type{})
+  constexpr explicit moving_average_filter(
+      value_type const& init_output = value_type{}
+  )
       : init_output_(init_output) {
     reset();
   }
@@ -44,7 +44,9 @@ public:
     output_ = sum_ / static_cast<divider_type>(data_.size());
   }
 
-  constexpr const_reference output() const { return output_; }
+  constexpr const_reference output() const {
+    return output_;
+  }
 
   constexpr void set_output(value_type const& output_v) {
     data_.clear();
@@ -52,20 +54,23 @@ public:
     output_ = output_v;
   }
 
-  constexpr void reset() { set_output(init_output_); }
+  constexpr void reset() {
+    set_output(init_output_);
+  }
 
-  constexpr underlying_type const& data() const { return data_; }
+  constexpr underlying_type const& data() const {
+    return data_;
+  }
 };
 
 template<typename T>
 struct is_moving_average_filter_type : std::false_type {};
 
 template<typename T, size_t WindowSize>
-struct is_moving_average_filter_type<moving_average<T, WindowSize>>
+struct is_moving_average_filter_type<moving_average_filter<T, WindowSize>>
     : std::true_type {};
 
 template<typename T>
 concept moving_average_filter_type = is_moving_average_filter_type<T>::value;
 
-}
 } // namespace emb

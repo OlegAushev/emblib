@@ -1,13 +1,10 @@
-#ifdef __cpp_constexpr
-
-#include <emb/filter.hpp>
+#include <emb/filter/exponential_filter.hpp>
 #include <emb/units.hpp>
 
-namespace emb {
-namespace tests {
+namespace {
 
 constexpr bool test_exponential_filter(
-    emb::filter::exponential_filter_type auto filter,
+    emb::exponential_filter_type auto filter,
     typename decltype(filter)::value_type init_output
 ) {
   using value_type = decltype(filter)::value_type;
@@ -55,7 +52,7 @@ constexpr bool test_exponential_filter(
 
 // Test with float
 static_assert(test_exponential_filter(
-    emb::filter::exponential<float, emb::units::sec_f32>(
+    emb::exponential_filter<float, emb::units::sec_f32>(
         emb::units::sec_f32{0.01f},
         emb::units::sec_f32{0.1f}
     ),
@@ -63,7 +60,7 @@ static_assert(test_exponential_filter(
 ));
 
 static_assert(test_exponential_filter(
-    emb::filter::exponential<float, emb::units::sec_f32>(
+    emb::exponential_filter<float, emb::units::sec_f32>(
         emb::units::sec_f32{0.01f},
         emb::units::sec_f32{0.1f},
         3.14f
@@ -73,14 +70,11 @@ static_assert(test_exponential_filter(
 
 // Test with units
 static_assert(test_exponential_filter(
-    emb::filter::exponential<emb::units::erad_f32, emb::units::sec_f32>(
+    emb::exponential_filter<emb::units::erad_f32, emb::units::sec_f32>(
         emb::units::sec_f32{0.01f},
         emb::units::sec_f32{0.1f}
     ),
     emb::units::erad_f32{0}
 ));
 
-} // namespace tests
-} // namespace emb
-
-#endif
+} // namespace

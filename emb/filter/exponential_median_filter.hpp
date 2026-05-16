@@ -1,13 +1,16 @@
 #pragma once
 
+#include <emb/circular_buffer.hpp>
+#include <emb/math.hpp>
+
 #include <algorithm>
-#include <utility>
+#include <array>
 
 namespace emb {
-namespace filter {
 
-template<typename T, typename Duration>
-class exponential {
+template<typename T, size_t WindowSize, typename Duration>
+  requires(emb::isodd(WindowSize))
+class exponential_median_filter {
 public:
   using value_type = T;
   using reference = value_type&;
@@ -15,14 +18,16 @@ public:
   using duration_type = Duration;
   using factor_type =
       decltype(std::declval<Duration>() / std::declval<Duration>());
+  static constexpr size_t window_size = WindowSize;
 private:
+  emb::circular_buffer<value_type, window_size> window_;
   duration_type sampling_period_;
   duration_type time_constant_;
   factor_type smooth_factor_;
   value_type init_output_;
   value_type output_;
 public:
-  constexpr exponential(
+  constexpr exponential_median_filter(
       duration_type sampling_period,
       duration_type time_constant,
       value_type const& init_output = value_type()
@@ -33,7 +38,15 @@ public:
   }
 
   constexpr void push(value_type const& input_v) {
-    output_ = output_ + smooth_factor_ * (input_v - output_);
+    window_.push_back(input_v);
+    std::array<value_type, window_size> window_sorted = {};
+    for (size_t i = 0; i < window_.size(); ++i) {
+      window_sorted[i] = window_[i];
+    }
+    std::sort(window_sorted.begin(), window_sorted.end());
+    value_type const median_v = window_sorted[window_size / 2];
+
+    output_ = output_ + smooth_factor_ * (median_v - output_);
   }
 
   constexpr const_reference output() const {
@@ -41,6 +54,7 @@ public:
   }
 
   constexpr void set_output(value_type const& output_v) {
+    window_.fill(output_v);
     output_ = output_v;
   }
 
@@ -74,13 +88,14 @@ public:
 };
 
 template<typename T>
-struct is_exponential_filter_type : std::false_type {};
+struct is_exponential_median_filter_type : std::false_type {};
 
-template<typename T, typename Duration>
-struct is_exponential_filter_type<exponential<T, Duration>> : std::true_type {};
+template<typename T, size_t WindowSize, typename Duration>
+struct is_exponential_median_filter_type<
+    exponential_median_filter<T, WindowSize, Duration>> : std::true_type {};
 
 template<typename T>
-concept exponential_filter_type = is_exponential_filter_type<T>::value;
+concept exponential_median_filter_type =
+    is_exponential_median_filter_type<T>::value;
 
-} // namespace filter
 } // namespace emb

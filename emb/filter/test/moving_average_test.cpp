@@ -1,13 +1,12 @@
-#include <emb/filter.hpp>
+#include <emb/filter/moving_average_filter.hpp>
 #include <emb/units.hpp>
 
 #include <numeric>
 
-namespace emb {
-namespace tests {
+namespace {
 
 constexpr bool test_moving_average_filter(
-    emb::filter::moving_average_filter_type auto filter,
+    emb::moving_average_filter_type auto filter,
     typename decltype(filter)::value_type init_output
 ) {
   using value_type = decltype(filter)::value_type;
@@ -60,35 +59,34 @@ constexpr bool test_moving_average_filter(
 }
 
 static_assert(
-    test_moving_average_filter(emb::filter::moving_average<int, 1>{}, 0)
+    test_moving_average_filter(emb::moving_average_filter<int, 1>{}, 0)
 );
 static_assert(
-    test_moving_average_filter(emb::filter::moving_average<int, 2>{}, 0)
+    test_moving_average_filter(emb::moving_average_filter<int, 2>{}, 0)
 );
 static_assert(
-    test_moving_average_filter(emb::filter::moving_average<int, 5>{}, 0)
+    test_moving_average_filter(emb::moving_average_filter<int, 5>{}, 0)
 );
 static_assert(
-    test_moving_average_filter(emb::filter::moving_average<int, 10>{}, 0)
+    test_moving_average_filter(emb::moving_average_filter<int, 10>{}, 0)
 );
 
 static_assert(
-    test_moving_average_filter(emb::filter::moving_average<int, 1>{42}, 42)
+    test_moving_average_filter(emb::moving_average_filter<int, 1>{42}, 42)
 );
 static_assert(
-    test_moving_average_filter(emb::filter::moving_average<int, 2>{42}, 42)
+    test_moving_average_filter(emb::moving_average_filter<int, 2>{42}, 42)
 );
 static_assert(
-    test_moving_average_filter(emb::filter::moving_average<int, 5>{42}, 42)
+    test_moving_average_filter(emb::moving_average_filter<int, 5>{42}, 42)
 );
 static_assert(
-    test_moving_average_filter(emb::filter::moving_average<int, 10>{42}, 42)
+    test_moving_average_filter(emb::moving_average_filter<int, 10>{42}, 42)
 );
 
 static_assert(test_moving_average_filter(
-    emb::filter::moving_average<emb::units::erad_f32, 4>{},
+    emb::moving_average_filter<emb::units::erad_f32, 4>{},
     emb::units::erad_f32{0}
 ));
 
-} // namespace tests
-} // namespace emb
+} // namespace

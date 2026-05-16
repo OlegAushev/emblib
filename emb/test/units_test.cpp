@@ -1,10 +1,6 @@
-#ifdef __cpp_constexpr
-
 #include <emb/units.hpp>
 
-namespace emb {
-namespace internal {
-namespace tests {
+namespace {
 
 template<typename Unit>
 constexpr Unit templated_conversion() {
@@ -65,8 +61,4 @@ constexpr bool test_units_conversion() {
 
 static_assert(test_units_conversion());
 
-} // namespace tests
-} // namespace internal
-} // namespace emb
-
-#endif
+} // namespace

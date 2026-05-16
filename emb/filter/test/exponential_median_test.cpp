@@ -1,15 +1,12 @@
-#ifdef __cpp_constexpr
-
-#include <emb/filter.hpp>
+#include <emb/filter/exponential_median_filter.hpp>
 #include <emb/units.hpp>
 
 #include <array>
 
-namespace emb {
-namespace tests {
+namespace {
 
 constexpr bool test_exponential_median_filter(
-    emb::filter::exponential_median_filter_type auto filter,
+    emb::exponential_median_filter_type auto filter,
     typename decltype(filter)::value_type init_output
 ) {
   using value_type = decltype(filter)::value_type;
@@ -62,7 +59,7 @@ constexpr bool test_exponential_median_filter(
 
 // Test with float
 static_assert(test_exponential_median_filter(
-    emb::filter::exponential_median<float, 3, emb::units::sec_f32>(
+    emb::exponential_median_filter<float, 3, emb::units::sec_f32>(
         emb::units::sec_f32{0.01f},
         emb::units::sec_f32{0.1f}
     ),
@@ -70,7 +67,7 @@ static_assert(test_exponential_median_filter(
 ));
 
 static_assert(test_exponential_median_filter(
-    emb::filter::exponential_median<float, 5, emb::units::sec_f32>(
+    emb::exponential_median_filter<float, 5, emb::units::sec_f32>(
         emb::units::sec_f32{0.01f},
         emb::units::sec_f32{0.1f}
     ),
@@ -78,7 +75,7 @@ static_assert(test_exponential_median_filter(
 ));
 
 static_assert(test_exponential_median_filter(
-    emb::filter::exponential_median<float, 3, emb::units::sec_f32>(
+    emb::exponential_median_filter<float, 3, emb::units::sec_f32>(
         emb::units::sec_f32{0.01f},
         emb::units::sec_f32{0.1f},
         3.14f
@@ -88,14 +85,11 @@ static_assert(test_exponential_median_filter(
 
 // Test with units
 static_assert(test_exponential_median_filter(
-    emb::filter::exponential_median<emb::units::erad_f32, 3, emb::units::sec_f32>(
+    emb::exponential_median_filter<emb::units::erad_f32, 3, emb::units::sec_f32>(
         emb::units::sec_f32{0.01f},
         emb::units::sec_f32{0.1f}
     ),
     emb::units::erad_f32{0}
 ));
 
-} // namespace tests
-} // namespace emb
-
-#endif
+} // namespace

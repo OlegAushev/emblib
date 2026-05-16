@@ -1,15 +1,12 @@
-#ifdef __cpp_constexpr
-
-#include <emb/filter.hpp>
+#include <emb/filter/median_filter.hpp>
 #include <emb/units.hpp>
 
 #include <array>
 
-namespace emb {
-namespace tests {
+namespace {
 
 constexpr bool test_median_filter(
-    emb::filter::median_filter_type auto filter,
+    emb::median_filter_type auto filter,
     typename decltype(filter)::value_type init_output
 ) {
   using value_type = decltype(filter)::value_type;
@@ -62,27 +59,24 @@ constexpr bool test_median_filter(
 }
 
 // Test with int and various odd window sizes
-static_assert(test_median_filter(emb::filter::median<int, 1>{}, 0));
-static_assert(test_median_filter(emb::filter::median<int, 3>{}, 0));
-static_assert(test_median_filter(emb::filter::median<int, 5>{}, 0));
-static_assert(test_median_filter(emb::filter::median<int, 7>{}, 0));
+static_assert(test_median_filter(emb::median_filter<int, 1>{}, 0));
+static_assert(test_median_filter(emb::median_filter<int, 3>{}, 0));
+static_assert(test_median_filter(emb::median_filter<int, 5>{}, 0));
+static_assert(test_median_filter(emb::median_filter<int, 7>{}, 0));
 
-static_assert(test_median_filter(emb::filter::median<int, 1>{42}, 42));
-static_assert(test_median_filter(emb::filter::median<int, 3>{42}, 42));
-static_assert(test_median_filter(emb::filter::median<int, 5>{42}, 42));
+static_assert(test_median_filter(emb::median_filter<int, 1>{42}, 42));
+static_assert(test_median_filter(emb::median_filter<int, 3>{42}, 42));
+static_assert(test_median_filter(emb::median_filter<int, 5>{42}, 42));
 
 // Test with float
-static_assert(test_median_filter(emb::filter::median<float, 3>{}, 0.0f));
-static_assert(test_median_filter(emb::filter::median<float, 5>{}, 0.0f));
-static_assert(test_median_filter(emb::filter::median<float, 3>{3.14f}, 3.14f));
+static_assert(test_median_filter(emb::median_filter<float, 3>{}, 0.0f));
+static_assert(test_median_filter(emb::median_filter<float, 5>{}, 0.0f));
+static_assert(test_median_filter(emb::median_filter<float, 3>{3.14f}, 3.14f));
 
 // Test with units
 static_assert(test_median_filter(
-    emb::filter::median<emb::units::erad_f32, 3>{},
+    emb::median_filter<emb::units::erad_f32, 3>{},
     emb::units::erad_f32{0}
 ));
 
-} // namespace tests
-} // namespace emb
-
-#endif
+} // namespace

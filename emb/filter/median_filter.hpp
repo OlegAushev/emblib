@@ -7,11 +7,10 @@
 #include <array>
 
 namespace emb {
-namespace filter {
 
 template<typename T, size_t WindowSize>
   requires(emb::isodd(WindowSize))
-class median {
+class median_filter {
 public:
   using value_type = T;
   using reference = value_type&;
@@ -22,7 +21,7 @@ private:
   value_type init_output_;
   value_type output_;
 public:
-  constexpr median(value_type const& init_output = value_type())
+  constexpr median_filter(value_type const& init_output = value_type())
       : init_output_(init_output) {
     reset();
   }
@@ -55,10 +54,9 @@ template<typename T>
 struct is_median_filter_type : std::false_type {};
 
 template<typename T, size_t WindowSize>
-struct is_median_filter_type<median<T, WindowSize>> : std::true_type {};
+struct is_median_filter_type<median_filter<T, WindowSize>> : std::true_type {};
 
 template<typename T>
 concept median_filter_type = is_median_filter_type<T>::value;
 
-} // namespace filter
 } // namespace emb
