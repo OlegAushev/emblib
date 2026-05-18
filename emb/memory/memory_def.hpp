@@ -1,6 +1,5 @@
 #pragma once
 
-#include <emb/core.hpp>
 #if __cplusplus < 201100
 #include <emb/scopedenum.hpp>
 #endif

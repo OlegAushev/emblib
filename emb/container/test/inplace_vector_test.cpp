@@ -1,12 +1,10 @@
 #include <emb/container/inplace_vector.hpp>
 
-namespace emb {
-namespace internal {
-namespace tests {
+namespace {
 
-template<typename V>
-constexpr bool test_inplace_vector(V v)
-  requires(std::same_as<typename V::value_type, int>) {
+template<typename Vector>
+constexpr bool test_inplace_vector(Vector v)
+  requires(std::same_as<typename Vector::value_type, int>) {
   int const cap{static_cast<int>(v.capacity())};
 
   assert(v.empty() && v.size() == 0);
@@ -35,7 +33,7 @@ constexpr bool test_inplace_vector(V v)
 
   int sum{0};
   for (auto i{0}; i < cap; ++i) {
-    auto const& x = v[static_cast<typename V::size_type>(i)];
+    auto const& x = v[static_cast<typename Vector::size_type>(i)];
     assert(x == i + 1);
     sum += x;
   }
@@ -257,6 +255,4 @@ static_assert(test_inplace_vector_try_pop());
 static_assert(test_inplace_vector_try_push());
 static_assert(test_inplace_vector_no_default_ctor());
 
-} // namespace tests
-} // namespace internal
-} // namespace emb
+} // namespace

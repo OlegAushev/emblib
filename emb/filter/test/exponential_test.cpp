@@ -3,11 +3,12 @@
 
 namespace {
 
+template<typename Filter>
 constexpr bool test_exponential_filter(
-    emb::exponential_filter_type auto filter,
-    typename decltype(filter)::value_type init_output
+    Filter filter,
+    typename Filter::value_type init_output
 ) {
-  using value_type = decltype(filter)::value_type;
+  using value_type = Filter::value_type;
 
   assert(filter.output() == init_output);
 

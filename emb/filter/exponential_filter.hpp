@@ -72,14 +72,4 @@ public:
   }
 };
 
-template<typename T>
-struct is_exponential_filter_type : std::false_type {};
-
-template<typename T, typename Duration>
-struct is_exponential_filter_type<exponential_filter<T, Duration>>
-    : std::true_type {};
-
-template<typename T>
-concept exponential_filter_type = is_exponential_filter_type<T>::value;
-
 } // namespace emb

@@ -2,7 +2,6 @@
 
 #include <cstring>
 #include <emb/chrono.hpp>
-#include <emb/core.hpp>
 #include "../memory_def.hpp"
 
 namespace emb {

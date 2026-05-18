@@ -1,14 +1,10 @@
-#ifdef __cpp_constexpr
-
 #include <emb/container/inplace_queue.hpp>
 
-namespace emb {
-namespace internal {
-namespace tests {
+namespace {
 
-template<typename Q>
-constexpr bool test_inplace_queue(Q q)
-  requires(std::same_as<typename Q::value_type, int>) {
+template<typename Queue>
+constexpr bool test_inplace_queue(Queue q)
+  requires(std::same_as<typename Queue::value_type, int>) {
   int const cap{static_cast<int>(q.capacity())};
 
   assert(q.empty());
@@ -302,8 +298,4 @@ static_assert(test_inplace_queue_no_default_ctor());
 static_assert(test_inplace_queue_move());
 static_assert(test_inplace_queue_move_wraparound());
 
-} // namespace tests
-} // namespace internal
-} // namespace emb
-
-#endif
+} // namespace

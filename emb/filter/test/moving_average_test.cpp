@@ -1,16 +1,15 @@
 #include <emb/filter/moving_average_filter.hpp>
 #include <emb/units.hpp>
 
-#include <numeric>
-
 namespace {
 
+template<typename Filter>
 constexpr bool test_moving_average_filter(
-    emb::moving_average_filter_type auto filter,
-    typename decltype(filter)::value_type init_output
+    Filter filter,
+    typename Filter::value_type init_output
 ) {
-  using value_type = decltype(filter)::value_type;
-  using divider_type = decltype(filter)::divider_type;
+  using value_type = Filter::value_type;
+  using divider_type = Filter::divider_type;
 
   assert(filter.output() == init_output);
 

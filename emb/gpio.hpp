@@ -1,10 +1,7 @@
 #pragma once
 
-#include <emb/core.hpp>
-
-#ifdef __cpp_concepts
 #include <concepts>
-#endif
+#include <cstdint>
 
 namespace emb {
 namespace gpio {

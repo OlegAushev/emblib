@@ -6,9 +6,9 @@
 
 namespace {
 
-template<typename G>
-constexpr bool test_sine_generator(G sine, emb::units::rad_f32 init_phase) {
-  using output_type = decltype(sine)::output_type;
+template<typename Sine>
+constexpr bool test_sine_generator(Sine sine, emb::units::rad_f32 init_phase) {
+  using output_type = Sine::value_type;
 
   std::array<emb::units::sec_f32, 100> timebase;
   std::array<output_type, 100> sine_ref;

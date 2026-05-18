@@ -1,7 +1,6 @@
 #pragma once
 
 #include <emb/algorithm.hpp>
-#include <emb/core.hpp>
 #include <emb/units.hpp>
 
 #include <algorithm>
@@ -10,38 +9,41 @@ namespace emb {
 
 template<typename T>
 class ramp_generator {
+public:
+  using value_type = T;
+  using const_reference = value_type const& ;
 private:
   units::sec_f32 ts_;
-  T slope_;
-  T step_;
+  value_type slope_;
+  value_type step_;
 
-  T target_;
-  T init_output_;
-  T output_;
+  value_type target_;
+  value_type init_output_;
+  value_type output_;
 public:
   ramp_generator(
       units::sec_f32 const& ts,
-      T const& slope,
-      T const& init_output = T{}
+      value_type const& slope,
+      value_type const& init_output = T{}
   )
       : init_output_(init_output) {
     set_slope(ts, slope);
     reset();
   }
 
-  T target() const {
+  value_type target() const {
     return target_;
   }
 
-  T output() const {
+  value_type output() const {
     return output_;
   }
 
-  void set_target(T const& input_v) {
+  void set_target(const_reference input_v) {
     target_ = input_v;
   }
 
-  void set_output(T const& output_v) {
+  void set_output(const_reference output_v) {
     target_ = output_v;
     output_ = output_v;
   }
@@ -50,7 +52,7 @@ public:
     set_output(init_output_);
   }
 
-  void set_slope(units::sec_f32 const& ts, T const& slope) {
+  void set_slope(units::sec_f32 const& ts, const_reference slope) {
     assert(ts.value() > 0);
     assert(slope > T(0));
     ts_ = ts;

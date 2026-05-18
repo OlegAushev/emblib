@@ -1,12 +1,10 @@
 #include <emb/container/inplace_stack.hpp>
 
-namespace emb {
-namespace internal {
-namespace tests {
+namespace {
 
-template<typename S>
-constexpr bool test_inplace_stack(S s)
-  requires(std::same_as<typename S::value_type, int>) {
+template<typename Stack>
+constexpr bool test_inplace_stack(Stack s)
+  requires(std::same_as<typename Stack::value_type, int>) {
   int const cap{static_cast<int>(s.capacity())};
 
   assert(s.empty());
@@ -245,6 +243,4 @@ static_assert(test_inplace_stack_try_pop());
 static_assert(test_inplace_stack_try_push());
 static_assert(test_inplace_stack_no_default_ctor());
 
-} // namespace tests
-} // namespace internal
-} // namespace emb
+} // namespace

@@ -1,7 +1,5 @@
 #pragma once
 
-#if __cplusplus >= 202300
-
 #include <emb/meta.hpp>
 
 #include <array>
@@ -285,5 +283,3 @@ private:
 } // namespace v2
 } // namespace fsm
 } // namespace emb
-
-#endif

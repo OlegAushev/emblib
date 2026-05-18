@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <emb/algorithm.hpp>
-#include <emb/core.hpp>
 #include <emb/math.hpp>
 #include <emb/units.hpp>
 
@@ -11,24 +10,24 @@ namespace emb {
 template<typename T>
 class sine_generator {
 public:
-  typedef T output_type;
-  typedef output_type const& const_reference;
+  using value_type = T;
+  using const_reference = value_type const&;
 private:
   units::sec_f32 update_period_;
-  output_type ampl_;
+  value_type ampl_;
   float wfreq_;
   emb::units::rad_f32 init_phase_;
-  output_type bias_;
+  value_type bias_;
 
   emb::units::rad_f32 phase_;
-  output_type output_;
+  value_type output_;
 public:
   constexpr sine_generator(
       units::sec_f32 const& update_period,
-      output_type const& ampl,
+      value_type const& ampl,
       units::hz_f32 const& freq,
       emb::units::rad_f32 const& init_phase = emb::units::rad_f32(0),
-      output_type bias = output_type()
+      value_type bias = value_type()
   )
       : update_period_(update_period),
         ampl_(ampl),

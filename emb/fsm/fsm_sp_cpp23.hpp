@@ -1,7 +1,5 @@
 #pragma once
 
-#if __cplusplus >= 202300
-
 #include <emb/chrono.hpp>
 
 #include <array>
@@ -129,5 +127,3 @@ public:
 
 } // namespace fsm
 } // namespace emb
-
-#endif

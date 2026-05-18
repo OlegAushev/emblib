@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <emb/algorithm.hpp>
 #include <emb/container/circular_buffer.hpp>
-#include <emb/core.hpp>
 #include <emb/math.hpp>
 #include <emb/units.hpp>
 
@@ -62,15 +61,5 @@ public:
     return data_;
   }
 };
-
-template<typename T>
-struct is_moving_average_filter_type : std::false_type {};
-
-template<typename T, size_t WindowSize>
-struct is_moving_average_filter_type<moving_average_filter<T, WindowSize>>
-    : std::true_type {};
-
-template<typename T>
-concept moving_average_filter_type = is_moving_average_filter_type<T>::value;
 
 } // namespace emb
