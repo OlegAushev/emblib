@@ -1,4 +1,4 @@
-#include <emb/inplace_stack.hpp>
+#include <emb/container/inplace_stack.hpp>
 
 namespace emb {
 namespace internal {
@@ -207,7 +207,7 @@ constexpr bool test_inplace_stack_try_pop() {
 }
 
 constexpr bool test_inplace_stack_try_push() {
-  emb::inplace_stack<int, 2> s;
+  [[maybe_unused]] emb::inplace_stack<int, 2> s;
   assert(s.try_push(1));
   assert(s.try_push(2));
   assert(!s.try_push(3));

@@ -1,4 +1,4 @@
-#include <emb/inplace_vector.hpp>
+#include <emb/container/inplace_vector.hpp>
 
 namespace emb {
 namespace internal {
@@ -217,7 +217,7 @@ constexpr bool test_inplace_vector_try_pop() {
 }
 
 constexpr bool test_inplace_vector_try_push() {
-  emb::inplace_vector<int, 2> v;
+  [[maybe_unused]] emb::inplace_vector<int, 2> v;
   assert(v.try_push_back(1));
   assert(v.try_push_back(2));
   assert(!v.try_push_back(3));

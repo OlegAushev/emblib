@@ -2,7 +2,7 @@
 
 #include <algorithm>
 #include <emb/algorithm.hpp>
-#include <emb/circular_buffer.hpp>
+#include <emb/container/circular_buffer.hpp>
 #include <emb/core.hpp>
 #include <emb/math.hpp>
 #include <emb/units.hpp>

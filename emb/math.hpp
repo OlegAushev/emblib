@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../src/math/trigonometric.hpp"
+#include <emb/math/trigonometric.hpp>
 
 #include <algorithm>
 #include <bit>

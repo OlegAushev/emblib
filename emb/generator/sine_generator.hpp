@@ -23,7 +23,7 @@ private:
   emb::units::rad_f32 phase_;
   output_type output_;
 public:
-  EMB_CONSTEXPR sine_generator(
+  constexpr sine_generator(
       units::sec_f32 const& update_period,
       output_type const& ampl,
       units::hz_f32 const& freq,
@@ -39,54 +39,41 @@ public:
     reset();
   }
 
-  EMB_CONSTEXPR const_reference output() const {
+  constexpr const_reference output() const {
     return output_;
   }
 
-  EMB_CONSTEXPR void reset() {
+  constexpr void reset() {
     phase_ = init_phase_;
     output_ = ampl_ * emb::sin(phase_.value()) + bias_;
   }
 
-  EMB_CONSTEXPR void update() {
+  constexpr void update() {
     phase_ = emb::units::rad_f32(
         emb::norm2pi(phase_.value() + wfreq_ * update_period_.value())
     );
     output_ = ampl_ * emb::sin(phase_.value()) + bias_;
   }
 
-  EMB_CONSTEXPR units::sec_f32 update_period() const {
+  constexpr units::sec_f32 update_period() const {
     return update_period_;
   }
 
-  EMB_CONSTEXPR const_reference ampl() const {
+  constexpr const_reference ampl() const {
     return ampl_;
   }
 
-  EMB_CONSTEXPR const_reference bias() const {
+  constexpr const_reference bias() const {
     return bias_;
   }
 
-  EMB_CONSTEXPR float freq() const {
+  constexpr float freq() const {
     return wfreq_ / (2 * std::numbers::pi_v<float>);
   }
 
-  emb::units::rad_f32 phase() const {
+  constexpr emb::units::rad_f32 phase() const {
     return phase_;
   }
 };
-
-#ifdef __cpp_concepts
-
-template<typename T>
-struct is_sine_generator_type : std::false_type {};
-
-template<typename T>
-struct is_sine_generator_type<emb::sine_generator<T>> : std::true_type {};
-
-template<typename T>
-concept sine_generator_type = is_sine_generator_type<T>::value;
-
-#endif
 
 } // namespace emb

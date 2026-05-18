@@ -2,7 +2,7 @@
 
 #include <emb/core.hpp>
 #include <emb/delegate.hpp>
-#include <emb/inplace_vector.hpp>
+#include <emb/container/inplace_vector.hpp>
 
 #include <chrono>
 

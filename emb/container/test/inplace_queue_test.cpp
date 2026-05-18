@@ -1,6 +1,6 @@
 #ifdef __cpp_constexpr
 
-#include <emb/inplace_queue.hpp>
+#include <emb/container/inplace_queue.hpp>
 
 namespace emb {
 namespace internal {
@@ -46,7 +46,7 @@ constexpr bool test_inplace_queue(Q q)
     assert(q.front() == cap + 1);
   }
 
-  int val{q.front()};
+  [[maybe_unused]] int val{q.front()};
   while (q.size() > 1) {
     assert(q.front() == val);
     q.pop();

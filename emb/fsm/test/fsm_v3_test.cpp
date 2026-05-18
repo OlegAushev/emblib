@@ -1,10 +1,8 @@
-#ifdef __cpp_constexpr
+#include <emb/fsm/fsm_v3.hpp>
 
-#include <emb/fsm.hpp>
+#include <cassert>
 
-namespace emb {
-namespace internal {
-namespace tests {
+namespace {
 
 namespace moore_fsm {
 
@@ -20,43 +18,22 @@ enum class SwitchStateId { open, closed };
 
 struct OpenState {
   static constexpr SwitchStateId id{SwitchStateId::open};
+  static constexpr void on_entry(Switch&);
+  static constexpr auto on_event(Switch const&, OpenEvent const&);
+  static constexpr auto on_event(Switch const&, CloseEvent const&);
 };
 
 struct ClosedState {
   static constexpr SwitchStateId id{SwitchStateId::closed};
+  static constexpr void on_entry(Switch&);
+  static constexpr auto on_event(Switch const&, OpenEvent const&);
+  static constexpr auto on_event(Switch const&, CloseEvent const&);
 };
 
-struct Transitions {
-  static constexpr void on_entry(Switch&, OpenState const&);
-  static constexpr auto on_event(
-      Switch const&,
-      OpenState const&,
-      OpenEvent const&
-  );
-  static constexpr auto on_event(
-      Switch const&,
-      OpenState const&,
-      CloseEvent const&
-  );
-  static constexpr void on_entry(Switch&, ClosedState const&);
-  static constexpr auto on_event(
-      Switch const&,
-      ClosedState const&,
-      OpenEvent const&
-  );
-  static constexpr auto on_event(
-      Switch const&,
-      ClosedState const&,
-      CloseEvent const&
-  );
-};
-
-class Switch : public emb::fsm::v2::finite_state_machine<
+class Switch : public emb::fsm::v3::finite_state_machine<
                    Switch,
-                   emb::fsm::v2::moore_policy,
-                   Transitions,
-                   OpenState,
-                   ClosedState> {
+                   emb::fsm::v3::moore_policy,
+                   emb::typelist<OpenState, ClosedState>> {
 public:
   constexpr Switch() : fsm_type(ClosedState{}) {
     start_fsm();
@@ -70,43 +47,27 @@ public:
   int closed_entries = 0;
 };
 
-constexpr void Transitions::on_entry(Switch& s, OpenState const&) {
+constexpr void OpenState::on_entry(Switch& s) {
   ++s.open_entries;
 }
 
-constexpr auto Transitions::on_event(
-    Switch const& s,
-    OpenState const&,
-    OpenEvent const&
-) {
+constexpr auto OpenState::on_event(Switch const& s, OpenEvent const&) {
   return std::nullopt;
 }
 
-constexpr auto Transitions::on_event(
-    Switch const& s,
-    OpenState const&,
-    CloseEvent const&
-) {
+constexpr auto OpenState::on_event(Switch const& s, CloseEvent const&) {
   return ClosedState{};
 }
 
-constexpr void Transitions::on_entry(Switch& s, ClosedState const&) {
+constexpr void ClosedState::on_entry(Switch& s) {
   ++s.closed_entries;
 }
 
-constexpr auto Transitions::on_event(
-    Switch const& s,
-    ClosedState const&,
-    OpenEvent const&
-) {
+constexpr auto ClosedState::on_event(Switch const& s, OpenEvent const&) {
   return OpenState{};
 }
 
-constexpr auto Transitions::on_event(
-    Switch const& s,
-    ClosedState const&,
-    CloseEvent const&
-) {
+constexpr auto ClosedState::on_event(Switch const& s, CloseEvent const&) {
   return std::nullopt;
 }
 
@@ -120,7 +81,7 @@ struct SwitchVisitor {
   }
 };
 
-constexpr bool test_moore_fsm_v2() {
+constexpr bool test_moore_fsm_v3() {
   Switch s;
   assert(s.is_in_state<ClosedState>());
   assert(s.state_id() == SwitchStateId::closed);
@@ -165,7 +126,7 @@ constexpr bool test_moore_fsm_v2() {
   return true;
 }
 
-static_assert(test_moore_fsm_v2());
+static_assert(test_moore_fsm_v3());
 
 } // namespace moore_fsm
 
@@ -183,29 +144,20 @@ enum class SwitchStateId { open, closed };
 
 struct OpenState {
   static constexpr SwitchStateId id{SwitchStateId::open};
+  static constexpr auto on_event(Switch&, OpenEvent const&);
+  static constexpr auto on_event(Switch&, CloseEvent const&);
 };
 
 struct ClosedState {
   static constexpr SwitchStateId id{SwitchStateId::closed};
+  static constexpr auto on_event(Switch&, OpenEvent const&);
+  static constexpr auto on_event(Switch&, CloseEvent const&);
 };
 
-struct Transitions {
-  static constexpr auto on_event(Switch&, OpenState const&, OpenEvent const&);
-  static constexpr auto on_event(Switch&, OpenState const&, CloseEvent const&);
-  static constexpr auto on_event(Switch&, ClosedState const&, OpenEvent const&);
-  static constexpr auto on_event(
-      Switch&,
-      ClosedState const&,
-      CloseEvent const&
-  );
-};
-
-class Switch : public emb::fsm::v2::finite_state_machine<
+class Switch : public emb::fsm::v3::finite_state_machine<
                    Switch,
-                   emb::fsm::v2::mealy_policy,
-                   Transitions,
-                   OpenState,
-                   ClosedState> {
+                   emb::fsm::v3::mealy_policy,
+                   emb::typelist<OpenState, ClosedState>> {
 public:
   constexpr Switch() : fsm_type(ClosedState{}) {
     start_fsm();
@@ -216,35 +168,19 @@ public:
   }
 };
 
-constexpr auto Transitions::on_event(
-    Switch& s,
-    OpenState const&,
-    OpenEvent const&
-) {
+constexpr auto OpenState::on_event(Switch& s, OpenEvent const&) {
   return std::nullopt;
 }
 
-constexpr auto Transitions::on_event(
-    Switch& s,
-    OpenState const&,
-    CloseEvent const&
-) {
+constexpr auto OpenState::on_event(Switch& s, CloseEvent const&) {
   return ClosedState{};
 }
 
-constexpr auto Transitions::on_event(
-    Switch& s,
-    ClosedState const&,
-    OpenEvent const&
-) {
+constexpr auto ClosedState::on_event(Switch& s, OpenEvent const&) {
   return OpenState{};
 }
 
-constexpr auto Transitions::on_event(
-    Switch& s,
-    ClosedState const&,
-    CloseEvent const&
-) {
+constexpr auto ClosedState::on_event(Switch& s, CloseEvent const&) {
   return std::nullopt;
 }
 
@@ -258,7 +194,7 @@ struct SwitchVisitor {
   }
 };
 
-constexpr bool test_mealy_fsm_v2() {
+constexpr bool test_mealy_fsm_v3() {
   Switch s;
   assert(s.is_in_state<ClosedState>());
   assert(s.state_id() == SwitchStateId::closed);
@@ -292,7 +228,7 @@ constexpr bool test_mealy_fsm_v2() {
   return true;
 }
 
-static_assert(test_mealy_fsm_v2());
+static_assert(test_mealy_fsm_v3());
 
 } // namespace mealy_fsm
 
@@ -312,81 +248,46 @@ enum class SwitchStateId { open, closed, destroyed };
 
 struct OpenState {
   static constexpr SwitchStateId id{SwitchStateId::open};
+  static constexpr void on_entry(Switch&);
+  static constexpr void on_exit(Switch&);
+  static constexpr auto on_event(Switch&, OpenEvent const&);
+  static constexpr auto on_event(Switch&, CloseEvent const&);
+  static constexpr auto on_event(Switch&, UpdateEvent const&);
 };
 
 struct ClosedState {
   static constexpr SwitchStateId id{SwitchStateId::closed};
+  static constexpr void on_entry(Switch&);
+  static constexpr void on_exit(Switch&);
+  static constexpr auto on_event(Switch&, OpenEvent const&);
+  static constexpr auto on_event(Switch&, CloseEvent const&);
+  static constexpr auto on_event(Switch&, UpdateEvent const&);
 };
 
 struct DestroyedState {
   static constexpr SwitchStateId id{SwitchStateId::destroyed};
-};
 
-struct Transitions {
-  static constexpr void on_entry(Switch&, OpenState const&);
-  static constexpr void on_exit(Switch&, OpenState const&);
-  static constexpr auto on_event(Switch&, OpenState const&, OpenEvent const&);
-  static constexpr auto on_event(Switch&, OpenState const&, CloseEvent const&);
-  static constexpr auto on_event(Switch&, OpenState const&, UpdateEvent const&);
-  static constexpr void on_entry(Switch&, ClosedState const&);
-  static constexpr void on_exit(Switch&, ClosedState const&);
-  static constexpr auto on_event(Switch&, ClosedState const&, OpenEvent const&);
-  static constexpr auto on_event(
-      Switch&,
-      ClosedState const&,
-      CloseEvent const&
-  );
-  static constexpr auto on_event(
-      Switch&,
-      ClosedState const&,
-      UpdateEvent const&
-  );
+  static constexpr void on_entry(Switch&) {}
 
-  static constexpr void on_entry(Switch&, DestroyedState const&) {}
+  static constexpr void on_exit(Switch&) {}
 
-  static constexpr void on_exit(Switch&, DestroyedState const&) {}
-
-  static constexpr auto on_event(
-      Switch const&,
-      DestroyedState const&,
-      OpenEvent const&
-  ) {
+  static constexpr auto on_event(Switch const&, OpenEvent const&) {
     return std::nullopt;
   }
 
-  static constexpr auto on_event(
-      Switch const&,
-      DestroyedState const&,
-      CloseEvent const&
-  ) {
+  static constexpr auto on_event(Switch const&, CloseEvent const&) {
     return std::nullopt;
   }
 
-  static constexpr auto on_event(
-      Switch&,
-      DestroyedState const&,
-      UpdateEvent const&
-  ) {
+  static constexpr auto on_event(Switch&, UpdateEvent const&) {
     return std::nullopt;
-  }
-
-  template<typename State>
-  static constexpr auto on_event(
-      Switch& s,
-      State const& state,
-      DestroyEvent const&
-  ) {
-    return DestroyedState{};
   }
 };
 
-class Switch : public emb::fsm::v2::finite_state_machine<
+class Switch : public emb::fsm::v3::finite_state_machine<
                    Switch,
-                   emb::fsm::v2::mixed_policy,
-                   Transitions,
-                   OpenState,
-                   ClosedState,
-                   DestroyedState> {
+                   emb::fsm::v3::mixed_policy,
+                   emb::typelist<OpenState, ClosedState, DestroyedState>> {
 public:
   constexpr Switch() : fsm_type(ClosedState{}) {
     start_fsm();
@@ -403,70 +304,50 @@ public:
   int updates = 0;
 };
 
-constexpr void Transitions::on_entry(Switch& s, OpenState const&) {
+constexpr void OpenState::on_entry(Switch& s) {
   ++s.open_entries;
 }
 
-constexpr void Transitions::on_exit(Switch& s, OpenState const&) {
+constexpr void OpenState::on_exit(Switch& s) {
   ++s.open_exits;
 }
 
-constexpr auto Transitions::on_event(
-    Switch& s,
-    OpenState const&,
-    OpenEvent const&
-) {
+constexpr auto OpenState::on_event(Switch& s, OpenEvent const&) {
   return std::nullopt;
 }
 
-constexpr auto Transitions::on_event(
-    Switch& s,
-    OpenState const&,
-    CloseEvent const&
-) {
+constexpr auto OpenState::on_event(Switch& s, CloseEvent const&) {
   return ClosedState{};
 }
 
-constexpr auto Transitions::on_event(
-    Switch& s,
-    OpenState const&,
-    UpdateEvent const&
-) {
+constexpr auto OpenState::on_event(Switch& s, UpdateEvent const&) {
   ++s.updates;
   return std::nullopt;
 }
 
-constexpr void Transitions::on_entry(Switch& s, ClosedState const&) {
+constexpr void ClosedState::on_entry(Switch& s) {
   ++s.closed_entries;
 }
 
-constexpr void Transitions::on_exit(Switch& s, ClosedState const&) {
+constexpr void ClosedState::on_exit(Switch& s) {
   ++s.closed_exits;
 }
 
-constexpr auto Transitions::on_event(
-    Switch& s,
-    ClosedState const&,
-    OpenEvent const&
-) {
+constexpr auto ClosedState::on_event(Switch& s, OpenEvent const&) {
   return OpenState{};
 }
 
-constexpr auto Transitions::on_event(
-    Switch& s,
-    ClosedState const&,
-    CloseEvent const&
-) {
+constexpr auto ClosedState::on_event(Switch& s, CloseEvent const&) {
   return std::nullopt;
 }
 
-constexpr auto Transitions::on_event(
-    Switch& s,
-    ClosedState const&,
-    UpdateEvent const&
-) {
+constexpr auto ClosedState::on_event(Switch& s, UpdateEvent const&) {
   ++s.updates;
   return std::nullopt;
+}
+
+constexpr auto on_event(Switch& s, DestroyEvent const&) {
+  return DestroyedState{};
 }
 
 struct SwitchVisitor {
@@ -483,7 +364,7 @@ struct SwitchVisitor {
   }
 };
 
-constexpr bool test_mixed_fsm_v2() {
+constexpr bool test_mixed_fsm_v3() {
   Switch s;
   assert(s.is_in_state<ClosedState>());
   assert(s.state_id() == SwitchStateId::closed);
@@ -562,12 +443,8 @@ constexpr bool test_mixed_fsm_v2() {
   return true;
 }
 
-static_assert(test_mixed_fsm_v2());
+static_assert(test_mixed_fsm_v3());
 
 } // namespace mixed_fsm
 
-} // namespace tests
-} // namespace internal
-} // namespace emb
-
-#endif
+} // namespace

@@ -1,6 +1,6 @@
 #ifdef __cpp_constexpr
 
-#include <emb/circular_buffer.hpp>
+#include <emb/container/circular_buffer.hpp>
 
 namespace emb {
 namespace internal {
