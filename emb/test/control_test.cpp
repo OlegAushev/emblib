@@ -1,11 +1,7 @@
-#ifdef __cpp_constexpr
-
 #include <emb/control.hpp>
 #include <emb/units.hpp>
 
-namespace emb {
-namespace internal {
-namespace tests {
+namespace {
 
 class button;
 class knob;
@@ -141,8 +137,4 @@ constexpr bool test_control_device() {
 
 static_assert(test_control_device());
 
-} // namespace tests
-} // namespace internal
-} // namespace emb
-
-#endif
+} // namespace

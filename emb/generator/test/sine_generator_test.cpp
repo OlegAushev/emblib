@@ -30,7 +30,7 @@ constexpr bool test_sine_generator(Sine sine, emb::units::rad_f32 init_phase) {
       }
   );
 
-  for (auto i{0uz}; i < sine_ref.size(); ++i) {
+  for (auto i = 0uz; i < sine_ref.size(); ++i) {
     assert(fabs(sine.output() - sine_ref[i]) < 0.001f * sine.ampl());
     sine.update();
   }

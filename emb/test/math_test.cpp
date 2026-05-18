@@ -1,10 +1,6 @@
-#ifdef __cpp_constexpr
-
 #include <emb/math.hpp>
 
-namespace emb {
-namespace internal {
-namespace tests {
+namespace {
 
 constexpr bool test_math() {
   [[maybe_unused]] constexpr auto near = [](float a, float b) {
@@ -64,8 +60,4 @@ constexpr bool test_math() {
 
 static_assert(test_math());
 
-} // namespace tests
-} // namespace internal
-} // namespace emb
-
-#endif
+} // namespace

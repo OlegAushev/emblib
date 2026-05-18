@@ -1,13 +1,11 @@
-#ifdef __cpp_constexpr
-
 #include <emb/meta.hpp>
 
 #include <array>
 #include <cassert>
 
-namespace emb {
-namespace internal {
-namespace tests {
+namespace {
+
+using namespace emb;
 
 constexpr bool test_unroll() {
   std::array<int, 5> arr;
@@ -75,11 +73,11 @@ static_assert(!typelist_unique<typelist<A, A>>);
 
 // append
 static_assert(std::is_same_v<typelist_append_t<typelist<>, A>, typelist<A>>);
-static_assert(std::is_same_v<typelist_append_t<typelist<A>, B>, typelist<A, B>>);
-static_assert(std::is_same_v<typelist_append_t<typelist<A, B>, C>, typelist<A, B, C>>);
+static_assert(
+    std::is_same_v<typelist_append_t<typelist<A>, B>, typelist<A, B>>
+);
+static_assert(
+    std::is_same_v<typelist_append_t<typelist<A, B>, C>, typelist<A, B, C>>
+);
 
-} // namespace tests
-} // namespace internal
-} // namespace emb
-
-#endif
+} // namespace

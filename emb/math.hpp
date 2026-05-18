@@ -4,8 +4,10 @@
 
 #include <algorithm>
 #include <bit>
+#include <cassert>
 #include <cfloat>
 #include <concepts>
+#include <cstdint>
 #include <numbers>
 
 #ifdef __arm__

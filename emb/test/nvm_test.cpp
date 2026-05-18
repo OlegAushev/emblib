@@ -19,9 +19,9 @@ struct emb::nvm::parameter<"gains"> : emb::nvm::parameter_traits<
                                           std::array<float, 3>,
                                           {100.f, 200.f, 300.f}> {};
 
-namespace emb {
-namespace internal {
-namespace tests {
+namespace {
+
+using namespace emb;
 
 // -- Test backend --
 
@@ -163,6 +163,4 @@ static_assert(test_hash_mismatch());
 static_assert(test_crc_mismatch());
 static_assert(test_reset());
 
-} // namespace tests
-} // namespace internal
-} // namespace emb
+} // namespace

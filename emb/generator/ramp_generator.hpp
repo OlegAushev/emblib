@@ -1,6 +1,7 @@
 #pragma once
 
 #include <emb/algorithm.hpp>
+#include <emb/assert.hpp>
 #include <emb/units.hpp>
 
 #include <algorithm>
@@ -11,7 +12,7 @@ template<typename T>
 class ramp_generator {
 public:
   using value_type = T;
-  using const_reference = value_type const& ;
+  using const_reference = value_type const&;
 private:
   units::sec_f32 ts_;
   value_type slope_;
@@ -21,50 +22,51 @@ private:
   value_type init_output_;
   value_type output_;
 public:
-  ramp_generator(
-      units::sec_f32 const& ts,
+  constexpr ramp_generator(
+      units::sec_f32 const& timestep,
       value_type const& slope,
       value_type const& init_output = T{}
   )
       : init_output_(init_output) {
-    set_slope(ts, slope);
+    set_slope(timestep, slope);
     reset();
   }
 
-  value_type target() const {
+  constexpr value_type target() const {
     return target_;
   }
 
-  value_type output() const {
+  constexpr value_type output() const {
     return output_;
   }
 
-  void set_target(const_reference input_v) {
-    target_ = input_v;
+  constexpr void set_target(const_reference value) {
+    target_ = value;
   }
 
-  void set_output(const_reference output_v) {
-    target_ = output_v;
-    output_ = output_v;
+  constexpr void set_output(const_reference value) {
+    target_ = value;
+    output_ = value;
   }
 
-  void reset() {
+  constexpr void reset() {
     set_output(init_output_);
   }
 
-  void set_slope(units::sec_f32 const& ts, const_reference slope) {
-    assert(ts.value() > 0);
+  constexpr void
+  set_slope(units::sec_f32 const& timestep, const_reference slope) {
+    assert(timestep.value() > 0);
     assert(slope > T(0));
-    ts_ = ts;
+    ts_ = timestep;
     slope_ = slope;
-    step_ = ts.value() * slope;
+    step_ = timestep.value() * slope;
   }
 
-  void set_timestep(units::sec_f32 const& ts) {
+  constexpr void set_timestep(units::sec_f32 const& ts) {
     set_slope(ts, slope_);
   }
 
-  void update() {
+  constexpr void update() {
     if (output_ < target_) {
       output_ = std::min(output_ + step_, target_);
     } else {
@@ -72,7 +74,7 @@ public:
     }
   }
 
-  bool at_target() const {
+  constexpr bool at_target() const {
     return output_ == target_;
   }
 };

@@ -1,12 +1,8 @@
-#ifdef __cpp_constexpr
-
 #include <emb/mmio.hpp>
 
 #include <cassert>
 
-namespace emb {
-namespace internal {
-namespace tests {
+namespace {
 
 constexpr bool test_mmio() {
   return true;
@@ -14,8 +10,4 @@ constexpr bool test_mmio() {
 
 static_assert(test_mmio());
 
-} // namespace tests
-} // namespace internal
-} // namespace emb
-
-#endif
+} // namespace

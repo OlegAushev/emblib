@@ -25,7 +25,7 @@ constexpr bool test_inplace_vector(Vector v)
   for (auto i{1}; i <= cap; ++i) {
     v.push_back(i);
     assert(v.back() == i);
-    assert(v.size() == static_cast<typename V::size_type>(i));
+    assert(v.size() == static_cast<typename Vector::size_type>(i));
   }
 
   assert(v.full());

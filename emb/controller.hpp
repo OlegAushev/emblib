@@ -100,13 +100,13 @@ public:
   constexpr pi_controller_base(
       value_type kp,
       value_type ki,
-      units::sec<value_type> ts,
+      units::sec<value_type> timestep,
       value_type lower_limit,
       value_type upper_limit
   )
       : kp_(kp),
         ki_(ki),
-        ts_(ts),
+        ts_(timestep),
         out_i_(0),
         lower_limit_(lower_limit),
         upper_limit_(upper_limit),
@@ -176,12 +176,12 @@ public:
   constexpr backcalc_pi_controller(
       value_type kp,
       value_type ki,
-      units::sec<value_type> ts,
+      units::sec<value_type> timestep,
       value_type kc,
       value_type lower_limit,
       value_type upper_limit
   )
-      : base_type(kp, ki, ts, lower_limit, upper_limit), kc_(kc) {}
+      : base_type(kp, ki, timestep, lower_limit, upper_limit), kc_(kc) {}
 
   constexpr void push(value_type ref, value_type meas) {
     value_type error = Policy::template error<value_type>(ref, meas);
@@ -224,11 +224,11 @@ public:
   constexpr clamping_pi_controller(
       value_type kp,
       value_type ki,
-      units::sec<value_type> ts,
+      units::sec<value_type> timestep,
       value_type lower_limit,
       value_type upper_limit
   )
-      : base_type(kp, ki, ts, lower_limit, upper_limit), error_(0) {}
+      : base_type(kp, ki, timestep, lower_limit, upper_limit), error_(0) {}
 
   constexpr void push(value_type ref, value_type meas) {
     value_type error = Policy::template error<value_type>(ref, meas);

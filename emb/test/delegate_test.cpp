@@ -3,9 +3,7 @@
 #include <cassert>
 #include <type_traits>
 
-namespace emb {
-namespace internal {
-namespace tests {
+namespace {
 
 constexpr int add(int a, int b) {
   return a + b;
@@ -136,6 +134,4 @@ static_assert(make_delegate_accepts<foo&>);
 static_assert(!make_delegate_accepts<foo>);
 static_assert(!make_delegate_accepts<foo const>);
 
-} // namespace tests
-} // namespace internal
-} // namespace emb
+} // namespace
