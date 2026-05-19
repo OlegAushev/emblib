@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cstdint>
 
+#include <emb/assert.hpp>
 #include <emb/can.hpp>
 #include <emb/can/bus.hpp>
 #include <emb/concurrent/isr_spsc_inplace_queue.hpp>
@@ -23,7 +24,7 @@ public:
   node(node const&) = delete;
   node& operator=(node const&) = delete;
 
-  bool add_rx(
+  void add_rx(
       format_t format,
       id_t id,
       id_t mask,
@@ -31,30 +32,28 @@ public:
       emb::delegate<void(frame_t const&)> handler,
       emb::delegate<void()> on_timeout
   ) {
-    if (!rx_.try_push_back(
-            {.format = format,
-             .id = id,
-             .mask = mask,
-             .timeout = timeout,
-             .last_rx = now_,
-             .timed_out = false,
-             .handler = handler,
-             .on_timeout = on_timeout}
-        )) {
-      return false;
-    }
+    bool ok = rx_.try_push_back(
+        {.format = format,
+         .id = id,
+         .mask = mask,
+         .timeout = timeout,
+         .last_rx = now_,
+         .timed_out = false,
+         .handler = handler,
+         .on_timeout = on_timeout}
+    );
+    emb::ensure(ok);
     bus_.add_filter(format, id, mask);
-    return true;
   }
 
-  bool add_periodic_tx(
+  void add_periodic_tx(
       format_t format,
       id_t id,
       uint8_t len,
       std::chrono::milliseconds period,
       emb::delegate<payload_t()> provider
   ) {
-    return tx_.try_push_back(
+    bool ok = tx_.try_push_back(
         {.format = format,
          .id = id,
          .len = len,
@@ -62,6 +61,7 @@ public:
          .last_tx = now_,
          .provider = provider}
     );
+    emb::ensure(ok);
   }
 
   void run(std::chrono::milliseconds since_boot) {
