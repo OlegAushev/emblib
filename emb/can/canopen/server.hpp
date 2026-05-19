@@ -10,7 +10,8 @@
 #include <emb/delegate.hpp>
 
 #include "can_transport.hpp"
-#include "canopen_def.hpp"
+#include "types.hpp"
+#include "od.hpp"
 #include "detail/emcy_producer.hpp"
 #include "detail/hb_consumer.hpp"
 #include "detail/hb_producer.hpp"

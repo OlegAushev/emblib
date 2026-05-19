@@ -6,7 +6,7 @@
 #include <emb/can.hpp>
 
 #include "../can_transport.hpp"
-#include "../canopen_def.hpp"
+#include "../types.hpp"
 
 namespace emb {
 namespace canopen {
