@@ -3,6 +3,7 @@
 #include <utility>
 
 namespace emb {
+namespace can {
 namespace canopen {
 
 server::server(
@@ -54,11 +55,11 @@ void server::run() {
   hb_consumer_.tick(now);
 }
 
-void server::enqueue_rx(emb::can::frame_t const& frame) {
+void server::enqueue_rx(frame_t const& frame) {
   (void)rx_queue_.try_push(frame); // drop-newest on full
 }
 
-void server::dispatch_rx(emb::can::frame_t const& frame) {
+void server::dispatch_rx(frame_t const& frame) {
   if (nmt_.match(frame)) {
     handle_nmt_command(frame);
     return;
@@ -69,7 +70,7 @@ void server::dispatch_rx(emb::can::frame_t const& frame) {
   hb_consumer_.try_handle(frame, now);
 }
 
-void server::handle_nmt_command(emb::can::frame_t const& frame) {
+void server::handle_nmt_command(frame_t const& frame) {
   auto cmd = nmt_.decode(frame);
   if (!cmd) return;
 
@@ -102,7 +103,7 @@ void server::apply_nmt_state(nmt_state s) {
 
 void server::set_rpdo_handler(
     rpdo_num n,
-    emb::delegate<void(emb::can::payload_t const&)> handler
+    emb::delegate<void(payload_t const&)> handler
 ) {
   rpdo_.set_handler(n, handler);
 }
@@ -116,13 +117,13 @@ void server::set_rpdo_timeout(
   rpdo_.set_timeout(n, timeout, on_timeout, now);
 }
 
-void server::set_rpdo_cob_id(rpdo_num n, emb::can::id_t custom_id) {
+void server::set_rpdo_cob_id(rpdo_num n, id_t custom_id) {
   rpdo_.set_cob_id(n, custom_id);
 }
 
 void server::set_tpdo_provider(
     tpdo_num n,
-    emb::delegate<emb::can::payload_t()> provider
+    emb::delegate<payload_t()> provider
 ) {
   tpdo_.set_provider(n, provider);
 }
@@ -172,4 +173,5 @@ bool server::emit_emcy(
 }
 
 } // namespace canopen
+} // namespace can
 } // namespace emb

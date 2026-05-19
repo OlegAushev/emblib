@@ -3,6 +3,7 @@
 #include <utility>
 
 namespace emb {
+namespace can {
 namespace canopen {
 namespace detail {
 
@@ -19,7 +20,7 @@ rpdo_consumer::rpdo_consumer(can_transport& transport, node_id id)
 
 void rpdo_consumer::set_handler(
     rpdo_num n,
-    emb::delegate<void(emb::can::payload_t const&)> handler
+    emb::delegate<void(payload_t const&)> handler
 ) {
   slots_[std::to_underlying(n)].handler = handler;
 }
@@ -37,7 +38,7 @@ void rpdo_consumer::set_timeout(
   s.timed_out = false;
 }
 
-void rpdo_consumer::set_cob_id(rpdo_num n, emb::can::id_t custom_id) {
+void rpdo_consumer::set_cob_id(rpdo_num n, id_t custom_id) {
   auto& s = slots_[std::to_underlying(n)];
   if (s.cob_id == custom_id) return;
 
@@ -48,7 +49,7 @@ void rpdo_consumer::set_cob_id(rpdo_num n, emb::can::id_t custom_id) {
 }
 
 bool rpdo_consumer::try_handle(
-    emb::can::frame_t const& frame,
+    frame_t const& frame,
     std::chrono::milliseconds now,
     nmt_state state
 ) {
@@ -90,4 +91,5 @@ void rpdo_consumer::reset_timers(std::chrono::milliseconds now) {
 
 } // namespace detail
 } // namespace canopen
+} // namespace can
 } // namespace emb

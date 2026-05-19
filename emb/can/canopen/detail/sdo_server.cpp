@@ -6,6 +6,7 @@
 #include <utility>
 
 namespace emb {
+namespace can {
 namespace canopen {
 namespace detail {
 
@@ -47,7 +48,7 @@ od_entry const* sdo_server::find(od_key key) const {
   return &(*it);
 }
 
-bool sdo_server::try_handle(emb::can::frame_t const& frame) {
+bool sdo_server::try_handle(frame_t const& frame) {
   if (frame.id != rsdo_cob_id_) return false;
 
   expedited_sdo rsdo = from_payload<expedited_sdo>(frame.payload);
@@ -68,12 +69,12 @@ bool sdo_server::try_handle(emb::can::frame_t const& frame) {
     return std::unexpected(sdo_abort_code::invalid_cs);
   }();
 
-  emb::can::payload_t response = result ? to_payload<expedited_sdo>(*result)
-                                        : to_payload<abort_sdo>(abort_sdo{
-                                              rsdo.index,
-                                              rsdo.subindex,
-                                              result.error()
-                                          });
+  payload_t response = result ? to_payload<expedited_sdo>(*result)
+                              : to_payload<abort_sdo>(abort_sdo{
+                                    rsdo.index,
+                                    rsdo.subindex,
+                                    result.error()
+                                });
 
   if (!tsdo_queue_.full()) {
     tsdo_queue_.push(response);
@@ -83,8 +84,8 @@ bool sdo_server::try_handle(emb::can::frame_t const& frame) {
 
 void sdo_server::drain() {
   while (!tsdo_queue_.empty()) {
-    emb::can::frame_t frame = {
-        .format = emb::can::format_t::standard,
+    frame_t frame = {
+        .format = format_t::standard,
         .id = tsdo_cob_id_,
         .len = 8,
         .payload = tsdo_queue_.front()
@@ -169,4 +170,5 @@ sdo_server::restore_default_parameter(od_key key) {
 
 } // namespace detail
 } // namespace canopen
+} // namespace can
 } // namespace emb

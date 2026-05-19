@@ -11,19 +11,18 @@
 #include <emb/can.hpp>
 
 namespace emb {
+namespace can {
 namespace canopen {
 
 template<typename T>
-  requires std::is_trivially_copyable_v<T>
-        && (sizeof(T) == sizeof(emb::can::payload_t))
-constexpr emb::can::payload_t to_payload(T const& message) {
-  return std::bit_cast<emb::can::payload_t>(message);
+  requires std::is_trivially_copyable_v<T> && (sizeof(T) == sizeof(payload_t))
+constexpr payload_t to_payload(T const& message) {
+  return std::bit_cast<payload_t>(message);
 }
 
 template<typename T>
-  requires std::is_trivially_copyable_v<T>
-        && (sizeof(T) == sizeof(emb::can::payload_t))
-constexpr T from_payload(emb::can::payload_t const& payload) {
+  requires std::is_trivially_copyable_v<T> && (sizeof(T) == sizeof(payload_t))
+constexpr T from_payload(payload_t const& payload) {
   return std::bit_cast<T>(payload);
 }
 
@@ -76,7 +75,7 @@ enum class cob_type : uint8_t {
 
 constexpr size_t cob_type_count = 15;
 
-constexpr std::array<emb::can::id_t, cob_type_count> cob_function_codes = {
+constexpr std::array<id_t, cob_type_count> cob_function_codes = {
     0x000, // nmt
     0x080, // sync
     0x080, // emcy
@@ -101,13 +100,13 @@ constexpr bool is_broadcast_cob = (Cob == cob_type::nmt)
 
 template<cob_type Cob>
   requires is_broadcast_cob<Cob>
-constexpr emb::can::id_t cob_id_of() {
+constexpr id_t cob_id_of() {
   return cob_function_codes[std::to_underlying(Cob)];
 }
 
 template<cob_type Cob>
   requires(!is_broadcast_cob<Cob>)
-constexpr emb::can::id_t cob_id_of(node_id id) {
+constexpr id_t cob_id_of(node_id id) {
   return cob_function_codes[std::to_underlying(Cob)] + id.get();
 }
 
@@ -127,4 +126,5 @@ constexpr cob_type to_cob(rpdo_num n) {
 }
 
 } // namespace canopen
+} // namespace can
 } // namespace emb

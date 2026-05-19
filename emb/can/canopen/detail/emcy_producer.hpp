@@ -9,6 +9,7 @@
 #include "../types.hpp"
 
 namespace emb {
+namespace can {
 namespace canopen {
 namespace detail {
 
@@ -22,8 +23,8 @@ public:
       uint8_t error_register,
       std::array<uint8_t, 5> manufacturer = {}
   ) {
-    emb::can::frame_t frame = {
-        .format = emb::can::format_t::standard,
+    frame_t frame = {
+        .format = format_t::standard,
         .id = cob_id_,
         .len = 8,
         .payload = {
@@ -42,9 +43,10 @@ public:
 
 private:
   can_transport& transport_;
-  emb::can::id_t cob_id_;
+  id_t cob_id_;
 };
 
 } // namespace detail
 } // namespace canopen
+} // namespace can
 } // namespace emb

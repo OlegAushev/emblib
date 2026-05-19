@@ -13,6 +13,7 @@
 #include "sdo.hpp"
 
 namespace emb {
+namespace can {
 namespace canopen {
 
 // User-facing typed OD value. Covers every scalar type representable in a
@@ -176,4 +177,5 @@ inline bool operator==(od_key const& lhs, od_key const& rhs) {
 }
 
 } // namespace canopen
+} // namespace can
 } // namespace emb

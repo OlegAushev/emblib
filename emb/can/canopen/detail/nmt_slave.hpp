@@ -9,6 +9,7 @@
 #include "../types.hpp"
 
 namespace emb {
+namespace can {
 namespace canopen {
 namespace detail {
 
@@ -16,11 +17,11 @@ class nmt_slave {
 public:
   explicit nmt_slave(node_id node) : node_(node) {}
 
-  static constexpr emb::can::id_t cob_id() {
+  static constexpr id_t cob_id() {
     return cob_id_;
   }
 
-  bool match(emb::can::frame_t const& frame) const {
+  bool match(frame_t const& frame) const {
     return frame.id == cob_id();
   }
 
@@ -32,7 +33,7 @@ public:
     state_ = s;
   }
 
-  std::optional<nmt_command> decode(emb::can::frame_t const& frame) const {
+  std::optional<nmt_command> decode(frame_t const& frame) const {
     if (frame.len < 2) return std::nullopt;
     uint8_t cs = frame.payload[0];
     uint8_t target = frame.payload[1];
@@ -50,10 +51,11 @@ public:
 
 private:
   node_id const node_;
-  static constexpr emb::can::id_t cob_id_ = cob_id_of<cob_type::nmt>();
+  static constexpr id_t cob_id_ = cob_id_of<cob_type::nmt>();
   nmt_state state_ = nmt_state::initializing;
 };
 
 } // namespace detail
 } // namespace canopen
+} // namespace can
 } // namespace emb

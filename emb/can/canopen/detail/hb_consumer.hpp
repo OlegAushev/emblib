@@ -11,6 +11,7 @@
 #include "../types.hpp"
 
 namespace emb {
+namespace can {
 namespace canopen {
 namespace detail {
 
@@ -32,17 +33,14 @@ public:
 
   // Called from server::dispatch_rx for each incoming frame; updates the
   // matching watch's last_rx and clears `lost`. Returns true on match.
-  bool try_handle(
-      emb::can::frame_t const& frame,
-      std::chrono::milliseconds now
-  );
+  bool try_handle(frame_t const& frame, std::chrono::milliseconds now);
 
   // Checks timeouts, fires on_lost once per loss event.
   void tick(std::chrono::milliseconds now);
 
 private:
   struct watch_slot {
-    emb::can::id_t cob_id = 0;
+    id_t cob_id = 0;
     node_id remote = node_id::make(1).value();
 
     std::chrono::milliseconds timeout{0};
@@ -58,4 +56,5 @@ private:
 
 } // namespace detail
 } // namespace canopen
+} // namespace can
 } // namespace emb

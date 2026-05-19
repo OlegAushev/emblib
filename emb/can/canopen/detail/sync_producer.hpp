@@ -9,6 +9,7 @@
 #include "../types.hpp"
 
 namespace emb {
+namespace can {
 namespace canopen {
 namespace detail {
 
@@ -28,12 +29,8 @@ public:
     if (period_ == std::chrono::milliseconds::zero()) return;
     if ((now - last_tx_) < period_) return;
 
-    emb::can::frame_t frame = {
-        .format = emb::can::format_t::standard,
-        .id = cob_id_,
-        .len = 0,
-        .payload = {}
-    };
+    frame_t frame =
+        {.format = format_t::standard, .id = cob_id_, .len = 0, .payload = {}};
 
     if (transport_.send(frame)) {
       last_tx_ = now;
@@ -42,11 +39,12 @@ public:
 
 private:
   can_transport& transport_;
-  static constexpr emb::can::id_t cob_id_ = cob_id_of<cob_type::sync>();
+  static constexpr id_t cob_id_ = cob_id_of<cob_type::sync>();
   std::chrono::milliseconds period_{0};
   std::chrono::milliseconds last_tx_{0};
 };
 
 } // namespace detail
 } // namespace canopen
+} // namespace can
 } // namespace emb

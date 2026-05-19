@@ -7,6 +7,7 @@
 #include <emb/can.hpp>
 
 namespace emb {
+namespace can {
 namespace canopen {
 
 namespace sdo_cs_codes {
@@ -24,7 +25,7 @@ constexpr uint32_t client_block_read = 5;
 constexpr uint32_t server_block_read = 6;
 } // namespace sdo_cs_codes
 
-inline uint32_t get_cs_code(emb::can::frame_t const& frame) {
+inline uint32_t get_cs_code(frame_t const& frame) {
   return (frame.payload[0] >> 5) & 0x07;
 }
 
@@ -89,4 +90,5 @@ struct abort_sdo {
 };
 
 } // namespace canopen
+} // namespace can
 } // namespace emb

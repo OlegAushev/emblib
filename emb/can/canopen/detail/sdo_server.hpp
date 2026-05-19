@@ -9,10 +9,11 @@
 #include <emb/container/inplace_queue.hpp>
 
 #include "../can_transport.hpp"
-#include "../types.hpp"
 #include "../od.hpp"
+#include "../types.hpp"
 
 namespace emb {
+namespace can {
 namespace canopen {
 namespace detail {
 
@@ -29,7 +30,7 @@ public:
   sdo_server(sdo_server const&) = delete;
   sdo_server& operator=(sdo_server const&) = delete;
 
-  bool try_handle(emb::can::frame_t const& frame);
+  bool try_handle(frame_t const& frame);
 
   void drain();
 
@@ -50,11 +51,12 @@ private:
 
   can_transport& transport_;
   std::span<od_entry> dictionary_;
-  emb::can::id_t rsdo_cob_id_;
-  emb::can::id_t tsdo_cob_id_;
-  emb::inplace_queue<emb::can::payload_t, tsdo_queue_capacity> tsdo_queue_;
+  id_t rsdo_cob_id_;
+  id_t tsdo_cob_id_;
+  emb::inplace_queue<payload_t, tsdo_queue_capacity> tsdo_queue_;
 };
 
 } // namespace detail
 } // namespace canopen
+} // namespace can
 } // namespace emb

@@ -11,6 +11,7 @@
 #include "../types.hpp"
 
 namespace emb {
+namespace can {
 namespace canopen {
 namespace detail {
 
@@ -24,7 +25,7 @@ public:
     slots_[3].cob_id = cob_id_of<cob_type::tpdo4>(node);
   }
 
-  void set_provider(tpdo_num n, emb::delegate<emb::can::payload_t()> provider) {
+  void set_provider(tpdo_num n, emb::delegate<payload_t()> provider) {
     slots_[std::to_underlying(n)].provider = provider;
   }
 
@@ -47,8 +48,8 @@ public:
       }
       if ((now - s.last_tx) < s.period) continue;
 
-      emb::can::frame_t frame = {
-          .format = emb::can::format_t::standard,
+      frame_t frame = {
+          .format = format_t::standard,
           .id = s.cob_id,
           .len = 8,
           .payload = s.provider()
@@ -62,8 +63,8 @@ public:
 
 private:
   struct slot {
-    emb::can::id_t cob_id = 0;
-    emb::delegate<emb::can::payload_t()> provider;
+    id_t cob_id = 0;
+    emb::delegate<payload_t()> provider;
     std::chrono::milliseconds period{0};
     std::chrono::milliseconds last_tx{0};
   };
@@ -74,4 +75,5 @@ private:
 
 } // namespace detail
 } // namespace canopen
+} // namespace can
 } // namespace emb

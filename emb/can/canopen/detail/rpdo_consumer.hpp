@@ -12,6 +12,7 @@
 #include "../types.hpp"
 
 namespace emb {
+namespace can {
 namespace canopen {
 namespace detail {
 
@@ -22,10 +23,7 @@ public:
   rpdo_consumer(rpdo_consumer const&) = delete;
   rpdo_consumer& operator=(rpdo_consumer const&) = delete;
 
-  void set_handler(
-      rpdo_num n,
-      emb::delegate<void(emb::can::payload_t const&)> handler
-  );
+  void set_handler(rpdo_num n, emb::delegate<void(payload_t const&)> handler);
 
   void set_timeout(
       rpdo_num n,
@@ -36,10 +34,10 @@ public:
 
   // Note: previous HW filter persists, frames matching the old COB-ID
   // will pass through but no slot will claim them in try_handle.
-  void set_cob_id(rpdo_num n, emb::can::id_t custom_id);
+  void set_cob_id(rpdo_num n, id_t custom_id);
 
   bool try_handle(
-      emb::can::frame_t const& frame,
+      frame_t const& frame,
       std::chrono::milliseconds now,
       nmt_state state
   );
@@ -50,9 +48,9 @@ public:
 
 private:
   struct slot {
-    emb::can::id_t cob_id = 0;
+    id_t cob_id = 0;
 
-    emb::delegate<void(emb::can::payload_t const&)> handler;
+    emb::delegate<void(payload_t const&)> handler;
 
     std::chrono::milliseconds timeout{0};
     std::chrono::milliseconds last_rx{0};
@@ -66,4 +64,5 @@ private:
 
 } // namespace detail
 } // namespace canopen
+} // namespace can
 } // namespace emb

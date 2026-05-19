@@ -10,8 +10,6 @@
 #include <emb/delegate.hpp>
 
 #include "can_transport.hpp"
-#include "types.hpp"
-#include "od.hpp"
 #include "detail/emcy_producer.hpp"
 #include "detail/hb_consumer.hpp"
 #include "detail/hb_producer.hpp"
@@ -20,8 +18,11 @@
 #include "detail/sdo_server.hpp"
 #include "detail/sync_producer.hpp"
 #include "detail/tpdo_producer.hpp"
+#include "od.hpp"
+#include "types.hpp"
 
 namespace emb {
+namespace can {
 namespace canopen {
 
 class server {
@@ -53,7 +54,7 @@ public:
 
   void set_rpdo_handler(
       rpdo_num n,
-      emb::delegate<void(emb::can::payload_t const&)> handler
+      emb::delegate<void(payload_t const&)> handler
   );
 
   void set_rpdo_timeout(
@@ -62,15 +63,11 @@ public:
       emb::delegate<void()> on_timeout
   );
 
-  void set_rpdo_cob_id(rpdo_num n, emb::can::id_t custom_id);
+  void set_rpdo_cob_id(rpdo_num n, id_t custom_id);
 
   // ---- TPDO ----
 
-  void set_tpdo_provider(
-      tpdo_num n,
-      emb::delegate<emb::can::payload_t()> provider
-  );
-
+  void set_tpdo_provider(tpdo_num n, emb::delegate<payload_t()> provider);
   void set_tpdo_period(tpdo_num n, std::chrono::milliseconds period);
 
   // ---- heartbeat / sync / nmt ----
@@ -98,18 +95,18 @@ public:
 private:
   static constexpr size_t rx_queue_capacity = 32;
 
-  void enqueue_rx(emb::can::frame_t const& frame);
-  void dispatch_rx(emb::can::frame_t const& frame);
+  void enqueue_rx(frame_t const& frame);
+  void dispatch_rx(frame_t const& frame);
 
   void apply_nmt_state(nmt_state s);
-  void handle_nmt_command(emb::can::frame_t const& frame);
+  void handle_nmt_command(frame_t const& frame);
 
   emb::delegate<std::chrono::milliseconds()> clock_;
 
   can_transport& transport_;
   node_id id_;
 
-  emb::isr_spsc_inplace_queue<emb::can::frame_t, rx_queue_capacity> rx_queue_;
+  emb::isr_spsc_inplace_queue<frame_t, rx_queue_capacity> rx_queue_;
 
   detail::nmt_slave nmt_;
   detail::hb_producer hb_producer_;
@@ -126,4 +123,5 @@ private:
 };
 
 } // namespace canopen
+} // namespace can
 } // namespace emb

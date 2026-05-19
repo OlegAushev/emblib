@@ -1,6 +1,7 @@
 #include "hb_consumer.hpp"
 
 namespace emb {
+namespace can {
 namespace canopen {
 namespace detail {
 
@@ -10,7 +11,7 @@ bool hb_consumer::watch(
     emb::delegate<void(node_id)> on_lost,
     std::chrono::milliseconds now
 ) {
-  emb::can::id_t cob_id = cob_id_of<cob_type::heartbeat>(remote);
+  id_t cob_id = cob_id_of<cob_type::heartbeat>(remote);
 
   // update existing watch on this cob_id
   for (auto& w : watches_) {
@@ -38,7 +39,7 @@ bool hb_consumer::watch(
 }
 
 bool hb_consumer::try_handle(
-    emb::can::frame_t const& frame,
+    frame_t const& frame,
     std::chrono::milliseconds now
 ) {
   for (auto& w : watches_) {
@@ -62,4 +63,5 @@ void hb_consumer::tick(std::chrono::milliseconds now) {
 
 } // namespace detail
 } // namespace canopen
+} // namespace can
 } // namespace emb
