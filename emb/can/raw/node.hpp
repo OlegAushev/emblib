@@ -11,19 +11,20 @@
 
 namespace emb {
 namespace can {
-namespace canopen {
+namespace raw {
 
 template<size_t RxSlots = 8, size_t TxSlots = 8, size_t RxQueueCapacity = 32>
-class raw_node {
+class node {
 public:
-  explicit raw_node(transport& bus) : bus_(bus) {
-    bus_.subscribe(emb::make_delegate<&raw_node::enqueue_rx>(this));
+  explicit node(transport& bus) : bus_(bus) {
+    bus_.subscribe(emb::make_delegate<&node::enqueue_rx>(this));
   }
 
-  raw_node(raw_node const&) = delete;
-  raw_node& operator=(raw_node const&) = delete;
+  node(node const&) = delete;
+  node& operator=(node const&) = delete;
 
-  bool register_rx(
+  bool add_rx(
+      format_t format,
       id_t id,
       id_t mask,
       std::chrono::milliseconds timeout,
@@ -31,7 +32,8 @@ public:
       emb::delegate<void()> on_timeout
   ) {
     if (!rx_.try_push_back(
-            {.id = id,
+            {.format = format,
+             .id = id,
              .mask = mask,
              .timeout = timeout,
              .last_rx = now_,
@@ -41,18 +43,20 @@ public:
         )) {
       return false;
     }
-    bus_.add_filter(format_t::standard, id, mask);
+    bus_.add_filter(format, id, mask);
     return true;
   }
 
-  bool register_periodic_tx(
+  bool add_periodic_tx(
+      format_t format,
       id_t id,
       uint8_t len,
       std::chrono::milliseconds period,
       emb::delegate<payload_t()> provider
   ) {
     return tx_.try_push_back(
-        {.id = id,
+        {.format = format,
+         .id = id,
          .len = len,
          .period = period,
          .last_tx = now_,
@@ -83,7 +87,12 @@ public:
       }
       if ((now_ - s.last_tx) < s.period) continue;
 
-      frame_t frame = {.id = s.id, .len = s.len, .payload = s.provider()};
+      frame_t frame = {
+          .format = s.format,
+          .id = s.id,
+          .len = s.len,
+          .payload = s.provider()
+      };
 
       if (bus_.send(frame)) {
         s.last_tx = now_;
@@ -93,6 +102,7 @@ public:
 
 private:
   struct rx_slot {
+    format_t format = format_t::standard;
     id_t id = 0;
     id_t mask = 0;
     std::chrono::milliseconds timeout{0};
@@ -103,6 +113,7 @@ private:
   };
 
   struct tx_slot {
+    format_t format = format_t::standard;
     id_t id = 0;
     uint8_t len = 0;
     std::chrono::milliseconds period{0};
@@ -116,6 +127,7 @@ private:
 
   void dispatch_rx(frame_t const& frame) {
     for (auto& s : rx_) {
+      if (frame.format != s.format) continue;
       if ((frame.id & s.mask) != (s.id & s.mask)) continue;
       s.last_rx = now_;
       s.timed_out = false;
@@ -131,6 +143,6 @@ private:
   emb::isr_spsc_inplace_queue<frame_t, RxQueueCapacity> rx_queue_;
 };
 
-} // namespace canopen
+} // namespace raw
 } // namespace can
 } // namespace emb
