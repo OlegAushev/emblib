@@ -34,7 +34,7 @@ bool hb_consumer::watch(
       )) {
     return false;
   }
-  transport_.add_filter(cob_id, 0x7FF);
+  bus_.add_filter(format_t::standard, cob_id, 0x7FF);
   return true;
 }
 

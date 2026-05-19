@@ -4,11 +4,10 @@
 #include <cstdint>
 
 #include <emb/can.hpp>
+#include <emb/can/bus.hpp>
 #include <emb/concurrent/isr_spsc_inplace_queue.hpp>
 #include <emb/container/inplace_vector.hpp>
 #include <emb/delegate.hpp>
-
-#include "can_transport.hpp"
 
 namespace emb {
 namespace can {
@@ -17,8 +16,8 @@ namespace canopen {
 template<size_t RxSlots = 8, size_t TxSlots = 8, size_t RxQueueCapacity = 32>
 class raw_node {
 public:
-  explicit raw_node(can_transport& transport) : transport_(transport) {
-    transport_.subscribe(emb::make_delegate<&raw_node::enqueue_rx>(this));
+  explicit raw_node(transport& bus) : bus_(bus) {
+    bus_.subscribe(emb::make_delegate<&raw_node::enqueue_rx>(this));
   }
 
   raw_node(raw_node const&) = delete;
@@ -42,7 +41,7 @@ public:
         )) {
       return false;
     }
-    transport_.add_filter(id, mask);
+    bus_.add_filter(format_t::standard, id, mask);
     return true;
   }
 
@@ -86,7 +85,7 @@ public:
 
       frame_t frame = {.id = s.id, .len = s.len, .payload = s.provider()};
 
-      if (transport_.send(frame)) {
+      if (bus_.send(frame)) {
         s.last_tx = now_;
       }
     }
@@ -125,7 +124,7 @@ private:
     }
   }
 
-  can_transport& transport_;
+  transport& bus_;
   std::chrono::milliseconds now_{0};
   emb::inplace_vector<rx_slot, RxSlots> rx_;
   emb::inplace_vector<tx_slot, TxSlots> tx_;

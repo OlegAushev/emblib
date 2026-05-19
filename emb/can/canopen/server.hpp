@@ -6,10 +6,10 @@
 #include <span>
 
 #include <emb/can.hpp>
+#include <emb/can/bus.hpp>
 #include <emb/concurrent/isr_spsc_inplace_queue.hpp>
 #include <emb/delegate.hpp>
 
-#include "can_transport.hpp"
 #include "detail/emcy_producer.hpp"
 #include "detail/hb_consumer.hpp"
 #include "detail/hb_producer.hpp"
@@ -29,7 +29,7 @@ class server {
 public:
   server(
       emb::delegate<std::chrono::milliseconds()> clock,
-      can_transport& transport,
+      transport& bus,
       node_id id,
       std::span<od_entry> dictionary
   );
@@ -103,7 +103,7 @@ private:
 
   emb::delegate<std::chrono::milliseconds()> clock_;
 
-  can_transport& transport_;
+  transport& bus_;
   node_id id_;
 
   emb::isr_spsc_inplace_queue<frame_t, rx_queue_capacity> rx_queue_;

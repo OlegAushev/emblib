@@ -6,9 +6,9 @@
 #include <utility>
 
 #include <emb/can.hpp>
+#include <emb/can/bus.hpp>
 #include <emb/delegate.hpp>
 
-#include "../can_transport.hpp"
 #include "../types.hpp"
 
 namespace emb {
@@ -18,7 +18,7 @@ namespace detail {
 
 class rpdo_consumer {
 public:
-  rpdo_consumer(can_transport& transport, node_id node);
+  rpdo_consumer(transport& bus, node_id node);
 
   rpdo_consumer(rpdo_consumer const&) = delete;
   rpdo_consumer& operator=(rpdo_consumer const&) = delete;
@@ -58,7 +58,7 @@ private:
     bool timed_out = false;
   };
 
-  can_transport& transport_;
+  transport& bus_;
   std::array<slot, 4> slots_;
 };
 

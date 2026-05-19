@@ -7,14 +7,13 @@ namespace can {
 namespace canopen {
 namespace detail {
 
-rpdo_consumer::rpdo_consumer(can_transport& transport, node_id id)
-    : transport_(transport) {
+rpdo_consumer::rpdo_consumer(transport& bus, node_id id) : bus_(bus) {
   slots_[0].cob_id = cob_id_of<cob_type::rpdo1>(id);
   slots_[1].cob_id = cob_id_of<cob_type::rpdo2>(id);
   slots_[2].cob_id = cob_id_of<cob_type::rpdo3>(id);
   slots_[3].cob_id = cob_id_of<cob_type::rpdo4>(id);
   for (auto& s : slots_) {
-    transport_.add_filter(s.cob_id, 0x7FF);
+    bus_.add_filter(format_t::standard, s.cob_id, 0x7FF);
   }
 }
 
@@ -42,9 +41,9 @@ void rpdo_consumer::set_cob_id(rpdo_num n, id_t custom_id) {
   auto& s = slots_[std::to_underlying(n)];
   if (s.cob_id == custom_id) return;
 
-  // Old HW filter persists in the transport; library-level slot moves to
+  // Old HW filter persists in the bus; library-level slot moves to
   // the new id, so old-id frames pass through but match nothing.
-  transport_.add_filter(custom_id, 0x7FF);
+  bus_.add_filter(format_t::standard, custom_id, 0x7FF);
   s.cob_id = custom_id;
 }
 

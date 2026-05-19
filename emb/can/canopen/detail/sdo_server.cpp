@@ -11,16 +11,16 @@ namespace canopen {
 namespace detail {
 
 sdo_server::sdo_server(
-    can_transport& transport,
+    transport& bus,
     node_id node,
     std::span<od_entry> dictionary
 )
-    : transport_(transport),
+    : bus_(bus),
       dictionary_(dictionary),
       rsdo_cob_id_(cob_id_of<cob_type::rsdo>(node)),
       tsdo_cob_id_(cob_id_of<cob_type::tsdo>(node)) {
   init_dictionary();
-  transport_.add_filter(rsdo_cob_id_, 0x7FF);
+  bus_.add_filter(format_t::standard, rsdo_cob_id_, 0x7FF);
 }
 
 void sdo_server::init_dictionary() {
@@ -90,7 +90,7 @@ void sdo_server::drain() {
         .len = 8,
         .payload = tsdo_queue_.front()
     };
-    if (!transport_.send(frame)) return;
+    if (!bus_.send(frame)) return;
     tsdo_queue_.pop();
   }
 }

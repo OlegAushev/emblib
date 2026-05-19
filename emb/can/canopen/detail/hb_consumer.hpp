@@ -4,10 +4,10 @@
 #include <cstdint>
 
 #include <emb/can.hpp>
+#include <emb/can/bus.hpp>
 #include <emb/container/inplace_vector.hpp>
 #include <emb/delegate.hpp>
 
-#include "../can_transport.hpp"
 #include "../types.hpp"
 
 namespace emb {
@@ -19,7 +19,7 @@ class hb_consumer {
 public:
   static constexpr size_t capacity = 8;
 
-  explicit hb_consumer(can_transport& transport) : transport_(transport) {}
+  explicit hb_consumer(transport& bus) : bus_(bus) {}
 
   hb_consumer(hb_consumer const&) = delete;
   hb_consumer& operator=(hb_consumer const&) = delete;
@@ -50,7 +50,7 @@ private:
     emb::delegate<void(node_id)> on_lost;
   };
 
-  can_transport& transport_;
+  transport& bus_;
   emb::inplace_vector<watch_slot, capacity> watches_;
 };
 

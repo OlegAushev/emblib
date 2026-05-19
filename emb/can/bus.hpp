@@ -1,17 +1,14 @@
 #pragma once
 
-#include <cstdint>
-
 #include <emb/can.hpp>
 #include <emb/delegate.hpp>
 
 namespace emb {
 namespace can {
-namespace canopen {
 
-class can_transport {
+class transport {
 public:
-  virtual ~can_transport() = default;
+  virtual ~transport() = default;
 
   virtual bool send(frame_t const& frame) = 0;
 
@@ -19,11 +16,11 @@ public:
   // accepted frame is delivered to all of them in registration order.
   virtual void subscribe(emb::delegate<void(frame_t const&)> handler) = 0;
 
-  // Configure a HW acceptance filter. There is no removal — embedded
-  // filters are set up at boot and persist for the device's lifetime.
-  virtual void add_filter(id_t id, id_t mask) = 0;
+  // Configure a HW acceptance filter. Format is explicit — drivers must
+  // route standard (11-bit) vs extended (29-bit) frames to appropriate
+  // hardware resources (e.g. STM32 filter banks in 16-bit vs 32-bit mode).
+  virtual void add_filter(format_t format, id_t id, id_t mask) = 0;
 };
 
-} // namespace canopen
 } // namespace can
 } // namespace emb

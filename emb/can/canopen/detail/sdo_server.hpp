@@ -6,9 +6,9 @@
 #include <span>
 
 #include <emb/can.hpp>
+#include <emb/can/bus.hpp>
 #include <emb/container/inplace_queue.hpp>
 
-#include "../can_transport.hpp"
 #include "../od.hpp"
 #include "../types.hpp"
 
@@ -21,11 +21,7 @@ class sdo_server {
 public:
   static constexpr size_t tsdo_queue_capacity = 16;
 
-  sdo_server(
-      can_transport& transport,
-      node_id node,
-      std::span<od_entry> dictionary
-  );
+  sdo_server(transport& bus, node_id node, std::span<od_entry> dictionary);
 
   sdo_server(sdo_server const&) = delete;
   sdo_server& operator=(sdo_server const&) = delete;
@@ -49,7 +45,7 @@ private:
 
   std::expected<void, sdo_abort_code> restore_default_parameter(od_key key);
 
-  can_transport& transport_;
+  transport& bus_;
   std::span<od_entry> dictionary_;
   id_t rsdo_cob_id_;
   id_t tsdo_cob_id_;

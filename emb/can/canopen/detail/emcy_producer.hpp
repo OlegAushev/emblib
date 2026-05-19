@@ -4,8 +4,8 @@
 #include <cstdint>
 
 #include <emb/can.hpp>
+#include <emb/can/bus.hpp>
 
-#include "../can_transport.hpp"
 #include "../types.hpp"
 
 namespace emb {
@@ -15,8 +15,8 @@ namespace detail {
 
 class emcy_producer {
 public:
-  emcy_producer(can_transport& transport, node_id node)
-      : transport_(transport), cob_id_(cob_id_of<cob_type::emcy>(node)) {}
+  emcy_producer(transport& bus, node_id node)
+      : bus_(bus), cob_id_(cob_id_of<cob_type::emcy>(node)) {}
 
   bool emit(
       uint16_t error_code,
@@ -38,11 +38,11 @@ public:
       frame.payload[3 + i] = manufacturer[i];
     }
 
-    return transport_.send(frame);
+    return bus_.send(frame);
   }
 
 private:
-  can_transport& transport_;
+  transport& bus_;
   id_t cob_id_;
 };
 

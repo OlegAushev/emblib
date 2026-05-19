@@ -8,24 +8,24 @@ namespace canopen {
 
 server::server(
     emb::delegate<std::chrono::milliseconds()> clock,
-    can_transport& transport,
+    transport& bus,
     node_id id,
     std::span<od_entry> dictionary
 )
     : clock_(clock),
-      transport_(transport),
+      bus_(bus),
       id_(id),
       nmt_(id),
-      hb_producer_(transport, id),
-      sync_producer_(transport),
-      hb_consumer_(transport),
-      emcy_(transport, id),
-      sdo_(transport, id, dictionary),
-      tpdo_(transport, id),
-      rpdo_(transport, id) {
-  transport_.subscribe(emb::make_delegate<&server::enqueue_rx>(this));
+      hb_producer_(bus, id),
+      sync_producer_(bus),
+      hb_consumer_(bus),
+      emcy_(bus, id),
+      sdo_(bus, id, dictionary),
+      tpdo_(bus, id),
+      rpdo_(bus, id) {
+  bus_.subscribe(emb::make_delegate<&server::enqueue_rx>(this));
 
-  transport_.add_filter(nmt_.cob_id(), 0x7FF);
+  bus_.add_filter(format_t::standard, nmt_.cob_id(), 0x7FF);
   apply_nmt_state(nmt_state::pre_operational);
 }
 

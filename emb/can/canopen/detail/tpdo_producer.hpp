@@ -5,9 +5,9 @@
 #include <utility>
 
 #include <emb/can.hpp>
+#include <emb/can/bus.hpp>
 #include <emb/delegate.hpp>
 
-#include "../can_transport.hpp"
 #include "../types.hpp"
 
 namespace emb {
@@ -17,8 +17,7 @@ namespace detail {
 
 class tpdo_producer {
 public:
-  tpdo_producer(can_transport& transport, node_id node)
-      : transport_(transport) {
+  tpdo_producer(transport& bus, node_id node) : bus_(bus) {
     slots_[0].cob_id = cob_id_of<cob_type::tpdo1>(node);
     slots_[1].cob_id = cob_id_of<cob_type::tpdo2>(node);
     slots_[2].cob_id = cob_id_of<cob_type::tpdo3>(node);
@@ -55,7 +54,7 @@ public:
           .payload = s.provider()
       };
 
-      if (transport_.send(frame)) {
+      if (bus_.send(frame)) {
         s.last_tx = now;
       }
     }
@@ -69,7 +68,7 @@ private:
     std::chrono::milliseconds last_tx{0};
   };
 
-  can_transport& transport_;
+  transport& bus_;
   std::array<slot, 4> slots_;
 };
 
