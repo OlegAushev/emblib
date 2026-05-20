@@ -54,79 +54,20 @@ public:
 
   basic_scheduler() = delete;
 
-  template<auto F>
-  static void add_task(std::chrono::milliseconds period) {
-    tasks_.push_back(
-        {emb::delegate<void()>::template bind<F>(),
-         period,
-         Clock::now()}
-    );
+  static void add_task(emb::delegate<void()> task,
+                       std::chrono::milliseconds period) {
+    tasks_.push_back({task, period, Clock::now()});
   }
 
-  template<auto M, typename T>
-  static void add_task(T* obj, std::chrono::milliseconds period) {
-    tasks_.push_back(
-        {emb::delegate<void()>::template bind<M>(obj),
-         period,
-         Clock::now()}
-    );
-  }
-
-  template<auto M, typename T>
-  static void add_task(T const* obj, std::chrono::milliseconds period) {
-    tasks_.push_back(
-        {emb::delegate<void()>::template bind<M>(obj),
-         period,
-         Clock::now()}
-    );
-  }
-
-  template<auto F>
-  static void add_adaptive_task(std::chrono::milliseconds period) {
-    adaptive_tasks_.push_back(
-        {emb::delegate<void(adaptive_task_context)>::template bind<F>(),
-         period,
-         Clock::now()}
-    );
-  }
-
-  template<auto M, typename T>
-  static void add_adaptive_task(T* obj, std::chrono::milliseconds period) {
-    adaptive_tasks_.push_back(
-        {emb::delegate<void(adaptive_task_context)>::template bind<M>(obj),
-         period,
-         Clock::now()}
-    );
-  }
-
-  template<auto M, typename T>
   static void
-  add_adaptive_task(T const* obj, std::chrono::milliseconds period) {
-    adaptive_tasks_.push_back(
-        {emb::delegate<void(adaptive_task_context)>::template bind<M>(obj),
-         period,
-         Clock::now()}
-    );
+  add_adaptive_task(emb::delegate<void(adaptive_task_context)> task,
+                    std::chrono::milliseconds period) {
+    adaptive_tasks_.push_back({task, period, Clock::now()});
   }
 
-  template<auto F>
-  static void add_delayed_task(std::chrono::milliseconds delay) {
-    delayed_task_ = emb::delegate<void()>::template bind<F>();
-    delayed_task_delay_ = delay;
-    delayed_task_start_ = Clock::now();
-  }
-
-  template<auto M, typename T>
-  static void add_delayed_task(T* obj, std::chrono::milliseconds delay) {
-    delayed_task_ = emb::delegate<void()>::template bind<M>(obj);
-    delayed_task_delay_ = delay;
-    delayed_task_start_ = Clock::now();
-  }
-
-  template<auto M, typename T>
-  static void add_delayed_task(T const* obj,
+  static void add_delayed_task(emb::delegate<void()> task,
                                std::chrono::milliseconds delay) {
-    delayed_task_ = emb::delegate<void()>::template bind<M>(obj);
+    delayed_task_ = task;
     delayed_task_delay_ = delay;
     delayed_task_start_ = Clock::now();
   }
@@ -145,7 +86,7 @@ public:
       if (now
           >= adaptive_tasks_[i].exec_timepoint + adaptive_tasks_[i].period) {
         adaptive_tasks_[i].exec_timepoint = now;
-        adaptive_tasks_[i].func(adaptive_task_context{adaptive_tasks_[i]});
+        adaptive_tasks_[i].func(adaptive_task_context(adaptive_tasks_[i]));
       }
     }
 
