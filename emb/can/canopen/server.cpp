@@ -43,7 +43,7 @@ void server::run() {
     dispatch_rx(*frame);
   }
 
-  uint8_t timed_out = rpdo_.tick(now, nmt_.state());
+  std::uint8_t timed_out = rpdo_.tick(now, nmt_.state());
   for (auto i = 0uz; i < 4; ++i) {
     if (timed_out & (1u << i)) emcy_.emit(0x8250, 0x10);
   }
@@ -165,9 +165,9 @@ bool server::watch_heartbeat(
 }
 
 bool server::emit_emcy(
-    uint16_t error_code,
-    uint8_t error_register,
-    std::array<uint8_t, 5> manufacturer
+    std::uint16_t error_code,
+    std::uint8_t error_register,
+    std::array<std::uint8_t, 5> manufacturer
 ) {
   return emcy_.emit(error_code, error_register, manufacturer);
 }

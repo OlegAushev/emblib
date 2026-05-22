@@ -63,10 +63,10 @@ bool rpdo_consumer::try_handle(
   return false;
 }
 
-uint8_t rpdo_consumer::tick(std::chrono::milliseconds now, nmt_state state) {
+std::uint8_t rpdo_consumer::tick(std::chrono::milliseconds now, nmt_state state) {
   if (state != nmt_state::operational) return 0;
 
-  uint8_t just_timed_out = 0;
+  std::uint8_t just_timed_out = 0;
   for (auto i = 0uz; i < slots_.size(); ++i) {
     auto& s = slots_[i];
     if (s.timeout == std::chrono::milliseconds::zero() || s.timed_out) {
@@ -75,7 +75,7 @@ uint8_t rpdo_consumer::tick(std::chrono::milliseconds now, nmt_state state) {
     if ((now - s.last_rx) >= s.timeout) {
       s.timed_out = true;
       if (s.on_timeout) s.on_timeout();
-      just_timed_out |= static_cast<uint8_t>(1u << i);
+      just_timed_out |= static_cast<std::uint8_t>(1u << i);
     }
   }
   return just_timed_out;

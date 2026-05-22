@@ -55,8 +55,8 @@ bool sdo_server::try_handle(frame_t const& frame) {
   if (rsdo.cs == sdo_cs_codes::abort) return true;
 
   od_key key = {
-      static_cast<uint16_t>(rsdo.index),
-      static_cast<uint8_t>(rsdo.subindex)
+      static_cast<std::uint16_t>(rsdo.index),
+      static_cast<std::uint8_t>(rsdo.subindex)
   };
   od_entry const* entry = find(key);
 

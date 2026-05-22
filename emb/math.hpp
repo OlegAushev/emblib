@@ -84,7 +84,7 @@ constexpr float fast_rsqrt(float arg) {
 
   const float x2 = arg * 0.5f;
 
-  auto i = std::bit_cast<uint32_t>(arg);
+  auto i = std::bit_cast<std::uint32_t>(arg);
   i = 0x5f3759df - (i >> 1);
   float y = std::bit_cast<float>(i);
 
@@ -210,7 +210,7 @@ constexpr T norm2pi_fast(T v) {
   constexpr T inv_two_pi = 1 / (2 * std::numbers::pi_v<T>);
 
   T norm = v * inv_two_pi;
-  norm -= static_cast<T>(static_cast<int32_t>(norm) - (norm < T{0}));
+  norm -= static_cast<T>(static_cast<std::int32_t>(norm) - (norm < T{0}));
   if (norm >= T{1}) norm -= T{1};
   return norm * two_pi;
 }

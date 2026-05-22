@@ -48,13 +48,13 @@ parameter_name(char const (&)[N]) -> parameter_name<N>;
 // -- Hash function objects --
 
 struct fnv1a_32 {
-  using type = uint32_t;
+  using type = std::uint32_t;
 
   template<std::size_t N>
   static consteval type operator()(parameter_name<N> const& s) {
     type h = 0x811C9DC5u;
     for (auto i = 0uz; i < N - 1; ++i) {
-      h ^= static_cast<uint8_t>(s.data[i]);
+      h ^= static_cast<std::uint8_t>(s.data[i]);
       h *= 0x01000193u;
     }
     return h;
@@ -63,7 +63,7 @@ struct fnv1a_32 {
   static constexpr type operator()(const char* s) {
     type h = 0x811C9DC5u;
     for (; *s; ++s) {
-      h ^= static_cast<uint8_t>(*s);
+      h ^= static_cast<std::uint8_t>(*s);
       h *= 0x01000193u;
     }
     return h;
@@ -73,12 +73,12 @@ struct fnv1a_32 {
 // -- CRC function objects --
 
 struct crc32 {
-  using type = uint32_t;
+  using type = std::uint32_t;
 
   template<typename Hash, typename Value>
   static constexpr type operator()(Hash const& h, Value const& val) {
-    auto hb = std::bit_cast<std::array<uint8_t, sizeof(Hash)>>(h);
-    auto vb = std::bit_cast<std::array<uint8_t, sizeof(Value)>>(val);
+    auto hb = std::bit_cast<std::array<std::uint8_t, sizeof(Hash)>>(h);
+    auto vb = std::bit_cast<std::array<std::uint8_t, sizeof(Value)>>(val);
     type crc = 0xFFFFFFFFu;
     for (auto b : hb) crc = update(crc, b);
     for (auto b : vb) crc = update(crc, b);
@@ -86,7 +86,7 @@ struct crc32 {
   }
 
 private:
-  static constexpr type update(type crc, uint8_t b) {
+  static constexpr type update(type crc, std::uint8_t b) {
     crc ^= b;
     for (int i = 0; i < 8; ++i)
       crc = (crc >> 1) ^ (0xEDB88320u & (-(crc & 1u)));
@@ -104,7 +104,7 @@ concept some_hash_fn = requires { typename F::type; }
 
 template<typename F>
 concept some_crc_fn = requires { typename F::type; }
-                   && requires(F f, uint32_t h, uint32_t v) {
+                   && requires(F f, std::uint32_t h, std::uint32_t v) {
                         { f(h, v) } -> std::same_as<typename F::type>;
                       };
 
@@ -188,9 +188,9 @@ concept some_storage = requires {
       { T::capacity } -> std::convertible_to<std::size_t>;
     }
     && requires(T& s, typename T::addr_type addr) {
-      { s.template read<uint32_t>(addr) }
-          -> std::same_as<std::expected<uint32_t, nvm::error>>;
-      { s.template write<uint32_t>(addr, uint32_t{}) }
+      { s.template read<std::uint32_t>(addr) }
+          -> std::same_as<std::expected<std::uint32_t, nvm::error>>;
+      { s.template write<std::uint32_t>(addr, std::uint32_t{}) }
           -> std::same_as<std::expected<void, nvm::error>>;
     };
 

@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <numbers>
 
 namespace emb {
@@ -15,7 +16,7 @@ calculate_svpwm(vec_polar v_s, float v_dc) {
   v_s.theta = norm2pi(v_s.theta);
   v_s.mag = std::clamp<float>(v_s.mag, 0, v_dc / std::numbers::sqrt3_v<float>);
 
-  int32_t const sector = static_cast<int32_t>(
+  std::int32_t const sector = static_cast<std::int32_t>(
       v_s.theta / (std::numbers::pi_v<float> / 3.0f)
   );
   float const theta = v_s.theta -

@@ -18,10 +18,17 @@ namespace canopen {
 
 // User-facing typed OD value. Covers every scalar type representable in a
 // 4-byte expedited SDO payload.
-using od_value = std::
-    variant<bool, int8_t, int16_t, int32_t, uint8_t, uint16_t, uint32_t, float>;
+using od_value = std::variant<
+    bool,
+    std::int8_t,
+    std::int16_t,
+    std::int32_t,
+    std::uint8_t,
+    std::uint16_t,
+    std::uint32_t,
+    float>;
 
-enum class od_value_type : uint8_t {
+enum class od_value_type : std::uint8_t {
   boolean,
   int8,
   int16,
@@ -34,7 +41,7 @@ enum class od_value_type : uint8_t {
   string
 };
 
-enum class od_access : uint8_t { rw, ro, wo, const_ };
+enum class od_access : std::uint8_t { rw, ro, wo, const_ };
 
 // ---- od accessors ----
 
@@ -70,26 +77,26 @@ std::expected<void, sdo_abort_code> od_write_var(od_value val) {
 inline od_value make_od_value(expedited_sdo_data raw, od_value_type type) {
   switch (type) {
   case od_value_type::boolean: return raw[0] != 0;
-  case od_value_type::int8: return static_cast<int8_t>(raw[0]);
+  case od_value_type::int8: return static_cast<std::int8_t>(raw[0]);
   case od_value_type::int16: {
-    int16_t v;
+    std::int16_t v;
     std::memcpy(&v, raw.data(), sizeof(v));
     return v;
   }
   case od_value_type::int32: {
-    int32_t v;
+    std::int32_t v;
     std::memcpy(&v, raw.data(), sizeof(v));
     return v;
   }
   case od_value_type::uint8: return raw[0];
   case od_value_type::uint16: {
-    uint16_t v;
+    std::uint16_t v;
     std::memcpy(&v, raw.data(), sizeof(v));
     return v;
   }
   case od_value_type::uint32:
   case od_value_type::exec: {
-    uint32_t v;
+    std::uint32_t v;
     std::memcpy(&v, raw.data(), sizeof(v));
     return v;
   }
@@ -98,7 +105,7 @@ inline od_value make_od_value(expedited_sdo_data raw, od_value_type type) {
     std::memcpy(&v, raw.data(), sizeof(v));
     return v;
   }
-  default: return uint32_t{0};
+  default: return std::uint32_t{0};
   }
 }
 
@@ -111,20 +118,20 @@ inline expedited_sdo_data to_raw(od_value v) {
 
 constexpr std::array<std::size_t, 10> od_data_type_sizes = {
     sizeof(bool),
-    sizeof(int8_t),
-    sizeof(int16_t),
-    sizeof(int32_t),
-    sizeof(uint8_t),
-    sizeof(uint16_t),
-    sizeof(uint32_t),
+    sizeof(std::int8_t),
+    sizeof(std::int16_t),
+    sizeof(std::int32_t),
+    sizeof(std::uint8_t),
+    sizeof(std::uint16_t),
+    sizeof(std::uint32_t),
     sizeof(float),
     4,
     4
 };
 
 struct od_key {
-  uint16_t index;
-  uint8_t subindex;
+  std::uint16_t index;
+  std::uint8_t subindex;
 };
 
 struct od_object {

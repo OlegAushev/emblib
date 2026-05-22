@@ -28,26 +28,26 @@ constexpr T from_payload(payload_t const& payload) {
 
 class node_id {
 private:
-  uint8_t id_;
-  constexpr explicit node_id(uint8_t id) : id_(id) {}
+  std::uint8_t id_;
+  constexpr explicit node_id(std::uint8_t id) : id_(id) {}
 public:
-  static constexpr std::optional<node_id> make(uint8_t id) {
+  static constexpr std::optional<node_id> make(std::uint8_t id) {
     if (id < 1 || id > 127) return std::nullopt;
     return node_id(id);
   }
-  constexpr uint8_t get() const {
+  constexpr std::uint8_t get() const {
     return id_;
   }
 };
 
-enum class nmt_state : uint8_t {
+enum class nmt_state : std::uint8_t {
   initializing = 0x00,
   stopped = 0x04,
   operational = 0x05,
   pre_operational = 0x7F
 };
 
-enum class nmt_command : uint8_t {
+enum class nmt_command : std::uint8_t {
   start,                 // 0x01
   stop,                  // 0x02
   enter_pre_operational, // 0x80
@@ -55,7 +55,7 @@ enum class nmt_command : uint8_t {
   reset_communication,   // 0x82
 };
 
-enum class cob_type : uint8_t {
+enum class cob_type : std::uint8_t {
   nmt,
   sync,
   emcy,
@@ -110,8 +110,8 @@ constexpr id_t cob_id_of(node_id id) {
   return cob_function_codes[std::to_underlying(Cob)] + id.get();
 }
 
-enum class tpdo_num : uint8_t { _1, _2, _3, _4 };
-enum class rpdo_num : uint8_t { _1, _2, _3, _4 };
+enum class tpdo_num : std::uint8_t { _1, _2, _3, _4 };
+enum class rpdo_num : std::uint8_t { _1, _2, _3, _4 };
 
 constexpr cob_type to_cob(tpdo_num n) {
   constexpr std::array<cob_type, 4> map =

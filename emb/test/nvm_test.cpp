@@ -7,7 +7,7 @@
 
 template<>
 struct emb::nvm::parameter<"motor.pole_pairs">
-    : emb::nvm::parameter_traits<"motor.pole_pairs", int32_t, 1> {};
+    : emb::nvm::parameter_traits<"motor.pole_pairs", std::int32_t, 1> {};
 
 template<>
 struct emb::nvm::parameter<"motor.R">
@@ -26,14 +26,14 @@ using namespace emb;
 // -- Test backend --
 
 struct backend {
-  using addr_type = uint32_t;
+  using addr_type = std::uint32_t;
   static constexpr std::size_t capacity = 512;
 
-  std::array<uint8_t, capacity> mem{};
+  std::array<std::uint8_t, capacity> mem{};
 
   template<typename T>
   constexpr auto read(addr_type addr) -> std::expected<T, nvm::error> {
-    std::array<uint8_t, sizeof(T)> buf{};
+    std::array<std::uint8_t, sizeof(T)> buf{};
     for (auto i = 0uz; i < sizeof(T); ++i)
       buf[i] = mem[addr + i];
     return std::bit_cast<T>(buf);
@@ -42,7 +42,7 @@ struct backend {
   template<typename T>
   constexpr auto write(addr_type addr, T const& val)
       -> std::expected<void, nvm::error> {
-    auto buf = std::bit_cast<std::array<uint8_t, sizeof(T)>>(val);
+    auto buf = std::bit_cast<std::array<std::uint8_t, sizeof(T)>>(val);
     for (auto i = 0uz; i < sizeof(T); ++i)
       mem[addr + i] = buf[i];
     return {};
@@ -73,7 +73,7 @@ static constexpr bool test_round_trip() {
   assert(
       settings.size
       == 3 * frame_overhead
-             + sizeof(int32_t)
+             + sizeof(std::int32_t)
              + sizeof(float)
              + 3 * sizeof(float)
   );

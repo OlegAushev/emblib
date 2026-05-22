@@ -11,8 +11,12 @@ namespace emb {
 namespace mmio {
 
 template<typename T>
-concept some_register = emb::
-    same_as_any<std::remove_cv_t<T>, uint8_t, uint16_t, uint32_t, uint64_t>;
+concept some_register = emb::same_as_any<
+    std::remove_cv_t<T>,
+    std::uint8_t,
+    std::uint16_t,
+    std::uint32_t,
+    std::uint64_t>;
 
 template<typename T>
 using mask_type = std::type_identity_t<std::remove_cv_t<T>>;

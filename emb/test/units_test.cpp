@@ -38,12 +38,14 @@ constexpr bool test_units_conversion() {
   assert(near(emb::norm180_fast(deg_f32{-10.0f}).value(), -10.0f));
 
   float v2{3000.0f};
-  [[maybe_unused]] int32_t p{4};
+  [[maybe_unused]] std::int32_t p{4};
   rpm_f32 rpm1{v2};
   assert(convert_to<rpm_f32>(rpm1) == rpm1);
   assert(convert_to<eradps_f32>(rpm1, p) == eradps_f32{emb::to_eradps(v2, p)});
 
-  assert(templated_conversion<erad_f32>() == erad_f32{std::numbers::pi_v<float>});
+  assert(
+      templated_conversion<erad_f32>() == erad_f32{std::numbers::pi_v<float>}
+  );
 
   assert(
       templated_conversion<edeg_f32>() ==

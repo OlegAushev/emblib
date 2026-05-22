@@ -19,17 +19,17 @@ public:
       : bus_(bus), cob_id_(cob_id_of<cob_type::emcy>(node)) {}
 
   bool emit(
-      uint16_t error_code,
-      uint8_t error_register,
-      std::array<uint8_t, 5> manufacturer = {}
+      std::uint16_t error_code,
+      std::uint8_t error_register,
+      std::array<std::uint8_t, 5> manufacturer = {}
   ) {
     frame_t frame = {
         .format = format_t::standard,
         .id = cob_id_,
         .len = 8,
         .payload = {
-            static_cast<uint8_t>(error_code & 0xFF),
-            static_cast<uint8_t>((error_code >> 8) & 0xFF),
+            static_cast<std::uint8_t>(error_code & 0xFF),
+            static_cast<std::uint8_t>((error_code >> 8) & 0xFF),
             error_register
         }
     };

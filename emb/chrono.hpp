@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <cstdint>
 
 namespace emb {
 namespace chrono {
@@ -78,10 +79,10 @@ public:
   }
 };
 
-using nanoseconds_i32 = std::chrono::duration<int32_t, std::nano>;
-using microseconds_i32 = std::chrono::duration<int32_t, std::micro>;
-using milliseconds_i32 = std::chrono::duration<int32_t, std::milli>;
-using seconds_i32 = std::chrono::duration<int32_t>;
+using nanoseconds_i32 = std::chrono::duration<std::int32_t, std::nano>;
+using microseconds_i32 = std::chrono::duration<std::int32_t, std::micro>;
+using milliseconds_i32 = std::chrono::duration<std::int32_t, std::milli>;
+using seconds_i32 = std::chrono::duration<std::int32_t>;
 
 } // namespace chrono
 } // namespace emb

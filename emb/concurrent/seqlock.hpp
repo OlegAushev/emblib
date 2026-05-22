@@ -17,7 +17,7 @@ namespace emb {
 template <typename T>
   requires(std::is_trivially_copyable_v<T>)
 class seqlock {
-  std::atomic<uint32_t> seq_ = 0;
+  std::atomic<std::uint32_t> seq_ = 0;
   T value_{};
 public:
   seqlock() = default;
@@ -25,7 +25,7 @@ public:
   seqlock& operator=(seqlock const&) = delete;
 
   void store(T const& desired) {
-    uint32_t const s = seq_.load(std::memory_order::relaxed);
+    std::uint32_t const s = seq_.load(std::memory_order::relaxed);
     seq_.store(s + 1, std::memory_order::relaxed);
     std::atomic_thread_fence(std::memory_order::release);
     std::memcpy(&value_, &desired, sizeof(T));
@@ -34,7 +34,7 @@ public:
 
   template<typename F>
   void update(F&& f) {
-    uint32_t const s = seq_.load(std::memory_order::relaxed);
+    std::uint32_t const s = seq_.load(std::memory_order::relaxed);
     seq_.store(s + 1, std::memory_order::relaxed);
     std::atomic_thread_fence(std::memory_order::release);
     T snapshot;
@@ -46,7 +46,7 @@ public:
 
   T load() const {
     T snapshot;
-    uint32_t s1, s2;
+    std::uint32_t s1, s2;
     for(;;) {
       s1 = seq_.load(std::memory_order::acquire);
       if (s1 & 1) {

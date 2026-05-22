@@ -35,8 +35,8 @@ public:
 
   std::optional<nmt_command> decode(frame_t const& frame) const {
     if (frame.len < 2) return std::nullopt;
-    uint8_t cs = frame.payload[0];
-    uint8_t target = frame.payload[1];
+    std::uint8_t cs = frame.payload[0];
+    std::uint8_t target = frame.payload[1];
     if (target != 0 && target != node_.get()) return std::nullopt;
 
     switch (cs) {

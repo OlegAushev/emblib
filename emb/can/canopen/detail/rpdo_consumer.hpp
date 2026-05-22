@@ -42,7 +42,7 @@ public:
       nmt_state state
   );
 
-  uint8_t tick(std::chrono::milliseconds now, nmt_state state);
+  std::uint8_t tick(std::chrono::milliseconds now, nmt_state state);
 
   void reset_timers(std::chrono::milliseconds now);
 

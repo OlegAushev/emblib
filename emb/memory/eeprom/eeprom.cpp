@@ -4,8 +4,10 @@ namespace emb {
 namespace mem {
 namespace eeprom {
 
-storage::storage(driver& driver_,
-                 uint32_t (*calc_crc32_func_)(uint8_t const*, std::size_t))
+storage::storage(
+    driver& driver_,
+    std::uint32_t (*calc_crc32_func_)(std::uint8_t const*, std::size_t)
+)
     : _driver(driver_),
       _calc_crc32(calc_crc32_func_),
       available_page_bytes(_driver.page_bytes() - 4),
@@ -18,7 +20,7 @@ storage::storage(driver& driver_,
   _errors.secondary_data_corrupted = 0;
   _errors.fatal = 0;
 
-  _backup_buf = new uint8_t[available_page_bytes];
+  _backup_buf = new std::uint8_t[available_page_bytes];
 }
 
 storage::~storage() {
@@ -26,7 +28,7 @@ storage::~storage() {
 }
 
 emb::mem::status storage::write(std::size_t page,
-                                uint8_t const* buf,
+                                std::uint8_t const* buf,
                                 std::size_t len,
                                 std::chrono::milliseconds timeout) {
   assert(page < available_page_count);
@@ -40,10 +42,10 @@ emb::mem::status storage::write(std::size_t page,
     return emb::mem::status::invalid_data_size;
   }
 
-  uint32_t crc = _calc_crc32(buf, len);
-  uint8_t crc_bytes[4];
+  std::uint32_t crc = _calc_crc32(buf, len);
+  std::uint8_t crc_bytes[4];
 #ifdef __c28x__
-  emb::c28x::to_bytes<uint32_t>(crc_bytes, crc);
+  emb::c28x::to_bytes<std::uint32_t>(crc_bytes, crc);
 #else
   memcpy(crc_bytes, &crc, 4);
 #endif
@@ -78,7 +80,7 @@ write_end:
 
 emb::mem::status storage::read(
     std::size_t page,
-    uint8_t* buf,
+    std::uint8_t* buf,
     std::size_t len,
     std::chrono::milliseconds timeout
 ) {
@@ -93,11 +95,11 @@ emb::mem::status storage::read(
     return emb::mem::status::invalid_data_size;
   }
 
-  uint8_t crc_bytes[4];
-  uint32_t primary_crc = 0;
-  uint32_t primary_stored_crc = 0;
-  uint32_t secondary_crc = 0;
-  uint32_t secondary_stored_crc = 0;
+  std::uint8_t crc_bytes[4];
+  std::uint32_t primary_crc = 0;
+  std::uint32_t primary_stored_crc = 0;
+  std::uint32_t secondary_crc = 0;
+  std::uint32_t secondary_stored_crc = 0;
 
   bool primary_ok = false;
   bool secondary_ok = false;
@@ -115,7 +117,7 @@ emb::mem::status storage::read(
   }
 
 #ifdef __c28x__
-  emb::c28x::from_bytes<uint32_t>(primary_stored_crc, crc_bytes);
+  emb::c28x::from_bytes<std::uint32_t>(primary_stored_crc, crc_bytes);
 #else
   memcpy(&primary_stored_crc, crc_bytes, 4);
 #endif
@@ -140,7 +142,7 @@ read_backup:
   }
 
 #ifdef __c28x__
-  emb::c28x::from_bytes<uint32_t>(secondary_stored_crc, crc_bytes);
+  emb::c28x::from_bytes<std::uint32_t>(secondary_stored_crc, crc_bytes);
 #else
   memcpy(&secondary_stored_crc, crc_bytes, 4);
 #endif
@@ -160,7 +162,7 @@ read_end:
     ++_errors.secondary_data_corrupted;
     _driver.write(page + available_page_count, 0, buf, len, timeout);
 #ifdef __c28x__
-    emb::c28x::to_bytes<uint32_t>(crc_bytes, primary_crc);
+    emb::c28x::to_bytes<std::uint32_t>(crc_bytes, primary_crc);
 #else
     memcpy(crc_bytes, &primary_crc, 4);
 #endif
@@ -172,7 +174,7 @@ read_end:
     memcpy(buf, _backup_buf, len); // update output buffer
     _driver.write(page, 0, _backup_buf, len, timeout);
 #ifdef __c28x__
-    emb::c28x::to_bytes<uint32_t>(crc_bytes, secondary_crc);
+    emb::c28x::to_bytes<std::uint32_t>(crc_bytes, secondary_crc);
 #else
     memcpy(crc_bytes, &secondary_crc, 4);
 #endif

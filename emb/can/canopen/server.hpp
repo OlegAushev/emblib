@@ -87,9 +87,9 @@ public:
   // ---- emcy ----
 
   bool emit_emcy(
-      uint16_t error_code,
-      uint8_t error_register,
-      std::array<uint8_t, 5> manufacturer = {}
+      std::uint16_t error_code,
+      std::uint8_t error_register,
+      std::array<std::uint8_t, 5> manufacturer = {}
   );
 
 private:

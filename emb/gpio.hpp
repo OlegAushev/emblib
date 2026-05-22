@@ -6,11 +6,11 @@
 namespace emb {
 namespace gpio {
 
-enum class level : int32_t { low = 0, high = 1 };
+enum class level : std::int32_t { low = 0, high = 1 };
 
-enum class polarity : int32_t { active_low = 0, active_high = 1 };
+enum class polarity : std::int32_t { active_low = 0, active_high = 1 };
 
-enum class state : int32_t { inactive = 0, active = 1 };
+enum class state : std::int32_t { inactive = 0, active = 1 };
 
 constexpr level operator!(level lvl) {
   return lvl == level::low ? level::high : level::low;

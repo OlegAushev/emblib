@@ -28,9 +28,9 @@ public:
 
 private:
   T buf_[3]{};
-  std::atomic<uint8_t> mutable shared_{0};
-  uint8_t write_ = 1;
-  uint8_t mutable read_ = 2;
+  std::atomic<std::uint8_t> mutable shared_{0};
+  std::uint8_t write_ = 1;
+  std::uint8_t mutable read_ = 2;
 };
 
 } // namespace emb

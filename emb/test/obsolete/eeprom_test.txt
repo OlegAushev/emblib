@@ -14,18 +14,18 @@ class TestingEepromDriver : public emb::mem::eeprom::driver {
 private:
   static std::size_t const _page_bytes = 64;
   static std::size_t const _page_count = 8;
-  static uint16_t _data[_page_count][_page_bytes / 2];
+  static std::uint16_t _data[_page_count][_page_bytes / 2];
 public:
   virtual emb::mem::status read(std::size_t page,
                                 std::size_t addr,
-                                uint8_t* buf,
+                                std::uint8_t* buf,
                                 std::size_t len,
                                 std::chrono::milliseconds timeout) EMB_OVERRIDE {
     for (auto i = 0uz; i < len; ++i) {
       if (((addr + i) % 2) == 0) {
-        buf[i] = uint8_t(_data[page][(addr + i) / 2] & 0x00FF);
+        buf[i] = std::uint8_t(_data[page][(addr + i) / 2] & 0x00FF);
       } else {
-        buf[i] = uint8_t(_data[page][(addr + i) / 2] >> 8);
+        buf[i] = std::uint8_t(_data[page][(addr + i) / 2] >> 8);
       }
     }
     return emb::mem::status::ok;
@@ -33,7 +33,7 @@ public:
 
   virtual emb::mem::status write(std::size_t page,
                                  std::size_t addr,
-                                 uint8_t const* buf,
+                                 std::uint8_t const* buf,
                                  std::size_t len,
                                  std::chrono::milliseconds timeout) EMB_OVERRIDE {
     for (auto i = 0uz; i < len; ++i) {
@@ -53,14 +53,14 @@ public:
   virtual std::size_t page_count() const EMB_OVERRIDE { return _page_count; }
 };
 
-uint16_t TestingEepromDriver::_data[TestingEepromDriver::_page_count]
+std::uint16_t TestingEepromDriver::_data[TestingEepromDriver::_page_count]
                                    [TestingEepromDriver::_page_bytes / 2] = {0};
 
 struct TestingEepromStruct1 {
-  uint32_t u32;
+  std::uint32_t u32;
   float f32;
-  uint16_t u16;
-  int32_t i32;
+  std::uint16_t u16;
+  std::int32_t i32;
   bool bl;
 #ifndef __c28x__
   friend auto operator<=>(const TestingEepromStruct1&,

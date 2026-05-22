@@ -52,7 +52,7 @@ public:
   void add_periodic_tx(
       format_t format,
       id_t id,
-      uint8_t len,
+      std::uint8_t len,
       std::chrono::milliseconds period,
       emb::delegate<payload_t()> provider
   ) {
@@ -118,7 +118,7 @@ private:
   struct tx_slot {
     format_t format = format_t::standard;
     id_t id = 0;
-    uint8_t len = 0;
+    std::uint8_t len = 0;
     std::chrono::milliseconds period{0};
     std::chrono::milliseconds last_tx{0};
     emb::delegate<payload_t()> provider;

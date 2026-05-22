@@ -3,6 +3,7 @@
 #include <emb/math.hpp>
 
 #include <concepts>
+#include <cstdint>
 
 namespace emb {
 namespace units {
@@ -329,7 +330,7 @@ constexpr Unit norm360_fast(Unit v) {
   using T = Unit::value_type;
   constexpr T inv_360 = T{1} / T{360};
   T norm = v.value() * inv_360;
-  norm -= static_cast<T>(static_cast<int32_t>(norm) - (norm < T{0}));
+  norm -= static_cast<T>(static_cast<std::int32_t>(norm) - (norm < T{0}));
   if (norm >= T{1}) norm -= T{1};
   return Unit{norm * T{360}};
 }
