@@ -9,7 +9,7 @@ constexpr bool test_median_filter(
     typename Filter::value_type init_output
 ) {
   using value_type = Filter::value_type;
-  constexpr size_t window_size = decltype(filter)::window_size;
+  constexpr std::size_t window_size = decltype(filter)::window_size;
 
   assert(filter.output() == init_output);
 
@@ -31,13 +31,13 @@ constexpr bool test_median_filter(
   };
 
   // Fill window with first value
-  for (size_t i = 0; i < window_size; ++i) {
+  for (auto i = 0uz; i < window_size; ++i) {
     filter.push(input[0]);
   }
   assert(filter.output() == input[0]);
 
   // Push varying values
-  for (size_t i = 0; i < input.size(); ++i) {
+  for (auto i = 0uz; i < input.size(); ++i) {
     filter.push(input[i]);
   }
 

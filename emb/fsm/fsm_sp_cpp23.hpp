@@ -11,7 +11,11 @@ namespace fsm {
 
 namespace sp1 {
 
-template<typename Clock, typename Object, typename State, typename LockGuard = void*>
+template<
+    typename Clock,
+    typename Object,
+    typename State,
+    typename LockGuard = void*>
 class abstract_state {
   static_assert(std::is_enum_v<State>);
 private:
@@ -43,7 +47,7 @@ public:
   }
 };
 
-template<typename State, typename AbstractState, size_t StateNum>
+template<typename State, typename AbstractState, std::size_t StateNum>
 class abstract_object {
   static_assert(std::is_enum_v<State>);
 private:
@@ -80,7 +84,7 @@ template<
     typename DerivedContext,
     typename StateEnum,
     typename BaseState,
-    size_t StatesNumber,
+    std::size_t StatesNumber,
     typename LockGuard = void*>
 class abstract_fsm {
 private:

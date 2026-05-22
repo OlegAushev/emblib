@@ -26,7 +26,7 @@ sdo_server::sdo_server(
 void sdo_server::init_dictionary() {
   std::sort(dictionary_.begin(), dictionary_.end());
 
-  for (size_t i = 0; i < dictionary_.size(); ++i) {
+  for (auto i = 0uz; i < dictionary_.size(); ++i) {
     [[maybe_unused]] auto const& e = dictionary_[i];
     [[maybe_unused]] auto const& obj = e.object;
 
@@ -107,7 +107,7 @@ sdo_server::read_expedited(od_entry const* entry, expedited_sdo const& rsdo) {
   expedited_sdo tsdo;
   tsdo.data = to_raw(*value);
 
-  size_t const data_size =
+  std::size_t const data_size =
       od_data_type_sizes[std::to_underlying(obj.data_type)];
 
   tsdo.index = rsdo.index;

@@ -109,7 +109,7 @@ inline expedited_sdo_data to_raw(od_value v) {
   return raw;
 }
 
-constexpr std::array<size_t, 10> od_data_type_sizes = {
+constexpr std::array<std::size_t, 10> od_data_type_sizes = {
     sizeof(bool),
     sizeof(int8_t),
     sizeof(int16_t),

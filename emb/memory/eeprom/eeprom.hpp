@@ -1,8 +1,8 @@
 #pragma once
 
+#include "../memory_def.hpp"
 #include <cstring>
 #include <emb/chrono.hpp>
-#include "../memory_def.hpp"
 
 namespace emb {
 namespace mem {
@@ -10,27 +10,31 @@ namespace eeprom {
 
 class driver {
 public:
-  virtual emb::mem::status read(size_t page,
-                                size_t offset,
-                                uint8_t* buf,
-                                size_t len,
-                                std::chrono::milliseconds timeout) = 0;
-  virtual emb::mem::status write(size_t page,
-                                 size_t offset,
-                                 uint8_t const* buf,
-                                 size_t len,
-                                 std::chrono::milliseconds timeout) = 0;
-  virtual size_t page_bytes() const = 0;
-  virtual size_t page_count() const = 0;
+  virtual emb::mem::status read(
+      std::size_t page,
+      std::size_t offset,
+      uint8_t* buf,
+      std::size_t len,
+      std::chrono::milliseconds timeout
+  ) = 0;
+  virtual emb::mem::status write(
+      std::size_t page,
+      std::size_t offset,
+      uint8_t const* buf,
+      std::size_t len,
+      std::chrono::milliseconds timeout
+  ) = 0;
+  virtual std::size_t page_bytes() const = 0;
+  virtual std::size_t page_count() const = 0;
 };
 
 class storage {
 private:
   driver& _driver;
-  uint32_t (*_calc_crc32)(uint8_t const*, size_t);
+  uint32_t (*_calc_crc32)(uint8_t const*, std::size_t);
 
-  size_t const available_page_bytes;
-  size_t const available_page_count;
+  std::size_t const available_page_bytes;
+  std::size_t const available_page_count;
 
   uint8_t* _backup_buf;
 
@@ -44,16 +48,27 @@ private:
     uint32_t fatal;
   } _errors;
 public:
-  storage(driver& driver_,
-          uint32_t (*calc_crc32_func_)(uint8_t const*, size_t));
+  storage(
+      driver& driver_,
+      uint32_t (*calc_crc32_func_)(uint8_t const*, std::size_t)
+  );
   ~storage();
-  emb::mem::status
-  read(size_t page, uint8_t* buf, size_t len, std::chrono::milliseconds timeout);
-  emb::mem::status
-  write(size_t page, uint8_t const* buf, size_t len, std::chrono::milliseconds timeout);
+  emb::mem::status read(
+      std::size_t page,
+      uint8_t* buf,
+      std::size_t len,
+      std::chrono::milliseconds timeout
+  );
+  emb::mem::status write(
+      std::size_t page,
+      uint8_t const* buf,
+      std::size_t len,
+      std::chrono::milliseconds timeout
+  );
 
   template<typename T>
-  emb::mem::status read(size_t page, T& data, std::chrono::milliseconds timeout) {
+  emb::mem::status
+  read(std::size_t page, T& data, std::chrono::milliseconds timeout) {
 #ifdef __c28x__
     uint8_t data_bytes[2 * sizeof(T)];
     status sts = read(page, data_bytes, 2 * sizeof(T), timeout);
@@ -67,7 +82,8 @@ public:
   }
 
   template<typename T>
-  emb::mem::status write(size_t page, T const& data, std::chrono::milliseconds timeout) {
+  emb::mem::status
+  write(std::size_t page, T const& data, std::chrono::milliseconds timeout) {
 #ifdef __c28x__
     uint8_t data_bytes[2 * sizeof(T)];
     emb::c28x::to_bytes<T>(data_bytes, data);

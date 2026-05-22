@@ -8,14 +8,14 @@
 
 namespace emb {
 
-template<typename T, size_t WindowSize>
+template<typename T, std::size_t WindowSize>
   requires(emb::isodd(WindowSize))
 class median_filter {
 public:
   using value_type = T;
   using reference = value_type&;
   using const_reference = value_type const&;
-  static constexpr size_t window_size = WindowSize;
+  static constexpr std::size_t window_size = WindowSize;
 private:
   emb::circular_buffer<value_type, window_size> window_;
   value_type init_output_;
@@ -29,7 +29,7 @@ public:
   constexpr void push(value_type const& input_v) {
     window_.push_back(input_v);
     std::array<value_type, window_size> window_sorted = {};
-    for (size_t i = 0; i < window_.size(); ++i) {
+    for (auto i = 0uz; i < window_.size(); ++i) {
       window_sorted[i] = window_[i];
     }
     std::sort(window_sorted.begin(), window_sorted.end());

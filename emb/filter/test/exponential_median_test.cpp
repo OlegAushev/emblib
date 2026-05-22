@@ -9,7 +9,7 @@ constexpr bool test_exponential_median_filter(
     typename Filter::value_type init_output
 ) {
   using value_type = Filter::value_type;
-  constexpr size_t window_size = Filter::window_size;
+  constexpr std::size_t window_size = Filter::window_size;
 
   assert(filter.output() == init_output);
 
@@ -31,7 +31,7 @@ constexpr bool test_exponential_median_filter(
   };
 
   // Push values - combines median filtering with exponential smoothing
-  for (size_t i = 0; i < window_size * 3; ++i) {
+  for (auto i = 0uz; i < window_size * 3; ++i) {
     filter.push(input[i % input.size()]);
   }
 
@@ -84,7 +84,10 @@ static_assert(test_exponential_median_filter(
 
 // Test with units
 static_assert(test_exponential_median_filter(
-    emb::exponential_median_filter<emb::units::erad_f32, 3, emb::units::sec_f32>(
+    emb::exponential_median_filter<
+        emb::units::erad_f32,
+        3,
+        emb::units::sec_f32>(
         emb::units::sec_f32{0.01f},
         emb::units::sec_f32{0.1f}
     ),

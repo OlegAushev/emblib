@@ -14,7 +14,10 @@ namespace emb {
 namespace can {
 namespace raw {
 
-template<size_t RxSlots = 8, size_t TxSlots = 8, size_t RxQueueCapacity = 32>
+template<
+    std::size_t RxSlots = 8,
+    std::size_t TxSlots = 8,
+    std::size_t RxQueueCapacity = 32>
 class node {
 public:
   explicit node(transport& bus) : bus_(bus) {

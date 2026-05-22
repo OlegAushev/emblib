@@ -19,7 +19,7 @@ namespace detail {
 
 class sdo_server {
 public:
-  static constexpr size_t tsdo_queue_capacity = 16;
+  static constexpr std::size_t tsdo_queue_capacity = 16;
 
   sdo_server(transport& bus, node_id node, std::span<od_entry> dictionary);
 

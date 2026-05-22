@@ -44,7 +44,7 @@ void server::run() {
   }
 
   uint8_t timed_out = rpdo_.tick(now, nmt_.state());
-  for (size_t i = 0; i < 4; ++i) {
+  for (auto i = 0uz; i < 4; ++i) {
     if (timed_out & (1u << i)) emcy_.emit(0x8250, 0x10);
   }
 

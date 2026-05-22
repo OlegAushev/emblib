@@ -27,7 +27,7 @@ constexpr bool test_ramp_generator(
   value_type const dir = target > init_output ? value_type{1} : value_type{-1};
 
   constexpr std::size_t max_iterations = 200;
-  for (std::size_t i = 0; i < max_iterations; ++i) {
+  for (auto i = 0uz; i < max_iterations; ++i) {
     value_type const unclamped = init_output
                                + dir * step * static_cast<value_type>(i);
     value_type const expected = dir > value_type{0}

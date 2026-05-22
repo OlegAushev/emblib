@@ -15,8 +15,8 @@ public:
   class adaptive_task_context;
 
 private:
-  static constexpr size_t max_simple_tasks{16};
-  static constexpr size_t max_adaptive_tasks{4};
+  static constexpr std::size_t max_simple_tasks{16};
+  static constexpr std::size_t max_adaptive_tasks{4};
 
   struct periodic_task {
     emb::delegate<void()> func;
@@ -75,14 +75,14 @@ public:
   static void run() {
     auto now = Clock::now();
 
-    for (size_t i = 0; i < tasks_.size(); ++i) {
+    for (auto i = 0uz; i < tasks_.size(); ++i) {
       if (now >= tasks_[i].exec_timepoint + tasks_[i].period) {
         tasks_[i].exec_timepoint = now;
         tasks_[i].func();
       }
     }
 
-    for (size_t i = 0; i < adaptive_tasks_.size(); ++i) {
+    for (auto i = 0uz; i < adaptive_tasks_.size(); ++i) {
       if (now
           >= adaptive_tasks_[i].exec_timepoint + adaptive_tasks_[i].period) {
         adaptive_tasks_[i].exec_timepoint = now;
@@ -100,10 +100,10 @@ public:
 
   static void reset() {
     auto now = Clock::now();
-    for (size_t i = 0; i < tasks_.size(); ++i) {
+    for (auto i = 0uz; i < tasks_.size(); ++i) {
       tasks_[i].exec_timepoint = now;
     }
-    for (size_t i = 0; i < adaptive_tasks_.size(); ++i) {
+    for (auto i = 0uz; i < adaptive_tasks_.size(); ++i) {
       adaptive_tasks_[i].exec_timepoint = now;
     }
   }

@@ -67,7 +67,7 @@ uint8_t rpdo_consumer::tick(std::chrono::milliseconds now, nmt_state state) {
   if (state != nmt_state::operational) return 0;
 
   uint8_t just_timed_out = 0;
-  for (size_t i = 0; i < slots_.size(); ++i) {
+  for (auto i = 0uz; i < slots_.size(); ++i) {
     auto& s = slots_[i];
     if (s.timeout == std::chrono::milliseconds::zero() || s.timed_out) {
       continue;

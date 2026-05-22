@@ -157,7 +157,7 @@ constexpr float lookup_sin(float x) {
   int per = (xf >> 1) & 1;
 
   float z = x * 128;
-  size_t zf = static_cast<size_t>(z);
+  std::size_t zf = static_cast<std::size_t>(z);
   z -= static_cast<float>(zf);
 
   float sint = detail::sincos_lookup_table[zf];

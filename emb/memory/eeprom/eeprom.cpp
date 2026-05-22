@@ -5,7 +5,7 @@ namespace mem {
 namespace eeprom {
 
 storage::storage(driver& driver_,
-                 uint32_t (*calc_crc32_func_)(uint8_t const*, size_t))
+                 uint32_t (*calc_crc32_func_)(uint8_t const*, std::size_t))
     : _driver(driver_),
       _calc_crc32(calc_crc32_func_),
       available_page_bytes(_driver.page_bytes() - 4),
@@ -25,9 +25,9 @@ storage::~storage() {
   delete[] _backup_buf;
 }
 
-emb::mem::status storage::write(size_t page,
+emb::mem::status storage::write(std::size_t page,
                                 uint8_t const* buf,
-                                size_t len,
+                                std::size_t len,
                                 std::chrono::milliseconds timeout) {
   assert(page < available_page_count);
   assert(len < available_page_bytes);
@@ -76,8 +76,12 @@ write_end:
   return sts;
 }
 
-emb::mem::status
-storage::read(size_t page, uint8_t* buf, size_t len, std::chrono::milliseconds timeout) {
+emb::mem::status storage::read(
+    std::size_t page,
+    uint8_t* buf,
+    std::size_t len,
+    std::chrono::milliseconds timeout
+) {
   assert(page < available_page_count);
   assert(len < available_page_bytes);
 

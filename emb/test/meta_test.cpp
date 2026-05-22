@@ -9,7 +9,7 @@ using namespace emb;
 
 constexpr bool test_unroll() {
   std::array<int, 5> arr;
-  emb::unroll<5>([&]<size_t I>() {
+  emb::unroll<5>([&]<std::size_t I>() {
     arr[I] = I;
     ++arr[I];
   });

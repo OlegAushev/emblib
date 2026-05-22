@@ -9,7 +9,7 @@ namespace emb {
 
 template<typename... Ts>
 struct typelist {
-  static constexpr size_t size = sizeof...(Ts);
+  static constexpr std::size_t size = sizeof...(Ts);
 };
 
 // -- size --
@@ -19,11 +19,11 @@ struct typelist_size;
 
 template<typename... Ts>
 struct typelist_size<typelist<Ts...>> {
-  static constexpr size_t value = sizeof...(Ts);
+  static constexpr std::size_t value = sizeof...(Ts);
 };
 
 template<typename List>
-inline constexpr size_t typelist_size_v = typelist_size<List>::value;
+inline constexpr std::size_t typelist_size_v = typelist_size<List>::value;
 
 // -- contains --
 
@@ -42,15 +42,15 @@ concept typelist_contains = typelist_contains_v<List, T>;
 
 // -- at --
 
-template<typename List, size_t I>
+template<typename List, std::size_t I>
 struct typelist_at;
 
-template<typename... Ts, size_t I>
+template<typename... Ts, std::size_t I>
 struct typelist_at<typelist<Ts...>, I> {
   using type = Ts...[I];
 };
 
-template<typename List, size_t I>
+template<typename List, std::size_t I>
 using typelist_at_t = typename typelist_at<List, I>::type;
 
 // -- count --
@@ -61,11 +61,12 @@ struct typelist_count_t;
 template<typename... Ts, typename T>
 struct typelist_count_t<typelist<Ts...>, T>
     : std::integral_constant<
-          size_t,
+          std::size_t,
           (0 + ... + (std::same_as<T, Ts> ? 1 : 0))> {};
 
 template<typename List, typename T>
-inline constexpr size_t typelist_count_v = typelist_count_t<List, T>::value;
+inline constexpr std::size_t typelist_count_v =
+    typelist_count_t<List, T>::value;
 
 // -- unique --
 

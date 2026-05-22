@@ -8,17 +8,17 @@
 
 namespace emb {
 
-template<typename T, size_t WindowSize>
+template<typename T, std::size_t WindowSize>
 class moving_average_filter {
 public:
   using value_type = T;
-  using size_type = size_t;
+  using size_type = std::size_t;
   using reference = value_type&;
   using const_reference = value_type const&;
   using underlying_type = emb::circular_buffer<value_type, WindowSize>;
   using divider_type =
       decltype(std::declval<value_type>() / std::declval<value_type>());
-  static constexpr size_t window_size = WindowSize;
+  static constexpr std::size_t window_size = WindowSize;
 private:
   underlying_type data_;
   value_type sum_;

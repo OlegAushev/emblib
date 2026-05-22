@@ -17,7 +17,7 @@ namespace detail {
 
 class hb_consumer {
 public:
-  static constexpr size_t capacity = 8;
+  static constexpr std::size_t capacity = 8;
 
   explicit hb_consumer(transport& bus) : bus_(bus) {}
 

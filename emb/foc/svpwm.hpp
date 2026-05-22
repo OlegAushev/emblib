@@ -66,7 +66,7 @@ calculate_svpwm(vec_polar v_s, float v_dc) {
   }
 
   std::array<emb::unsigned_pu, 3> duty_cycles;
-  for (size_t i = 0; i < 3; ++i) {
+  for (auto i = 0uz; i < 3; ++i) {
     duty_cycles[i] = emb::unsigned_pu(pulse_durations[i]);
   }
 

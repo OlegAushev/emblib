@@ -15,7 +15,7 @@ calculate_sinpwm(vec_ab v_s, float v_dc) {
   float const voltage_base = v_dc / 1.5f;
   std::array<emb::unsigned_pu, 3> duty_cycles;
 
-  for (size_t i = 0; i < 3; ++i) {
+  for (auto i = 0uz; i < 3; ++i) {
     duty_cycles[i] = emb::unsigned_pu(voltages[i] / voltage_base);
   }
 

@@ -20,7 +20,7 @@ enum class error {
   crc_mismatch,
 };
 
-template<size_t N>
+template<std::size_t N>
 struct parameter_name {
   char data[N]{};
 
@@ -28,21 +28,21 @@ struct parameter_name {
     std::copy_n(str, N, data);
   }
 
-  constexpr size_t size() const {
+  constexpr std::size_t size() const {
     return N - 1;
   }
 
-  template<size_t M>
+  template<std::size_t M>
   constexpr bool operator==(parameter_name<M> const& other) const {
     if (N != M) return false;
-    for (size_t i = 0; i < N; ++i) {
+    for (auto i = 0uz; i < N; ++i) {
       if (data[i] != other.data[i]) return false;
     }
     return true;
   }
 };
 
-template<size_t N>
+template<std::size_t N>
 parameter_name(char const (&)[N]) -> parameter_name<N>;
 
 // -- Hash function objects --
@@ -50,10 +50,10 @@ parameter_name(char const (&)[N]) -> parameter_name<N>;
 struct fnv1a_32 {
   using type = uint32_t;
 
-  template<size_t N>
+  template<std::size_t N>
   static consteval type operator()(parameter_name<N> const& s) {
     type h = 0x811C9DC5u;
-    for (size_t i = 0; i < N - 1; ++i) {
+    for (auto i = 0uz; i < N - 1; ++i) {
       h ^= static_cast<uint8_t>(s.data[i]);
       h *= 0x01000193u;
     }
@@ -118,7 +118,7 @@ struct parameter {
 template<some_hash_fn HashFn = fnv1a_32>
 struct layout_entry {
   typename HashFn::type hash;
-  size_t size;
+  std::size_t size;
 };
 
 template<
@@ -132,57 +132,60 @@ struct parameter_traits {
   static constexpr bool exists = true;
   static constexpr auto name = parameter_name(Name);
   static constexpr typename HashFn::type hash = HashFn{}(name);
-  static constexpr size_t size = sizeof(T);
+  static constexpr std::size_t size = sizeof(T);
   static constexpr value_type default_value = Default;
   static constexpr layout_entry<HashFn> entry = {hash, size};
 };
 
 // -- Layout --
 
-template<size_t N, some_hash_fn HashFn = fnv1a_32, some_crc_fn CrcFn = crc32>
+template<
+    std::size_t N,
+    some_hash_fn HashFn = fnv1a_32,
+    some_crc_fn CrcFn = crc32>
 struct layout {
   using hash_fn = HashFn;
   using crc_fn = CrcFn;
   using hash_type = typename HashFn::type;
   using crc_type = typename CrcFn::type;
-  static constexpr size_t overhead = sizeof(hash_type) + sizeof(crc_type);
+  static constexpr std::size_t overhead = sizeof(hash_type) + sizeof(crc_type);
 
-  size_t base = 0;
+  std::size_t base = 0;
   layout_entry<HashFn> entries[N] = {};
 
-  consteval size_t offset_of(hash_type key) const {
-    size_t off = base;
-    for (size_t i = 0; i < N; ++i) {
+  consteval std::size_t offset_of(hash_type key) const {
+    std::size_t off = base;
+    for (auto i = 0uz; i < N; ++i) {
       if (entries[i].hash == key) return off;
       off += entries[i].size + overhead;
     }
     return SIZE_MAX;
   }
 
-  consteval size_t size() const {
-    size_t s = 0;
-    for (size_t i = 0; i < N; ++i)
+  consteval std::size_t size() const {
+    std::size_t s = 0;
+    for (auto i = 0uz; i < N; ++i)
       s += entries[i].size + overhead;
     return s;
   }
 
   consteval bool names_unique() const {
-    for (size_t i = 0; i < N; ++i)
-      for (size_t j = i + 1; j < N; ++j)
+    for (auto i = 0uz; i < N; ++i)
+      for (auto j = i + 1; j < N; ++j)
         if (entries[i].hash == entries[j].hash) return false;
     return true;
   }
 };
 
-template<size_t N, some_hash_fn HashFn>
-layout(size_t, layout_entry<HashFn> const (&)[N]) -> layout<N, HashFn>;
+template<std::size_t N, some_hash_fn HashFn>
+layout(std::size_t, layout_entry<HashFn> const (&)[N]) -> layout<N, HashFn>;
 
 // -- Storage backend concept --
 
 template<typename T>
 concept some_storage = requires {
       typename T::addr_type;
-      { T::capacity } -> std::convertible_to<size_t>;
+      { T::capacity } -> std::convertible_to<std::size_t>;
     }
     && requires(T& s, typename T::addr_type addr) {
       { s.template read<uint32_t>(addr) }
@@ -203,7 +206,7 @@ class registry {
   using crc_fn = typename layout_type::crc_fn;
 
 public:
-  static constexpr size_t size = Layout.size();
+  static constexpr std::size_t size = Layout.size();
 
   static_assert(
       Layout.names_unique(),
@@ -271,7 +274,7 @@ public:
   }
 
   auto erase() -> std::expected<void, error> {
-    for (size_t off = Layout.base; off < Layout.base + size; ++off) {
+    for (std::size_t off = Layout.base; off < Layout.base + size; ++off) {
       auto r = storage_.template write<std::byte>(
           typename Storage::addr_type(off),
           std::byte{0}

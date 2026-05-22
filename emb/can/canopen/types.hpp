@@ -73,7 +73,7 @@ enum class cob_type : uint8_t {
   heartbeat
 };
 
-constexpr size_t cob_type_count = 15;
+constexpr std::size_t cob_type_count = 15;
 
 constexpr std::array<id_t, cob_type_count> cob_function_codes = {
     0x000, // nmt

@@ -94,8 +94,8 @@ consteval bool are_id_unique() {
     return true;
   } else {
     constexpr std::array ids = {States::id...};
-    for (std::size_t i = 0; i < ids.size(); ++i) {
-      for (std::size_t j = i + 1; j < ids.size(); ++j) {
+    for (auto i = 0uz; i < ids.size(); ++i) {
+      for (auto j = i + 1; j < ids.size(); ++j) {
         if (ids[i] == ids[j]) {
           return false;
         }

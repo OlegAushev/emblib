@@ -27,14 +27,14 @@ using namespace emb;
 
 struct backend {
   using addr_type = uint32_t;
-  static constexpr size_t capacity = 512;
+  static constexpr std::size_t capacity = 512;
 
   std::array<uint8_t, capacity> mem{};
 
   template<typename T>
   constexpr auto read(addr_type addr) -> std::expected<T, nvm::error> {
     std::array<uint8_t, sizeof(T)> buf{};
-    for (size_t i = 0; i < sizeof(T); ++i)
+    for (auto i = 0uz; i < sizeof(T); ++i)
       buf[i] = mem[addr + i];
     return std::bit_cast<T>(buf);
   }
@@ -43,7 +43,7 @@ struct backend {
   constexpr auto write(addr_type addr, T const& val)
       -> std::expected<void, nvm::error> {
     auto buf = std::bit_cast<std::array<uint8_t, sizeof(T)>>(val);
-    for (size_t i = 0; i < sizeof(T); ++i)
+    for (auto i = 0uz; i < sizeof(T); ++i)
       mem[addr + i] = buf[i];
     return {};
   }
@@ -62,7 +62,7 @@ inline constexpr nvm::layout nvm_layout{
 
 // -- Tests --
 
-static constexpr size_t frame_overhead = sizeof(nvm::fnv1a_32::type)
+static constexpr std::size_t frame_overhead = sizeof(nvm::fnv1a_32::type)
                                        + sizeof(nvm::crc32::type);
 
 static constexpr bool test_round_trip() {

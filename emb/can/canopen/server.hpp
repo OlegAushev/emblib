@@ -93,7 +93,7 @@ public:
   );
 
 private:
-  static constexpr size_t rx_queue_capacity = 32;
+  static constexpr std::size_t rx_queue_capacity = 32;
 
   void enqueue_rx(frame_t const& frame);
   void dispatch_rx(frame_t const& frame);

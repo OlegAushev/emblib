@@ -29,7 +29,7 @@ constexpr bool test_circular_buffer(CircularBuffer buf)
     buf.push_back(i);
     assert(
         buf.front() == 1 && buf.back() == i &&
-        buf.size() == static_cast<size_t>(i)
+        buf.size() == static_cast<std::size_t>(i)
     );
   }
 

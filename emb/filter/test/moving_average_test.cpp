@@ -25,7 +25,7 @@ constexpr bool test_moving_average_filter(
       value_type{5},
       value_type{4}
   };
-  size_t idx{0};
+  std::size_t idx{0};
   value_type sum{0};
 
   while (!filter.data().full()) {
@@ -46,7 +46,7 @@ constexpr bool test_moving_average_filter(
   }
 
   sum = value_type{0};
-  for (size_t i = 0; i < filter.data().size(); ++i) {
+  for (auto i = 0uz; i < filter.data().size(); ++i) {
     sum += filter.data()[i];
   }
   assert(filter.output() == sum / static_cast<divider_type>(capacity));

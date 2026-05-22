@@ -19,7 +19,7 @@ inline std::array<unsigned_pu, 3> compensate_deadtime_v1(
   std::array<unsigned_pu, 3> dc;
   emb::unsigned_pu const deadtime_dutycycle(deadtime / pwm_period);
 
-  for (size_t i = 0; i < 3; ++i) {
+  for (auto i = 0uz; i < 3; ++i) {
     if (currents[i] > current_threshold) {
       dc[i] = dutycycles[i] + deadtime_dutycycle;
     } else if (currents[i] < -current_threshold) {
@@ -48,13 +48,14 @@ inline std::array<unsigned_pu, 3> compensate_deadtime_v2(
 
   auto const [min, max] = std::minmax_element(currents.begin(), currents.end());
 
-  // use Kirchhoff's current law to determine if there is one positive or one negative current
+  // use Kirchhoff's current law to determine
+  // if there is one positive or one negative current
   if (*min + *max > 0) {
     auto const idx = std::distance(currents.begin(), max);
-    dc[size_t(idx)] = dc[size_t(idx)] + 2 * deadtime_dutycycle;
+    dc[std::size_t(idx)] = dc[std::size_t(idx)] + 2 * deadtime_dutycycle;
   } else if (*min + *max < 0) {
     auto const idx = std::distance(currents.begin(), min);
-    dc[size_t(idx)] = dc[size_t(idx)] - 2 * deadtime_dutycycle;
+    dc[std::size_t(idx)] = dc[std::size_t(idx)] - 2 * deadtime_dutycycle;
   }
 
   return dc;

@@ -34,7 +34,7 @@ public:
         }
     };
 
-    for (size_t i = 0; i < 5; ++i) {
+    for (auto i = 0uz; i < 5; ++i) {
       frame.payload[3 + i] = manufacturer[i];
     }
 
