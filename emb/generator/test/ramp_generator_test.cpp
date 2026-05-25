@@ -30,9 +30,12 @@ constexpr bool test_ramp_generator(
   for (auto i = 0uz; i < max_iterations; ++i) {
     value_type const unclamped = init_output
                                + dir * step * static_cast<value_type>(i);
-    value_type const expected = dir > value_type{0}
-                                  ? std::min(unclamped, target)
-                                  : std::max(unclamped, target);
+    [[maybe_unused]] value_type const expected = dir > value_type{0}
+                                                   ? std::min(unclamped, target)
+                                                   : std::max(
+                                                         unclamped,
+                                                         target
+                                                     );
     assert(fabs(ramp.output() - expected) < 1e-4f);
     if (ramp.at_target()) break;
     ramp.update();
