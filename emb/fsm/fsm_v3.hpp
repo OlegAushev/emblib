@@ -78,26 +78,6 @@ consteval bool are_id_unique() {
 template<typename... States>
 concept states_with_unique_id = are_id_unique<States...>();
 
-template<typename Context, typename Policy, typename... States>
-concept fsm_states = requires {
-  requires sizeof...(States) > 0;
-  requires(detail::state_with_id<States> && ...);
-  requires detail::states_with_same_id_type<States...>;
-  requires detail::states_with_unique_id<States...>;
-  requires detail::fsm_policy<Policy, Context>;
-  requires(
-      Policy::entry_action ? (detail::entry_action<States, Context> && ...) :
-                             !(detail::entry_action<States, Context> || ...)
-  );
-  requires(
-      Policy::exit_action ? (detail::exit_action<States, Context> && ...) :
-                            !(detail::exit_action<States, Context> || ...)
-  );
-};
-
-template<typename State, typename... States>
-concept one_of_fsm_states = std::disjunction_v<std::is_same<State, States>...>;
-
 template<
     typename State,
     typename Context,
@@ -138,6 +118,86 @@ concept event_handler =
       common_event_handler<Context, Policy, Event, Result>) &&
      ...);
 
+template<typename...>
+inline constexpr bool always_false = false;
+
+template<typename State>
+struct diagnose_state {
+  static_assert(
+      state_with_id<State>,
+      "finite_state_machine: every state must declare a static `id` member "
+      "(an integral or enum constant)"
+  );
+  static constexpr bool ok = true;
+};
+
+template<typename Context, typename Policy, bool Proceed, typename... States>
+struct diagnose_fsm_details {
+  static constexpr bool ok = true; // an earlier requirement failed; stop here
+};
+
+template<typename Context, typename Policy, typename... States>
+struct diagnose_fsm_details<Context, Policy, true, States...> {
+  static_assert(
+      states_with_same_id_type<States...>,
+      "finite_state_machine: all State::id must share the same type"
+  );
+  static_assert(
+      states_with_unique_id<States...>,
+      "finite_state_machine: all State::id values must be unique"
+  );
+  static_assert(
+      !Policy::entry_action || (entry_action<States, Context> && ...),
+      "finite_state_machine: this policy requires every state to define "
+      "on_entry(context&)"
+  );
+  static_assert(
+      Policy::entry_action || !(entry_action<States, Context> || ...),
+      "finite_state_machine: this policy forbids states from defining "
+      "on_entry(context&)"
+  );
+  static_assert(
+      !Policy::exit_action || (exit_action<States, Context> && ...),
+      "finite_state_machine: this policy requires every state to define "
+      "on_exit(context&)"
+  );
+  static_assert(
+      Policy::exit_action || !(exit_action<States, Context> || ...),
+      "finite_state_machine: this policy forbids states from defining "
+      "on_exit(context&)"
+  );
+  static constexpr bool ok = true;
+};
+
+template<typename Derived, typename Policy, typename StateList>
+struct diagnose_fsm {
+  static_assert(
+      always_false<StateList>,
+      "finite_state_machine: the state-list argument must be "
+      "emb::typelist<States...>"
+  );
+  static constexpr bool ok = true;
+};
+
+template<typename Derived, typename Policy, typename... States>
+struct diagnose_fsm<Derived, Policy, typelist<States...>> {
+  static_assert(
+      fsm_policy<Policy, Derived>,
+      "finite_state_machine: Policy must model fsm_policy (entry_action, "
+      "exit_action, event_context_type<context>)"
+  );
+  static_assert(
+      sizeof...(States) > 0,
+      "finite_state_machine: at least one state is required"
+  );
+  static_assert((diagnose_state<States>::ok && ...));
+  static constexpr bool ok = diagnose_fsm_details<
+      Derived,
+      Policy,
+      fsm_policy<Policy, Derived> && (state_with_id<States> && ...),
+      States...>::ok;
+};
+
 } // namespace detail
 
 struct moore_policy {
@@ -162,14 +222,16 @@ struct mixed_policy {
 };
 
 template<typename Derived, typename Policy, typename StateList>
-class finite_state_machine;
+class finite_state_machine {
+  static_assert(detail::diagnose_fsm<Derived, Policy, StateList>::ok);
+};
 
 template<typename Derived, typename Policy, typename... States>
-  requires detail::fsm_policy<Policy, Derived>
-        && detail::fsm_states<Derived, Policy, States...>
 class finite_state_machine<Derived, Policy, typelist<States...>> {
+  static_assert(detail::diagnose_fsm<Derived, Policy, typelist<States...>>::ok);
 public:
-  using fsm_type = finite_state_machine<Derived, Policy, typelist<States...>>;
+  using state_list = typelist<States...>;
+  using fsm_type = finite_state_machine<Derived, Policy, state_list>;
   using context_type = Derived;
   using event_context_type =
       typename Policy::template event_context_type<context_type>;
@@ -185,7 +247,7 @@ public:
   finite_state_machine& operator=(finite_state_machine&&) = default;
 
   template<typename State>
-    requires detail::one_of_fsm_states<State, States...>
+    requires typelist_contains<state_list, State>
   constexpr finite_state_machine(State&& initial_state)
       : state_(std::forward<State>(initial_state)) {}
 
@@ -228,7 +290,7 @@ public:
   }
 
   template<typename State, typename... Args>
-    requires detail::one_of_fsm_states<State, States...>
+    requires typelist_contains<state_list, State>
   constexpr void force_transition(Args&&... args) {
     exit_state();
     state_ = state_type(std::in_place_type<State>, std::forward<Args>(args)...);
@@ -236,7 +298,7 @@ public:
   }
 public:
   template<typename State, typename... Args>
-    requires detail::one_of_fsm_states<State, States...>
+    requires typelist_contains<state_list, State>
   [[nodiscard]] static constexpr next_state_type transition_to(Args&&... args) {
     return state_type(std::in_place_type<State>, std::forward<Args>(args)...);
   }
@@ -255,7 +317,7 @@ public:
   }
 
   template<typename State>
-    requires detail::one_of_fsm_states<State, States...>
+    requires typelist_contains<state_list, State>
   constexpr bool is_in_state() const {
     return std::holds_alternative<State>(state_);
   }
