@@ -5,6 +5,7 @@
 #include <emb/units/angle.hpp>
 #include <emb/units/chrono.hpp>
 #include <emb/units/electrical.hpp>
+#include <emb/units/flow.hpp>
 #include <emb/units/pressure.hpp>
 #include <emb/units/speed.hpp>
 
