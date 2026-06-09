@@ -8,5 +8,6 @@
 #include <emb/units/flow.hpp>
 #include <emb/units/pressure.hpp>
 #include <emb/units/speed.hpp>
+#include <emb/units/temperature.hpp>
 
 #include <emb/units/relations.hpp>
