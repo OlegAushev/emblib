@@ -41,32 +41,32 @@ concept exit_action = requires(Context& ctx) {
 };
 
 template<typename State>
-concept state_with_id = requires {
-  State::id;
-  requires std::integral<std::remove_cv_t<decltype(State::id)>> ||
-               std::is_enum_v<std::remove_cv_t<decltype(State::id)>>;
+concept state_with_tag = requires {
+  State::tag;
+  requires std::integral<std::remove_cv_t<decltype(State::tag)>> ||
+               std::is_enum_v<std::remove_cv_t<decltype(State::tag)>>;
   requires requires {
-    std::integral_constant<decltype(State::id), State::id>{};
+    std::integral_constant<decltype(State::tag), State::tag>{};
   };
 };
 
 template<typename... States>
-concept states_with_same_id_type =
+concept states_with_same_tag_type =
     (sizeof...(States) > 0) &&
     std::conjunction_v<std::is_same<
-        std::remove_cv_t<decltype(States::id)>,
+        std::remove_cv_t<decltype(States::tag)>,
         std::remove_cv_t<
-            decltype(std::tuple_element_t<0, std::tuple<States...>>::id)>>...>;
+            decltype(std::tuple_element_t<0, std::tuple<States...>>::tag)>>...>;
 
 template<typename... States>
-consteval bool are_id_unique() {
+consteval bool are_tags_unique() {
   if constexpr (sizeof...(States) <= 1) {
     return true;
   } else {
-    constexpr std::array ids = {States::id...};
-    for (auto i = 0uz; i < ids.size(); ++i) {
-      for (auto j = i + 1; j < ids.size(); ++j) {
-        if (ids[i] == ids[j]) {
+    constexpr std::array tags = {States::tag...};
+    for (auto i = 0uz; i < tags.size(); ++i) {
+      for (auto j = i + 1; j < tags.size(); ++j) {
+        if (tags[i] == tags[j]) {
           return false;
         }
       }
@@ -76,7 +76,7 @@ consteval bool are_id_unique() {
 }
 
 template<typename... States>
-concept states_with_unique_id = are_id_unique<States...>();
+concept states_with_unique_tags = are_tags_unique<States...>();
 
 template<
     typename State,
@@ -124,8 +124,8 @@ inline constexpr bool always_false = false;
 template<typename State>
 struct diagnose_state {
   static_assert(
-      state_with_id<State>,
-      "finite_state_machine: every state must declare a static `id` member "
+      state_with_tag<State>,
+      "finite_state_machine: every state must declare a static `tag` member "
       "(an integral or enum constant)"
   );
   static constexpr bool ok = true;
@@ -139,12 +139,12 @@ struct diagnose_fsm_details {
 template<typename Context, typename Policy, typename... States>
 struct diagnose_fsm_details<Context, Policy, true, States...> {
   static_assert(
-      states_with_same_id_type<States...>,
-      "finite_state_machine: all State::id must share the same type"
+      states_with_same_tag_type<States...>,
+      "finite_state_machine: all State::tag must share the same type"
   );
   static_assert(
-      states_with_unique_id<States...>,
-      "finite_state_machine: all State::id values must be unique"
+      states_with_unique_tags<States...>,
+      "finite_state_machine: all State::tag values must be unique"
   );
   static_assert(
       !Policy::entry_action || (entry_action<States, Context> && ...),
@@ -194,7 +194,7 @@ struct diagnose_fsm<Derived, Policy, typelist<States...>> {
   static constexpr bool ok = diagnose_fsm_details<
       Derived,
       Policy,
-      fsm_policy<Policy, Derived> && (state_with_id<States> && ...),
+      fsm_policy<Policy, Derived> && (state_with_tag<States> && ...),
       States...>::ok;
 };
 
@@ -322,11 +322,11 @@ public:
     return std::holds_alternative<State>(state_);
   }
 
-  [[nodiscard]] constexpr auto state_id() const {
+  [[nodiscard]] constexpr auto state_tag() const {
     return std::visit(
         [](auto const& s) {
           using S = std::remove_cvref_t<decltype(s)>;
-          return S::id;
+          return S::tag;
         },
         state_
     );
