@@ -97,4 +97,17 @@ struct typelist_append<typelist<Types...>, T> {
 template<typename List, typename T>
 using typelist_append_t = typename typelist_append<List, T>::type;
 
+// -- concat --
+
+template<typename A, typename B>
+struct typelist_concat;
+
+template<typename... As, typename... Bs>
+struct typelist_concat<typelist<As...>, typelist<Bs...>> {
+  using type = typelist<As..., Bs...>;
+};
+
+template<typename A, typename B>
+using typelist_concat_t = typename typelist_concat<A, B>::type;
+
 } // namespace emb
