@@ -2,7 +2,7 @@
 
 #include <array>
 #include <chrono>
-#include <utility>
+#include <cstddef>
 
 #include <emb/can.hpp>
 #include <emb/can/bus.hpp>
@@ -15,36 +15,31 @@ namespace can {
 namespace canopen {
 namespace detail {
 
+template<std::uint8_t NodeId, std::size_t N>
 class tpdo_producer {
 public:
-  tpdo_producer(transport& bus, node_id node) : bus_(bus) {
-    slots_[0].cob_id = cob_id_of<cob_type::tpdo1>(node);
-    slots_[1].cob_id = cob_id_of<cob_type::tpdo2>(node);
-    slots_[2].cob_id = cob_id_of<cob_type::tpdo3>(node);
-    slots_[3].cob_id = cob_id_of<cob_type::tpdo4>(node);
-  }
+  explicit tpdo_producer(transport& bus) : bus_(bus) {}
 
-  void set_provider(tpdo_num n, emb::delegate<payload_t()> provider) {
-    slots_[std::to_underlying(n)].provider = provider;
-  }
-
-  void set_period(
-      tpdo_num n,
-      std::chrono::milliseconds period,
-      std::chrono::milliseconds now
-  ) {
-    auto& s = slots_[std::to_underlying(n)];
-    s.period = period;
+  template<std::size_t I, pdo_id CobId>
+  void setup(tpdo_config const& cfg, std::chrono::milliseconds now) {
+    static_assert(I >= 1 && I <= N, "TPDO index out of range");
+    auto& s = slots_[I - 1];
+    s.provider = cfg.provider;
+    s.period = cfg.period;
     s.last_tx = now;
+    if constexpr (CobId.is_custom) {
+      s.cob_id = CobId.value;
+    } else {
+      s.cob_id = cob_id_of<cob_type::tpdo, I, NodeId>();
+    }
   }
 
   void tick(std::chrono::milliseconds now, nmt_state state) {
     if (state != nmt_state::operational) return;
 
     for (auto& s : slots_) {
-      if (s.period == std::chrono::milliseconds::zero() || !s.provider) {
-        continue;
-      }
+      if (!s.provider) continue;
+      if (s.period == std::chrono::milliseconds::zero()) continue;
       if ((now - s.last_tx) < s.period) continue;
 
       frame_t frame = {
@@ -69,7 +64,7 @@ private:
   };
 
   transport& bus_;
-  std::array<slot, 4> slots_;
+  std::array<slot, N> slots_;
 };
 
 } // namespace detail

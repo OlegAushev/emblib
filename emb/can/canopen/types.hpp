@@ -2,13 +2,14 @@
 
 #include <array>
 #include <bit>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
-#include <optional>
 #include <type_traits>
 #include <utility>
 
 #include <emb/can.hpp>
+#include <emb/delegate.hpp>
 
 namespace emb {
 namespace can {
@@ -26,19 +27,8 @@ constexpr T from_payload(payload_t const& payload) {
   return std::bit_cast<T>(payload);
 }
 
-class node_id {
-private:
-  std::uint8_t id_;
-  constexpr explicit node_id(std::uint8_t id) : id_(id) {}
-public:
-  static constexpr std::optional<node_id> make(std::uint8_t id) {
-    if (id < 1 || id > 127) return std::nullopt;
-    return node_id(id);
-  }
-  constexpr std::uint8_t get() const {
-    return id_;
-  }
-};
+template<std::uint8_t Id>
+concept valid_node_id = Id >= 1 && Id <= 127;
 
 enum class nmt_state : std::uint8_t {
   initializing = 0x00,
@@ -60,70 +50,87 @@ enum class cob_type : std::uint8_t {
   sync,
   emcy,
   time,
-  tpdo1,
-  rpdo1,
-  tpdo2,
-  rpdo2,
-  tpdo3,
-  rpdo3,
-  tpdo4,
-  rpdo4,
+  tpdo,
+  rpdo,
   tsdo,
   rsdo,
   heartbeat
 };
 
-constexpr std::size_t cob_type_count = 15;
+constexpr std::size_t cob_type_count = 9;
 
 constexpr std::array<id_t, cob_type_count> cob_function_codes = {
     0x000, // nmt
     0x080, // sync
     0x080, // emcy
     0x100, // time
-    0x180, // tpdo1
-    0x200, // rpdo1
-    0x280, // tpdo2
-    0x300, // rpdo2
-    0x380, // tpdo3
-    0x400, // rpdo3
-    0x480, // tpdo4
-    0x500, // rpdo4
+    0x180, // tpdo (base)
+    0x200, // rpdo (base)
     0x580, // tsdo
     0x600, // rsdo
     0x700  // heartbeat
 };
 
-template<cob_type Cob>
-constexpr bool is_broadcast_cob = (Cob == cob_type::nmt)
-                               || (Cob == cob_type::sync)
-                               || (Cob == cob_type::time);
+template<cob_type C>
+concept broadcast_cob =
+    C == cob_type::nmt || C == cob_type::sync || C == cob_type::time;
 
-template<cob_type Cob>
-  requires is_broadcast_cob<Cob>
+template<cob_type C>
+concept pdo_cob = C == cob_type::tpdo || C == cob_type::rpdo;
+
+template<cob_type C>
+concept peer_cob = !broadcast_cob<C> && !pdo_cob<C>;
+
+template<cob_type Service>
+  requires broadcast_cob<Service>
 constexpr id_t cob_id_of() {
-  return cob_function_codes[std::to_underlying(Cob)];
+  return cob_function_codes[std::to_underlying(Service)];
 }
 
-template<cob_type Cob>
-  requires(!is_broadcast_cob<Cob>)
-constexpr id_t cob_id_of(node_id id) {
-  return cob_function_codes[std::to_underlying(Cob)] + id.get();
+template<cob_type Service, std::uint8_t NodeId>
+  requires peer_cob<Service>
+constexpr id_t cob_id_of() {
+  static_assert(valid_node_id<NodeId>, "node id must be in [1, 127]");
+  return cob_function_codes[std::to_underlying(Service)] + NodeId;
 }
 
-enum class tpdo_num : std::uint8_t { _1, _2, _3, _4 };
-enum class rpdo_num : std::uint8_t { _1, _2, _3, _4 };
-
-constexpr cob_type to_cob(tpdo_num n) {
-  constexpr std::array<cob_type, 4> map =
-      {cob_type::tpdo1, cob_type::tpdo2, cob_type::tpdo3, cob_type::tpdo4};
-  return map[std::to_underlying(n)];
+template<cob_type Pdo, std::size_t I, std::uint8_t NodeId>
+  requires pdo_cob<Pdo>
+constexpr id_t cob_id_of() {
+  static_assert(I >= 1 && I <= 4, "predefined COB-ID exists only for PDO 1..4");
+  static_assert(valid_node_id<NodeId>, "node id must be in [1, 127]");
+  return cob_function_codes[std::to_underlying(Pdo)]
+         + static_cast<id_t>(0x100 * (I - 1)) + NodeId;
 }
 
-constexpr cob_type to_cob(rpdo_num n) {
-  constexpr std::array<cob_type, 4> map =
-      {cob_type::rpdo1, cob_type::rpdo2, cob_type::rpdo3, cob_type::rpdo4};
-  return map[std::to_underlying(n)];
-}
+struct pdo_id {
+  id_t value = 0;
+  bool is_custom = false;
+
+  constexpr pdo_id() = default;
+
+  static constexpr pdo_id predefined() {
+    return {};
+  }
+
+  static constexpr pdo_id custom(id_t v) {
+    return pdo_id(v, true);
+  }
+
+private:
+  constexpr pdo_id(id_t v, bool c) : value(v), is_custom(c) {}
+};
+
+struct tpdo_config {
+  emb::delegate<payload_t()> provider;
+  std::chrono::milliseconds period{0}; // 0 = do not transmit
+};
+
+struct rpdo_config {
+  emb::delegate<void(payload_t const&)> handler;
+  std::chrono::milliseconds timeout{0}; // 0 = liveness monitoring off
+  emb::delegate<void()> on_timeout;
+};
 
 } // namespace canopen
 } // namespace can

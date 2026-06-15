@@ -13,10 +13,10 @@ namespace can {
 namespace canopen {
 namespace detail {
 
+template<std::uint8_t NodeId>
 class hb_producer {
 public:
-  hb_producer(transport& bus, node_id node)
-      : bus_(bus), cob_id_(cob_id_of<cob_type::heartbeat>(node)) {}
+  explicit hb_producer(transport& bus) : bus_(bus) {}
 
   void set_period(
       std::chrono::milliseconds period,
@@ -32,7 +32,7 @@ public:
 
     frame_t frame = {
         .format = format_t::standard,
-        .id = cob_id_,
+        .id = cob_id_of<cob_type::heartbeat, NodeId>(),
         .len = 1,
         .payload = {std::to_underlying(state)}
     };
@@ -44,7 +44,6 @@ public:
 
 private:
   transport& bus_;
-  id_t const cob_id_;
   std::chrono::milliseconds period_{0};
   std::chrono::milliseconds last_tx_{0};
 };

@@ -13,10 +13,10 @@ namespace can {
 namespace canopen {
 namespace detail {
 
+template<std::uint8_t NodeId>
 class emcy_producer {
 public:
-  emcy_producer(transport& bus, node_id node)
-      : bus_(bus), cob_id_(cob_id_of<cob_type::emcy>(node)) {}
+  explicit emcy_producer(transport& bus) : bus_(bus) {}
 
   bool emit(
       std::uint16_t error_code,
@@ -25,7 +25,7 @@ public:
   ) {
     frame_t frame = {
         .format = format_t::standard,
-        .id = cob_id_,
+        .id = cob_id_of<cob_type::emcy, NodeId>(),
         .len = 8,
         .payload = {
             static_cast<std::uint8_t>(error_code & 0xFF),
@@ -43,7 +43,6 @@ public:
 
 private:
   transport& bus_;
-  id_t cob_id_;
 };
 
 } // namespace detail
