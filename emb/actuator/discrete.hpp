@@ -1,6 +1,8 @@
 #pragma once
 
+#include <emb/actuator/feedback.hpp>
 #include <emb/actuator/generic.hpp>
+#include <emb/actuator/monitored.hpp>
 
 #include <emb/gpio.hpp>
 
@@ -43,5 +45,44 @@ public:
 // A two-position actuator driven by a single GPIO line.
 template<typename Encoder, typename Pin>
 using device = generic<position, Encoder, gpio_driver<Pin>>;
+
+// Sensor reading a feedback line from a GPIO input pin.
+template<emb::gpio::input Pin>
+class gpio_sensor {
+private:
+  Pin& pin_;
+public:
+  explicit gpio_sensor(Pin& pin) : pin_(pin) {}
+
+  emb::gpio::state operator()() const {
+    return pin_.read();
+  }
+};
+
+// Decoder for a make (normally-open) aux contact: an active feedback line means
+// the actuator has reached the closed position.
+struct make_contact {
+  static constexpr position operator()(emb::gpio::state s) {
+    return s == emb::gpio::state::active ? position::closed : position::open;
+  }
+};
+
+// Decoder for a break (normally-closed) aux contact: an active feedback line
+// means the actuator has reached the open position.
+struct break_contact {
+  static constexpr position operator()(emb::gpio::state s) {
+    return s == emb::gpio::state::active ? position::open : position::closed;
+  }
+};
+
+// A feedback channel sensing position through a GPIO input pin.
+template<typename Decoder, typename Pin>
+using sense = feedback<position, gpio_sensor<Pin>, Decoder>;
+
+// A two-position actuator with closed-loop position feedback: a control output
+// pin plus a feedback input pin.
+template<typename Encoder, typename Decoder, typename CtrlPin, typename FbPin>
+using monitored_device =
+    monitored<device<Encoder, CtrlPin>, sense<Decoder, FbPin>>;
 
 } // namespace emb::actuator::discrete
