@@ -26,9 +26,17 @@ namespace emb {
 namespace can {
 namespace canopen {
 
-template<std::uint8_t NodeId, std::size_t NumTpdo = 4, std::size_t NumRpdo = 4>
+struct server_options {
+  std::uint8_t node_id;
+  std::size_t tpdo_count = 4;
+  std::size_t rpdo_count = 4;
+  std::size_t rx_queue_capacity = 32;
+};
+
+template<server_options Opt>
 class server {
-  static_assert(valid_node_id<NodeId>, "node id must be in [1, 127]");
+  static_assert(valid_node_id<Opt.node_id>, "node id must be in [1, 127]");
+
 public:
   server(
       emb::delegate<std::chrono::milliseconds()> clock,
@@ -70,7 +78,9 @@ public:
     }
 
     std::size_t timed_out = rpdo_.tick(now, nmt_.state());
-    for (std::size_t i = 0; i < timed_out; ++i) emcy_.emit(0x8250, 0x10);
+    for (std::size_t i = 0; i < timed_out; ++i) {
+      emcy_.emit(0x8250, 0x10);
+    }
 
     tpdo_.tick(now, nmt_.state());
     sdo_.drain();
@@ -80,7 +90,7 @@ public:
   }
 
   static constexpr std::uint8_t id() {
-    return NodeId;
+    return Opt.node_id;
   }
 
   nmt_state state() const {
@@ -91,8 +101,11 @@ public:
 
   template<std::size_t I, pdo_id Cob = pdo_id::predefined()>
   void setup_rpdo(rpdo_config cfg) {
-    static_assert(I >= 1 && I <= NumRpdo, "RPDO index out of range");
-    static_assert(Cob.is_custom || I <= 4, "PDO >= 5 requires pdo_id::custom(...)");
+    static_assert(I >= 1 && I <= Opt.rpdo_count, "RPDO index out of range");
+    static_assert(
+        Cob.is_custom || I <= 4,
+        "PDO >= 5 requires pdo_id::custom(...)"
+    );
     static_assert(
         !Cob.is_custom || (Cob.value >= 1 && Cob.value <= 0x7FF),
         "COB-ID out of 11-bit range"
@@ -104,8 +117,11 @@ public:
 
   template<std::size_t I, pdo_id Cob = pdo_id::predefined()>
   void setup_tpdo(tpdo_config cfg) {
-    static_assert(I >= 1 && I <= NumTpdo, "TPDO index out of range");
-    static_assert(Cob.is_custom || I <= 4, "PDO >= 5 requires pdo_id::custom(...)");
+    static_assert(I >= 1 && I <= Opt.tpdo_count, "TPDO index out of range");
+    static_assert(
+        Cob.is_custom || I <= 4,
+        "PDO >= 5 requires pdo_id::custom(...)"
+    );
     static_assert(
         !Cob.is_custom || (Cob.value >= 1 && Cob.value <= 0x7FF),
         "COB-ID out of 11-bit range"
@@ -157,8 +173,6 @@ public:
   }
 
 private:
-  static constexpr std::size_t rx_queue_capacity = 32;
-
   void enqueue_rx(frame_t const& frame) {
     (void)rx_queue_.try_push(frame); // drop-newest on full
   }
@@ -207,16 +221,16 @@ private:
 
   transport& bus_;
 
-  emb::isr_spsc_inplace_queue<frame_t, rx_queue_capacity> rx_queue_;
+  emb::isr_spsc_inplace_queue<frame_t, Opt.rx_queue_capacity> rx_queue_;
 
-  detail::nmt_slave<NodeId> nmt_;
-  detail::hb_producer<NodeId> hb_producer_;
+  detail::nmt_slave<Opt.node_id> nmt_;
+  detail::hb_producer<Opt.node_id> hb_producer_;
   detail::sync_producer sync_producer_;
   detail::hb_consumer hb_consumer_;
-  detail::emcy_producer<NodeId> emcy_;
-  detail::sdo_server<NodeId> sdo_;
-  detail::tpdo_producer<NodeId, NumTpdo> tpdo_;
-  detail::rpdo_consumer<NodeId, NumRpdo> rpdo_;
+  detail::emcy_producer<Opt.node_id> emcy_;
+  detail::sdo_server<Opt.node_id> sdo_;
+  detail::tpdo_producer<Opt.node_id, Opt.tpdo_count> tpdo_;
+  detail::rpdo_consumer<Opt.node_id, Opt.rpdo_count> rpdo_;
 
   emb::delegate<void(nmt_state)> on_nmt_change_;
   emb::delegate<void()> on_reset_node_;

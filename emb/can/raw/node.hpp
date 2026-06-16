@@ -14,10 +14,13 @@ namespace emb {
 namespace can {
 namespace raw {
 
-template<
-    std::size_t RxSlots = 8,
-    std::size_t TxSlots = 8,
-    std::size_t RxQueueCapacity = 32>
+struct node_options {
+  std::size_t rx_slots = 8;
+  std::size_t tx_slots = 8;
+  std::size_t rx_queue_capacity = 32;
+};
+
+template<node_options Opt>
 class node {
 public:
   explicit node(transport& bus) : bus_(bus) {
@@ -141,9 +144,9 @@ private:
 
   transport& bus_;
   std::chrono::milliseconds now_{0};
-  emb::inplace_vector<rx_slot, RxSlots> rx_;
-  emb::inplace_vector<tx_slot, TxSlots> tx_;
-  emb::isr_spsc_inplace_queue<frame_t, RxQueueCapacity> rx_queue_;
+  emb::inplace_vector<rx_slot, Opt.rx_slots> rx_;
+  emb::inplace_vector<tx_slot, Opt.tx_slots> tx_;
+  emb::isr_spsc_inplace_queue<frame_t, Opt.rx_queue_capacity> rx_queue_;
 };
 
 } // namespace raw
