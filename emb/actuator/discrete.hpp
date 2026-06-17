@@ -78,16 +78,16 @@ public:
 
 // A two-position actuator driven by a single GPIO line.
 template<typename Encoder, typename Pin>
-using device = unmonitored<position, Encoder, gpio_driver<Pin>>;
+using gpio_actuator = unmonitored<position, Encoder, gpio_driver<Pin>>;
 
 // A feedback channel sensing position through a GPIO input pin.
 template<typename Decoder, typename Pin>
-using sense = feedback<position, gpio_sensor<Pin>, Decoder>;
+using gpio_feedback = feedback<position, gpio_sensor<Pin>, Decoder>;
 
 // A two-position actuator with closed-loop position feedback: a control output
 // pin plus a feedback input pin.
 template<typename Encoder, typename Decoder, typename CtrlPin, typename FbPin>
-using monitored_device =
-    monitored<device<Encoder, CtrlPin>, sense<Decoder, FbPin>>;
+using gpio_monitored_actuator =
+    monitored<gpio_actuator<Encoder, CtrlPin>, gpio_feedback<Decoder, FbPin>>;
 
 } // namespace emb::actuator::discrete
