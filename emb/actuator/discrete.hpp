@@ -1,8 +1,8 @@
 #pragma once
 
 #include <emb/actuator/feedback.hpp>
-#include <emb/actuator/generic.hpp>
 #include <emb/actuator/monitored.hpp>
+#include <emb/actuator/unmonitored.hpp>
 
 #include <emb/gpio.hpp>
 
@@ -44,7 +44,7 @@ public:
 
 // A two-position actuator driven by a single GPIO line.
 template<typename Encoder, typename Pin>
-using device = generic<position, Encoder, gpio_driver<Pin>>;
+using device = unmonitored<position, Encoder, gpio_driver<Pin>>;
 
 // Sensor reading a feedback line from a GPIO input pin.
 template<emb::gpio::input Pin>

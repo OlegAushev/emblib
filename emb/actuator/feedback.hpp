@@ -7,9 +7,9 @@
 
 namespace emb::actuator {
 
-// A feedback channel: reads a low-level measurement through a sensor and decodes
-// it into the actual actuator state. The mirror image of the command path, where
-// an encoder turns a state into a driver command.
+// A feedback channel: reads a low-level measurement through a sensor and
+// decodes it into the actual actuator state. The mirror image of the command
+// path, where an encoder turns a state into a driver command.
 template<typename State, typename Sensor, typename Decoder>
   requires some_sensor<Sensor>
         && some_decoder<Decoder, std::invoke_result_t<Sensor&>>
