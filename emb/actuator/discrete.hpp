@@ -18,17 +18,29 @@ enum class position : std::uint8_t { closed, open };
 // driver/sensor (e.g. the GPIO ones below) translates it to and from hardware.
 enum class signal : std::uint8_t { inactive, active };
 
-// Encoder for a normally-closed actuator: de-energized rest is closed.
+// Position<->signal bijection for a normally-closed actuator: de-energized rest
+// is closed. As an encoder it maps a desired position to a drive signal; as a
+// decoder it maps a feedback signal back to a position (active = open, i.e. a
+// break aux contact).
 struct normally_closed {
   static constexpr signal operator()(position desired) {
     return desired != position::closed ? signal::active : signal::inactive;
   }
+  static constexpr position operator()(signal s) {
+    return s == signal::active ? position::open : position::closed;
+  }
 };
 
-// Encoder for a normally-open actuator: de-energized rest is open.
+// Position<->signal bijection for a normally-open actuator: de-energized rest
+// is open. As an encoder it maps a desired position to a drive signal; as a
+// decoder it maps a feedback signal back to a position (active = closed, i.e. a
+// make aux contact).
 struct normally_open {
   static constexpr signal operator()(position desired) {
     return desired != position::open ? signal::active : signal::inactive;
+  }
+  static constexpr position operator()(signal s) {
+    return s == signal::active ? position::closed : position::open;
   }
 };
 
@@ -49,10 +61,6 @@ public:
   }
 };
 
-// A two-position actuator driven by a single GPIO line.
-template<typename Encoder, typename Pin>
-using device = unmonitored<position, Encoder, gpio_driver<Pin>>;
-
 // Sensor translating a GPIO input pin to a logical signal. The pin applies its
 // own polarity when mapping the physical level to the active/inactive state.
 template<emb::gpio::input Pin>
@@ -68,21 +76,9 @@ public:
   }
 };
 
-// Decoder for a make (normally-open) aux contact: an active feedback signal
-// means the actuator has reached the closed position.
-struct make_contact {
-  static constexpr position operator()(signal s) {
-    return s == signal::active ? position::closed : position::open;
-  }
-};
-
-// Decoder for a break (normally-closed) aux contact: an active feedback signal
-// means the actuator has reached the open position.
-struct break_contact {
-  static constexpr position operator()(signal s) {
-    return s == signal::active ? position::open : position::closed;
-  }
-};
+// A two-position actuator driven by a single GPIO line.
+template<typename Encoder, typename Pin>
+using device = unmonitored<position, Encoder, gpio_driver<Pin>>;
 
 // A feedback channel sensing position through a GPIO input pin.
 template<typename Decoder, typename Pin>
