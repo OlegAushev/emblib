@@ -9,8 +9,9 @@ namespace emb::sensor {
 // Each stage exposes forward()/inverse(); the transform then provides:
 //   forward(value) -> raw code  -- synthesize codes (test vectors, thresholds)
 //   inverse(code)  -> value     -- the actual measurement / conversion
-// operator() aliases inverse(), so a transform satisfies emb::sensor::some_converter
-// and can be handed to a sensor (buffered/unbuffered) directly.
+// operator() aliases inverse(), so a transform satisfies
+// emb::sensor::some_converter and can be handed to a sensor
+// (singlephase/polyphase/buffered) directly.
 
 namespace detail {
 
@@ -56,9 +57,7 @@ public:
   // raw code -> measured value (inverts stages back to front)
   constexpr auto inverse(auto code) const {
     return std::apply(
-        [&](auto const&... s) {
-          return detail::transform_inverse(code, s...);
-        },
+        [&](auto const&... s) { return detail::transform_inverse(code, s...); },
         stages
     );
   }

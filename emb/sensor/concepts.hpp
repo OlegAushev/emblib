@@ -28,4 +28,17 @@ concept some_filter = requires(
   f.push(v);
 };
 
+// A sensor core: it converts and filters submitted samples and exposes the
+// filtered result. sample_type is what a producer submits and what a buffered
+// queue stores -- one scalar code for singlephase, one aligned frame of codes
+// for polyphase. rawdata_type is the per-channel scalar code (equal to
+// sample_type for singlephase). buffered composes any such core.
+template<typename C>
+concept some_sensor_core = requires(C c, typename C::sample_type const& s) {
+  typename C::rawdata_type;
+  typename C::sample_type;
+  typename C::value_type;
+  c.submit(s);
+};
+
 } // namespace emb::sensor
