@@ -14,10 +14,7 @@ namespace emb::sensor {
 // the queue through a sensor core, so conversion/filtering happens off the ISR.
 // The core is any some_sensor_core -- singlephase for a single channel,
 // polyphase for an aligned N-phase frame -- and the queue's element type must
-// match the core's sample_type (a scalar code, or a whole frame). Keeping the
-// core a parameter (rather than hardcoding singlephase) lets one buffered serve
-// both: a polyphase core queues whole frames, so the phases stay aligned across
-// the ISR/main-loop boundary instead of drifting in N independent queues.
+// match the core's sample_type (a scalar code, or a whole frame).
 template<typename Queue, typename Core>
   requires some_spsc_queue<Queue>
         && some_sensor_core<Core>
@@ -25,34 +22,29 @@ template<typename Queue, typename Core>
 class buffered {
 public:
   using core_type = Core;
-  using rawdata_type = typename Core::rawdata_type;
   using sample_type = typename Core::sample_type;
+  using raw_type = typename Core::raw_type;
   using value_type = typename Core::value_type;
 private:
   Queue queue_;
   Core core_;
 public:
-  // Forwards to the core's constructor: (converter, filter) for singlephase, or
-  // (converter, filter) / per-phase arrays for polyphase. The constraint keeps
-  // this from hijacking copy/move construction.
   template<typename... Args>
     requires std::constructible_from<Core, Args...>
   explicit buffered(Args&&... args) : core_(std::forward<Args>(args)...) {}
 
-  // Read access to the filtered outputs: core().value() for a scalar core,
-  // core().values() / value(phase) for polyphase.
   Core const& core() const {
     return core_;
   }
 
-  // Convenience forwarder for scalar cores; absent for polyphase, which is read
-  // through values() / value(phase) below.
+  // Convenience forwarder for singlephase cores; absent for polyphase,
+  // which is read through values() / value(phase) below.
   value_type value() const
       requires requires(Core const& c) { c.value(); } {
     return core_.value();
   }
 
-  // Convenience forwarders for polyphase cores; absent for scalar cores.
+  // Convenience forwarders for polyphase cores; absent for singlephase cores.
   auto values() const
       requires requires(Core const& c) { c.values(); } {
     return core_.values();
@@ -64,8 +56,8 @@ public:
   }
 
   // Producer-side (ISR). On overflow the newest sample is dropped.
-  void submit(sample_type data) {
-    auto _ = queue_.try_push(std::move(data));
+  void submit(sample_type sample) {
+    auto _ = queue_.try_push(std::move(sample));
   }
 
   // Consumer-side (main loop). Drains the queue through the core pipeline.

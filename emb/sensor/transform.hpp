@@ -44,27 +44,27 @@ public:
 
   constexpr explicit transform(Stages... s) : stages{s...} {}
 
-  // measured value -> raw code (composes stages front to back)
-  constexpr auto forward(auto value) const {
+  // measured value -> sensor output (e.g. ADC code)
+  // composes stages front to back
+  constexpr auto forward(auto in) const {
     return std::apply(
-        [&](auto const&... s) {
-          return detail::transform_forward(value, s...);
-        },
+        [&](auto const&... s) { return detail::transform_forward(in, s...); },
         stages
     );
   }
 
-  // raw code -> measured value (inverts stages back to front)
-  constexpr auto inverse(auto code) const {
+  // sensor output (e.g. ADC code) -> measured value
+  // inverts stages back to front
+  constexpr auto inverse(auto out) const {
     return std::apply(
-        [&](auto const&... s) { return detail::transform_inverse(code, s...); },
+        [&](auto const&... s) { return detail::transform_inverse(out, s...); },
         stages
     );
   }
 
   // a transform is itself an emb::sensor::some_converter
-  constexpr auto operator()(auto code) const {
-    return inverse(code);
+  constexpr auto operator()(auto out) const {
+    return inverse(out);
   }
 };
 
