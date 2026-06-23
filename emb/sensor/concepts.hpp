@@ -48,4 +48,15 @@ concept some_sensor_core = requires(C c, typename C::sample_type const& s) {
   c.submit(s);
 };
 
+// Phase-arity markers for metaprogramming. They partition sensor surfaces by
+// how the filtered result reads back: a polyphase surface exposes a frame-wide
+// values(), a singlephase surface a scalar value().
+template<typename C>
+concept some_polyphase_sensor =
+    some_sensor_core<C> && requires(C const& c) { c.values(); };
+
+template<typename C>
+concept some_singlephase_sensor =
+    some_sensor_core<C> && requires(C const& c) { c.value(); };
+
 } // namespace emb::sensor
