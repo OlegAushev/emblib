@@ -36,7 +36,7 @@ public:
 
 // The no-op prefilter: passes raw codes straight to the converter. Use it
 // as the prefilter argument when a sensor needs no raw-domain preprocessing.
-template<typename T = std::uint32_t>
+template<typename T>
 using passthrough_prefilter = streaming_prefilter<passthrough_filter<T>>;
 
 } // namespace emb::sensor
