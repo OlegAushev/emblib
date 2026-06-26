@@ -39,6 +39,11 @@ public:
   void submit(sample_type sample) {
     filter_.push(converter_(prefilter_(sample)));
   }
+
+  value_type operator()(sample_type sample) {
+    submit(sample);
+    return value();
+  }
 };
 
 } // namespace emb::sensor
