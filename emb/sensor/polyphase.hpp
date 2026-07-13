@@ -85,11 +85,6 @@ public:
   void submit(sample_type const& sample) {
     submit_impl(sample, std::make_index_sequence<N>{});
   }
-
-  values_type operator()(sample_type const& sample) {
-    submit(sample);
-    return values();
-  }
 private:
   template<typename T>
   static std::array<T, N> broadcast(T const& proto) {
