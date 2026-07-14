@@ -6,9 +6,13 @@
 #include <bit>
 #include <cassert>
 #include <cfloat>
+#include <cmath>
 #include <concepts>
 #include <cstdint>
+#include <limits>
 #include <numbers>
+#include <numeric>
+#include <ratio>
 
 #ifdef __arm__
 extern "C" {
@@ -16,13 +20,9 @@ extern "C" {
 }
 #endif
 
-#ifdef __x86_64__
-#include <cmath>
-#endif
-
 namespace emb {
 
-// sin -------------------------------------------------------------------------
+// ---- sin ----
 inline float builtin_sin(float x) {
 #ifdef __arm__
   return arm_sin_f32(x);
@@ -40,7 +40,7 @@ constexpr float sin(float x) {
   }
 }
 
-// cos -------------------------------------------------------------------------
+// ---- cos ----
 inline float builtin_cos(float x) {
 #ifdef __arm__
   return arm_cos_f32(x);
@@ -58,7 +58,7 @@ constexpr float cos(float x) {
   }
 }
 
-// atan2 -----------------------------------------------------------------------
+// ---- atan2 ----
 inline float builtin_atan2(float y, float x) {
 #ifdef __arm__
   float ret;
@@ -78,7 +78,7 @@ constexpr float atan2(float y, float x) {
   }
 }
 
-// rsqrt/sqrt -------------------------------------------------------------
+// ---- rsqrt/sqrt ----
 constexpr float fast_rsqrt(float arg) {
   assert(arg >= FLT_MIN);
 
@@ -138,7 +138,7 @@ constexpr float sqrt(float arg) {
   }
 }
 
-// fmod ------------------------------------------------------------------------
+// ---- fmod ----
 template<std::floating_point T>
 consteval T fmod_trivial(T x, T y) {
   return x - static_cast<T>(static_cast<long long>(x / y)) * y;
@@ -153,22 +153,70 @@ constexpr T fmod(T x, T y) {
   }
 }
 
-// sgn -------------------------------------------------------------------------
+// ---- sgn ----
 template<typename T = int, typename V>
 constexpr T sgn(V v) {
   return T((V(0) < v) - (v < V(0)));
 }
 
-// iseven ----------------------------------------------------------------------
+// ---- iseven ----
 constexpr bool iseven(std::integral auto v) {
   return v % 2 == 0;
 }
 
-// isodd -----------------------------------------------------------------------
+// ---- isodd ----
 constexpr bool isodd(std::integral auto v) {
   return !iseven(v);
 }
 
+// ---- saturate_round ----
+template<std::integral Int, std::floating_point Float>
+constexpr Int saturate_round(Float num) {
+  static_assert(
+      sizeof(Int) < sizeof(long long) || std::is_signed_v<Int>,
+      "u64 upper range is unreachable via llround"
+  );
+  constexpr bool fits_long = sizeof(Int) < sizeof(long)
+                          || (sizeof(Int) == sizeof(long)
+                              && std::is_signed_v<Int>);
+  using Wide = std::conditional_t<fits_long, long, long long>;
+
+  assert(!std::isnan(num));
+  if (num >= static_cast<Float>(std::numeric_limits<Wide>::max())) {
+    return std::numeric_limits<Int>::max();
+  }
+  if (num <= static_cast<Float>(std::numeric_limits<Wide>::min())) {
+    return std::numeric_limits<Int>::min();
+  }
+
+  if constexpr (fits_long) {
+    return std::saturate_cast<Int>(std::lround(num));
+  } else {
+    return std::saturate_cast<Int>(std::llround(num));
+  }
+}
+
+// ---- quantize ----
+template<std::integral Int, typename Step, std::floating_point Float>
+  requires requires { Step::num; Step::den; }
+constexpr Int quantize(Float num) {
+  static_assert(Step::num > 0, "Step must be a positive ratio");
+  constexpr Float scale = static_cast<Float>(Step::den)
+                        / static_cast<Float>(Step::num);
+  return saturate_round<Int>(num * scale);
+}
+
+// ---- dequantize ----
+template<typename Step, std::floating_point Float = float, std::integral Int>
+  requires requires { Step::num; Step::den; }
+constexpr Float dequantize(Int num) {
+  static_assert(Step::num > 0, "Step must be a positive ratio");
+  constexpr Float step = static_cast<Float>(Step::num)
+                       / static_cast<Float>(Step::den);
+  return static_cast<Float>(num) * step;
+}
+
+// -----------------------------------------------------------------------------
 template<std::floating_point T>
 constexpr T to_rad(T deg) {
   return std::numbers::pi_v<T> * deg / T{180};
