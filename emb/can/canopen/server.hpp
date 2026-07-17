@@ -99,34 +99,34 @@ public:
 
   // ---- RPDO ----
 
-  template<std::size_t I, pdo_id Cob = pdo_id::predefined()>
+  template<std::size_t I, pdo_id CobId = pdo_id::predefined()>
   void setup_rpdo(rpdo_config cfg) {
     static_assert(I >= 1 && I <= Opt.rpdo_count, "RPDO index out of range");
     static_assert(
-        Cob.is_custom || I <= 4,
+        CobId.is_custom || I <= 4,
         "PDO >= 5 requires pdo_id::custom(...)"
     );
     static_assert(
-        !Cob.is_custom || (Cob.value >= 1 && Cob.value <= 0x7FF),
+        !CobId.is_custom || (CobId.value >= 1 && CobId.value <= 0x7FF),
         "COB-ID out of 11-bit range"
     );
-    rpdo_.template setup<I, Cob>(cfg, clock_());
+    rpdo_.template setup<I, CobId>(cfg, clock_());
   }
 
   // ---- TPDO ----
 
-  template<std::size_t I, pdo_id Cob = pdo_id::predefined()>
+  template<std::size_t I, pdo_id CobId = pdo_id::predefined()>
   void setup_tpdo(tpdo_config cfg) {
     static_assert(I >= 1 && I <= Opt.tpdo_count, "TPDO index out of range");
     static_assert(
-        Cob.is_custom || I <= 4,
+        CobId.is_custom || I <= 4,
         "PDO >= 5 requires pdo_id::custom(...)"
     );
     static_assert(
-        !Cob.is_custom || (Cob.value >= 1 && Cob.value <= 0x7FF),
+        !CobId.is_custom || (CobId.value >= 1 && CobId.value <= 0x7FF),
         "COB-ID out of 11-bit range"
     );
-    tpdo_.template setup<I, Cob>(cfg, clock_());
+    tpdo_.template setup<I, CobId>(cfg, clock_());
   }
 
   // ---- heartbeat / sync / nmt ----
