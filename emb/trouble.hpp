@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <optional>
 #include <type_traits>
 #include <utility>
 
@@ -59,6 +60,9 @@ consteval bool levels_within(typelist<Statuses...>) {
 
 } // namespace detail
 
+//
+// ---- registry ----
+//
 template<
     typename StatusList,
     typename Level,
@@ -183,6 +187,79 @@ private:
 
   inline static std::array<flags_type, LevelCount> shadow_{};
   inline static std::array<double_buffer<flags_type>, LevelCount> flags_{};
+};
+
+//
+// ---- registry_mirror ----
+//
+template<typename StatusList, typename Level, std::size_t LevelCount>
+class registry_mirror {
+  static_assert(level_like<Level>, "Level must be a scoped enum");
+  static_assert(
+      typelist_unique_v<StatusList>,
+      "status list must not contain duplicate statuses"
+  );
+  static_assert(
+      StatusList::size <= std::size_t{std::numeric_limits<id_type>::max()} + 1,
+      "status count exceeds id_type range"
+  );
+
+public:
+  static constexpr std::size_t status_count = StatusList::size;
+  static constexpr std::size_t level_count = LevelCount;
+  using flags_type = std::bitset<status_count>;
+
+  void store(Level lvl, flags_type flags) {
+    flags_[std::to_underlying(lvl)] = flags;
+  }
+
+  template<typename S>
+    requires contains<StatusList, S>
+  bool test(Level lvl) const {
+    return flags_[std::to_underlying(lvl)].test(id_of<S>);
+  }
+
+  template<typename S>
+    requires contains<StatusList, S>
+  bool test() const {
+    for (auto l = 0uz; l < LevelCount; ++l) {
+      if (flags_[l].test(id_of<S>)) return true;
+    }
+    return false;
+  }
+
+  flags_type flags(Level lvl) const {
+    return flags_[std::to_underlying(lvl)];
+  }
+
+  bool any(Level lvl) const {
+    return flags(lvl).any();
+  }
+
+  bool any() const {
+    for (auto l = 0uz; l < LevelCount; ++l) {
+      if (flags_[l].any()) return true;
+    }
+    return false;
+  }
+
+  // Highest level with at least one active status.
+  std::optional<Level> worst() const {
+    for (auto l = LevelCount; l > 0uz; --l) {
+      if (flags_[l - 1].any()) return static_cast<Level>(l - 1);
+    }
+    return std::nullopt;
+  }
+
+  void clear() {
+    flags_.fill({});
+  }
+
+private:
+  template<typename S>
+  static constexpr id_type id_of = detail::index_of<S>(StatusList{});
+
+  std::array<flags_type, LevelCount> flags_{};
 };
 
 } // namespace emb::trouble
