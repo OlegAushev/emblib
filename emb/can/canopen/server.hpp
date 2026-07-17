@@ -63,6 +63,10 @@ public:
 
   ~server() = default;
 
+  static constexpr server_options options() {
+    return Opt;
+  }
+
   void start() {
     apply_nmt_state(nmt_state::operational);
   }
@@ -87,10 +91,6 @@ public:
     hb_producer_.tick(now, nmt_.state());
     sync_producer_.tick(now);
     hb_consumer_.tick(now);
-  }
-
-  static constexpr std::uint8_t id() {
-    return Opt.node_id;
   }
 
   nmt_state state() const {
