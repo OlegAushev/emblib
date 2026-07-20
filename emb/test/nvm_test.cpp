@@ -1,23 +1,10 @@
 #include <array>
 #include <bit>
+#include <cassert>
 #include <cstring>
+
 #include <emb/nvm.hpp>
-
-// -- Parameter definitions --
-
-template<>
-struct emb::nvm::parameter<"motor.pole_pairs">
-    : emb::nvm::parameter_traits<"motor.pole_pairs", std::int32_t, 1> {};
-
-template<>
-struct emb::nvm::parameter<"motor.R">
-    : emb::nvm::parameter_traits<"motor.R", float, 0.050f> {};
-
-template<>
-struct emb::nvm::parameter<"gains"> : emb::nvm::parameter_traits<
-                                          "gains",
-                                          std::array<float, 3>,
-                                          {100.f, 200.f, 300.f}> {};
+#include <emb/units.hpp>
 
 namespace {
 
@@ -51,31 +38,43 @@ struct backend {
 
 // -- Layout --
 
-inline constexpr nvm::layout nvm_layout{
-    .base = 0,
-    .entries = {
-        nvm::parameter<"motor.pole_pairs">::entry,
-        nvm::parameter<"motor.R">::entry,
-        nvm::parameter<"gains">::entry
-    }
-};
+inline constexpr nvm::layout<
+    nvm::parameter<"motor.pole_pairs", std::int32_t{1}>,
+    nvm::parameter<"motor.R", 0.050f>,
+    nvm::parameter<"gains", std::array{100.f, 200.f, 300.f}>,
+    nvm::parameter<"angle.offset", units::deg_f32{15.0f}>>
+    nvm_layout{.base = 0};
+
+using registry_type = nvm::registry<backend, nvm_layout>;
+
+static_assert(
+    std::same_as<registry_type::value_type<"motor.pole_pairs">, std::int32_t>
+);
+static_assert(std::same_as<registry_type::value_type<"motor.R">, float>);
+static_assert(
+    std::same_as<registry_type::value_type<"gains">, std::array<float, 3>>
+);
+static_assert(
+    std::same_as<registry_type::value_type<"angle.offset">, units::deg_f32>
+);
 
 // -- Tests --
 
 static constexpr std::size_t frame_overhead = sizeof(nvm::fnv1a_32::type)
-                                       + sizeof(nvm::crc32::type);
+                                            + sizeof(nvm::crc32::type);
 
 static constexpr bool test_round_trip() {
   backend storage{};
-  nvm::registry<backend, nvm_layout> settings{storage};
+  registry_type settings{storage};
 
   // size includes hash+crc overhead per entry
   assert(
       settings.size
-      == 3 * frame_overhead
+      == 4 * frame_overhead
              + sizeof(std::int32_t)
              + sizeof(float)
              + 3 * sizeof(float)
+             + sizeof(units::deg_f32)
   );
 
   auto r1 = settings.set<"motor.R">(0.42f);
@@ -84,6 +83,8 @@ static constexpr bool test_round_trip() {
   assert(r2.has_value());
   auto r3 = settings.set<"gains">({1.f, 2.f, 3.f});
   assert(r3.has_value());
+  auto r4 = settings.set<"angle.offset">(units::deg_f32{30.0f});
+  assert(r4.has_value());
 
   auto motor_R = settings.get<"motor.R">();
   assert(motor_R.has_value() && *motor_R == 0.42f);
@@ -95,12 +96,15 @@ static constexpr bool test_round_trip() {
   assert(gains.has_value());
   assert((*gains)[0] == 1.f && (*gains)[1] == 2.f && (*gains)[2] == 3.f);
 
+  auto angle = settings.get<"angle.offset">();
+  assert(angle.has_value() && *angle == units::deg_f32{30.0f});
+
   return true;
 }
 
 static constexpr bool test_hash_mismatch() {
   backend storage{};
-  nvm::registry<backend, nvm_layout> settings{storage};
+  registry_type settings{storage};
 
   [[maybe_unused]] auto r = settings.set<"motor.pole_pairs">(10);
 
@@ -108,9 +112,7 @@ static constexpr bool test_hash_mismatch() {
   assert(motor_p.has_value() && *motor_p == 10);
 
   // corrupt the hash byte of motor.pole_pairs frame
-  constexpr auto off = nvm_layout.offset_of(
-      nvm::parameter<"motor.pole_pairs">::hash
-  );
+  constexpr auto off = nvm_layout.offset_of<"motor.pole_pairs">();
   storage.mem[off] ^= 0xFF;
 
   motor_p = settings.get<"motor.pole_pairs">();
@@ -122,7 +124,7 @@ static constexpr bool test_hash_mismatch() {
 
 static constexpr bool test_crc_mismatch() {
   backend storage{};
-  nvm::registry<backend, nvm_layout> settings{storage};
+  registry_type settings{storage};
 
   [[maybe_unused]] auto r = settings.set<"motor.R">(0.42f);
 
@@ -130,8 +132,8 @@ static constexpr bool test_crc_mismatch() {
   assert(motor_R.has_value() && *motor_R == 0.42f);
 
   // corrupt a value byte (hash stays valid, CRC will mismatch)
-  constexpr auto off = nvm_layout.offset_of(nvm::parameter<"motor.R">::hash);
-  storage.mem[off + sizeof(nvm::parameter<"motor.R">::hash_type)] ^=
+  constexpr auto off = nvm_layout.offset_of<"motor.R">();
+  storage.mem[off + sizeof(nvm::fnv1a_32::type)] ^=
       0xFF; // corrupt first byte of value
 
   motor_R = settings.get<"motor.R">();
@@ -143,7 +145,7 @@ static constexpr bool test_crc_mismatch() {
 
 static constexpr bool test_reset() {
   backend storage{};
-  nvm::registry<backend, nvm_layout> settings{storage};
+  registry_type settings{storage};
 
   [[maybe_unused]] auto r = settings.set<"motor.pole_pairs">(42);
 
@@ -158,9 +160,43 @@ static constexpr bool test_reset() {
   return true;
 }
 
+static constexpr bool test_reset_all() {
+  backend storage{};
+  registry_type settings{storage};
+
+  // fresh storage: nothing readable yet
+  assert(!settings.get<"motor.R">().has_value());
+
+  [[maybe_unused]] auto r1 = settings.set<"motor.pole_pairs">(42);
+  [[maybe_unused]] auto r2 = settings.set<"motor.R">(0.42f);
+  [[maybe_unused]] auto r3 = settings.set<"gains">({1.f, 2.f, 3.f});
+  [[maybe_unused]] auto r4 = settings.set<"angle.offset">(
+      units::deg_f32{30.0f}
+  );
+
+  auto r = settings.reset_all();
+  assert(r.has_value());
+
+  auto motor_p = settings.get<"motor.pole_pairs">();
+  assert(motor_p.has_value() && *motor_p == 1);
+
+  auto motor_R = settings.get<"motor.R">();
+  assert(motor_R.has_value() && *motor_R == 0.050f);
+
+  auto gains = settings.get<"gains">();
+  assert(gains.has_value());
+  assert((*gains)[0] == 100.f && (*gains)[1] == 200.f && (*gains)[2] == 300.f);
+
+  auto angle = settings.get<"angle.offset">();
+  assert(angle.has_value() && *angle == units::deg_f32{15.0f});
+
+  return true;
+}
+
 static_assert(test_round_trip());
 static_assert(test_hash_mismatch());
 static_assert(test_crc_mismatch());
 static_assert(test_reset());
+static_assert(test_reset_all());
 
 } // namespace

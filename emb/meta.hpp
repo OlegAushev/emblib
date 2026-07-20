@@ -1,5 +1,6 @@
 #pragma once
 
+#include <emb/meta/nth_type.hpp>
 #include <emb/meta/type_index.hpp>
 #include <emb/meta/typelist.hpp>
 #include <emb/meta/unroll.hpp>
