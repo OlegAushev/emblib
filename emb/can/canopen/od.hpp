@@ -73,7 +73,7 @@ std::expected<void, sdo_abort_code> od_write_var(od_value val) {
     *Var = *v;
     return {};
   }
-  return std::unexpected(sdo_abort_code::general_error);
+  return std::unexpected(sdo_abort_code::data_type_mismatch);
 }
 
 // Deserialize raw 4-byte SDO data into a typed od_value per the OD entry's

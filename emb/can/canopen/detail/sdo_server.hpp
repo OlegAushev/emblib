@@ -117,7 +117,7 @@ private:
   read_expedited(od_entry const* entry, expedited_sdo const& rsdo) {
     auto const& obj = entry->object;
     if (!obj.has_read_permission())
-      return std::unexpected(sdo_abort_code::read_access_wo);
+      return std::unexpected(sdo_abort_code::read_from_write_only);
 
     auto value = obj.read();
     if (!value) return std::unexpected(value.error());
@@ -141,7 +141,7 @@ private:
   write_expedited(od_entry const* entry, expedited_sdo const& rsdo) {
     auto const& obj = entry->object;
     if (!obj.has_write_permission())
-      return std::unexpected(sdo_abort_code::write_access_ro);
+      return std::unexpected(sdo_abort_code::write_to_read_only);
 
     // Special case: a write to 0x1011:4 is a restore-defaults request —
     // the SDO data carries the od_key of the parameter to restore, not a
@@ -174,12 +174,12 @@ private:
 
     auto const& obj = entry->object;
 
-    if (!obj.default_value.has_value()) {
-      return std::unexpected(sdo_abort_code::data_store_error);
+    if (!obj.has_write_permission()) {
+      return std::unexpected(sdo_abort_code::write_to_read_only);
     }
 
-    if (!obj.has_write_permission()) {
-      return std::unexpected(sdo_abort_code::write_access_ro);
+    if (!obj.default_value.has_value()) {
+      return std::unexpected(sdo_abort_code::no_data_available);
     }
 
     return obj.write(*obj.default_value);
