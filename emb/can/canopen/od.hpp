@@ -12,6 +12,8 @@
 
 #include "sdo.hpp"
 
+#include <emb/meta/alternative_of.hpp>
+
 namespace emb {
 namespace can {
 namespace canopen {
@@ -27,6 +29,11 @@ using od_value = std::variant<
     std::uint16_t,
     std::uint32_t,
     float>;
+
+// T is one of od_value's alternatives; derived from od_value itself so the
+// two cannot drift apart.
+template<typename T>
+concept od_scalar = alternative_of<T, od_value>;
 
 enum class od_value_type : std::uint8_t {
   boolean,

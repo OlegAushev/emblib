@@ -36,6 +36,14 @@ static_assert(std::is_same_v<nth_type_t<1, A, B, C>, B>);
 static_assert(std::is_same_v<nth_type_t<2, A, B, C>, C>);
 static_assert(std::is_same_v<nth_type<1, A, B, C>::type, B>);
 
+// -- alternative_of tests --
+
+static_assert(is_alternative_of_v<A, std::variant<A, B>>);
+static_assert(!is_alternative_of_v<C, std::variant<A, B>>);
+static_assert(!is_alternative_of_v<A, int>);
+static_assert(alternative_of<B, std::variant<A, B>>);
+static_assert(!alternative_of<C, std::variant<A, B>>);
+
 // size
 static_assert(typelist<>::size == 0);
 static_assert(typelist<A>::size == 1);

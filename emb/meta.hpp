@@ -1,5 +1,6 @@
 #pragma once
 
+#include <emb/meta/alternative_of.hpp>
 #include <emb/meta/nth_type.hpp>
 #include <emb/meta/type_index.hpp>
 #include <emb/meta/typelist.hpp>
