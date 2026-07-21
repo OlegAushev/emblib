@@ -48,6 +48,13 @@ public:
     od_entry const* entry = find(key);
 
     auto result = [&]() -> std::expected<expedited_sdo, sdo_abort_code> {
+      // A write to 0x1011:4 is a restore-defaults request — the SDO data
+      // carries the od_key of the parameter to restore, not a value. Handled
+      // here entirely; no dictionary entry is required for it.
+      if (rsdo.cs == sdo_cs_codes::client_init_write
+          && key == restore_default_parameter_key) {
+        return write_restore_default(rsdo);
+      }
       if (!entry) return std::unexpected(sdo_abort_code::object_not_found);
       if (rsdo.cs == sdo_cs_codes::client_init_read)
         return read_expedited(entry, rsdo);
@@ -143,20 +150,24 @@ private:
     if (!obj.has_write_permission())
       return std::unexpected(sdo_abort_code::write_to_read_only);
 
-    // Special case: a write to 0x1011:4 is a restore-defaults request —
-    // the SDO data carries the od_key of the parameter to restore, not a
-    // value. Handled inline; the entry's write_func is not invoked.
-    if (entry->key == restore_default_parameter_key) {
-      od_key target = {};
-      std::memcpy(&target, rsdo.data.data(), sizeof(target));
-      if (auto r = restore_default_parameter(target); !r) {
-        return std::unexpected(r.error());
-      }
-    } else {
-      od_value value = make_od_value(rsdo.data, obj.data_type);
-      if (auto r = obj.write(value); !r) {
-        return std::unexpected(r.error());
-      }
+    od_value value = make_od_value(rsdo.data, obj.data_type);
+    if (auto r = obj.write(value); !r) {
+      return std::unexpected(r.error());
+    }
+
+    expedited_sdo tsdo;
+    tsdo.index = rsdo.index;
+    tsdo.subindex = rsdo.subindex;
+    tsdo.cs = sdo_cs_codes::server_init_write;
+    return tsdo;
+  }
+
+  std::expected<expedited_sdo, sdo_abort_code>
+  write_restore_default(expedited_sdo const& rsdo) {
+    od_key target = {};
+    std::memcpy(&target, rsdo.data.data(), sizeof(target));
+    if (auto r = restore_default_parameter(target); !r) {
+      return std::unexpected(r.error());
     }
 
     expedited_sdo tsdo;
