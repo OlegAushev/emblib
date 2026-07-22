@@ -87,6 +87,42 @@ void clear(T& reg, mask_type<T> mask) {
   reg = static_cast<U>(reg & ~mask);
 }
 
+template<some_writable_register T>
+void toggle(T& reg, mask_type<T> mask) {
+  using U = std::remove_cv_t<T>;
+  reg = static_cast<U>(reg ^ mask);
+}
+
+template<some_register T>
+[[nodiscard]] auto test_any(T const& reg, mask_type<T> mask) -> bool {
+  return (reg & mask) != 0;
+}
+
+template<some_register T>
+[[nodiscard]] auto test_all(T const& reg, mask_type<T> mask) -> bool {
+  return (reg & mask) == mask;
+}
+
+template<some_writable_register T>
+void clear_w1(T& reg, mask_type<T> mask) {
+  using U = std::remove_cv_t<T>;
+  reg = static_cast<U>(mask);
+}
+
+template<some_writable_register T>
+void clear_w0(T& reg, mask_type<T> mask) {
+  using U = std::remove_cv_t<T>;
+  reg = static_cast<U>(~mask);
+}
+
+template<some_writable_register T>
+void set_or_clear(T& reg, mask_type<T> mask, bool cond) {
+  if (cond)
+    set(reg, mask);
+  else
+    clear(reg, mask);
+}
+
 } // namespace runtime
 
 template<auto Mask, some_register T>
@@ -117,74 +153,46 @@ void clear(T& reg) {
   runtime::clear(reg, static_cast<U>(Mask));
 }
 
-template<some_writable_register T>
-void toggle(T& reg, mask_type<T> mask) {
-  using U = std::remove_cv_t<T>;
-  reg = static_cast<U>(reg ^ mask);
-}
-
 template<auto Mask, some_writable_register T>
   requires mask_for<Mask, T>
 void toggle(T& reg) {
   using U = std::remove_cv_t<T>;
-  toggle(reg, static_cast<U>(Mask));
-}
-
-template<some_register T>
-[[nodiscard]] auto test_any(T const& reg, mask_type<T> mask) -> bool {
-  return (reg & mask) != 0;
+  runtime::toggle(reg, static_cast<U>(Mask));
 }
 
 template<auto Mask, some_register T>
   requires mask_for<Mask, T>
 [[nodiscard]] auto test_any(T const& reg) -> bool {
   using U = std::remove_cv_t<T>;
-  return test_any(reg, static_cast<U>(Mask));
-}
-
-template<some_register T>
-[[nodiscard]] auto test_all(T const& reg, mask_type<T> mask) -> bool {
-  return (reg & mask) == mask;
+  return runtime::test_any(reg, static_cast<U>(Mask));
 }
 
 template<auto Mask, some_register T>
   requires mask_for<Mask, T>
 [[nodiscard]] auto test_all(T const& reg) -> bool {
   using U = std::remove_cv_t<T>;
-  return test_all(reg, static_cast<U>(Mask));
+  return runtime::test_all(reg, static_cast<U>(Mask));
 }
 
 template<auto Mask, some_register T>
   requires flag_mask_for<Mask, T>
 [[nodiscard]] auto test(T const& reg) -> bool {
   using U = std::remove_cv_t<T>;
-  return test_any(reg, static_cast<U>(Mask));
-}
-
-template<some_writable_register T>
-void clear_w1(T& reg, mask_type<T> mask) {
-  using U = std::remove_cv_t<T>;
-  reg = static_cast<U>(mask);
+  return runtime::test_any(reg, static_cast<U>(Mask));
 }
 
 template<auto Mask, some_writable_register T>
   requires mask_for<Mask, T>
 void clear_w1(T& reg) {
   using U = std::remove_cv_t<T>;
-  clear_w1(reg, static_cast<U>(Mask));
-}
-
-template<some_writable_register T>
-void clear_w0(T& reg, mask_type<T> mask) {
-  using U = std::remove_cv_t<T>;
-  reg = static_cast<U>(~mask);
+  runtime::clear_w1(reg, static_cast<U>(Mask));
 }
 
 template<auto Mask, some_writable_register T>
   requires mask_for<Mask, T>
 void clear_w0(T& reg) {
   using U = std::remove_cv_t<T>;
-  clear_w0(reg, static_cast<U>(Mask));
+  runtime::clear_w0(reg, static_cast<U>(Mask));
 }
 
 template<auto Mask>
@@ -215,14 +223,6 @@ void modify(T& reg, First first, Rest... rest) {
   static_assert(mask_or == mask_sum, "overlapping field masks");
 
   reg = static_cast<U>((reg & ~mask_or) | (first.encoded | ... | rest.encoded));
-}
-
-template<some_writable_register T>
-void set_or_clear(T& reg, mask_type<T> mask, bool cond) {
-  if (cond)
-    runtime::set(reg, mask);
-  else
-    runtime::clear(reg, mask);
 }
 
 template<auto Mask, some_writable_register T>
