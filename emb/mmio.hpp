@@ -75,6 +75,18 @@ void write(T& reg, mask_type<T> mask, mask_type<T> value) {
   );
 }
 
+template<some_writable_register T>
+void set(T& reg, mask_type<T> mask) {
+  using U = std::remove_cv_t<T>;
+  reg = static_cast<U>(reg | mask);
+}
+
+template<some_writable_register T>
+void clear(T& reg, mask_type<T> mask) {
+  using U = std::remove_cv_t<T>;
+  reg = static_cast<U>(reg & ~mask);
+}
+
 } // namespace runtime
 
 template<auto Mask, some_register T>
@@ -91,30 +103,18 @@ void write(T& reg, mask_type<T> value) {
   runtime::write(reg, static_cast<U>(Mask), value);
 }
 
-template<some_writable_register T>
-void set(T& reg, mask_type<T> mask) {
-  using U = std::remove_cv_t<T>;
-  reg = static_cast<U>(reg | mask);
-}
-
 template<auto Mask, some_writable_register T>
   requires mask_for<Mask, T>
 void set(T& reg) {
   using U = std::remove_cv_t<T>;
-  set(reg, static_cast<U>(Mask));
-}
-
-template<some_writable_register T>
-void clear(T& reg, mask_type<T> mask) {
-  using U = std::remove_cv_t<T>;
-  reg = static_cast<U>(reg & ~mask);
+  runtime::set(reg, static_cast<U>(Mask));
 }
 
 template<auto Mask, some_writable_register T>
   requires mask_for<Mask, T>
 void clear(T& reg) {
   using U = std::remove_cv_t<T>;
-  clear(reg, static_cast<U>(Mask));
+  runtime::clear(reg, static_cast<U>(Mask));
 }
 
 template<some_writable_register T>
@@ -220,9 +220,9 @@ void modify(T& reg, First first, Rest... rest) {
 template<some_writable_register T>
 void set_or_clear(T& reg, mask_type<T> mask, bool cond) {
   if (cond)
-    set(reg, mask);
+    runtime::set(reg, mask);
   else
-    clear(reg, mask);
+    runtime::clear(reg, mask);
 }
 
 template<auto Mask, some_writable_register T>
