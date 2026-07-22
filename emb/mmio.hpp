@@ -58,18 +58,13 @@ concept flag_mask_for = mask_for<Mask, T>
                             static_cast<std::remove_cv_t<T>>(Mask)
                      );
 
+namespace runtime {
+
 template<some_register T>
 [[nodiscard]] auto read(T const& reg, mask_type<T> mask)
     -> std::remove_cv_t<T> {
   using U = std::remove_cv_t<T>;
   return static_cast<U>((reg & mask) >> std::countr_zero(mask));
-}
-
-template<auto Mask, some_register T>
-  requires field_mask_for<Mask, T>
-[[nodiscard]] auto read(T const& reg) -> std::remove_cv_t<T> {
-  using U = std::remove_cv_t<T>;
-  return read(reg, static_cast<U>(Mask));
 }
 
 template<some_writable_register T>
@@ -80,11 +75,20 @@ void write(T& reg, mask_type<T> mask, mask_type<T> value) {
   );
 }
 
+} // namespace runtime
+
+template<auto Mask, some_register T>
+  requires field_mask_for<Mask, T>
+[[nodiscard]] auto read(T const& reg) -> std::remove_cv_t<T> {
+  using U = std::remove_cv_t<T>;
+  return runtime::read(reg, static_cast<U>(Mask));
+}
+
 template<auto Mask, some_writable_register T>
   requires field_mask_for<Mask, T>
 void write(T& reg, mask_type<T> value) {
   using U = std::remove_cv_t<T>;
-  write(reg, static_cast<U>(Mask), value);
+  runtime::write(reg, static_cast<U>(Mask), value);
 }
 
 template<some_writable_register T>
