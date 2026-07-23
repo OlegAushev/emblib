@@ -139,6 +139,12 @@ void write(T& reg, mask_type<T> value) {
   runtime::write(reg, static_cast<U>(Mask), value);
 }
 
+template<auto Mask, some_writable_register T, typename E>
+  requires(field_mask_for<Mask, T> && std::is_scoped_enum_v<E>)
+void write(T& reg, E value) {
+  write<Mask>(reg, static_cast<mask_type<T>>(std::to_underlying(value)));
+}
+
 template<auto Mask, some_writable_register T>
   requires mask_for<Mask, T>
 void set(T& reg) {
@@ -206,6 +212,11 @@ struct bits {
 
   constexpr explicit bits(value_type v)
       : encoded(value_type((v << offset) & mask)) {}
+
+  template<typename E>
+    requires std::is_scoped_enum_v<E>
+  constexpr explicit bits(E v)
+      : bits(static_cast<value_type>(std::to_underlying(v))) {}
 };
 
 template<some_writable_register T, typename First, typename... Rest>
