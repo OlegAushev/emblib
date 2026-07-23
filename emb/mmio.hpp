@@ -25,6 +25,9 @@ concept some_writable_register = some_register<T> && !std::is_const_v<T>;
 template<typename T>
 using mask_type = std::remove_cv_t<T>;
 
+template<typename T>
+using value_type = std::remove_cv_t<T>;
+
 namespace detail {
 
 template<std::unsigned_integral T>
@@ -62,13 +65,13 @@ namespace runtime {
 
 template<some_register T>
 [[nodiscard]] auto read(T const& reg, mask_type<T> mask)
-    -> std::remove_cv_t<T> {
+    -> value_type<T> {
   using U = std::remove_cv_t<T>;
   return static_cast<U>((reg & mask) >> std::countr_zero(mask));
 }
 
 template<some_writable_register T>
-void write(T& reg, mask_type<T> mask, mask_type<T> value) {
+void write(T& reg, mask_type<T> mask, value_type<T> value) {
   using U = std::remove_cv_t<T>;
   reg = static_cast<U>(
       (reg & ~mask) | ((value << std::countr_zero(mask)) & mask)
@@ -127,14 +130,14 @@ void set_or_clear(T& reg, mask_type<T> mask, bool cond) {
 
 template<auto Mask, some_register T>
   requires field_mask_for<Mask, T>
-[[nodiscard]] auto read(T const& reg) -> std::remove_cv_t<T> {
+[[nodiscard]] auto read(T const& reg) -> value_type<T> {
   using U = std::remove_cv_t<T>;
   return runtime::read(reg, static_cast<U>(Mask));
 }
 
 template<auto Mask, some_writable_register T>
   requires field_mask_for<Mask, T>
-void write(T& reg, mask_type<T> value) {
+void write(T& reg, value_type<T> value) {
   using U = std::remove_cv_t<T>;
   runtime::write(reg, static_cast<U>(Mask), value);
 }
@@ -142,7 +145,7 @@ void write(T& reg, mask_type<T> value) {
 template<auto Mask, some_writable_register T, typename E>
   requires(field_mask_for<Mask, T> && std::is_scoped_enum_v<E>)
 void write(T& reg, E value) {
-  write<Mask>(reg, static_cast<mask_type<T>>(std::to_underlying(value)));
+  write<Mask>(reg, static_cast<value_type<T>>(std::to_underlying(value)));
 }
 
 template<auto Mask, some_writable_register T>
