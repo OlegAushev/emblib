@@ -13,7 +13,7 @@ concept some_spsc_queue = requires(Q q, typename Q::value_type v) {
 };
 
 template<typename P>
-concept some_prefilter = requires(P p, typename P::sample_type const& s) {
+concept some_preprocessor = requires(P p, typename P::sample_type const& s) {
   typename P::sample_type;
   typename P::value_type;
   { p(s) } -> std::convertible_to<typename P::value_type>;

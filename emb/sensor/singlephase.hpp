@@ -10,25 +10,25 @@ namespace emb::sensor {
 // immediately in the caller's context (e.g. the same ISR that produces the
 // sample). No queue and no deferred process() step. See polyphase for the
 // N-phase counterpart and buffered for the queued decorator over either.
-template<typename Prefilter, typename Converter, typename Filter>
-  requires some_prefilter<Prefilter>
+template<typename Preprocessor, typename Converter, typename Filter>
+  requires some_preprocessor<Preprocessor>
         && some_filter<Filter>
         && some_converter<
                Converter,
-               typename Prefilter::value_type,
+               typename Preprocessor::value_type,
                typename Filter::value_type>
 class singlephase {
 public:
-  using sample_type = typename Prefilter::sample_type;
-  using raw_type = typename Prefilter::value_type;
+  using sample_type = typename Preprocessor::sample_type;
+  using raw_type = typename Preprocessor::value_type;
   using value_type = typename Filter::value_type;
 private:
-  Prefilter prefilter_;
+  Preprocessor preprocessor_;
   Converter converter_;
   Filter filter_;
 public:
-  singlephase(Prefilter prefilter, Converter converter, Filter filter)
-      : prefilter_(std::move(prefilter)),
+  singlephase(Preprocessor preprocessor, Converter converter, Filter filter)
+      : preprocessor_(std::move(preprocessor)),
         converter_(std::move(converter)),
         filter_(std::move(filter)) {}
 
@@ -37,7 +37,7 @@ public:
   }
 
   void submit(sample_type sample) {
-    filter_.push(converter_(prefilter_(sample)));
+    filter_.push(converter_(preprocessor_(sample)));
   }
 };
 

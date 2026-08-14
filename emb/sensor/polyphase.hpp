@@ -13,19 +13,23 @@ namespace emb::sensor {
 // by one acquisition frame. Adds only frame-synchronous submission, so
 // the N filtered outputs read back from value()/values() belong to the same
 // sampling instant.
-template<typename Prefilter, typename Converter, typename Filter, std::size_t N>
-  requires some_prefilter<Prefilter>
+template<
+    typename Preprocessor,
+    typename Converter,
+    typename Filter,
+    std::size_t N>
+  requires some_preprocessor<Preprocessor>
         && some_filter<Filter>
         && some_converter<
                Converter,
-               typename Prefilter::value_type,
+               typename Preprocessor::value_type,
                typename Filter::value_type>
         && (N > 0)
 class polyphase {
 public:
-  using core_type = singlephase<Prefilter, Converter, Filter>;
+  using core_type = singlephase<Preprocessor, Converter, Filter>;
   using sample_type = std::array<typename core_type::sample_type, N>;
-  using raw_type = typename Prefilter::value_type;
+  using raw_type = typename Preprocessor::value_type;
   using value_type = typename Filter::value_type;
   using values_type = std::array<value_type, N>;
 
@@ -35,36 +39,36 @@ private:
 
   template<std::size_t... I>
   polyphase(
-      std::array<Prefilter, N> prefilters,
+      std::array<Preprocessor, N> preprocessors,
       std::array<Converter, N> converters,
       std::array<Filter, N> filters,
       std::index_sequence<I...>
   )
       : cores_{core_type(
-            std::move(prefilters[I]),
+            std::move(preprocessors[I]),
             std::move(converters[I]),
             std::move(filters[I])
         )...} {}
 public:
-  // Per-phase construction: each phase gets its own prefilter, converter and
+  // Per-phase construction: each phase gets its own preprocessor, converter and
   // filter, e.g. independent per-phase gain/offset calibration.
   polyphase(
-      std::array<Prefilter, N> prefilters,
+      std::array<Preprocessor, N> preprocessors,
       std::array<Converter, N> converters,
       std::array<Filter, N> filters
   )
       : polyphase(
-            std::move(prefilters),
+            std::move(preprocessors),
             std::move(converters),
             std::move(filters),
             std::make_index_sequence<N>{}
         ) {}
 
-  // Broadcast construction: one prefilter/converter/filter prototype copied
+  // Broadcast construction: one preprocessor/converter/filter prototype copied
   // into every phase. Each phase still keeps its own independent state.
-  polyphase(Prefilter prefilter, Converter converter, Filter filter)
+  polyphase(Preprocessor preprocessor, Converter converter, Filter filter)
       : polyphase(
-            broadcast(prefilter),
+            broadcast(preprocessor),
             broadcast(converter),
             broadcast(filter),
             std::make_index_sequence<N>{}
