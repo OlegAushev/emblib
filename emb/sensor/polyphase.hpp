@@ -50,6 +50,8 @@ private:
             std::move(filters[I])
         )...} {}
 public:
+  polyphase() = default;
+
   // Per-phase construction: each phase gets its own preprocessor, converter and
   // filter, e.g. independent per-phase gain/offset calibration.
   polyphase(

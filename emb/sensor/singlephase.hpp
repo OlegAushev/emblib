@@ -27,6 +27,11 @@ private:
   Converter converter_;
   Filter filter_;
 public:
+  // Available iff all three stages are default-constructible; otherwise
+  // implicitly deleted, so stages carrying calibration or runtime state
+  // still force explicit construction.
+  singlephase() = default;
+
   singlephase(Preprocessor preprocessor, Converter converter, Filter filter)
       : preprocessor_(std::move(preprocessor)),
         converter_(std::move(converter)),

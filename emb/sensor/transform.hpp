@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tuple>
+#include <type_traits>
 
 namespace emb::sensor {
 
@@ -43,6 +44,11 @@ public:
   std::tuple<Stages...> stages;
 
   constexpr explicit transform(Stages... s) : stages{s...} {}
+
+  // Default construction is meaningful only for stateless stages.
+  constexpr transform()
+    requires(std::is_empty_v<Stages> && ...)
+  = default;
 
   // measured value -> sensor output (e.g. ADC code)
   // composes stages front to back
