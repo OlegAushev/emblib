@@ -12,13 +12,6 @@ concept some_spsc_queue = requires(Q q, typename Q::value_type v) {
   { q.try_pop() } -> std::same_as<std::optional<typename Q::value_type>>;
 };
 
-template<typename P>
-concept some_preprocessor = requires(P p, typename P::sample_type const& s) {
-  typename P::sample_type;
-  typename P::value_type;
-  { p(s) } -> std::convertible_to<typename P::value_type>;
-};
-
 template<typename C, typename Input, typename Output>
 concept some_converter = requires(C c, Input in) {
   { c(in) } -> std::convertible_to<Output>;
@@ -52,11 +45,11 @@ concept some_sensor_core = requires(C c, typename C::sample_type const& s) {
 // how the filtered result reads back: a polyphase surface exposes a frame-wide
 // values(), a singlephase surface a scalar value().
 template<typename C>
-concept some_polyphase_sensor =
-    some_sensor_core<C> && requires(C const& c) { c.values(); };
+concept some_polyphase_sensor = some_sensor_core<C>
+                             && requires(C const& c) { c.values(); };
 
 template<typename C>
-concept some_singlephase_sensor =
-    some_sensor_core<C> && requires(C const& c) { c.value(); };
+concept some_singlephase_sensor = some_sensor_core<C>
+                               && requires(C const& c) { c.value(); };
 
 } // namespace emb::sensor
