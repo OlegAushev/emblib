@@ -1,6 +1,6 @@
 #pragma once
 
-#include <emb/concurrent/double_buffer.hpp>
+#include <emb/concurrent/isr_seqlock.hpp>
 #include <emb/meta.hpp>
 
 #include <array>
@@ -100,9 +100,10 @@ public:
     requires valid_level<StatusList, S, Lvl>
   static void set() {
     CriticalSection lock;
-    auto& shadow = shadow_[std::to_underlying(Lvl)];
-    shadow.set(id_of<S>);
-    flags_[std::to_underlying(Lvl)].store(shadow);
+    flags_[std::to_underlying(Lvl)].update([](flags_type f) {
+      f.set(id_of<S>);
+      return f;
+    });
   }
 
   // for statuses confined to a single level it can be deduced
@@ -116,9 +117,10 @@ public:
     requires valid_level<StatusList, S, Lvl>
   static void reset() {
     CriticalSection lock;
-    auto& shadow = shadow_[std::to_underlying(Lvl)];
-    shadow.reset(id_of<S>);
-    flags_[std::to_underlying(Lvl)].store(shadow);
+    flags_[std::to_underlying(Lvl)].update([](flags_type f) {
+      f.reset(id_of<S>);
+      return f;
+    });
   }
 
   template<typename S>
@@ -131,8 +133,10 @@ public:
       constexpr auto lo = std::to_underlying(S::level_min);
       constexpr auto hi = std::to_underlying(S::level_max);
       for (auto l = lo; l <= hi; ++l) {
-        shadow_[l].reset(id_of<S>);
-        flags_[l].store(shadow_[l]);
+        flags_[l].update([](flags_type f) {
+          f.reset(id_of<S>);
+          return f;
+        });
       }
     }
   }
@@ -175,7 +179,6 @@ public:
 
   static void clear() {
     CriticalSection lock;
-    shadow_.fill({});
     for (auto l = 0uz; l < LevelCount; ++l) {
       flags_[l].store({});
     }
@@ -185,8 +188,7 @@ private:
   template<typename S>
   static constexpr id_type id_of = detail::index_of<S>(StatusList{});
 
-  inline static std::array<flags_type, LevelCount> shadow_{};
-  inline static std::array<double_buffer<flags_type>, LevelCount> flags_{};
+  inline static std::array<isr_seqlock<flags_type>, LevelCount> flags_{};
 };
 
 //

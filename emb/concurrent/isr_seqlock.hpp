@@ -12,7 +12,8 @@ namespace emb {
 // Uses signal fences — not suitable for multi-core (SMP) systems.
 // Constraints:
 //   - exactly one writer, multiple writers need separate mutual exclusion
-//   - reader priority must not be higher than writer priority
+//   - a reader must not preempt the writer mid-write: ensure by priorities
+//     or by masking interrupts around store()/update()
 template <typename T>
   requires(std::is_trivially_copyable_v<T>)
 class isr_seqlock {
