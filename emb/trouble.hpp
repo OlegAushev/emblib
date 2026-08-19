@@ -51,6 +51,11 @@ consteval bool valid_level_ranges(typelist<Statuses...>) {
   return ((Statuses::level_min <= Statuses::level_max) && ...);
 }
 
+template<typename... Statuses>
+consteval bool all_empty(typelist<Statuses...>) {
+  return (std::is_empty_v<Statuses> && ...);
+}
+
 template<std::size_t LevelCount, typename... Statuses>
 consteval bool levels_within(typelist<Statuses...>) {
   return (
@@ -83,6 +88,10 @@ class registry {
       "level_min must be <= level_max"
   );
   static_assert(
+      detail::all_empty(StatusList{}),
+      "statuses must be stateless tag types"
+  );
+  static_assert(
       detail::levels_within<LevelCount>(StatusList{}),
       "status level_max must be within LevelCount"
   );
@@ -96,67 +105,68 @@ public:
   static constexpr std::size_t level_count = LevelCount;
   using flags_type = std::bitset<status_count>;
 
-  template<typename S, Level Lvl>
-    requires valid_level<StatusList, S, Lvl>
-  static void set() {
+  template<typename Status, Level L>
+    requires valid_level<StatusList, Status, L>
+  static void set(Status, std::integral_constant<Level, L>) {
     CriticalSection lock;
-    flags_[std::to_underlying(Lvl)].update([](flags_type f) {
-      f.set(id_of<S>);
+    flags_[std::to_underlying(L)].update([](flags_type f) {
+      f.set(id_of<Status>);
       return f;
     });
   }
 
   // for statuses confined to a single level it can be deduced
-  template<typename S>
-    requires contains<StatusList, S> && (S::level_min == S::level_max)
-  static void set() {
-    set<S, S::level_min>();
+  template<typename Status>
+    requires contains<StatusList, Status>
+          && (Status::level_min == Status::level_max)
+  static void set(Status s) {
+    set(s, std::integral_constant<Level, Status::level_min>{});
   }
 
-  template<typename S, Level Lvl>
-    requires valid_level<StatusList, S, Lvl>
-  static void reset() {
+  template<typename Status, Level L>
+    requires valid_level<StatusList, Status, L>
+  static void reset(Status, std::integral_constant<Level, L>) {
     CriticalSection lock;
-    flags_[std::to_underlying(Lvl)].update([](flags_type f) {
-      f.reset(id_of<S>);
+    flags_[std::to_underlying(L)].update([](flags_type f) {
+      f.reset(id_of<Status>);
       return f;
     });
   }
 
-  template<typename S>
-    requires contains<StatusList, S>
-  static void reset() {
-    if constexpr (S::level_min == S::level_max) {
-      reset<S, S::level_min>();
+  template<typename Status>
+    requires contains<StatusList, Status>
+  static void reset(Status s) {
+    if constexpr (Status::level_min == Status::level_max) {
+      reset(s, std::integral_constant<Level, Status::level_min>{});
     } else {
       CriticalSection lock;
-      constexpr auto lo = std::to_underlying(S::level_min);
-      constexpr auto hi = std::to_underlying(S::level_max);
+      constexpr auto lo = std::to_underlying(Status::level_min);
+      constexpr auto hi = std::to_underlying(Status::level_max);
       for (auto l = lo; l <= hi; ++l) {
         flags_[l].update([](flags_type f) {
-          f.reset(id_of<S>);
+          f.reset(id_of<Status>);
           return f;
         });
       }
     }
   }
 
-  template<typename S, Level Lvl>
-    requires valid_level<StatusList, S, Lvl>
-  static bool test() {
-    return flags_[std::to_underlying(Lvl)].load().test(id_of<S>);
+  template<typename Status, Level L>
+    requires valid_level<StatusList, Status, L>
+  static bool test(Status, std::integral_constant<Level, L>) {
+    return flags_[std::to_underlying(L)].load().test(id_of<Status>);
   }
 
-  template<typename S>
-    requires contains<StatusList, S>
-  static bool test() {
-    if constexpr (S::level_min == S::level_max) {
-      return test<S, S::level_min>();
+  template<typename Status>
+    requires contains<StatusList, Status>
+  static bool test(Status s) {
+    if constexpr (Status::level_min == Status::level_max) {
+      return test(s, std::integral_constant<Level, Status::level_min>{});
     } else {
-      constexpr auto lo = std::to_underlying(S::level_min);
-      constexpr auto hi = std::to_underlying(S::level_max);
+      constexpr auto lo = std::to_underlying(Status::level_min);
+      constexpr auto hi = std::to_underlying(Status::level_max);
       for (auto l = lo; l <= hi; ++l) {
-        if (flags_[l].load().test(id_of<S>)) return true;
+        if (flags_[l].load().test(id_of<Status>)) return true;
       }
       return false;
     }
@@ -185,8 +195,8 @@ public:
   }
 
 private:
-  template<typename S>
-  static constexpr id_type id_of = detail::index_of<S>(StatusList{});
+  template<typename Status>
+  static constexpr id_type id_of = detail::index_of<Status>(StatusList{});
 
   inline static std::array<isr_seqlock<flags_type>, LevelCount> flags_{};
 };
@@ -202,6 +212,10 @@ class registry_mirror {
       "status list must not contain duplicate statuses"
   );
   static_assert(
+      detail::all_empty(StatusList{}),
+      "statuses must be stateless tag types"
+  );
+  static_assert(
       StatusList::size <= std::size_t{std::numeric_limits<id_type>::max()} + 1,
       "status count exceeds id_type range"
   );
@@ -215,17 +229,17 @@ public:
     flags_[std::to_underlying(lvl)] = flags;
   }
 
-  template<typename S>
-    requires contains<StatusList, S>
-  bool test(Level lvl) const {
-    return flags_[std::to_underlying(lvl)].test(id_of<S>);
+  template<typename Status>
+    requires contains<StatusList, Status>
+  bool test(Status, Level lvl) const {
+    return flags_[std::to_underlying(lvl)].test(id_of<Status>);
   }
 
-  template<typename S>
-    requires contains<StatusList, S>
-  bool test() const {
+  template<typename Status>
+    requires contains<StatusList, Status>
+  bool test(Status) const {
     for (auto l = 0uz; l < LevelCount; ++l) {
-      if (flags_[l].test(id_of<S>)) return true;
+      if (flags_[l].test(id_of<Status>)) return true;
     }
     return false;
   }
@@ -258,8 +272,8 @@ public:
   }
 
 private:
-  template<typename S>
-  static constexpr id_type id_of = detail::index_of<S>(StatusList{});
+  template<typename Status>
+  static constexpr id_type id_of = detail::index_of<Status>(StatusList{});
 
   std::array<flags_type, LevelCount> flags_{};
 };
