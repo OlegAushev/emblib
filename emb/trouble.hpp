@@ -202,6 +202,83 @@ private:
 };
 
 //
+// ---- app-side forwarding function objects ----
+//
+// Instantiate as inline constexpr objects in the namespace holding the
+// statuses:
+//   inline constexpr emb::trouble::set_fn<registry> set{};
+//
+template<typename Registry>
+struct set_fn {
+  template<typename Status, typename LevelTag>
+    requires requires(Status s, LevelTag l) { Registry::set(s, l); }
+  static void operator()(Status s, LevelTag l) {
+    Registry::set(s, l);
+  }
+
+  template<typename Status>
+    requires requires(Status s) { Registry::set(s); }
+  static void operator()(Status s) {
+    Registry::set(s);
+  }
+};
+
+template<typename Registry>
+struct reset_fn {
+  template<typename Status, typename LevelTag>
+    requires requires(Status s, LevelTag l) { Registry::reset(s, l); }
+  static void operator()(Status s, LevelTag l) {
+    Registry::reset(s, l);
+  }
+
+  template<typename Status>
+    requires requires(Status s) { Registry::reset(s); }
+  static void operator()(Status s) {
+    Registry::reset(s);
+  }
+};
+
+template<typename Registry>
+struct test_fn {
+  template<typename Status, typename LevelTag>
+    requires requires(Status s, LevelTag l) { Registry::test(s, l); }
+  static bool operator()(Status s, LevelTag l) {
+    return Registry::test(s, l);
+  }
+
+  template<typename Status>
+    requires requires(Status s) { Registry::test(s); }
+  static bool operator()(Status s) {
+    return Registry::test(s);
+  }
+};
+
+template<typename Registry>
+struct any_fn {
+  static bool operator()(auto lvl) {
+    return Registry::any(lvl);
+  }
+
+  static bool operator()() {
+    return Registry::any();
+  }
+};
+
+template<typename Registry>
+struct flags_fn {
+  static Registry::flags_type operator()(auto lvl) {
+    return Registry::flags(lvl);
+  }
+};
+
+template<typename Registry>
+struct clear_fn {
+  static void operator()() {
+    Registry::clear();
+  }
+};
+
+//
 // ---- registry_mirror ----
 //
 template<typename StatusList, typename Level, std::size_t LevelCount>
