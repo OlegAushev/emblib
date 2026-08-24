@@ -32,13 +32,13 @@ public:
     reset();
   }
 
-  constexpr void push(value_type const& input_v) {
+  constexpr void push(value_type const& input) {
     if (!data_.full()) {
-      data_.push_back(input_v);
-      sum_ += input_v;
+      data_.push_back(input);
+      sum_ += input;
     } else {
-      sum_ = sum_ - data_.front() + input_v;
-      data_.push_back(input_v);
+      sum_ = sum_ - data_.front() + input;
+      data_.push_back(input);
     }
     output_ = sum_ / static_cast<divider_type>(data_.size());
   }
@@ -47,10 +47,10 @@ public:
     return output_;
   }
 
-  constexpr void set_output(value_type const& output_v) {
+  constexpr void set_output(value_type const& value) {
     data_.clear();
     sum_ = value_type{0};
-    output_ = output_v;
+    output_ = value;
   }
 
   constexpr void reset() {

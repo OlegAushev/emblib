@@ -17,8 +17,8 @@ public:
 
   constexpr explicit passthrough_filter(value_type const& init) : value_(init) {}
 
-  constexpr void push(value_type const& input_v) {
-    value_ = input_v;
+  constexpr void push(value_type const& input) {
+    value_ = input;
   }
 
   constexpr const_reference output() const {

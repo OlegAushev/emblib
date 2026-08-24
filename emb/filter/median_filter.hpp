@@ -26,8 +26,8 @@ public:
     reset();
   }
 
-  constexpr void push(value_type const& input_v) {
-    window_.push_back(input_v);
+  constexpr void push(value_type const& input) {
+    window_.push_back(input);
     std::array<value_type, window_size> window_sorted = {};
     for (auto i = 0uz; i < window_.size(); ++i) {
       window_sorted[i] = window_[i];
@@ -40,9 +40,9 @@ public:
     return output_;
   }
 
-  constexpr void set_output(value_type const& output_v) {
-    window_.fill(output_v);
-    output_ = output_v;
+  constexpr void set_output(value_type const& value) {
+    window_.fill(value);
+    output_ = value;
   }
 
   constexpr void reset() {

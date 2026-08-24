@@ -31,16 +31,16 @@ public:
     reset();
   }
 
-  constexpr void push(value_type const& input_v) {
-    output_ = output_ + smooth_factor_ * (input_v - output_);
+  constexpr void push(value_type const& input) {
+    output_ = output_ + smooth_factor_ * (input - output_);
   }
 
   constexpr const_reference output() const {
     return output_;
   }
 
-  constexpr void set_output(value_type const& output_v) {
-    output_ = output_v;
+  constexpr void set_output(value_type const& value) {
+    output_ = value;
   }
 
   constexpr void reset() {
