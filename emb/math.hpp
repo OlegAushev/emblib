@@ -1,6 +1,7 @@
 #pragma once
 
 #include <emb/math/clamped.hpp>
+#include <emb/math/saturation.hpp>
 #include <emb/math/trigonometric.hpp>
 
 #include <algorithm>
@@ -191,9 +192,9 @@ constexpr Int saturate_round(Float num) {
   }
 
   if constexpr (fits_long) {
-    return std::saturate_cast<Int>(std::lround(num));
+    return emb::saturating_cast<Int>(std::lround(num));
   } else {
-    return std::saturate_cast<Int>(std::llround(num));
+    return emb::saturating_cast<Int>(std::llround(num));
   }
 }
 
