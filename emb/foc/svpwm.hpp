@@ -11,7 +11,7 @@
 namespace emb {
 namespace foc {
 
-inline std::array<emb::unsigned_pu, 3>
+inline std::array<emb::unsigned_pu_f32, 3>
 calculate_svpwm(vec_polar v_s, float v_dc) {
   v_s.theta = norm2pi(v_s.theta);
   v_s.mag = std::clamp<float>(v_s.mag, 0, v_dc / std::numbers::sqrt3_v<float>);
@@ -66,15 +66,15 @@ calculate_svpwm(vec_polar v_s, float v_dc) {
   default: break;
   }
 
-  std::array<emb::unsigned_pu, 3> duty_cycles;
+  std::array<emb::unsigned_pu_f32, 3> duty_cycles;
   for (auto i = 0uz; i < 3; ++i) {
-    duty_cycles[i] = emb::unsigned_pu(pulse_durations[i]);
+    duty_cycles[i] = emb::unsigned_pu_f32(pulse_durations[i]);
   }
 
   return duty_cycles;
 }
 
-inline std::array<emb::unsigned_pu, 3>
+inline std::array<emb::unsigned_pu_f32, 3>
 calculate_svpwm_v2(std::array<float, 3> const& Vs, float Vdc) {
   // normalization: [−1, +1]
   float const inv = 2.f / Vdc;
@@ -88,10 +88,10 @@ calculate_svpwm_v2(std::array<float, 3> const& Vs, float Vdc) {
   float const Voff = -0.5f * (Vmax + Vmin);
 
   // duty cycles
-  std::array<emb::unsigned_pu, 3> duty;
-  duty[0] = emb::unsigned_pu((Va + Voff + 1.f) * 0.5f);
-  duty[1] = emb::unsigned_pu((Vb + Voff + 1.f) * 0.5f);
-  duty[2] = emb::unsigned_pu((Vc + Voff + 1.f) * 0.5f);
+  std::array<emb::unsigned_pu_f32, 3> duty;
+  duty[0] = emb::unsigned_pu_f32((Va + Voff + 1.f) * 0.5f);
+  duty[1] = emb::unsigned_pu_f32((Vb + Voff + 1.f) * 0.5f);
+  duty[2] = emb::unsigned_pu_f32((Vc + Voff + 1.f) * 0.5f);
   return duty;
 }
 
@@ -101,7 +101,7 @@ private:
 public:
   constexpr svpwm(float Vdc) : Vdc_(Vdc) {}
 
-  std::array<unsigned_pu, 3> operator()(vec_polar V) const {
+  std::array<unsigned_pu_f32, 3> operator()(vec_polar V) const {
     return calculate_svpwm(V, Vdc_);
   }
 };

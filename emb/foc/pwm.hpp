@@ -73,10 +73,10 @@ struct dpwmmax {
 } // namespace pwm_mode
 
 template<typename Mode>
-constexpr std::array<emb::unsigned_pu, 3>
+constexpr std::array<emb::unsigned_pu_f32, 3>
 modulate(std::array<float, 3> const& Vs, float Vdc) {
   if (Vdc <= 0.f) {
-    return {unsigned_pu{0.5f}, unsigned_pu{0.5f}, unsigned_pu{0.5f}};
+    return {unsigned_pu_f32{0.5f}, unsigned_pu_f32{0.5f}, unsigned_pu_f32{0.5f}};
   }
 
   // normalization: [−1, +1]
@@ -89,10 +89,10 @@ modulate(std::array<float, 3> const& Vs, float Vdc) {
   float const Voff = Mode::offset(Va, Vb, Vc);
 
   // duty cycles
-  std::array<emb::unsigned_pu, 3> duty;
-  duty[0] = emb::unsigned_pu{(Va + Voff + 1.f) * 0.5f};
-  duty[1] = emb::unsigned_pu{(Vb + Voff + 1.f) * 0.5f};
-  duty[2] = emb::unsigned_pu{(Vc + Voff + 1.f) * 0.5f};
+  std::array<emb::unsigned_pu_f32, 3> duty;
+  duty[0] = emb::unsigned_pu_f32{(Va + Voff + 1.f) * 0.5f};
+  duty[1] = emb::unsigned_pu_f32{(Vb + Voff + 1.f) * 0.5f};
+  duty[2] = emb::unsigned_pu_f32{(Vc + Voff + 1.f) * 0.5f};
   return duty;
 }
 

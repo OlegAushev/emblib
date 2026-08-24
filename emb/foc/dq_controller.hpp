@@ -42,7 +42,7 @@ public:
       vec_dq Iref,
       vec_dq Vcomp,
       float Vdc,
-      emb::unsigned_pu Vd_limit_factor
+      emb::unsigned_pu_f32 Vd_limit_factor
   ) {
     // D-axis controller
     float const Vd_avail = Vdc

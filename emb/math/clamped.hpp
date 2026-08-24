@@ -74,7 +74,13 @@ public:
   }
 };
 
-using signed_pu = clamped<-1.0f, 1.0f>;
-using unsigned_pu = clamped<0.0f, 1.0f>;
+template<std::floating_point T>
+using signed_pu = clamped<T{-1}, T{1}>;
+
+template<std::floating_point T>
+using unsigned_pu = clamped<T{0}, T{1}>;
+
+using signed_pu_f32 = signed_pu<float>;
+using unsigned_pu_f32 = unsigned_pu<float>;
 
 } // namespace emb

@@ -9,15 +9,15 @@
 namespace emb {
 namespace foc {
 
-inline std::array<unsigned_pu, 3> compensate_deadtime_v1(
-    std::array<unsigned_pu, 3> const& dutycycles,
+inline std::array<unsigned_pu_f32, 3> compensate_deadtime_v1(
+    std::array<unsigned_pu_f32, 3> const& dutycycles,
     std::array<float, 3> const& currents,
     float current_threshold,
     float pwm_period,
     float deadtime
 ) {
-  std::array<unsigned_pu, 3> dc;
-  emb::unsigned_pu const deadtime_dutycycle(deadtime / pwm_period);
+  std::array<unsigned_pu_f32, 3> dc;
+  emb::unsigned_pu_f32 const deadtime_dutycycle(deadtime / pwm_period);
 
   for (auto i = 0uz; i < 3; ++i) {
     if (currents[i] > current_threshold) {
@@ -33,8 +33,8 @@ inline std::array<unsigned_pu, 3> compensate_deadtime_v1(
 }
 
 /// @brief DOI: 10.4028/www.scientific.net/AMM.416-417.536
-inline std::array<unsigned_pu, 3> compensate_deadtime_v2(
-    std::array<unsigned_pu, 3> const& dutycycles,
+inline std::array<unsigned_pu_f32, 3> compensate_deadtime_v2(
+    std::array<unsigned_pu_f32, 3> const& dutycycles,
     std::array<float, 3> const& currents,
     float current_threshold,
     float pwm_period,
@@ -44,7 +44,7 @@ inline std::array<unsigned_pu, 3> compensate_deadtime_v2(
   return dutycycles;
 #else
   auto dc = dutycycles;
-  emb::unsigned_pu const deadtime_dutycycle(deadtime / pwm_period);
+  emb::unsigned_pu_f32 const deadtime_dutycycle(deadtime / pwm_period);
 
   auto const [min, max] = std::minmax_element(currents.begin(), currents.end());
 
