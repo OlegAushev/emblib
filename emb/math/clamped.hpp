@@ -15,8 +15,6 @@ public:
 
   constexpr explicit clamped(float v) : v_(std::clamp(v, lo, hi)) {}
 
-  constexpr clamped(float v, float base) : v_(std::clamp(v / base, lo, hi)) {}
-
   constexpr float value() const {
     return v_;
   }
