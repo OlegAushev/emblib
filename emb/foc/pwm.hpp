@@ -76,7 +76,11 @@ template<typename Mode>
 constexpr std::array<emb::unsigned_pu_f32, 3>
 modulate(std::array<float, 3> const& Vs, float Vdc) {
   if (Vdc <= 0.f) {
-    return {unsigned_pu_f32{0.5f}, unsigned_pu_f32{0.5f}, unsigned_pu_f32{0.5f}};
+    return {
+        unsigned_pu_f32{0.5f},
+        unsigned_pu_f32{0.5f},
+        unsigned_pu_f32{0.5f}
+    };
   }
 
   // normalization: [−1, +1]
