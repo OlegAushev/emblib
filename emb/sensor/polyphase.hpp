@@ -24,6 +24,7 @@ public:
   using raw_type = Raw;
   using value_type = typename Filter::value_type;
   using values_type = std::array<value_type, N>;
+  using sensor_category = immediate_tag;
 
   static constexpr std::size_t phase_count = N;
 private:

@@ -17,7 +17,7 @@ namespace emb::sensor {
 // sample with the source it was taken from. Which source is selected when,
 // and how long it settles, is the producer's business.
 //
-// Deliberately not a some_sensor_core: submit needs the source alongside the
+// Deliberately not a some_sensor: submit needs the source alongside the
 // sample, so multiplexed cannot sit inside a buffered decorator. Decorate the
 // per-source sensor instead: multiplexed<buffered<...>, N> queues per source
 // and drains them all through process(). N == 1 is a path wired straight to
@@ -31,8 +31,11 @@ public:
   using raw_type = typename Sensor::raw_type;
   using value_type = typename Sensor::value_type;
   using values_type = std::array<value_type, N>;
+  // Forwarded for introspection, like value_type; multiplexed itself is not a
+  // some_sensor (see above).
+  using sensor_category = typename Sensor::sensor_category;
 
-  static constexpr std::size_t phase_count = N;
+  static constexpr std::size_t source_count = N;
 private:
   std::array<Sensor, N> sensors_;
 
@@ -50,13 +53,13 @@ public:
   constexpr explicit multiplexed(Args const&... args)
       : multiplexed(std::make_index_sequence<N>{}, args...) {}
 
-  constexpr Sensor const& sensor(std::size_t phase) const {
-    return sensors_[phase];
+  constexpr Sensor const& sensor(std::size_t source) const {
+    return sensors_[source];
   }
 
-  // Producer-side: the sample taken while `phase` was selected.
-  constexpr void submit(std::size_t phase, sample_type sample) {
-    sensors_[phase].submit(std::move(sample));
+  // Producer-side: the sample taken while `source` was selected.
+  constexpr void submit(std::size_t source, sample_type sample) {
+    sensors_[source].submit(std::move(sample));
   }
 
   // Consumer-side, present when the per-source sensor defers work to a
@@ -68,8 +71,8 @@ public:
     }
   }
 
-  constexpr value_type value(std::size_t phase) const {
-    return sensors_[phase].value();
+  constexpr value_type value(std::size_t source) const {
+    return sensors_[source].value();
   }
 
   constexpr values_type values() const {

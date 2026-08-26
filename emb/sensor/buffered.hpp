@@ -9,15 +9,16 @@
 
 namespace emb::sensor {
 
-// Buffered sensor: an SPSC queue decouples the producing context (ISR, via
-// submit) from the consuming context (main loop, via process). process drains
-// the queue through a sensor core, so conversion/filtering happens off the ISR.
-// The core is any some_sensor_core -- singlephase for a single channel,
+// Buffered sensor: an SPSC queue decouples the producing context
+// from the consuming context. process drains the queue through a sensor core.
+// The core is any immediate sensor -- singlephase for a single channel,
 // polyphase for an aligned N-phase frame -- and the queue's element type must
-// match the core's sample_type (a scalar code, or a whole frame).
+// match the core's sample_type (a scalar value, or a whole frame). buffered
+// takes an immediate sensor and makes it deferred, so it cannot nest: the
+// outer process() would never drive the inner one.
 template<typename Queue, typename Core>
   requires some_spsc_queue<Queue>
-        && some_sensor_core<Core>
+        && some_immediate_sensor<Core>
         && std::same_as<typename Queue::value_type, typename Core::sample_type>
 class buffered {
 public:
@@ -25,6 +26,7 @@ public:
   using sample_type = typename Core::sample_type;
   using raw_type = typename Core::raw_type;
   using value_type = typename Core::value_type;
+  using sensor_category = deferred_tag;
 private:
   Queue queue_;
   Core core_;

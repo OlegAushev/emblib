@@ -28,28 +28,41 @@ concept some_filter = requires(
   f.push(v);
 };
 
-// A sensor core: it converts and filters submitted samples and exposes the
-// filtered result. sample_type is what a producer submits and what a buffered
-// queue stores -- one scalar code for singlephase, one aligned frame of codes
-// for polyphase. raw_type is the per-channel scalar code (equal to sample_type
-// for singlephase). buffered composes any such core.
-template<typename C>
-concept some_sensor_core = requires(C c, typename C::sample_type const& s) {
-  typename C::sample_type;
-  typename C::raw_type;
-  typename C::value_type;
-  c.submit(s);
+// Sensor categories, on one axis: when conversion completes. An immediate
+// sensor converts and filters inside submit(), in the caller's context; a
+// deferred sensor parks the sample in submit() and converts later, in a
+// consumer-side process(). The category is declared by the type's author.
+struct immediate_tag {};
+struct deferred_tag {};
+
+// Any sensor surface: typed raw/sample/value, a declared category, and a
+// one-argument submit. sample_type is what a producer submits and what a
+// buffered queue stores -- one scalar value for singlephase, one aligned frame
+// of values for polyphase. raw_type is the per-channel scalar value (equal to
+// sample_type for singlephase).
+template<typename S>
+concept some_sensor = requires(S s, typename S::sample_type const& sample) {
+  typename S::raw_type;
+  typename S::sample_type;
+  typename S::value_type;
+  typename S::sensor_category;
+  s.submit(sample);
 };
 
-// Phase-arity markers for metaprogramming. They partition sensor surfaces by
-// how the filtered result reads back: a polyphase surface exposes a frame-wide
-// values(), a singlephase surface a scalar value().
-template<typename C>
-concept some_polyphase_sensor = some_sensor_core<C>
-                             && requires(C const& c) { c.values(); };
+template<typename S>
+concept some_immediate_sensor =
+    some_sensor<S> && std::same_as<typename S::sensor_category, immediate_tag>;
 
-template<typename C>
-concept some_singlephase_sensor = some_sensor_core<C>
-                               && requires(C const& c) { c.value(); };
+template<typename S>
+concept some_deferred_sensor =
+    some_sensor<S> && std::same_as<typename S::sensor_category, deferred_tag>;
+
+template<typename S>
+concept some_polyphase_sensor = some_sensor<S>
+                             && requires(S const& s) { s.values(); };
+
+template<typename S>
+concept some_singlephase_sensor = some_sensor<S>
+                               && requires(S const& s) { s.value(); };
 
 } // namespace emb::sensor

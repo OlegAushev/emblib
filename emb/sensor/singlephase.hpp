@@ -18,6 +18,7 @@ public:
   using sample_type = Raw;
   using raw_type = Raw;
   using value_type = typename Filter::value_type;
+  using sensor_category = immediate_tag;
 private:
   Converter converter_;
   Filter filter_;
