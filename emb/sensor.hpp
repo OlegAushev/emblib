@@ -5,3 +5,4 @@
 #include <emb/sensor/singlephase.hpp>
 #include <emb/sensor/buffered.hpp>
 #include <emb/sensor/polyphase.hpp>
+#include <emb/sensor/multiplexed.hpp>
