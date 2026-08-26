@@ -74,4 +74,17 @@ public:
   }
 };
 
+// Lifts a constexpr device object of structural type into an empty stage type,
+// so it composes into a default-constructed transform next to stateless stages.
+template<auto device>
+struct bind {
+  static constexpr auto forward(auto x) {
+    return device.forward(x);
+  }
+
+  static constexpr auto inverse(auto y) {
+    return device.inverse(y);
+  }
+};
+
 } // namespace emb::sensor
