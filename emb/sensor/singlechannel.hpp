@@ -6,14 +6,14 @@
 
 namespace emb::sensor {
 
-// Single-phase transport-free sensor core: conversion and filtering run
+// Single-channel transport-free sensor core: conversion and filtering run
 // immediately in the caller's context (e.g. the same ISR that produces the
-// sample). No queue and no deferred process() step. See polyphase for the
-// N-phase counterpart and buffered for the queued decorator over either.
+// sample). No queue and no deferred process() step. See multichannel for the
+// N-channel counterpart and buffered for the queued decorator over either.
 template<typename Raw, typename Converter, typename Filter>
   requires some_filter<Filter>
         && some_converter<Converter, Raw, typename Filter::value_type>
-class singlephase {
+class singlechannel {
 public:
   using sample_type = Raw;
   using raw_type = Raw;
@@ -26,9 +26,9 @@ public:
   // Available if both stages are default-constructible; otherwise
   // implicitly deleted, so stages carrying calibration or runtime state
   // still force explicit construction.
-  singlephase() = default;
+  singlechannel() = default;
 
-  singlephase(Converter converter, Filter filter)
+  singlechannel(Converter converter, Filter filter)
       : converter_(std::move(converter)), filter_(std::move(filter)) {}
 
   value_type value() const {

@@ -12,7 +12,7 @@ namespace emb::sensor {
 //   inverse(code)  -> value     -- the actual measurement / conversion
 // operator() aliases inverse(), so a transform satisfies
 // emb::sensor::some_converter and can be handed to a sensor
-// (singlephase/polyphase/buffered) directly.
+// (singlechannel/multichannel/buffered) directly.
 
 namespace detail {
 

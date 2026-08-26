@@ -11,8 +11,8 @@ namespace emb::sensor {
 
 // N-source sensor over one time-shared acquisition path, e.g. an analog
 // multiplexer in front of a single ADC channel: an aggregate of N
-// independent singlephase sensors, one per source, fed one source at a time.
-// Unlike polyphase there is no frame -- the sources are sampled in turn, so
+// independent singlechannel sensors, one per source, fed one source at a time.
+// Unlike multichannel there is no frame -- the sources are sampled in turn, so
 // their readings belong to different instants, and the producer tags every
 // sample with the source it was taken from. Which source is selected when,
 // and how long it settles, is the producer's business.
@@ -23,7 +23,7 @@ namespace emb::sensor {
 // and drains them all through process(). N == 1 is a path wired straight to
 // its only source.
 template<typename Sensor, std::size_t N>
-  requires some_singlephase_sensor<Sensor> && (N > 0)
+  requires some_singlechannel_sensor<Sensor> && (N > 0)
 class multiplexed {
 public:
   using sensor_type = Sensor;

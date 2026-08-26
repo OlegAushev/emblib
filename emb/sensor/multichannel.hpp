@@ -1,7 +1,7 @@
 #pragma once
 
 #include <emb/sensor/concepts.hpp>
-#include <emb/sensor/singlephase.hpp>
+#include <emb/sensor/singlechannel.hpp>
 
 #include <array>
 #include <cstddef>
@@ -9,65 +9,68 @@
 
 namespace emb::sensor {
 
-// N-phase sensor core: an aggregate of N independent singlephase cores driven
-// by one acquisition frame. Adds only frame-synchronous submission, so
+// N-channel sensor core: an aggregate of N independent singlechannel cores
+// driven by one acquisition frame. Adds only frame-synchronous submission, so
 // the N filtered outputs read back from value()/values() belong to the same
-// sampling instant.
+// acquisition frame.
 template<typename Raw, typename Converter, typename Filter, std::size_t N>
   requires some_filter<Filter>
         && some_converter<Converter, Raw, typename Filter::value_type>
         && (N > 0)
-class polyphase {
+class multichannel {
 public:
-  using core_type = singlephase<Raw, Converter, Filter>;
+  using core_type = singlechannel<Raw, Converter, Filter>;
   using sample_type = std::array<typename core_type::sample_type, N>;
   using raw_type = Raw;
   using value_type = typename Filter::value_type;
   using values_type = std::array<value_type, N>;
   using sensor_category = immediate_tag;
 
-  static constexpr std::size_t phase_count = N;
+  static constexpr std::size_t channel_count = N;
 private:
   std::array<core_type, N> cores_;
 
   template<std::size_t... I>
-  polyphase(
+  multichannel(
       std::array<Converter, N> converters,
       std::array<Filter, N> filters,
       std::index_sequence<I...>
   )
       : cores_{core_type(std::move(converters[I]), std::move(filters[I]))...} {}
 public:
-  polyphase() = default;
+  multichannel() = default;
 
-  // Per-phase construction: each phase gets its own converter and filter,
-  // e.g. independent per-phase gain/offset calibration.
-  polyphase(std::array<Converter, N> converters, std::array<Filter, N> filters)
-      : polyphase(
+  // Per-channel construction: each channel gets its own converter and filter,
+  // e.g. independent per-channel gain/offset calibration.
+  multichannel(
+      std::array<Converter, N> converters,
+      std::array<Filter, N> filters
+  )
+      : multichannel(
             std::move(converters),
             std::move(filters),
             std::make_index_sequence<N>{}
         ) {}
 
   // Broadcast construction: one converter/filter prototype copied into every
-  // phase. Each phase still keeps its own independent state.
-  polyphase(Converter converter, Filter filter)
-      : polyphase(
+  // channel. Each channel still keeps its own independent state.
+  multichannel(Converter converter, Filter filter)
+      : multichannel(
             broadcast(converter),
             broadcast(filter),
             std::make_index_sequence<N>{}
         ) {}
 
-  value_type value(std::size_t phase) const {
-    return cores_[phase].value();
+  value_type value(std::size_t channel) const {
+    return cores_[channel].value();
   }
 
   values_type values() const {
     return values_impl(std::make_index_sequence<N>{});
   }
 
-  core_type const& core(std::size_t phase) const {
-    return cores_[phase];
+  core_type const& core(std::size_t channel) const {
+    return cores_[channel];
   }
 
   void submit(sample_type const& sample) {

@@ -37,9 +37,9 @@ struct deferred_tag {};
 
 // Any sensor surface: typed raw/sample/value, a declared category, and a
 // one-argument submit. sample_type is what a producer submits and what a
-// buffered queue stores -- one scalar value for singlephase, one aligned frame
-// of values for polyphase. raw_type is the per-channel scalar value (equal to
-// sample_type for singlephase).
+// buffered queue stores -- one scalar value for singlechannel, one aligned
+// frame of values for multichannel. raw_type is the per-channel scalar value
+// (equal to sample_type for singlechannel).
 template<typename S>
 concept some_sensor = requires(S s, typename S::sample_type const& sample) {
   typename S::raw_type;
@@ -58,11 +58,11 @@ concept some_deferred_sensor =
     some_sensor<S> && std::same_as<typename S::sensor_category, deferred_tag>;
 
 template<typename S>
-concept some_polyphase_sensor = some_sensor<S>
-                             && requires(S const& s) { s.values(); };
+concept some_singlechannel_sensor = some_sensor<S>
+                                 && requires(S const& s) { s.value(); };
 
 template<typename S>
-concept some_singlephase_sensor = some_sensor<S>
-                               && requires(S const& s) { s.value(); };
+concept some_multichannel_sensor = some_sensor<S>
+                                && requires(S const& s) { s.values(); };
 
 } // namespace emb::sensor
