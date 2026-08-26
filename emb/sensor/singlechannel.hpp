@@ -15,8 +15,8 @@ template<typename Raw, typename Converter, typename Filter>
         && some_converter<Converter, Raw, typename Filter::value_type>
 class singlechannel {
 public:
-  using sample_type = Raw;
   using raw_type = Raw;
+  using sample_type = Raw;
   using value_type = typename Filter::value_type;
   using sensor_category = immediate_tag;
 private:

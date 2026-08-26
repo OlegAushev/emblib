@@ -23,8 +23,8 @@ template<typename Queue, typename Core>
 class buffered {
 public:
   using core_type = Core;
-  using sample_type = typename Core::sample_type;
   using raw_type = typename Core::raw_type;
+  using sample_type = typename Core::sample_type;
   using value_type = typename Core::value_type;
   using sensor_category = deferred_tag;
 private:

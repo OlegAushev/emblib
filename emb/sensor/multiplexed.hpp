@@ -27,8 +27,8 @@ template<typename Sensor, std::size_t N>
 class multiplexed {
 public:
   using sensor_type = Sensor;
-  using sample_type = typename Sensor::sample_type;
   using raw_type = typename Sensor::raw_type;
+  using sample_type = typename Sensor::sample_type;
   using value_type = typename Sensor::value_type;
   using values_type = std::array<value_type, N>;
   // Forwarded for introspection, like value_type; multiplexed itself is not a
@@ -44,6 +44,11 @@ private:
       : sensors_{((void)I, Sensor(args...))...} {}
 public:
   constexpr multiplexed() = default;
+
+  // Per-source construction: each source gets its own sensor, e.g. with a
+  // different transducer model behind the same multiplexer.
+  constexpr explicit multiplexed(std::array<Sensor, N> sensors)
+      : sensors_(std::move(sensors)) {}
 
   // Broadcast construction: every source's sensor is built from the same
   // arguments. Each source still keeps its own independent state.
