@@ -39,6 +39,10 @@ public:
     return core_;
   }
 
+  Core& core() {
+    return core_;
+  }
+
   // Convenience forwarder for singlechannel cores; absent for multichannel,
   // which is read through values() / value(channel) below.
   value_type value() const

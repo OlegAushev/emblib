@@ -62,6 +62,10 @@ public:
     return sensors_[source];
   }
 
+  constexpr Sensor& sensor(std::size_t source) {
+    return sensors_[source];
+  }
+
   // Producer-side: the sample taken while `source` was selected.
   constexpr void submit(std::size_t source, sample_type sample) {
     sensors_[source].submit(std::move(sample));

@@ -31,46 +31,52 @@ private:
   std::array<Core, N> cores_;
 
   template<typename... Args, std::size_t... I>
-  multichannel(std::index_sequence<I...>, Args const&... args)
+  constexpr multichannel(std::index_sequence<I...>, Args const&... args)
       : cores_{((void)I, Core(args...))...} {}
 public:
-  multichannel() = default;
+  constexpr multichannel() = default;
 
   // Per-channel construction: each channel gets its own core, e.g. with
   // independent per-channel gain/offset calibration.
-  explicit multichannel(std::array<Core, N> cores) : cores_(std::move(cores)) {}
+  constexpr explicit multichannel(std::array<Core, N> cores)
+      : cores_(std::move(cores)) {}
 
   // Broadcast construction: every channel's core is built from the same
   // arguments. Each channel still keeps its own independent state.
   template<typename... Args>
     requires(sizeof...(Args) > 0)
          && std::constructible_from<Core, Args const&...>
-  explicit multichannel(Args const&... args)
+  constexpr explicit multichannel(Args const&... args)
       : multichannel(std::make_index_sequence<N>{}, args...) {}
 
-  value_type value(std::size_t channel) const {
+  constexpr value_type value(std::size_t channel) const {
     return cores_[channel].value();
   }
 
-  values_type values() const {
+  constexpr values_type values() const {
     return values_impl(std::make_index_sequence<N>{});
   }
 
-  core_type const& core(std::size_t channel) const {
+  constexpr core_type const& core(std::size_t channel) const {
     return cores_[channel];
   }
 
-  void submit(sample_type const& sample) {
+  constexpr core_type& core(std::size_t channel) {
+    return cores_[channel];
+  }
+
+  constexpr void submit(sample_type const& sample) {
     submit_impl(sample, std::make_index_sequence<N>{});
   }
 private:
   template<std::size_t... I>
-  void submit_impl(sample_type const& sample, std::index_sequence<I...>) {
+  constexpr void
+  submit_impl(sample_type const& sample, std::index_sequence<I...>) {
     (cores_[I].submit(sample[I]), ...);
   }
 
   template<std::size_t... I>
-  values_type values_impl(std::index_sequence<I...>) const {
+  constexpr values_type values_impl(std::index_sequence<I...>) const {
     return {cores_[I].value()...};
   }
 };

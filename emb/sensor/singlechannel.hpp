@@ -10,6 +10,14 @@ namespace emb::sensor {
 // immediately in the caller's context (e.g. the same ISR that produces the
 // sample). No queue and no deferred process() step. See multichannel for the
 // N-channel counterpart and buffered for the queued decorator over either.
+//
+// Stages are reachable through converter()/filter(): const for
+// introspection, non-const for post-construction state -- calibration
+// carried by converter stages, filter preload or retuning. Mutation belongs
+// to the context that runs the conversion (submit() here, the consumer-side
+// process() once wrapped in buffered), or to a sensor that is quiescent.
+// multichannel, buffered and multiplexed expose their parts under the same
+// rule.
 template<typename Raw, typename Converter, typename Filter>
   requires some_filter<Filter>
         && some_converter<Converter, Raw, typename Filter::value_type>
@@ -26,16 +34,32 @@ public:
   // Available if both stages are default-constructible; otherwise
   // implicitly deleted, so stages carrying calibration or runtime state
   // still force explicit construction.
-  singlechannel() = default;
+  constexpr singlechannel() = default;
 
-  singlechannel(Converter converter, Filter filter)
+  constexpr singlechannel(Converter converter, Filter filter)
       : converter_(std::move(converter)), filter_(std::move(filter)) {}
 
-  value_type value() const {
+  constexpr Converter const& converter() const {
+    return converter_;
+  }
+
+  constexpr Converter& converter() {
+    return converter_;
+  }
+
+  constexpr Filter const& filter() const {
+    return filter_;
+  }
+
+  constexpr Filter& filter() {
+    return filter_;
+  }
+
+  constexpr value_type value() const {
     return filter_.output();
   }
 
-  void submit(sample_type sample) {
+  constexpr void submit(sample_type sample) {
     filter_.push(converter_(sample));
   }
 };
