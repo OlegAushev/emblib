@@ -242,6 +242,7 @@ class registry {
   using hash_type = typename layout_type::hash_type;
   using crc_type = typename layout_type::crc_type;
   using crc_fn = typename layout_type::crc_fn;
+  using addr_type = typename Storage::addr_type;
 
   template<parameter_name Name>
   static constexpr std::size_t index =
@@ -278,33 +279,57 @@ public:
 
   constexpr explicit registry(Storage& storage) : storage_(storage) {}
 
+  // Opaque ticket to one layout cell: lets callers build their own
+  // per-value-type code paths (a table of parameters, a protocol adapter)
+  // without re-specializing per name. Constructible only via ref<Name>(), so
+  // every instance went through the layout's compile-time name checks and no
+  // address outside the layout can be forged; the cell scheme stays private.
+  template<typename T>
+  class parameter_ref {
+    addr_type hash_loc_;
+    addr_type val_loc_;
+    addr_type crc_loc_;
+    hash_type hash_;
+
+    constexpr parameter_ref(
+        addr_type hash_loc, addr_type val_loc, addr_type crc_loc,
+        hash_type hash
+    )
+        : hash_loc_(hash_loc), val_loc_(val_loc), crc_loc_(crc_loc),
+          hash_(hash) {}
+
+    friend class registry;
+  };
+
   template<parameter_name Name>
-  constexpr auto get()
-      -> std::expected<typename traits<Name>::value_type, error> {
+  static consteval auto ref() -> parameter_ref<value_type<Name>> {
     constexpr auto hash_loc = Layout.offset_of(index<Name>);
     constexpr auto val_loc = hash_loc + sizeof(hash_type);
     constexpr auto crc_loc = val_loc + sizeof(value_type<Name>);
-    return get_impl<value_type<Name>>(
-        hash_loc,
-        val_loc,
-        crc_loc,
-        layout_type::hashes[index<Name>]
-    );
+    return {hash_loc, val_loc, crc_loc, layout_type::hashes[index<Name>]};
+  }
+
+  template<typename T>
+  constexpr auto get(parameter_ref<T> p) -> std::expected<T, error> {
+    return get_impl<T>(p.hash_loc_, p.val_loc_, p.crc_loc_, p.hash_);
+  }
+
+  template<typename T>
+  constexpr auto set(parameter_ref<T> p, T const& val)
+      -> std::expected<void, error> {
+    return set_impl<T>(p.hash_loc_, p.val_loc_, p.crc_loc_, p.hash_, val);
+  }
+
+  template<parameter_name Name>
+  constexpr auto get()
+      -> std::expected<typename traits<Name>::value_type, error> {
+    return get(ref<Name>());
   }
 
   template<parameter_name Name>
   constexpr auto set(typename traits<Name>::value_type const& val)
       -> std::expected<void, error> {
-    constexpr auto hash_loc = Layout.offset_of(index<Name>);
-    constexpr auto val_loc = hash_loc + sizeof(hash_type);
-    constexpr auto crc_loc = val_loc + sizeof(value_type<Name>);
-    return set_impl(
-        hash_loc,
-        val_loc,
-        crc_loc,
-        layout_type::hashes[index<Name>],
-        val
-    );
+    return set(ref<Name>(), val);
   }
 
   template<parameter_name Name>
@@ -335,18 +360,13 @@ public:
   }
 
 private:
-  using addr_type = typename Storage::addr_type;
-
-  // Shared bodies exist to be emitted once per value type instead of once
-  // per parameter name; noinline is what enforces that. Without it -O3
-  // inlines them back into every call site, each copy dragging storage
-  // internals along and outweighing the per-name specializations they
-  // replace. The I/O they wrap is slow enough that call overhead is
-  // irrelevant.
   template<typename T>
-  [[gnu::noinline]] constexpr auto
-  get_impl(addr_type hash_loc, addr_type val_loc, addr_type crc_loc,
-           hash_type hash) -> std::expected<T, error> {
+  [[gnu::noinline]] constexpr auto get_impl(
+      addr_type hash_loc,
+      addr_type val_loc,
+      addr_type crc_loc,
+      hash_type hash
+  ) -> std::expected<T, error> {
     auto h = storage_.template read<hash_type>(hash_loc);
     if (!h) return std::unexpected(h.error());
     if (*h != hash) return std::unexpected(error::hash_mismatch);
@@ -364,9 +384,13 @@ private:
   }
 
   template<typename T>
-  [[gnu::noinline]] constexpr auto
-  set_impl(addr_type hash_loc, addr_type val_loc, addr_type crc_loc,
-           hash_type hash, T const& val) -> std::expected<void, error> {
+  [[gnu::noinline]] constexpr auto set_impl(
+      addr_type hash_loc,
+      addr_type val_loc,
+      addr_type crc_loc,
+      hash_type hash,
+      T const& val
+  ) -> std::expected<void, error> {
     auto r1 = storage_.template write<hash_type>(hash_loc, hash);
     if (!r1) return r1;
 
