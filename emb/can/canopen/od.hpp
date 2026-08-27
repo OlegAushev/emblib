@@ -50,24 +50,28 @@ enum class od_value_type : std::uint8_t {
 
 enum class od_access : std::uint8_t { rw, ro, wo, const_ };
 
+// Accessor result types: what od_object::read/write return.
+using od_read_result = std::expected<od_value, sdo_abort_code>;
+using od_write_result = std::expected<void, sdo_abort_code>;
+
 // ---- od accessors ----
 
-inline std::expected<od_value, sdo_abort_code> od_no_read() {
+inline od_read_result od_no_read() {
   return std::unexpected(sdo_abort_code::unsupported_access);
 }
 
-inline std::expected<void, sdo_abort_code> od_no_write(od_value /*val*/) {
+inline od_write_result od_no_write(od_value /*val*/) {
   return std::unexpected(sdo_abort_code::unsupported_access);
 }
 
 // Helpers for plain-variable entries. NTTP requires static storage.
 template<auto Var>
-std::expected<od_value, sdo_abort_code> od_read_var() {
+od_read_result od_read_var() {
   return od_value{*Var};
 }
 
 template<auto Var>
-std::expected<void, sdo_abort_code> od_write_var(od_value val) {
+od_write_result od_write_var(od_value val) {
   using T = std::remove_pointer_t<decltype(Var)>;
   if (auto* v = std::get_if<T>(&val)) {
     *Var = *v;
@@ -149,8 +153,8 @@ struct od_object {
   od_access access;
   od_value_type data_type;
   std::optional<od_value> default_value;
-  std::expected<od_value, sdo_abort_code> (*read)();
-  std::expected<void, sdo_abort_code> (*write)(od_value val);
+  od_read_result (*read)();
+  od_write_result (*write)(od_value val);
 
   bool has_read_permission() const {
     return access != od_access::wo;

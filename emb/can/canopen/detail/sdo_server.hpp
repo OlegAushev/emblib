@@ -177,7 +177,7 @@ private:
     return tsdo;
   }
 
-  std::expected<void, sdo_abort_code> restore_default_parameter(od_key key) {
+  od_write_result restore_default_parameter(od_key key) {
     od_entry const* entry = find(key);
     if (entry == nullptr) {
       return std::unexpected(sdo_abort_code::object_not_found);
