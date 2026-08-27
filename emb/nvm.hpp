@@ -281,45 +281,30 @@ public:
   template<parameter_name Name>
   constexpr auto get()
       -> std::expected<typename traits<Name>::value_type, error> {
-    constexpr auto hash = layout_type::hashes[index<Name>];
-    constexpr auto offset = Layout.offset_of(index<Name>);
-
-    constexpr auto hash_loc = offset;
-    auto h = storage_.template read<hash_type>(hash_loc);
-    if (!h) return std::unexpected(h.error());
-    if (*h != hash) return std::unexpected(error::hash_mismatch);
-
-    constexpr auto val_loc = offset + sizeof(hash_type);
-    auto val = storage_.template read<value_type<Name>>(val_loc);
-    if (!val) return std::unexpected(val.error());
-
+    constexpr auto hash_loc = Layout.offset_of(index<Name>);
+    constexpr auto val_loc = hash_loc + sizeof(hash_type);
     constexpr auto crc_loc = val_loc + sizeof(value_type<Name>);
-    auto stored_crc = storage_.template read<crc_type>(crc_loc);
-    if (!stored_crc) return std::unexpected(stored_crc.error());
-
-    auto crc = crc_fn{}(hash, *val);
-    if (*stored_crc != crc) return std::unexpected(error::crc_mismatch);
-
-    return *val;
+    return get_impl<value_type<Name>>(
+        hash_loc,
+        val_loc,
+        crc_loc,
+        layout_type::hashes[index<Name>]
+    );
   }
 
   template<parameter_name Name>
   constexpr auto set(typename traits<Name>::value_type const& val)
       -> std::expected<void, error> {
-    constexpr auto hash = layout_type::hashes[index<Name>];
-    constexpr auto offset = Layout.offset_of(index<Name>);
-
-    constexpr auto hash_loc = offset;
-    auto r1 = storage_.template write<hash_type>(hash_loc, hash);
-    if (!r1) return r1;
-
-    constexpr auto val_loc = offset + sizeof(hash_type);
-    auto r2 = storage_.template write<value_type<Name>>(val_loc, val);
-    if (!r2) return r2;
-
-    auto crc = crc_fn{}(hash, val);
+    constexpr auto hash_loc = Layout.offset_of(index<Name>);
+    constexpr auto val_loc = hash_loc + sizeof(hash_type);
     constexpr auto crc_loc = val_loc + sizeof(value_type<Name>);
-    return storage_.template write<crc_type>(crc_loc, crc);
+    return set_impl(
+        hash_loc,
+        val_loc,
+        crc_loc,
+        layout_type::hashes[index<Name>],
+        val
+    );
   }
 
   template<parameter_name Name>
@@ -347,6 +332,43 @@ public:
       if (!r) return r;
     }
     return {};
+  }
+
+private:
+  using addr_type = typename Storage::addr_type;
+
+  template<typename T>
+  [[gnu::noinline]] constexpr auto
+  get_impl(addr_type hash_loc, addr_type val_loc, addr_type crc_loc,
+           hash_type hash) -> std::expected<T, error> {
+    auto h = storage_.template read<hash_type>(hash_loc);
+    if (!h) return std::unexpected(h.error());
+    if (*h != hash) return std::unexpected(error::hash_mismatch);
+
+    auto val = storage_.template read<T>(val_loc);
+    if (!val) return std::unexpected(val.error());
+
+    auto stored_crc = storage_.template read<crc_type>(crc_loc);
+    if (!stored_crc) return std::unexpected(stored_crc.error());
+
+    auto crc = crc_fn{}(hash, *val);
+    if (*stored_crc != crc) return std::unexpected(error::crc_mismatch);
+
+    return *val;
+  }
+
+  template<typename T>
+  [[gnu::noinline]] constexpr auto
+  set_impl(addr_type hash_loc, addr_type val_loc, addr_type crc_loc,
+           hash_type hash, T const& val) -> std::expected<void, error> {
+    auto r1 = storage_.template write<hash_type>(hash_loc, hash);
+    if (!r1) return r1;
+
+    auto r2 = storage_.template write<T>(val_loc, val);
+    if (!r2) return r2;
+
+    auto crc = crc_fn{}(hash, val);
+    return storage_.template write<crc_type>(crc_loc, crc);
   }
 };
 
