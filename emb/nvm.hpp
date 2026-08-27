@@ -337,6 +337,12 @@ public:
 private:
   using addr_type = typename Storage::addr_type;
 
+  // Shared bodies exist to be emitted once per value type instead of once
+  // per parameter name; noinline is what enforces that. Without it -O3
+  // inlines them back into every call site, each copy dragging storage
+  // internals along and outweighing the per-name specializations they
+  // replace. The I/O they wrap is slow enough that call overhead is
+  // irrelevant.
   template<typename T>
   [[gnu::noinline]] constexpr auto
   get_impl(addr_type hash_loc, addr_type val_loc, addr_type crc_loc,
