@@ -12,8 +12,7 @@ struct typelist {
   static constexpr std::size_t size = sizeof...(Ts);
 };
 
-// -- size --
-
+// ==== size ====
 template<typename T>
 struct typelist_size;
 
@@ -25,8 +24,7 @@ struct typelist_size<typelist<Ts...>> {
 template<typename List>
 inline constexpr std::size_t typelist_size_v = typelist_size<List>::value;
 
-// -- contains --
-
+// ==== contains ====
 template<typename List, typename T>
 struct typelist_contains_t : std::false_type {};
 
@@ -40,8 +38,7 @@ inline constexpr bool typelist_contains_v = typelist_contains_t<List, T>::value;
 template<typename List, typename T>
 concept typelist_contains = typelist_contains_v<List, T>;
 
-// -- at --
-
+// ==== at ====
 template<typename List, std::size_t I>
 struct typelist_at;
 
@@ -53,8 +50,7 @@ struct typelist_at<typelist<Ts...>, I> {
 template<typename List, std::size_t I>
 using typelist_at_t = typename typelist_at<List, I>::type;
 
-// -- count --
-
+// ==== count ====
 template<typename List, typename T>
 struct typelist_count_t;
 
@@ -68,8 +64,7 @@ template<typename List, typename T>
 inline constexpr std::size_t typelist_count_v =
     typelist_count_t<List, T>::value;
 
-// -- unique --
-
+// ==== unique ====
 template<typename List>
 struct typelist_unique_t;
 
@@ -84,8 +79,7 @@ inline constexpr bool typelist_unique_v = typelist_unique_t<List>::value;
 template<typename List>
 concept typelist_unique = typelist_unique_v<List>;
 
-// -- append --
-
+// ==== append ====
 template<typename List, typename T>
 struct typelist_append;
 
@@ -97,8 +91,7 @@ struct typelist_append<typelist<Types...>, T> {
 template<typename List, typename T>
 using typelist_append_t = typename typelist_append<List, T>::type;
 
-// -- concat --
-
+// ==== concat ====
 template<typename A, typename B>
 struct typelist_concat;
 

@@ -6,7 +6,6 @@
 
 namespace emb {
 
-// T is one of Variant's std::variant alternatives.
 template<typename T, typename Variant>
 struct is_alternative_of : std::false_type {};
 
