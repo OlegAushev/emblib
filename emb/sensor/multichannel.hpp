@@ -1,10 +1,13 @@
 #pragma once
 
+#include <emb/meta.hpp>
 #include <emb/sensor/concepts.hpp>
 
 #include <array>
 #include <concepts>
 #include <cstddef>
+#include <tuple>
+#include <type_traits>
 #include <utility>
 
 namespace emb::sensor {
@@ -13,72 +16,111 @@ namespace emb::sensor {
 // driven by one acquisition frame. Adds only frame-synchronous submission, so
 // the N filtered outputs read back from value()/values() belong to the same
 // acquisition frame.
-template<typename Core, std::size_t N>
-  requires some_singlechannel_sensor<Core>
-        && some_immediate_sensor<Core>
-        && (N > 0)
+//
+// The channels may be different core types -- inputs with different
+// transducer models behind one ADC scan -- but they share the frame, so they
+// share sample_type and raw_type, and they make up one sensor, so they share
+// value_type: the frame reads back as one std::array whatever the channels
+// are. Identical channel types (multichannel_n) live in an array and are
+// addressed by index directly, with core(channel) available; otherwise
+// channels live in a tuple, reached through core<I>(), and value(channel)
+// selects through a compare chain.
+template<typename... Cores>
+  requires(sizeof...(Cores) > 0)
+       && (some_singlechannel_sensor<Cores> && ...)
+       && (some_immediate_sensor<Cores> && ...)
+       && all_same<typename Cores::raw_type...>
+       && all_same<typename Cores::sample_type...>
+       && all_same<typename Cores::value_type...>
 class multichannel {
+  using first_type = nth_type_t<0, Cores...>;
 public:
-  using core_type = Core;
-  using raw_type = typename Core::raw_type;
-  using sample_type = std::array<typename Core::sample_type, N>;
-  using value_type = typename Core::value_type;
-  using values_type = std::array<value_type, N>;
-  using sensor_category = immediate_tag;
+  static constexpr std::size_t channel_count = sizeof...(Cores);
+  static constexpr bool uniform_cores = all_same<Cores...>;
 
-  static constexpr std::size_t channel_count = N;
+  template<std::size_t I>
+  using core_type = nth_type_t<I, Cores...>;
+
+  using raw_type = typename first_type::raw_type;
+  using sample_type =
+      std::array<typename first_type::sample_type, channel_count>;
+  using value_type = typename first_type::value_type;
+  using values_type = std::array<value_type, channel_count>;
+  using sensor_category = immediate_tag;
+  using cores_type = std::conditional_t<
+      uniform_cores,
+      std::array<first_type, channel_count>,
+      std::tuple<Cores...>>;
 private:
-  std::array<Core, N> cores_;
+  cores_type cores_;
 
   template<typename... Args, std::size_t... I>
   constexpr multichannel(std::index_sequence<I...>, Args const&... args)
-      : cores_{((void)I, Core(args...))...} {}
+      : cores_{((void)I, first_type(args...))...} {}
 public:
   constexpr multichannel() = default;
 
   // Per-channel construction: each channel gets its own core, e.g. with
   // independent per-channel gain/offset calibration.
-  constexpr explicit multichannel(std::array<Core, N> cores)
+  constexpr explicit multichannel(cores_type cores)
+    requires(std::move_constructible<Cores> && ...)
       : cores_(std::move(cores)) {}
 
   // Broadcast construction: every channel's core is built from the same
-  // arguments. Each channel still keeps its own independent state.
+  // arguments. Each channel still keeps its own independent state. Uniform
+  // channels only: cores of different types differ in what they are built
+  // from.
   template<typename... Args>
-    requires(sizeof...(Args) > 0)
-         && std::constructible_from<Core, Args const&...>
+    requires uniform_cores
+          && (sizeof...(Args) > 0)
+          && std::constructible_from<first_type, Args const&...>
   constexpr explicit multichannel(Args const&... args)
-      : multichannel(std::make_index_sequence<N>{}, args...) {}
+      : multichannel(std::make_index_sequence<channel_count>{}, args...) {}
 
-  constexpr value_type value(std::size_t channel) const {
-    return cores_[channel].value();
+  template<std::size_t I>
+  constexpr core_type<I> const& core() const {
+    return std::get<I>(cores_);
   }
 
-  constexpr values_type values() const {
-    return values_impl(std::make_index_sequence<N>{});
+  template<std::size_t I>
+  constexpr core_type<I>& core() {
+    return std::get<I>(cores_);
   }
 
-  constexpr core_type const& core(std::size_t channel) const {
+  constexpr first_type const& core(std::size_t channel) const
+    requires uniform_cores {
     return cores_[channel];
   }
 
-  constexpr core_type& core(std::size_t channel) {
+  constexpr first_type& core(std::size_t channel)
+    requires uniform_cores {
     return cores_[channel];
   }
 
   constexpr void submit(sample_type const& sample) {
-    submit_impl(sample, std::make_index_sequence<N>{});
-  }
-private:
-  template<std::size_t... I>
-  constexpr void
-  submit_impl(sample_type const& sample, std::index_sequence<I...>) {
-    (cores_[I].submit(sample[I]), ...);
+    unroll<channel_count>([&]<std::size_t I>() {
+      std::get<I>(cores_).submit(sample[I]);
+    });
   }
 
-  template<std::size_t... I>
-  constexpr values_type values_impl(std::index_sequence<I...>) const {
-    return {cores_[I].value()...};
+  // `channel` must be below channel_count.
+  constexpr value_type value(std::size_t channel) const {
+    return visit_at(cores_, channel, [](auto const& core) {
+      return core.value();
+    });
+  }
+
+  constexpr values_type values() const {
+    return [&]<std::size_t... I>(std::index_sequence<I...>) {
+      return values_type{std::get<I>(cores_).value()...};
+    }(std::make_index_sequence<channel_count>{});
   }
 };
+
+// multichannel<Core, Core, ...>: N channels of one core type, for a channel
+// count known as a constant rather than a spelled-out list.
+template<typename Core, std::size_t N>
+  requires(N > 0)
+using multichannel_n = replicate_t<multichannel, Core, N>;
 
 } // namespace emb::sensor
