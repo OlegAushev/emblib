@@ -31,9 +31,6 @@ private:
   Converter converter_;
   Filter filter_;
 public:
-  // Available if both stages are default-constructible; otherwise
-  // implicitly deleted, so stages carrying calibration or runtime state
-  // still force explicit construction.
   constexpr singlechannel() = default;
 
   constexpr singlechannel(Converter converter, Filter filter)
