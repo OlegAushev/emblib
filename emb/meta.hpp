@@ -13,6 +13,21 @@ namespace emb {
 template<typename T, typename... Ts>
 concept same_as_any = (... || std::same_as<T, Ts>);
 
+namespace detail {
+
+template<typename... Ts>
+inline constexpr bool all_same_v = true;
+
+template<typename T, typename... Ts>
+inline constexpr bool all_same_v<T, Ts...> = (... && std::same_as<T, Ts>);
+
+} // namespace detail
+
+// Every type in the pack is the same; vacuously true for an empty pack.
+// Fully variadic so that a pack can be expanded into it directly.
+template<typename... Ts>
+concept all_same = detail::all_same_v<Ts...>;
+
 template<typename... Ts>
 struct overload : Ts... {
   using Ts::operator()...;
