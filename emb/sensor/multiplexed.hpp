@@ -72,24 +72,6 @@ private:
   template<typename... Args, std::size_t... I>
   constexpr multiplexed(std::index_sequence<I...>, Args const&... args)
       : sensors_{((void)I, first_type(args...))...} {}
-
-  // Runtime source -> compile-time index. Uniform sources are indexed
-  // directly; otherwise a compare chain that the compiler folds into a jump
-  // table. `source` must be below source_count: the last branch is
-  // unconditional.
-  // TODO(C++26 expansion statements, GCC 16): template for
-  template<std::size_t I = 0, typename Self, typename F>
-  constexpr decltype(auto)
-  dispatch(this Self& self, std::size_t source, F&& f) {
-    if constexpr (uniform_sensors) {
-      return f(self.sensors_[source]);
-    } else if constexpr (I + 1 == source_count) {
-      return f(std::get<I>(self.sensors_));
-    } else {
-      return source == I ? f(std::get<I>(self.sensors_))
-                         : self.template dispatch<I + 1>(source, f);
-    }
-  }
 public:
   constexpr multiplexed() = default;
 
@@ -132,9 +114,11 @@ public:
     return sensors_[source];
   }
 
-  // Producer-side: the sample taken while `source` was selected.
+  // Producer-side: the sample taken while `source` was selected. Uniform
+  // sources are indexed directly, otherwise selected through visit_at's
+  // compare chain; `source` must be below source_count.
   constexpr void submit(std::size_t source, sample_type sample) {
-    dispatch(source, [&](auto& sensor) {
+    visit_at(sensors_, source, [&](auto& sensor) {
       sensor.submit(std::move(sample));
     });
   }
@@ -161,7 +145,7 @@ public:
 
   constexpr typename first_type::value_type value(std::size_t source) const
     requires uniform_values {
-    return dispatch(source, [](auto const& sensor) {
+    return visit_at(sensors_, source, [](auto const& sensor) {
       return sensor.value();
     });
   }
@@ -173,29 +157,11 @@ public:
   }
 };
 
-namespace detail {
-
-// Sensor for any index: expanding replicated<Sensor, I>... over an index pack
-// repeats Sensor once per index.
-template<typename Sensor, std::size_t>
-using replicated = Sensor;
-
-template<typename Sensor, typename Indices>
-struct replicate;
-
-template<typename Sensor, std::size_t... I>
-struct replicate<Sensor, std::index_sequence<I...>> {
-  using type = multiplexed<replicated<Sensor, I>...>;
-};
-
-} // namespace detail
-
 // multiplexed<Sensor, Sensor, ...>: N sources of one sensor type, for a
 // source count known as a constant rather than a spelled-out list, e.g. a
 // board's multiplexer input count.
 template<typename Sensor, std::size_t N>
   requires(N > 0)
-using multiplexed_n =
-    typename detail::replicate<Sensor, std::make_index_sequence<N>>::type;
+using multiplexed_n = replicate_t<multiplexed, Sensor, N>;
 
 } // namespace emb::sensor
