@@ -158,7 +158,7 @@ constexpr T fmod(T x, T y) {
 // ---- sgn ----
 template<typename T = int, typename V>
 constexpr T sgn(V v) {
-  return T((V(0) < v) - (v < V(0)));
+  return static_cast<T>((V{0} < v) - (v < V{0}));
 }
 
 // ---- iseven ----
