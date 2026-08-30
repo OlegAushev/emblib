@@ -221,22 +221,22 @@ constexpr Float dequantize(Int num) {
 // -----------------------------------------------------------------------------
 template<std::floating_point T>
 constexpr T to_rad(T deg) {
-  return std::numbers::pi_v<T> * deg / T{180};
+  return deg * (std::numbers::pi_v<T> / T{180});
 }
 
 template<std::floating_point T>
 constexpr T to_deg(T rad) {
-  return T{180} * rad / std::numbers::pi_v<T>;
+  return rad * (T{180} / std::numbers::pi_v<T>);
 }
 
 template<std::floating_point T, std::integral P>
 constexpr T to_eradps(T n, P p) {
-  return 2 * std::numbers::pi_v<T> * static_cast<T>(p) * n / 60;
+  return static_cast<T>(p) * n * (2 * std::numbers::pi_v<T> / T{60});
 }
 
 template<std::floating_point T, std::integral P>
 constexpr T to_rpm(T w, P p) {
-  return 60 * w / (2 * std::numbers::pi_v<T> * static_cast<T>(p));
+  return w * (T{60} / (2 * std::numbers::pi_v<T>)) / static_cast<T>(p);
 }
 
 template<std::floating_point T>
