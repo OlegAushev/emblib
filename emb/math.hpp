@@ -81,12 +81,12 @@ constexpr float atan2(float y, float x) {
 }
 
 // ---- rsqrt/sqrt ----
-constexpr float fast_rsqrt(float arg) {
-  assert(arg >= FLT_MIN);
+constexpr float fast_rsqrt(float x) {
+  assert(x >= FLT_MIN);
 
-  const float x2 = arg * 0.5f;
+  const float x2 = x * 0.5f;
 
-  auto i = std::bit_cast<std::uint32_t>(arg);
+  auto i = std::bit_cast<std::uint32_t>(x);
   i = 0x5f3759df - (i >> 1);
   float y = std::bit_cast<float>(i);
 
@@ -96,47 +96,47 @@ constexpr float fast_rsqrt(float arg) {
   return y;
 }
 
-inline float builtin_rsqrt(float arg) {
+inline float builtin_rsqrt(float x) {
 #ifdef __arm__
   float ret;
-  arm_sqrt_f32(arg, &ret);
+  arm_sqrt_f32(x, &ret);
   return 1.0f / ret;
 #endif
 #ifdef __x86_64__
-  return 1.0f / std::sqrtf(arg);
+  return 1.0f / std::sqrtf(x);
 #endif
 }
 
-constexpr float rsqrt(float arg) {
+constexpr float rsqrt(float x) {
   if !consteval {
-    return builtin_rsqrt(arg);
+    return builtin_rsqrt(x);
   } else {
-    return fast_rsqrt(arg);
+    return fast_rsqrt(x);
   }
 }
 
-constexpr float fast_sqrt(float arg) {
-  assert(arg >= 0.0f);
-  if (arg < FLT_MIN) return 0.0f;
-  return arg * fast_rsqrt(arg);
+constexpr float fast_sqrt(float x) {
+  assert(x >= 0.0f);
+  if (x < FLT_MIN) return 0.0f;
+  return x * fast_rsqrt(x);
 }
 
-inline float builtin_sqrt(float arg) {
+inline float builtin_sqrt(float x) {
 #ifdef __arm__
   float ret;
-  arm_sqrt_f32(arg, &ret);
+  arm_sqrt_f32(x, &ret);
   return ret;
 #endif
 #ifdef __x86_64__
-  return std::sqrtf(arg);
+  return std::sqrtf(x);
 #endif
 }
 
-constexpr float sqrt(float arg) {
+constexpr float sqrt(float x) {
   if !consteval {
-    return builtin_sqrt(arg);
+    return builtin_sqrt(x);
   } else {
-    return fast_sqrt(arg);
+    return fast_sqrt(x);
   }
 }
 
@@ -162,18 +162,18 @@ constexpr T sgn(V v) {
 }
 
 // ---- iseven ----
-constexpr bool iseven(std::integral auto v) {
-  return v % 2 == 0;
+constexpr bool iseven(std::integral auto n) {
+  return n % 2 == 0;
 }
 
 // ---- isodd ----
-constexpr bool isodd(std::integral auto v) {
-  return !iseven(v);
+constexpr bool isodd(std::integral auto n) {
+  return !iseven(n);
 }
 
 // ---- saturate_round ----
 template<std::integral Int, std::floating_point Float>
-constexpr Int saturate_round(Float num) {
+constexpr Int saturate_round(Float x) {
   static_assert(
       sizeof(Int) < sizeof(long long) || std::is_signed_v<Int>,
       "u64 upper range is unreachable via llround"
@@ -183,39 +183,39 @@ constexpr Int saturate_round(Float num) {
                               && std::is_signed_v<Int>);
   using Wide = std::conditional_t<fits_long, long, long long>;
 
-  assert(!std::isnan(num));
-  if (num >= static_cast<Float>(std::numeric_limits<Wide>::max())) {
+  assert(!std::isnan(x));
+  if (x >= static_cast<Float>(std::numeric_limits<Wide>::max())) {
     return std::numeric_limits<Int>::max();
   }
-  if (num <= static_cast<Float>(std::numeric_limits<Wide>::min())) {
+  if (x <= static_cast<Float>(std::numeric_limits<Wide>::min())) {
     return std::numeric_limits<Int>::min();
   }
 
   if constexpr (fits_long) {
-    return emb::saturating_cast<Int>(std::lround(num));
+    return emb::saturating_cast<Int>(std::lround(x));
   } else {
-    return emb::saturating_cast<Int>(std::llround(num));
+    return emb::saturating_cast<Int>(std::llround(x));
   }
 }
 
 // ---- quantize ----
 template<std::integral Int, typename Step, std::floating_point Float>
   requires requires { Step::num; Step::den; }
-constexpr Int quantize(Float num) {
+constexpr Int quantize(Float x) {
   static_assert(Step::num > 0, "Step must be a positive ratio");
   constexpr Float scale = static_cast<Float>(Step::den)
                         / static_cast<Float>(Step::num);
-  return saturate_round<Int>(num * scale);
+  return saturate_round<Int>(x * scale);
 }
 
 // ---- dequantize ----
 template<typename Step, std::floating_point Float = float, std::integral Int>
   requires requires { Step::num; Step::den; }
-constexpr Float dequantize(Int num) {
+constexpr Float dequantize(Int n) {
   static_assert(Step::num > 0, "Step must be a positive ratio");
   constexpr Float step = static_cast<Float>(Step::num)
                        / static_cast<Float>(Step::den);
-  return static_cast<Float>(num) * step;
+  return static_cast<Float>(n) * step;
 }
 
 // -----------------------------------------------------------------------------
@@ -240,34 +240,34 @@ constexpr T to_rpm(T w, P p) {
 }
 
 template<std::floating_point T>
-constexpr T norm2pi(T v) {
+constexpr T norm2pi(T x) {
   constexpr T two_pi = 2 * std::numbers::pi_v<T>;
-  v = emb::fmod(v, two_pi);
-  if (v < 0) {
-    v += two_pi;
+  x = emb::fmod(x, two_pi);
+  if (x < 0) {
+    x += two_pi;
   }
-  return v;
+  return x;
 }
 
 template<std::floating_point T>
-constexpr T normpi(T v) {
-  return norm2pi(v + std::numbers::pi_v<T>) - std::numbers::pi_v<T>;
+constexpr T normpi(T x) {
+  return norm2pi(x + std::numbers::pi_v<T>) - std::numbers::pi_v<T>;
 }
 
 template<std::floating_point T>
-constexpr T norm2pi_fast(T v) {
+constexpr T norm2pi_fast(T x) {
   constexpr T two_pi = 2 * std::numbers::pi_v<T>;
   constexpr T inv_two_pi = 1 / (2 * std::numbers::pi_v<T>);
 
-  T norm = v * inv_two_pi;
+  T norm = x * inv_two_pi;
   norm -= static_cast<T>(static_cast<std::int32_t>(norm) - (norm < T{0}));
   if (norm >= T{1}) norm -= T{1};
   return norm * two_pi;
 }
 
 template<std::floating_point T>
-constexpr T normpi_fast(T v) {
-  return norm2pi_fast(v + std::numbers::pi_v<T>) - std::numbers::pi_v<T>;
+constexpr T normpi_fast(T x) {
+  return norm2pi_fast(x + std::numbers::pi_v<T>) - std::numbers::pi_v<T>;
 }
 
 } // namespace emb
