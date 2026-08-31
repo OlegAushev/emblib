@@ -12,6 +12,19 @@ struct typelist {
   static constexpr std::size_t size = sizeof...(Ts);
 };
 
+// ==== is_typelist ====
+template<typename T>
+struct is_typelist : std::false_type {};
+
+template<typename... Ts>
+struct is_typelist<typelist<Ts...>> : std::true_type {};
+
+template<typename T>
+inline constexpr bool is_typelist_v = is_typelist<T>::value;
+
+template<typename T>
+concept some_typelist = is_typelist_v<T>;
+
 // ==== size ====
 template<typename T>
 struct typelist_size;
