@@ -12,7 +12,7 @@ namespace emb {
 namespace foc {
 
 inline std::array<emb::unsigned_pu_f32, 3>
-calculate_svpwm(vec_polar v_s, float v_dc) {
+calculate_svpwm(voltage_polar v_s, float v_dc) {
   v_s.theta = norm2pi(v_s.theta);
   v_s.mag = std::clamp<float>(v_s.mag, 0, v_dc / std::numbers::sqrt3_v<float>);
 
@@ -75,12 +75,12 @@ calculate_svpwm(vec_polar v_s, float v_dc) {
 }
 
 inline std::array<emb::unsigned_pu_f32, 3>
-calculate_svpwm_v2(std::array<float, 3> const& Vs, float Vdc) {
+calculate_svpwm_v2(voltage_abc const& Vs, float Vdc) {
   // normalization: [−1, +1]
   float const inv = 2.f / Vdc;
-  float const Va = Vs[0] * inv;
-  float const Vb = Vs[1] * inv;
-  float const Vc = Vs[2] * inv;
+  float const Va = Vs.a * inv;
+  float const Vb = Vs.b * inv;
+  float const Vc = Vs.c * inv;
 
   auto const [Vmin, Vmax] = std::minmax({Va, Vb, Vc});
 
@@ -101,7 +101,7 @@ private:
 public:
   constexpr svpwm(float Vdc) : Vdc_(Vdc) {}
 
-  std::array<unsigned_pu_f32, 3> operator()(vec_polar V) const {
+  std::array<unsigned_pu_f32, 3> operator()(voltage_polar V) const {
     return calculate_svpwm(V, Vdc_);
   }
 };

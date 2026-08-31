@@ -10,16 +10,14 @@ namespace emb {
 namespace foc {
 
 inline std::array<emb::unsigned_pu_f32, 3>
-calculate_sinpwm(vec_ab v_s, float v_dc) {
-  std::array<float, 3> voltages = invclarke_transform(v_s);
+calculate_sinpwm(voltage_ab v_s, float v_dc) {
+  voltage_abc const v = invclarke_transform(v_s);
   float const voltage_base = v_dc / 1.5f;
-  std::array<emb::unsigned_pu_f32, 3> duty_cycles;
-
-  for (auto i = 0uz; i < 3; ++i) {
-    duty_cycles[i] = emb::unsigned_pu_f32(voltages[i] / voltage_base);
-  }
-
-  return duty_cycles;
+  return {
+      emb::unsigned_pu_f32(v.a / voltage_base),
+      emb::unsigned_pu_f32(v.b / voltage_base),
+      emb::unsigned_pu_f32(v.c / voltage_base)
+  };
 }
 
 } // namespace foc

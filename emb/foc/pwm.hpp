@@ -74,7 +74,7 @@ struct dpwmmax {
 
 template<typename Mode>
 constexpr std::array<emb::unsigned_pu_f32, 3>
-modulate(std::array<float, 3> const& Vs, float Vdc) {
+modulate(voltage_abc const& Vs, float Vdc) {
   if (Vdc <= 0.f) {
     return {
         unsigned_pu_f32{0.5f},
@@ -85,9 +85,9 @@ modulate(std::array<float, 3> const& Vs, float Vdc) {
 
   // normalization: [−1, +1]
   float const inv = 2.f / Vdc;
-  float const Va = Vs[0] * inv;
-  float const Vb = Vs[1] * inv;
-  float const Vc = Vs[2] * inv;
+  float const Va = Vs.a * inv;
+  float const Vb = Vs.b * inv;
+  float const Vc = Vs.c * inv;
 
   // common-mode offset
   float const Voff = Mode::offset(Va, Vb, Vc);

@@ -19,7 +19,7 @@ public:
   dq_compensation(some_motor auto const& motor, emb::units::eradps_f32 speed)
       : Ld_(motor.Ld), Lq_(motor.Lq), Psi_(motor.Psi), omega_(speed.value()) {}
 
-  constexpr vec_dq operator()(vec_dq const& Imeas) const {
+  constexpr voltage_dq operator()(current_dq const& Imeas) const {
     return {
         .d = -omega_ * Lq_ * Imeas.q,
         .q = omega_ * (Ld_ * Imeas.d + Psi_),
@@ -37,10 +37,10 @@ public:
   dq_control(dq_controller_type& Id, dq_controller_type& Iq)
       : Id_(Id), Iq_(Iq) {}
 
-  constexpr vec_dq operator()(
-      vec_dq const& Imeas,
-      vec_dq Iref,
-      vec_dq Vcomp,
+  constexpr voltage_dq operator()(
+      current_dq const& Imeas,
+      current_dq Iref,
+      voltage_dq Vcomp,
       float Vdc,
       emb::unsigned_pu_f32 Vd_limit_factor
   ) {
