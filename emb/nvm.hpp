@@ -1,5 +1,11 @@
 #pragma once
 
+// NVM parameter registry. A layout is a constexpr array of {name, default}
+// entries over a closed typelist of value types; each entry owns one storage
+// cell laid out as hash | value | crc. The registry reads and writes cells by
+// name (or index) with hash and CRC checks, on any byte-addressed backend
+// satisfying some_storage.
+
 #include <emb/meta.hpp>
 
 #include <algorithm>
@@ -9,7 +15,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <expected>
+#include <string_view>
 #include <type_traits>
+#include <variant>
 
 namespace emb {
 namespace nvm {
@@ -23,6 +31,8 @@ enum class error {
   crc_mismatch,
 };
 
+// Structural string for naming a parameter as a template argument:
+// registry::get<"motor.p">().
 template<std::size_t N>
 struct parameter_name {
   char data[N]{};
@@ -35,13 +45,8 @@ struct parameter_name {
     return N - 1;
   }
 
-  template<std::size_t M>
-  constexpr bool operator==(parameter_name<M> const& other) const {
-    if (N != M) return false;
-    for (auto i = 0uz; i < N; ++i) {
-      if (data[i] != other.data[i]) return false;
-    }
-    return true;
+  constexpr std::string_view view() const {
+    return {data, N - 1};
   }
 };
 
@@ -53,20 +58,10 @@ parameter_name(char const (&)[N]) -> parameter_name<N>;
 struct fnv1a_32 {
   using type = std::uint32_t;
 
-  template<std::size_t N>
-  static consteval type operator()(parameter_name<N> const& s) {
+  static constexpr type operator()(std::string_view s) {
     type h = 0x811C9DC5u;
-    for (auto i = 0uz; i < N - 1; ++i) {
-      h ^= static_cast<std::uint8_t>(s.data[i]);
-      h *= 0x01000193u;
-    }
-    return h;
-  }
-
-  static constexpr type operator()(char const* s) {
-    type h = 0x811C9DC5u;
-    for (; *s; ++s) {
-      h ^= static_cast<std::uint8_t>(*s);
+    for (char c : s) {
+      h ^= static_cast<std::uint8_t>(c);
       h *= 0x01000193u;
     }
     return h;
@@ -103,7 +98,7 @@ private:
 
 template<typename F>
 concept some_hash_fn = requires { typename F::type; }
-                    && requires(F f, char const* s) {
+                    && requires(F f, std::string_view s) {
                          { f(s) } -> std::same_as<typename F::type>;
                        };
 
@@ -113,22 +108,85 @@ concept some_crc_fn = requires { typename F::type; }
                         { f(h, v) } -> std::same_as<typename F::type>;
                       };
 
+// -- Value types --
+
+namespace detail {
+
+template<typename... Ts>
+consteval bool storable(typelist<Ts...>) {
+  return sizeof...(Ts) > 0
+      && (std::is_trivially_copyable_v<Ts> && ...)
+      && typelist_unique<typelist<Ts...>>;
+}
+
+// Message for the unknown-name static_assert: names the offending parameter
+// in the error line itself instead of leaving it buried in the instantiation
+// chain.
+template<parameter_name Name>
+consteval auto unknown_parameter_message() {
+  constexpr std::string_view prefix = "Unknown parameter '";
+  std::array<char, prefix.size() + Name.size() + 1> msg{};
+  auto it = std::copy_n(prefix.data(), prefix.size(), msg.begin());
+  it = std::copy_n(Name.data, Name.size(), it);
+  *it = '\'';
+  return msg;
+}
+
+} // namespace detail
+
+// The closed set of value types a layout may hold: an emb::typelist of
+// distinct trivially copyable types. Closed because a homogeneous array
+// cannot carry heterogeneous defaults; each entry stores its default in a
+// variant over the set, and the alternative index is what recovers the
+// parameter's static type at compile time.
+template<typename T>
+concept some_value_types = some_typelist<T> && detail::storable(T{});
+
 // -- Parameter --
 
-template<parameter_name Name, auto Default>
-struct parameter {
-  using value_type = std::remove_cv_t<decltype(Default)>;
-  static constexpr auto name = Name;
-  static constexpr value_type default_value = Default;
-};
+// One layout entry.
+template<some_value_types Types>
+struct parameter;
 
-template<typename P>
-concept some_parameter = requires {
-  typename P::value_type;
-  requires std::same_as<
-      std::remove_cv_t<decltype(P::default_value)>,
-      typename P::value_type>;
-  P::name.size();
+template<typename... Ts>
+struct parameter<typelist<Ts...>> {
+  // The default is a member with a converting constructor rather than a
+  // constructor of parameter itself, and parameter stays an aggregate: an
+  // aggregate member's initializer is an expression with a source location,
+  // so a wrong default type is reported at the offending entry, not at the
+  // whole list. Exactly the listed types — no promotions, so `0.05` where
+  // `0.05f` was meant is an error, not a silently double-typed parameter.
+  struct default_type {
+    std::variant<Ts...> value;
+
+    template<same_as_any<Ts...> T>
+    constexpr default_type(T v) : value(std::in_place_type<T>, v) {}
+
+    template<typename T>
+    constexpr default_type(T) = delete(
+        "NVM parameter default must have exactly one of the layout's value "
+        "types: a literal needs its suffix (0.05f, not 0.05) and an integer "
+        "its type (std::int32_t{1}, not 1)"
+    );
+
+    constexpr std::size_t index() const {
+      return value.index();
+    }
+  };
+
+  std::string_view name;
+  default_type default_value;
+
+  constexpr std::size_t type_index() const {
+    return default_value.index();
+  }
+
+  constexpr std::size_t size() const {
+    static constexpr std::array<std::size_t, sizeof...(Ts)> sizes{
+        sizeof(Ts)...
+    };
+    return sizes[default_value.index()];
+  }
 };
 
 // -- Layout --
@@ -137,76 +195,64 @@ concept some_parameter = requires {
 // evaluation with this name in the diagnostic.
 void parameter_index_out_of_range();
 
-template<some_hash_fn HashFn, some_crc_fn CrcFn, some_parameter... Params>
+template<
+    some_hash_fn HashFn,
+    some_crc_fn CrcFn,
+    some_value_types Types,
+    std::size_t N>
 struct basic_layout {
   using hash_fn = HashFn;
   using crc_fn = CrcFn;
   using hash_type = typename HashFn::type;
   using crc_type = typename CrcFn::type;
-  static constexpr std::size_t count = sizeof...(Params);
+  using types = Types;
+  using parameter_type = parameter<Types>;
+
+  static constexpr std::size_t count = N;
+  static constexpr std::size_t npos = SIZE_MAX;
   static constexpr std::size_t overhead = sizeof(hash_type) + sizeof(crc_type);
 
-  static constexpr std::array<hash_type, count> hashes{
-      HashFn{}(Params::name)...
-  };
+  std::array<parameter_type, N> parameters;
 
-  static constexpr std::array<std::size_t, count> sizes{
-      sizeof(typename Params::value_type)...
-  };
-
-  std::size_t base = 0;
-
-  template<parameter_name Name>
-  static consteval std::size_t index_of() {
-    constexpr auto key = HashFn{}(Name);
-    for (auto i = 0uz; i < count; ++i) {
-      if (hashes[i] == key) return i;
-    }
-    return SIZE_MAX;
+  // Lookups are consteval members over the object's own data; the typed
+  // accessors (value_type_at, default_at) live outside the class because a
+  // member function cannot read its object in a constant expression (`this`
+  // is not usable there), yet the alternative index must be a constant to
+  // name the type.
+  consteval std::size_t index_of(std::string_view name) const {
+    for (auto i = 0uz; i < count; ++i)
+      if (parameters[i].name == name) return i;
+    return npos;
   }
 
-  template<parameter_name Name>
-  static consteval std::size_t checked_index_of() {
-    constexpr std::size_t i = index_of<Name>();
-    static_assert(i != SIZE_MAX, "Unknown parameter");
-    if constexpr (i != SIZE_MAX) {
-      // index_of matches by hash only; reject a foreign name that merely
-      // collides with a layout entry's hash.
-      static_assert(
-          parameter_at<i>::name == Name,
-          "Parameter name hash collision"
-      );
-    }
-    return i;
+  consteval hash_type hash_at(std::size_t index) const {
+    if (index >= count) parameter_index_out_of_range();
+    return HashFn{}(parameters[index].name);
   }
 
-  template<parameter_name Name>
-  using parameter_of = nth_type_t<checked_index_of<Name>(), Params...>;
-
-  template<std::size_t I>
-  using parameter_at = nth_type_t<I, Params...>;
-
+  // Offset of the entry's cell from the start of the layout; where the layout
+  // sits in storage is the registry's business (its Base parameter).
   consteval std::size_t offset_of(std::size_t index) const {
     if (index >= count) parameter_index_out_of_range();
-    std::size_t off = base;
+    std::size_t off = 0;
     for (auto i = 0uz; i < index; ++i)
-      off += sizes[i] + overhead;
+      off += parameters[i].size() + overhead;
     return off;
   }
 
-  template<parameter_name Name>
-  consteval std::size_t offset_of() const {
-    return offset_of(checked_index_of<Name>());
-  }
-
-  static consteval std::size_t size() {
+  consteval std::size_t size() const {
     std::size_t s = 0;
     for (auto i = 0uz; i < count; ++i)
-      s += sizes[i] + overhead;
+      s += parameters[i].size() + overhead;
     return s;
   }
 
-  static consteval bool names_unique() {
+  // Stored hashes identify cells at runtime, so they — not just the names —
+  // must be unique.
+  consteval bool names_unique() const {
+    std::array<hash_type, N> hashes{};
+    for (auto i = 0uz; i < count; ++i)
+      hashes[i] = hash_at(i);
     for (auto i = 0uz; i < count; ++i)
       for (auto j = i + 1; j < count; ++j)
         if (hashes[i] == hashes[j]) return false;
@@ -214,8 +260,33 @@ struct basic_layout {
   }
 };
 
-template<some_parameter... Params>
-using layout = basic_layout<fnv1a_32, crc32, Params...>;
+template<some_value_types Types, std::size_t N>
+using layout = basic_layout<fnv1a_32, crc32, Types, N>;
+
+// make_layout<types>({{"a", 1.0f}, {"b", true}, ...}): N is deduced from the
+// braced list, each element converts through parameter's constructor.
+template<
+    some_value_types Types,
+    some_hash_fn HashFn = fnv1a_32,
+    some_crc_fn CrcFn = crc32,
+    std::size_t N>
+consteval auto make_layout(parameter<Types> const (&parameters)[N])
+    -> basic_layout<HashFn, CrcFn, Types, N> {
+  return {std::to_array(parameters)};
+}
+
+// Static type and default of the I-th entry of a layout object.
+template<auto& Layout, std::size_t I>
+using value_type_at = typelist_at_t<
+    typename std::remove_cvref_t<decltype(Layout)>::types,
+    Layout.parameters[I].type_index()>;
+
+template<auto& Layout, std::size_t I>
+consteval auto default_at() -> value_type_at<Layout, I> {
+  return std::get<value_type_at<Layout, I>>(
+      Layout.parameters[I].default_value.value
+  );
+}
 
 // -- Storage backend concept --
 
@@ -234,7 +305,8 @@ concept some_storage = requires {
 
 // -- Registry --
 
-template<some_storage Storage, auto& Layout>
+// Binds a layout to a storage backend at byte offset Base.
+template<some_storage Storage, auto& Layout, std::size_t Base = 0>
 class registry {
   Storage& storage_;
 
@@ -244,36 +316,44 @@ class registry {
   using crc_fn = typename layout_type::crc_fn;
   using addr_type = typename Storage::addr_type;
 
-  template<parameter_name Name>
-  static constexpr std::size_t index =
-      layout_type::template checked_index_of<Name>();
-
 public:
-  // Member struct rather than a plain alias chain: alias templates are
-  // transparent to name mangling, so spelling the dependent value type
-  // through them in get/set signatures would expand the whole parameter pack
-  // into every mangled symbol (~150 bytes per parameter). A nested class
-  // mangles by name, keeping symbols O(name), not O(layout).
+  // Per-name facts of one layout entry. A nested class rather than alias
+  // templates: aliases are transparent to name mangling, so spelling the
+  // value type through value_type_at<> in get/set signatures would embed
+  // the lookup expression — the layout object, its array type, the whole
+  // typelist — into every mangled symbol, and binutils cannot even
+  // demangle those. A nested class mangles by name, keeping symbols O(name).
   template<parameter_name Name>
-  struct traits {
-    using parameter = typename layout_type::template parameter_of<Name>;
-    using value_type = typename parameter::value_type;
+  struct parameter {
+    static constexpr std::size_t lookup = Layout.index_of(Name.view());
+    static_assert(
+        lookup != layout_type::npos,
+        detail::unknown_parameter_message<Name>()
+    );
+    // Clamped so a wrong name produces the static_assert alone: with npos
+    // fed into the accessors below, GCC adds an out-of-bounds std::array
+    // error and a "no matching function for get" on top of it.
+    static constexpr std::size_t index = lookup == layout_type::npos ? 0
+                                                                     : lookup;
+
+    static constexpr auto name = Name;
+    using value_type = value_type_at<Layout, index>;
+    static constexpr value_type default_value = default_at<Layout, index>();
   };
 
   template<parameter_name Name>
-  using parameter = typename traits<Name>::parameter;
+  using value_type = typename parameter<Name>::value_type;
 
-  template<parameter_name Name>
-  using value_type = typename traits<Name>::value_type;
-
+  static constexpr std::size_t base = Base;
   static constexpr std::size_t size = Layout.size();
 
   static_assert(
       Layout.names_unique(),
       "Duplicate or hash-colliding parameter names"
   );
+
   static_assert(
-      Layout.base + Layout.size() <= Storage::capacity,
+      base + size <= Storage::capacity,
       "Layout does not fit in storage"
   );
 
@@ -281,75 +361,70 @@ public:
 
   // Opaque ticket to one layout cell: lets callers build their own
   // per-value-type code paths (a table of parameters, a protocol adapter)
-  // without re-specializing per name. Constructible only via ref<Name>(), so
-  // every instance went through the layout's compile-time name checks and no
-  // address outside the layout can be forged; the cell scheme stays private.
+  // without re-specializing per name. Constructible only via ref<Name>() /
+  // ref_at<I>(), so every instance went through the layout's compile-time
+  // checks and no address outside the layout can be forged; the cell scheme
+  // stays private.
   template<typename T>
   class parameter_ref {
-    addr_type hash_loc_;
     addr_type val_loc_;
-    addr_type crc_loc_;
     hash_type hash_;
 
-    constexpr parameter_ref(
-        addr_type hash_loc, addr_type val_loc, addr_type crc_loc,
-        hash_type hash
-    )
-        : hash_loc_(hash_loc), val_loc_(val_loc), crc_loc_(crc_loc),
-          hash_(hash) {}
+    constexpr parameter_ref(addr_type val_loc, hash_type hash)
+        : val_loc_(val_loc), hash_(hash) {}
 
     friend class registry;
   };
 
+  template<std::size_t I>
+  static consteval auto ref_at() -> parameter_ref<value_type_at<Layout, I>> {
+    constexpr auto val_loc = base + Layout.offset_of(I) + sizeof(hash_type);
+    return {val_loc, Layout.hash_at(I)};
+  }
+
   template<parameter_name Name>
   static consteval auto ref() -> parameter_ref<value_type<Name>> {
-    constexpr auto hash_loc = Layout.offset_of(index<Name>);
-    constexpr auto val_loc = hash_loc + sizeof(hash_type);
-    constexpr auto crc_loc = val_loc + sizeof(value_type<Name>);
-    return {hash_loc, val_loc, crc_loc, layout_type::hashes[index<Name>]};
+    return ref_at<parameter<Name>::index>();
   }
 
   template<typename T>
   constexpr auto get(parameter_ref<T> p) -> std::expected<T, error> {
-    return get_impl<T>(p.hash_loc_, p.val_loc_, p.crc_loc_, p.hash_);
+    return get_impl<T>(p.val_loc_, p.hash_);
   }
 
   template<typename T>
   constexpr auto set(parameter_ref<T> p, T const& val)
       -> std::expected<void, error> {
-    return set_impl<T>(p.hash_loc_, p.val_loc_, p.crc_loc_, p.hash_, val);
+    return set_impl<T>(p.val_loc_, p.hash_, val);
   }
 
   template<parameter_name Name>
   constexpr auto get()
-      -> std::expected<typename traits<Name>::value_type, error> {
+      -> std::expected<typename parameter<Name>::value_type, error> {
     return get(ref<Name>());
   }
 
   template<parameter_name Name>
-  constexpr auto set(typename traits<Name>::value_type const& val)
+  constexpr auto set(typename parameter<Name>::value_type const& val)
       -> std::expected<void, error> {
     return set(ref<Name>(), val);
   }
 
   template<parameter_name Name>
   constexpr auto reset() {
-    return set<Name>(parameter<Name>::default_value);
+    return set(ref<Name>(), parameter<Name>::default_value);
   }
 
-  // Iterates by index instead of expanding the parameter pack in a lambda:
-  // a lambda specialized on Params... would emit one more pack-sized symbol.
   constexpr auto reset_all() -> std::expected<void, error> {
     std::expected<void, error> r{};
     unroll<layout_type::count>([&]<std::size_t I>() {
-      using P = typename layout_type::template parameter_at<I>;
-      if (r) r = this->template reset<P::name>();
+      if (r) r = set(ref_at<I>(), default_at<Layout, I>());
     });
     return r;
   }
 
   auto erase() -> std::expected<void, error> {
-    for (std::size_t off = Layout.base; off < Layout.base + size; ++off) {
+    for (std::size_t off = base; off < base + size; ++off) {
       auto r = storage_.template write<std::byte>(
           typename Storage::addr_type(off),
           std::byte{0}
@@ -361,12 +436,11 @@ public:
 
 private:
   template<typename T>
-  [[gnu::noinline]] constexpr auto get_impl(
-      addr_type hash_loc,
-      addr_type val_loc,
-      addr_type crc_loc,
-      hash_type hash
-  ) -> std::expected<T, error> {
+  [[gnu::noinline]] constexpr auto get_impl(addr_type val_loc, hash_type hash)
+      -> std::expected<T, error> {
+    auto const hash_loc = addr_type(val_loc - sizeof(hash_type));
+    auto const crc_loc = addr_type(val_loc + sizeof(T));
+
     auto h = storage_.template read<hash_type>(hash_loc);
     if (!h) return std::unexpected(h.error());
     if (*h != hash) return std::unexpected(error::hash_mismatch);
@@ -384,13 +458,12 @@ private:
   }
 
   template<typename T>
-  [[gnu::noinline]] constexpr auto set_impl(
-      addr_type hash_loc,
-      addr_type val_loc,
-      addr_type crc_loc,
-      hash_type hash,
-      T const& val
-  ) -> std::expected<void, error> {
+  [[gnu::noinline]] constexpr auto
+  set_impl(addr_type val_loc, hash_type hash, T const& val)
+      -> std::expected<void, error> {
+    auto const hash_loc = addr_type(val_loc - sizeof(hash_type));
+    auto const crc_loc = addr_type(val_loc + sizeof(T));
+
     auto r1 = storage_.template write<hash_type>(hash_loc, hash);
     if (!r1) return r1;
 

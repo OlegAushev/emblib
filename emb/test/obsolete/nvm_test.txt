@@ -3,8 +3,7 @@
 #include <cassert>
 #include <cstring>
 
-#include <emb/meta/typelist.hpp>
-#include <emb/nvm.hpp>
+#include <emb/nvm_obsolete.hpp>
 #include <emb/units.hpp>
 
 namespace {
@@ -39,17 +38,14 @@ struct backend {
 
 // -- Layout --
 
-using value_types =
-    typelist<std::int32_t, float, std::array<float, 3>, units::deg_f32>;
+inline constexpr nvm::layout<
+    nvm::parameter<"motor.pole_pairs", std::int32_t{1}>,
+    nvm::parameter<"motor.R", 0.050f>,
+    nvm::parameter<"gains", std::array{100.f, 200.f, 300.f}>,
+    nvm::parameter<"angle.offset", units::deg_f32{15.0f}>>
+    nvm_layout{.base = 0};
 
-inline constexpr auto nvm_layout = nvm::make_layout<value_types>({
-    {"motor.pole_pairs", std::int32_t{1}},
-    {"motor.R", 0.050f},
-    {"gains", std::array{100.f, 200.f, 300.f}},
-    {"angle.offset", units::deg_f32{15.0f}},
-});
-
-using registry_type = nvm::registry<backend, nvm_layout, /*base=*/64>;
+using registry_type = nvm::registry<backend, nvm_layout>;
 
 static_assert(
     std::same_as<registry_type::value_type<"motor.pole_pairs">, std::int32_t>
@@ -116,9 +112,7 @@ static constexpr bool test_hash_mismatch() {
   assert(motor_p.has_value() && *motor_p == 10);
 
   // corrupt the hash byte of motor.pole_pairs frame
-  constexpr auto off =
-      registry_type::base
-      + nvm_layout.offset_of(nvm_layout.index_of("motor.pole_pairs"));
+  constexpr auto off = nvm_layout.offset_of<"motor.pole_pairs">();
   storage.mem[off] ^= 0xFF;
 
   motor_p = settings.get<"motor.pole_pairs">();
@@ -138,9 +132,7 @@ static constexpr bool test_crc_mismatch() {
   assert(motor_R.has_value() && *motor_R == 0.42f);
 
   // corrupt a value byte (hash stays valid, CRC will mismatch)
-  constexpr auto off =
-      registry_type::base
-      + nvm_layout.offset_of(nvm_layout.index_of("motor.R"));
+  constexpr auto off = nvm_layout.offset_of<"motor.R">();
   storage.mem[off + sizeof(nvm::fnv1a_32::type)] ^=
       0xFF; // corrupt first byte of value
 
