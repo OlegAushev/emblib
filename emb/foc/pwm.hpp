@@ -73,13 +73,13 @@ struct dpwmmax {
 } // namespace pwm_mode
 
 template<typename Mode>
-constexpr std::array<emb::unsigned_pu_f32, 3>
+constexpr three_phase<emb::unsigned_pu_f32>
 modulate(voltage_abc const& Vs, float Vdc) {
   if (Vdc <= 0.f) {
     return {
-        unsigned_pu_f32{0.5f},
-        unsigned_pu_f32{0.5f},
-        unsigned_pu_f32{0.5f}
+        .a = unsigned_pu_f32{0.5f},
+        .b = unsigned_pu_f32{0.5f},
+        .c = unsigned_pu_f32{0.5f}
     };
   }
 
@@ -93,11 +93,11 @@ modulate(voltage_abc const& Vs, float Vdc) {
   float const Voff = Mode::offset(Va, Vb, Vc);
 
   // duty cycles
-  std::array<emb::unsigned_pu_f32, 3> duty;
-  duty[0] = emb::unsigned_pu_f32{(Va + Voff + 1.f) * 0.5f};
-  duty[1] = emb::unsigned_pu_f32{(Vb + Voff + 1.f) * 0.5f};
-  duty[2] = emb::unsigned_pu_f32{(Vc + Voff + 1.f) * 0.5f};
-  return duty;
+  return {
+      .a = emb::unsigned_pu_f32{(Va + Voff + 1.f) * 0.5f},
+      .b = emb::unsigned_pu_f32{(Vb + Voff + 1.f) * 0.5f},
+      .c = emb::unsigned_pu_f32{(Vc + Voff + 1.f) * 0.5f}
+  };
 }
 
 } // namespace foc

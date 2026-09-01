@@ -9,14 +9,14 @@
 namespace emb {
 namespace foc {
 
-inline std::array<emb::unsigned_pu_f32, 3>
+inline three_phase<emb::unsigned_pu_f32>
 calculate_sinpwm(voltage_ab v_s, float v_dc) {
   voltage_abc const v = invclarke_transform(v_s);
   float const voltage_base = v_dc / 1.5f;
   return {
-      emb::unsigned_pu_f32(v.a / voltage_base),
-      emb::unsigned_pu_f32(v.b / voltage_base),
-      emb::unsigned_pu_f32(v.c / voltage_base)
+      .a = emb::unsigned_pu_f32(v.a / voltage_base),
+      .b = emb::unsigned_pu_f32(v.b / voltage_base),
+      .c = emb::unsigned_pu_f32(v.c / voltage_base)
   };
 }
 

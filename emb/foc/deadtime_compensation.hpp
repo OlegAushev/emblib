@@ -9,33 +9,35 @@
 namespace emb {
 namespace foc {
 
-inline std::array<unsigned_pu_f32, 3> compensate_deadtime_v1(
-    std::array<unsigned_pu_f32, 3> const& dutycycles,
+inline three_phase<unsigned_pu_f32> compensate_deadtime_v1(
+    three_phase<unsigned_pu_f32> const& dutycycles,
     current_abc const& currents,
     float current_threshold,
     float pwm_period,
     float deadtime
 ) {
-  std::array<unsigned_pu_f32, 3> dc;
   emb::unsigned_pu_f32 const deadtime_dutycycle(deadtime / pwm_period);
-  std::array<float, 3> const i_ph{currents.a, currents.b, currents.c};
 
-  for (auto i = 0uz; i < 3; ++i) {
-    if (i_ph[i] > current_threshold) {
-      dc[i] = dutycycles[i] + deadtime_dutycycle;
-    } else if (i_ph[i] < -current_threshold) {
-      dc[i] = dutycycles[i] - deadtime_dutycycle;
+  auto const compensate = [&](unsigned_pu_f32 duty, float current) {
+    if (current > current_threshold) {
+      return duty + deadtime_dutycycle;
+    } else if (current < -current_threshold) {
+      return duty - deadtime_dutycycle;
     } else {
-      dc[i] = dutycycles[i];
+      return duty;
     }
-  }
+  };
 
-  return dc;
+  return {
+      .a = compensate(dutycycles.a, currents.a),
+      .b = compensate(dutycycles.b, currents.b),
+      .c = compensate(dutycycles.c, currents.c)
+  };
 }
 
 /// @brief DOI: 10.4028/www.scientific.net/AMM.416-417.536
-inline std::array<unsigned_pu_f32, 3> compensate_deadtime_v2(
-    std::array<unsigned_pu_f32, 3> const& dutycycles,
+inline three_phase<unsigned_pu_f32> compensate_deadtime_v2(
+    three_phase<unsigned_pu_f32> const& dutycycles,
     current_abc const& currents,
     float current_threshold,
     float pwm_period,
@@ -44,7 +46,7 @@ inline std::array<unsigned_pu_f32, 3> compensate_deadtime_v2(
 #ifdef __c28x__
   return dutycycles;
 #else
-  auto dc = dutycycles;
+  std::array<unsigned_pu_f32, 3> dc{dutycycles.a, dutycycles.b, dutycycles.c};
   emb::unsigned_pu_f32 const deadtime_dutycycle(deadtime / pwm_period);
 
   std::array<float, 3> const i_ph{currents.a, currents.b, currents.c};
@@ -61,7 +63,7 @@ inline std::array<unsigned_pu_f32, 3> compensate_deadtime_v2(
     dc[std::size_t(idx)] = dc[std::size_t(idx)] - 2 * deadtime_dutycycle;
   }
 
-  return dc;
+  return {.a = dc[0], .b = dc[1], .c = dc[2]};
 #endif
 }
 
