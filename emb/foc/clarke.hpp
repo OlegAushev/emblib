@@ -2,7 +2,6 @@
 
 #include <emb/foc/types.hpp>
 
-#include <array>
 #include <numbers>
 
 namespace emb {
@@ -16,22 +15,6 @@ struct clarke_transform_fn {
         .beta = (arg.b - arg.c) * std::numbers::inv_sqrt3_v<float>
     };
   }
-
-  // template<typename Q>
-  // constexpr vec_ab<Q> operator()(float a, float b, float c) const {
-  //   return {
-  //       .alpha = a,
-  //       .beta = (b - c) * std::numbers::inv_sqrt3_v<float>
-  //   };
-  // }
-
-  // template<typename Q>
-  // constexpr vec_ab<Q> operator()(float a, float b) const {
-  //   return {
-  //       .alpha = a,
-  //       .beta = (a + 2 * b) * std::numbers::inv_sqrt3_v<float>
-  //   };
-  // }
 };
 
 inline constexpr clarke_transform_fn clarke_transform{};
