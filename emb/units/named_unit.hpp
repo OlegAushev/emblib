@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <concepts>
 #include <type_traits>
 
@@ -112,6 +113,11 @@ operator/(named_unit<T, Unit> lhs, named_unit<T, Unit> rhs) {
 template<std::floating_point T, typename Unit>
 constexpr named_unit<T, Unit> operator-(named_unit<T, Unit> v) {
   return named_unit<T, Unit>(-v.value());
+}
+
+template<std::floating_point T, typename Unit>
+constexpr named_unit<T, Unit> abs(named_unit<T, Unit> v) {
+  return named_unit<T, Unit>(std::abs(v.value()));
 }
 
 template<typename T>

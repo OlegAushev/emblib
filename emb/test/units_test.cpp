@@ -58,6 +58,12 @@ constexpr bool test_units_conversion() {
   [[maybe_unused]] sec_f32 per{0.0001f};
   assert(1 / per == hz_f32(1 / 0.0001f));
 
+  // abs
+  assert(abs(rpm_f32{-100.0f}) == rpm_f32{100.0f});
+  assert(abs(rpm_f32{100.0f}) == rpm_f32{100.0f});
+  assert(abs(rpm_f32{0.0f}) == rpm_f32{0.0f});
+  assert(abs(deg_f32{-90.0f}) > deg_f32{45.0f});
+
   return true;
 }
 
