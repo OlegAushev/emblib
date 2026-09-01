@@ -126,6 +126,14 @@ public:
       return values_type{std::get<I>(cores_).value()...};
     }(std::make_index_sequence<channel_count>{});
   }
+
+  template<typename V>
+  constexpr V values() const
+  {
+    return [&]<std::size_t... I>(std::index_sequence<I...>) {
+      return V{std::get<I>(cores_).value()...};
+    }(std::make_index_sequence<channel_count>{});
+  }
 };
 
 // multichannel<Core, Core, ...>: N channels of one core type, for a channel
