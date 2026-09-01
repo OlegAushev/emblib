@@ -47,16 +47,17 @@ public:
   using value_type = typename first_type::value_type;
   using values_type = std::array<value_type, channel_count>;
   using sensor_category = immediate_tag;
-  using cores_type = std::conditional_t<
-      uniform_cores,
-      std::array<first_type, channel_count>,
-      std::tuple<Cores...>>;
+  using cores_type = std::conditional_t<uniform_cores,
+                                        std::array<first_type, channel_count>,
+                                        std::tuple<Cores...>>;
 private:
   cores_type cores_;
 
   template<typename... Args, std::size_t... I>
   constexpr multichannel(std::index_sequence<I...>, Args const&... args)
-      : cores_{((void)I, first_type(args...))...} {}
+      : cores_{((void)I, first_type(args...))...}
+  {
+  }
 public:
   constexpr multichannel() = default;
 
@@ -64,7 +65,9 @@ public:
   // independent per-channel gain/offset calibration.
   constexpr explicit multichannel(cores_type cores)
     requires(std::move_constructible<Cores> && ...)
-      : cores_(std::move(cores)) {}
+      : cores_(std::move(cores))
+  {
+  }
 
   // Broadcast construction: every channel's core is built from the same
   // arguments. Each channel still keeps its own independent state. Uniform
@@ -75,42 +78,50 @@ public:
           && (sizeof...(Args) > 0)
           && std::constructible_from<first_type, Args const&...>
   constexpr explicit multichannel(Args const&... args)
-      : multichannel(std::make_index_sequence<channel_count>{}, args...) {}
+      : multichannel(std::make_index_sequence<channel_count>{}, args...)
+  {
+  }
 
   template<std::size_t I>
-  constexpr core_type<I> const& core() const {
+  constexpr core_type<I> const& core() const
+  {
     return std::get<I>(cores_);
   }
 
   template<std::size_t I>
-  constexpr core_type<I>& core() {
+  constexpr core_type<I>& core()
+  {
     return std::get<I>(cores_);
   }
 
   constexpr first_type const& core(std::size_t channel) const
-    requires uniform_cores {
+    requires uniform_cores
+  {
     return cores_[channel];
   }
 
   constexpr first_type& core(std::size_t channel)
-    requires uniform_cores {
+    requires uniform_cores
+  {
     return cores_[channel];
   }
 
-  constexpr void submit(sample_type const& sample) {
-    unroll<channel_count>([&]<std::size_t I>() {
-      std::get<I>(cores_).submit(sample[I]);
-    });
+  constexpr void submit(sample_type const& sample)
+  {
+    unroll<channel_count>(
+        [&]<std::size_t I>() { std::get<I>(cores_).submit(sample[I]); });
   }
 
   // `channel` must be below channel_count.
-  constexpr value_type value(std::size_t channel) const {
+  constexpr value_type value(std::size_t channel) const
+  {
     return visit_at(cores_, channel, [](auto const& core) {
       return core.value();
     });
   }
 
-  constexpr values_type values() const {
+  constexpr values_type values() const
+  {
     return [&]<std::size_t... I>(std::index_sequence<I...>) {
       return values_type{std::get<I>(cores_).value()...};
     }(std::make_index_sequence<channel_count>{});
