@@ -9,40 +9,40 @@
 namespace emb {
 namespace foc {
 
-inline three_phase<unsigned_pu_f32> compensate_deadtime_v1(
-    three_phase<unsigned_pu_f32> const& dutycycles,
-    current_abc const& currents,
-    float current_threshold,
-    float pwm_period,
-    float deadtime
-) {
+inline three_phase<unsigned_pu_f32>
+compensate_deadtime_v1(three_phase<unsigned_pu_f32> const& dutycycles,
+                       current_abc const& currents,
+                       float current_threshold,
+                       float pwm_period,
+                       float deadtime)
+{
   emb::unsigned_pu_f32 const deadtime_dutycycle(deadtime / pwm_period);
 
   auto const compensate = [&](unsigned_pu_f32 duty, float current) {
     if (current > current_threshold) {
       return duty + deadtime_dutycycle;
-    } else if (current < -current_threshold) {
+    }
+    else if (current < -current_threshold) {
       return duty - deadtime_dutycycle;
-    } else {
+    }
+    else {
       return duty;
     }
   };
 
-  return {
-      .a = compensate(dutycycles.a, currents.a),
-      .b = compensate(dutycycles.b, currents.b),
-      .c = compensate(dutycycles.c, currents.c)
-  };
+  return {.a = compensate(dutycycles.a, currents.a),
+          .b = compensate(dutycycles.b, currents.b),
+          .c = compensate(dutycycles.c, currents.c)};
 }
 
 /// @brief DOI: 10.4028/www.scientific.net/AMM.416-417.536
-inline three_phase<unsigned_pu_f32> compensate_deadtime_v2(
-    three_phase<unsigned_pu_f32> const& dutycycles,
-    current_abc const& currents,
-    float current_threshold,
-    float pwm_period,
-    float deadtime
-) {
+inline three_phase<unsigned_pu_f32>
+compensate_deadtime_v2(three_phase<unsigned_pu_f32> const& dutycycles,
+                       current_abc const& currents,
+                       float current_threshold,
+                       float pwm_period,
+                       float deadtime)
+{
 #ifdef __c28x__
   return dutycycles;
 #else
@@ -58,7 +58,8 @@ inline three_phase<unsigned_pu_f32> compensate_deadtime_v2(
   if (*min + *max > 0) {
     auto const idx = std::distance(i_ph.begin(), max);
     dc[std::size_t(idx)] = dc[std::size_t(idx)] + 2 * deadtime_dutycycle;
-  } else if (*min + *max < 0) {
+  }
+  else if (*min + *max < 0) {
     auto const idx = std::distance(i_ph.begin(), min);
     dc[std::size_t(idx)] = dc[std::size_t(idx)] - 2 * deadtime_dutycycle;
   }

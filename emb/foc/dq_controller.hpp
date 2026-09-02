@@ -17,9 +17,12 @@ class dq_compensation {
   float omega_;
 public:
   dq_compensation(some_motor auto const& motor, emb::units::eradps_f32 speed)
-      : Ld_(motor.Ld), Lq_(motor.Lq), Psi_(motor.Psi), omega_(speed.value()) {}
+      : Ld_(motor.Ld), Lq_(motor.Lq), Psi_(motor.Psi), omega_(speed.value())
+  {
+  }
 
-  constexpr voltage_dq operator()(current_dq const& Imeas) const {
+  constexpr voltage_dq operator()(current_dq const& Imeas) const
+  {
     return {
         .d = -omega_ * Lq_ * Imeas.q,
         .q = omega_ * (Ld_ * Imeas.d + Psi_),
@@ -34,16 +37,16 @@ class dq_control {
   dq_controller_type& Id_;
   dq_controller_type& Iq_;
 public:
-  dq_control(dq_controller_type& Id, dq_controller_type& Iq)
-      : Id_(Id), Iq_(Iq) {}
+  dq_control(dq_controller_type& Id, dq_controller_type& Iq) : Id_(Id), Iq_(Iq)
+  {
+  }
 
-  constexpr voltage_dq operator()(
-      current_dq const& Imeas,
-      current_dq Iref,
-      voltage_dq Vcomp,
-      float Vdc,
-      emb::unsigned_pu_f32 Vd_limit_factor
-  ) {
+  constexpr voltage_dq operator()(current_dq const& Imeas,
+                                  current_dq Iref,
+                                  voltage_dq Vcomp,
+                                  float Vdc,
+                                  emb::unsigned_pu_f32 Vd_limit_factor)
+  {
     // D-axis controller
     float const Vd_avail = Vdc
                          / std::numbers::sqrt3_v<float>
@@ -56,12 +59,12 @@ public:
     // Q-axis controller
     float const Vdc_over_sqrt3 = Vdc / std::numbers::sqrt3_v<float>;
     if (std::fabs(Vd) < Vdc_over_sqrt3) {
-      float const Vq_avail = emb::sqrt(
-          Vdc_over_sqrt3 * Vdc_over_sqrt3 - Vd * Vd
-      );
+      float const Vq_avail = emb::sqrt(Vdc_over_sqrt3 * Vdc_over_sqrt3
+                                       - Vd * Vd);
       Iq_.set_lower_limit(-Vq_avail - Vcomp.q);
       Iq_.set_upper_limit(Vq_avail - Vcomp.q);
-    } else {
+    }
+    else {
       Iq_.set_lower_limit(0.0f);
       Iq_.set_upper_limit(0.0f);
     }

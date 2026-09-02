@@ -11,27 +11,31 @@ namespace foc {
 namespace pwm_mode {
 
 struct spwm {
-  static constexpr float offset(float, float, float) {
+  static constexpr float offset(float, float, float)
+  {
     return 0.f;
   }
 };
 
 struct svpwm {
-  static constexpr float offset(float Va, float Vb, float Vc) {
+  static constexpr float offset(float Va, float Vb, float Vc)
+  {
     auto const [mn, mx] = std::minmax({Va, Vb, Vc});
     return -0.5f * (mx + mn);
   }
 };
 
 struct dpwm1 {
-  static constexpr float offset(float Va, float Vb, float Vc) {
+  static constexpr float offset(float Va, float Vb, float Vc)
+  {
     auto const [mn, mx] = std::minmax({Va, Vb, Vc});
     return (mx + mn > 0.f) ? (1.f - mx) : (-1.f - mn);
   }
 };
 
 struct dpwm0 {
-  static constexpr float offset(float Va, float Vb, float Vc) {
+  static constexpr float offset(float Va, float Vb, float Vc)
+  {
     auto const [mn, mx] = std::minmax({Va, Vb, Vc});
     bool const clamp_low = (Va >= Vb && Vb >= Vc)
                         || (Vb >= Vc && Vc >= Va)
@@ -41,7 +45,8 @@ struct dpwm0 {
 };
 
 struct dpwm2 {
-  static constexpr float offset(float Va, float Vb, float Vc) {
+  static constexpr float offset(float Va, float Vb, float Vc)
+  {
     auto const [mn, mx] = std::minmax({Va, Vb, Vc});
     bool const clamp_high = (Va >= Vb && Vb >= Vc)
                          || (Vb >= Vc && Vc >= Va)
@@ -51,7 +56,8 @@ struct dpwm2 {
 };
 
 struct dpwm3 {
-  static constexpr float offset(float Va, float Vb, float Vc) {
+  static constexpr float offset(float Va, float Vb, float Vc)
+  {
     auto const [mn, mx] = std::minmax({Va, Vb, Vc});
     float const mid = Va + Vb + Vc - mx - mn;
     return (mid > 0.f) ? (1.f - mx) : (-1.f - mn);
@@ -59,13 +65,15 @@ struct dpwm3 {
 };
 
 struct dpwmmin {
-  static constexpr float offset(float Va, float Vb, float Vc) {
+  static constexpr float offset(float Va, float Vb, float Vc)
+  {
     return -1.f - std::min({Va, Vb, Vc});
   }
 };
 
 struct dpwmmax {
-  static constexpr float offset(float Va, float Vb, float Vc) {
+  static constexpr float offset(float Va, float Vb, float Vc)
+  {
     return 1.f - std::max({Va, Vb, Vc});
   }
 };
@@ -73,14 +81,13 @@ struct dpwmmax {
 } // namespace pwm_mode
 
 template<typename Mode>
-constexpr three_phase<emb::unsigned_pu_f32>
-modulate(voltage_abc const& Vs, float Vdc) {
+constexpr three_phase<emb::unsigned_pu_f32> modulate(voltage_abc const& Vs,
+                                                     float Vdc)
+{
   if (Vdc <= 0.f) {
-    return {
-        .a = unsigned_pu_f32{0.5f},
-        .b = unsigned_pu_f32{0.5f},
-        .c = unsigned_pu_f32{0.5f}
-    };
+    return {.a = unsigned_pu_f32{0.5f},
+            .b = unsigned_pu_f32{0.5f},
+            .c = unsigned_pu_f32{0.5f}};
   }
 
   // normalization: [−1, +1]
@@ -93,11 +100,9 @@ modulate(voltage_abc const& Vs, float Vdc) {
   float const Voff = Mode::offset(Va, Vb, Vc);
 
   // duty cycles
-  return {
-      .a = emb::unsigned_pu_f32{(Va + Voff + 1.f) * 0.5f},
-      .b = emb::unsigned_pu_f32{(Vb + Voff + 1.f) * 0.5f},
-      .c = emb::unsigned_pu_f32{(Vc + Voff + 1.f) * 0.5f}
-  };
+  return {.a = emb::unsigned_pu_f32{(Va + Voff + 1.f) * 0.5f},
+          .b = emb::unsigned_pu_f32{(Vb + Voff + 1.f) * 0.5f},
+          .c = emb::unsigned_pu_f32{(Vc + Voff + 1.f) * 0.5f}};
 }
 
 } // namespace foc
