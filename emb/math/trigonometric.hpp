@@ -141,7 +141,8 @@ inline constexpr std::array<float, 129> sincos_lookup_table{
 
 } // namespace detail
 
-constexpr float lookup_sin(float x) {
+constexpr float lookup_sin(float x)
+{
   x /= (std::numbers::pi_v<float> / 2.0f);
 
   int sign = x < 0.0f;
@@ -164,22 +165,29 @@ constexpr float lookup_sin(float x) {
   float cost = detail::sincos_lookup_table[128 - zf];
 
   float zz = z * z;
-  float ss =
-      z * (0.012271846303085128928f +
-           zz * (-3.0801968454884792651e-7f + 2.3193461291439683491e-12f * zz));
-  float cc = 1.0f - zz * (0.000075299105843272081f +
-                          zz * (-9.449925567834354484e-10f +
-                                4.7437807891647010749e-15f * zz));
+  float ss = z
+           * (0.012271846303085128928f
+              + zz
+                    * (-3.0801968454884792651e-7f
+                       + 2.3193461291439683491e-12f * zz));
+  float cc = 1.0f
+           - zz
+                 * (0.000075299105843272081f
+                    + zz
+                          * (-9.449925567834354484e-10f
+                             + 4.7437807891647010749e-15f * zz));
 
   float sin_v = (sign ^ per) ? -sint * cc - cost * ss : sint * cc + cost * ss;
   return sin_v;
 }
 
-constexpr float lookup_cos(float x) {
+constexpr float lookup_cos(float x)
+{
   return lookup_sin(x + std::numbers::pi_v<float> / 2.0f);
 }
 
-constexpr float fast_atan2(float y, float x) {
+constexpr float fast_atan2(float y, float x)
+{
   constexpr float pi = std::numbers::pi_v<float>;
   constexpr float half_pi = pi / 2.0f;
 
@@ -196,13 +204,20 @@ constexpr float fast_atan2(float y, float x) {
 
   // minimax polynomial for atan(a) on [0, 1], max error ~1.5e-5
   float a2 = a * a;
-  float r = a * (1.0f
-      + a2 * (-0.3333314528f
-      + a2 * (0.1999355085f
-      + a2 * (-0.1420889944f
-      + a2 * (0.1065626393f
-      + a2 * (-0.0752896400f
-      + a2 * 0.0429096138f))))));
+  float r =
+      a
+      * (1.0f
+         + a2
+               * (-0.3333314528f
+                  + a2
+                        * (0.1999355085f
+                           + a2
+                                 * (-0.1420889944f
+                                    + a2
+                                          * (0.1065626393f
+                                             + a2
+                                                   * (-0.0752896400f
+                                                      + a2 * 0.0429096138f))))));
 
   if (swap) {
     r = half_pi - r;

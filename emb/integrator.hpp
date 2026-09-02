@@ -23,52 +23,62 @@ public:
       units::sec<value_type> timestep,
       value_type init_output = 0,
       value_type lower_limit = -std::numeric_limits<value_type>::max(),
-      value_type upper_limit = std::numeric_limits<value_type>::max()
-  )
+      value_type upper_limit = std::numeric_limits<value_type>::max())
       : ts_(timestep),
         lower_limit_(lower_limit),
         upper_limit_(upper_limit),
-        init_output_(init_output) {
+        init_output_(init_output)
+  {
     reset();
   }
 
-  constexpr void push(value_type rate) {
+  constexpr void push(value_type rate)
+  {
     set_output(output_ + rate * ts_.value());
   }
 
-  constexpr void add(value_type increment) {
+  constexpr void add(value_type increment)
+  {
     set_output(output_ + increment);
   }
 
-  constexpr value_type output() const {
+  constexpr value_type output() const
+  {
     return output_;
   }
 
-  constexpr void set_output(value_type value) {
+  constexpr void set_output(value_type value)
+  {
     output_ = std::clamp(value, lower_limit_, upper_limit_);
   }
 
-  constexpr void reset() {
+  constexpr void reset()
+  {
     set_output(init_output_);
   }
 
-  constexpr void set_timestep(units::sec<value_type> value) {
+  constexpr void set_timestep(units::sec<value_type> value)
+  {
     ts_ = value;
   }
 
-  constexpr void set_lower_limit(value_type value) {
+  constexpr void set_lower_limit(value_type value)
+  {
     lower_limit_ = value;
   }
 
-  constexpr void set_upper_limit(value_type value) {
+  constexpr void set_upper_limit(value_type value)
+  {
     upper_limit_ = value;
   }
 
-  constexpr value_type lower_limit() const {
+  constexpr value_type lower_limit() const
+  {
     return lower_limit_;
   }
 
-  constexpr value_type upper_limit() const {
+  constexpr value_type upper_limit() const
+  {
     return upper_limit_;
   }
 };

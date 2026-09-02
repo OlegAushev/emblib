@@ -23,10 +23,12 @@ enum class signal : std::uint8_t { inactive, active };
 // decoder it maps a feedback signal back to a position (active = open, i.e. a
 // break aux contact).
 struct normally_closed {
-  static constexpr signal operator()(position desired) {
+  static constexpr signal operator()(position desired)
+  {
     return desired != position::closed ? signal::active : signal::inactive;
   }
-  static constexpr position operator()(signal s) {
+  static constexpr position operator()(signal s)
+  {
     return s == signal::active ? position::open : position::closed;
   }
 };
@@ -36,10 +38,12 @@ struct normally_closed {
 // decoder it maps a feedback signal back to a position (active = closed, i.e. a
 // make aux contact).
 struct normally_open {
-  static constexpr signal operator()(position desired) {
+  static constexpr signal operator()(position desired)
+  {
     return desired != position::open ? signal::active : signal::inactive;
   }
-  static constexpr position operator()(signal s) {
+  static constexpr position operator()(signal s)
+  {
     return s == signal::active ? position::closed : position::open;
   }
 };
@@ -53,11 +57,10 @@ private:
 public:
   explicit gpio_driver(Pin& pin) : pin_(pin) {}
 
-  void operator()(signal s) {
-    pin_.set(
-        s == signal::active ? emb::gpio::state::active
-                            : emb::gpio::state::inactive
-    );
+  void operator()(signal s)
+  {
+    pin_.set(s == signal::active ? emb::gpio::state::active
+                                 : emb::gpio::state::inactive);
   }
 };
 
@@ -70,7 +73,8 @@ private:
 public:
   explicit gpio_sensor(Pin& pin) : pin_(pin) {}
 
-  signal operator()() const {
+  signal operator()() const
+  {
     return pin_.read() == emb::gpio::state::active ? signal::active
                                                    : signal::inactive;
   }

@@ -5,7 +5,8 @@
 
 namespace {
 
-constexpr int add(int a, int b) {
+constexpr int add(int a, int b)
+{
   return a + b;
 }
 
@@ -15,20 +16,24 @@ class foo {
 public:
   constexpr foo(int a, int b) : a_(a), b_(b) {}
 
-  constexpr int add(int c) {
+  constexpr int add(int c)
+  {
     return a_ + b_ + c;
   }
 
-  constexpr int sub(int c) {
+  constexpr int sub(int c)
+  {
     return a_ + b_ - c;
   }
 
-  constexpr int sum() const {
+  constexpr int sum() const
+  {
     return a_ + b_;
   }
 };
 
-constexpr bool test_delegate() {
+constexpr bool test_delegate()
+{
   [[maybe_unused]] auto add_delegate =
       emb::delegate<int(int, int)>::bind<&add>();
   assert(add_delegate(1, 2) == 3);
@@ -47,17 +52,16 @@ constexpr bool test_delegate() {
 static_assert(test_delegate());
 
 // bind() reference overloads
-constexpr bool test_bind_from_reference() {
+constexpr bool test_bind_from_reference()
+{
   foo f(-1, 5);
   [[maybe_unused]] auto add_delegate = emb::delegate<int(int)>::bind<&foo::add>(
-      f
-  );
+      f);
   assert(add_delegate(6) == 10);
 
   foo const cf(1, 3);
   [[maybe_unused]] auto sum_delegate = emb::delegate<int()>::bind<&foo::sum>(
-      cf
-  );
+      cf);
   assert(sum_delegate() == 4);
 
   return true;
@@ -66,11 +70,11 @@ constexpr bool test_bind_from_reference() {
 static_assert(test_bind_from_reference());
 
 // make_delegate() signature deduction and binding
-constexpr bool test_make_delegate() {
+constexpr bool test_make_delegate()
+{
   auto add_delegate = emb::make_delegate<&add>();
   static_assert(
-      std::is_same_v<decltype(add_delegate), emb::delegate<int(int, int)>>
-  );
+      std::is_same_v<decltype(add_delegate), emb::delegate<int(int, int)>>);
   assert(add_delegate(1, 2) == 3);
 
   foo f(-1, 5);
@@ -91,7 +95,8 @@ constexpr bool test_make_delegate() {
 static_assert(test_make_delegate());
 
 // operator bool, operator==/!= and empty state
-constexpr bool test_comparison() {
+constexpr bool test_comparison()
+{
   [[maybe_unused]] emb::delegate<int(int)> empty;
   assert(!empty);
   assert(empty == emb::delegate<int(int)>());

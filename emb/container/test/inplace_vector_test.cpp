@@ -4,7 +4,8 @@ namespace {
 
 template<typename Vector>
 constexpr bool test_inplace_vector(Vector v)
-  requires(std::same_as<typename Vector::value_type, int>) {
+  requires(std::same_as<typename Vector::value_type, int>)
+{
   int const cap{static_cast<int>(v.capacity())};
 
   assert(v.empty() && v.size() == 0);
@@ -15,7 +16,8 @@ constexpr bool test_inplace_vector(Vector v)
 
   if (v.capacity() != 1) {
     assert(!v.full());
-  } else {
+  }
+  else {
     assert(v.full());
   }
 
@@ -66,17 +68,20 @@ struct tracked {
   int* counter = nullptr;
 
   constexpr tracked() = default;
-  constexpr tracked(int v, int* c) : value(v), counter(c) {
+  constexpr tracked(int v, int* c) : value(v), counter(c)
+  {
     if (counter) ++*counter;
   }
-  constexpr tracked(tracked const& o) : value(o.value), counter(o.counter) {
+  constexpr tracked(tracked const& o) : value(o.value), counter(o.counter)
+  {
     if (counter) ++*counter;
   }
-  constexpr tracked(tracked&& o) noexcept
-      : value(o.value), counter(o.counter) {
+  constexpr tracked(tracked&& o) noexcept : value(o.value), counter(o.counter)
+  {
     o.counter = nullptr;
   }
-  constexpr tracked& operator=(tracked const& o) {
+  constexpr tracked& operator=(tracked const& o)
+  {
     if (this != &o) {
       if (counter) --*counter;
       value = o.value;
@@ -85,7 +90,8 @@ struct tracked {
     }
     return *this;
   }
-  constexpr tracked& operator=(tracked&& o) noexcept {
+  constexpr tracked& operator=(tracked&& o) noexcept
+  {
     if (this != &o) {
       if (counter) --*counter;
       value = o.value;
@@ -94,14 +100,16 @@ struct tracked {
     }
     return *this;
   }
-  constexpr ~tracked() {
+  constexpr ~tracked()
+  {
     if (counter) --*counter;
   }
 };
 
 static_assert(!std::is_trivially_destructible_v<tracked>);
 
-constexpr bool test_inplace_vector_lifecycle() {
+constexpr bool test_inplace_vector_lifecycle()
+{
   int alive = 0;
   {
     emb::inplace_vector<tracked, 4> v;
@@ -130,7 +138,8 @@ constexpr bool test_inplace_vector_lifecycle() {
   return true;
 }
 
-constexpr bool test_inplace_vector_copy() {
+constexpr bool test_inplace_vector_copy()
+{
   int alive = 0;
   emb::inplace_vector<tracked, 4> v;
   v.emplace_back(1, &alive);
@@ -156,7 +165,8 @@ constexpr bool test_inplace_vector_copy() {
   return true;
 }
 
-constexpr bool test_inplace_vector_move() {
+constexpr bool test_inplace_vector_move()
+{
   int alive = 0;
   emb::inplace_vector<tracked, 4> src;
   src.emplace_back(1, &alive);
@@ -181,7 +191,8 @@ constexpr bool test_inplace_vector_move() {
   return true;
 }
 
-constexpr bool test_inplace_vector_move_push() {
+constexpr bool test_inplace_vector_move_push()
+{
   int alive = 0;
   emb::inplace_vector<tracked, 2> v;
 
@@ -195,7 +206,8 @@ constexpr bool test_inplace_vector_move_push() {
   return true;
 }
 
-constexpr bool test_inplace_vector_try_pop() {
+constexpr bool test_inplace_vector_try_pop()
+{
   int alive = 0;
   emb::inplace_vector<tracked, 2> v;
 
@@ -214,7 +226,8 @@ constexpr bool test_inplace_vector_try_pop() {
   return true;
 }
 
-constexpr bool test_inplace_vector_try_push() {
+constexpr bool test_inplace_vector_try_push()
+{
   [[maybe_unused]] emb::inplace_vector<int, 2> v;
   assert(v.try_push_back(1));
   assert(v.try_push_back(2));
@@ -231,7 +244,8 @@ struct no_default {
 
 static_assert(!std::is_default_constructible_v<no_default>);
 
-constexpr bool test_inplace_vector_no_default_ctor() {
+constexpr bool test_inplace_vector_no_default_ctor()
+{
   emb::inplace_vector<no_default, 3> v;
   v.emplace_back(10);
   v.emplace_back(20);

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <emb/delegate.hpp>
 #include <emb/container/inplace_vector.hpp>
+#include <emb/delegate.hpp>
 
 #include <chrono>
 
@@ -44,10 +44,12 @@ public:
     adaptive_periodic_task& self_;
   public:
     explicit adaptive_task_context(adaptive_periodic_task& p) : self_(p) {}
-    void set_period(std::chrono::milliseconds p) {
+    void set_period(std::chrono::milliseconds p)
+    {
       self_.period = p;
     }
-    std::chrono::milliseconds period() const {
+    std::chrono::milliseconds period() const
+    {
       return self_.period;
     }
   };
@@ -55,24 +57,27 @@ public:
   basic_scheduler() = delete;
 
   static void add_task(emb::delegate<void()> task,
-                       std::chrono::milliseconds period) {
+                       std::chrono::milliseconds period)
+  {
     tasks_.push_back({task, period, Clock::now()});
   }
 
-  static void
-  add_adaptive_task(emb::delegate<void(adaptive_task_context)> task,
-                    std::chrono::milliseconds period) {
+  static void add_adaptive_task(emb::delegate<void(adaptive_task_context)> task,
+                                std::chrono::milliseconds period)
+  {
     adaptive_tasks_.push_back({task, period, Clock::now()});
   }
 
   static void add_delayed_task(emb::delegate<void()> task,
-                               std::chrono::milliseconds delay) {
+                               std::chrono::milliseconds delay)
+  {
     delayed_task_ = task;
     delayed_task_delay_ = delay;
     delayed_task_start_ = Clock::now();
   }
 
-  static void run() {
+  static void run()
+  {
     auto now = Clock::now();
 
     for (auto i = 0uz; i < tasks_.size(); ++i) {
@@ -98,7 +103,8 @@ public:
     }
   }
 
-  static void reset() {
+  static void reset()
+  {
     auto now = Clock::now();
     for (auto i = 0uz; i < tasks_.size(); ++i) {
       tasks_[i].exec_timepoint = now;

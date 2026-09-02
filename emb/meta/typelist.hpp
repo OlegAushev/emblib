@@ -69,9 +69,8 @@ struct typelist_count_t;
 
 template<typename... Ts, typename T>
 struct typelist_count_t<typelist<Ts...>, T>
-    : std::integral_constant<
-          std::size_t,
-          (0 + ... + (std::same_as<T, Ts> ? 1 : 0))> {};
+    : std::integral_constant<std::size_t,
+                             (0 + ... + (std::same_as<T, Ts> ? 1 : 0))> {};
 
 template<typename List, typename T>
 inline constexpr std::size_t typelist_count_v =
@@ -83,8 +82,8 @@ struct typelist_unique_t;
 
 template<typename... Ts>
 struct typelist_unique_t<typelist<Ts...>>
-    : std::bool_constant<
-          (... && (typelist_count_v<typelist<Ts...>, Ts> == 1))> {};
+    : std::bool_constant<(...
+                          && (typelist_count_v<typelist<Ts...>, Ts> == 1))> {};
 
 template<typename List>
 inline constexpr bool typelist_unique_v = typelist_unique_t<List>::value;

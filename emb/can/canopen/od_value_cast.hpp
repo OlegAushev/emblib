@@ -14,13 +14,16 @@ namespace canopen {
 // Wraps a value of arbitrary type into od_value. Handles od_value scalars
 // as-is and named_unit types via `.value()`.
 template<typename T>
-constexpr auto to_od_value(T const& v) -> od_value {
+constexpr auto to_od_value(T const& v) -> od_value
+{
   static_assert(sizeof(T) <= 4, "od_value holds only types of sizeof <= 4");
   if constexpr (od_scalar<T>) {
     return od_value{v};
-  } else if constexpr (units::unit<T>) {
+  }
+  else if constexpr (units::unit<T>) {
     return od_value{v.value()};
-  } else {
+  }
+  else {
     static_assert(false, "unsupported od_value type");
   }
 }
@@ -29,17 +32,20 @@ constexpr auto to_od_value(T const& v) -> od_value {
 // alternative does not match. Named_unit types are constructed from the float
 // alternative.
 template<typename T>
-constexpr auto from_od_value(od_value const& val) -> std::optional<T> {
+constexpr auto from_od_value(od_value const& val) -> std::optional<T>
+{
   static_assert(sizeof(T) <= 4, "od_value holds only types of sizeof <= 4");
   if constexpr (od_scalar<T>) {
     if (auto* p = std::get_if<T>(&val)) {
       return *p;
     }
-  } else if constexpr (units::unit<T>) {
+  }
+  else if constexpr (units::unit<T>) {
     if (auto* p = std::get_if<float>(&val)) {
       return T{*p};
     }
-  } else {
+  }
+  else {
     static_assert(false, "unsupported od_value type");
   }
   return std::nullopt;

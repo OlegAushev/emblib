@@ -7,7 +7,8 @@ namespace {
 
 using namespace emb;
 
-constexpr bool test_unroll() {
+constexpr bool test_unroll()
+{
   std::array<int, 5> arr;
   emb::unroll<5>([&]<std::size_t I>() {
     arr[I] = I;
@@ -89,10 +90,8 @@ static_assert(!typelist_unique<typelist<A, A>>);
 // append
 static_assert(std::is_same_v<typelist_append_t<typelist<>, A>, typelist<A>>);
 static_assert(
-    std::is_same_v<typelist_append_t<typelist<A>, B>, typelist<A, B>>
-);
+    std::is_same_v<typelist_append_t<typelist<A>, B>, typelist<A, B>>);
 static_assert(
-    std::is_same_v<typelist_append_t<typelist<A, B>, C>, typelist<A, B, C>>
-);
+    std::is_same_v<typelist_append_t<typelist<A, B>, C>, typelist<A, B, C>>);
 
 } // namespace

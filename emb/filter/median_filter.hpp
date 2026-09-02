@@ -22,11 +22,13 @@ private:
   value_type output_;
 public:
   constexpr median_filter(value_type const& init_output = value_type())
-      : init_output_(init_output) {
+      : init_output_(init_output)
+  {
     reset();
   }
 
-  constexpr void push(value_type const& input) {
+  constexpr void push(value_type const& input)
+  {
     window_.push_back(input);
     std::array<value_type, window_size> window_sorted = {};
     for (auto i = 0uz; i < window_.size(); ++i) {
@@ -36,16 +38,19 @@ public:
     output_ = window_sorted[window_size / 2];
   }
 
-  constexpr const_reference output() const {
+  constexpr const_reference output() const
+  {
     return output_;
   }
 
-  constexpr void set_output(value_type const& value) {
+  constexpr void set_output(value_type const& value)
+  {
     window_.fill(value);
     output_ = value;
   }
 
-  constexpr void reset() {
+  constexpr void reset()
+  {
     set_output(init_output_);
   }
 };

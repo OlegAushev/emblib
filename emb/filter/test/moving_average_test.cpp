@@ -4,10 +4,10 @@
 namespace {
 
 template<typename Filter>
-constexpr bool test_moving_average_filter(
-    Filter filter,
-    typename Filter::value_type init_output
-) {
+constexpr bool
+test_moving_average_filter(Filter filter,
+                           typename Filter::value_type init_output)
+{
   using value_type = Filter::value_type;
   using divider_type = Filter::divider_type;
 
@@ -16,15 +16,13 @@ constexpr bool test_moving_average_filter(
   filter.set_output(value_type{-42});
   assert(filter.output() == value_type{-42});
 
-  std::array<value_type, 7> input{
-      value_type{10},
-      value_type{9},
-      value_type{8},
-      value_type{7},
-      value_type{6},
-      value_type{5},
-      value_type{4}
-  };
+  std::array<value_type, 7> input{value_type{10},
+                                  value_type{9},
+                                  value_type{8},
+                                  value_type{7},
+                                  value_type{6},
+                                  value_type{5},
+                                  value_type{4}};
   std::size_t idx{0};
   value_type sum{0};
 
@@ -33,8 +31,8 @@ constexpr bool test_moving_average_filter(
     filter.push(val);
     idx = (idx + 1) % input.size();
     sum += val;
-    [[maybe_unused]] auto out = sum /
-                                static_cast<divider_type>(filter.data().size());
+    [[maybe_unused]] auto out = sum
+                              / static_cast<divider_type>(filter.data().size());
     assert(filter.output() == out);
   }
 
@@ -57,35 +55,26 @@ constexpr bool test_moving_average_filter(
   return true;
 }
 
-static_assert(
-    test_moving_average_filter(emb::moving_average_filter<int, 1>{}, 0)
-);
-static_assert(
-    test_moving_average_filter(emb::moving_average_filter<int, 2>{}, 0)
-);
-static_assert(
-    test_moving_average_filter(emb::moving_average_filter<int, 5>{}, 0)
-);
-static_assert(
-    test_moving_average_filter(emb::moving_average_filter<int, 10>{}, 0)
-);
+static_assert(test_moving_average_filter(emb::moving_average_filter<int, 1>{},
+                                         0));
+static_assert(test_moving_average_filter(emb::moving_average_filter<int, 2>{},
+                                         0));
+static_assert(test_moving_average_filter(emb::moving_average_filter<int, 5>{},
+                                         0));
+static_assert(test_moving_average_filter(emb::moving_average_filter<int, 10>{},
+                                         0));
 
+static_assert(test_moving_average_filter(emb::moving_average_filter<int, 1>{42},
+                                         42));
+static_assert(test_moving_average_filter(emb::moving_average_filter<int, 2>{42},
+                                         42));
+static_assert(test_moving_average_filter(emb::moving_average_filter<int, 5>{42},
+                                         42));
 static_assert(
-    test_moving_average_filter(emb::moving_average_filter<int, 1>{42}, 42)
-);
-static_assert(
-    test_moving_average_filter(emb::moving_average_filter<int, 2>{42}, 42)
-);
-static_assert(
-    test_moving_average_filter(emb::moving_average_filter<int, 5>{42}, 42)
-);
-static_assert(
-    test_moving_average_filter(emb::moving_average_filter<int, 10>{42}, 42)
-);
+    test_moving_average_filter(emb::moving_average_filter<int, 10>{42}, 42));
 
 static_assert(test_moving_average_filter(
     emb::moving_average_filter<emb::units::erad_f32, 4>{},
-    emb::units::erad_f32{0}
-));
+    emb::units::erad_f32{0}));
 
 } // namespace

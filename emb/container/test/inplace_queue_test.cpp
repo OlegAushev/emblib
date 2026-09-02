@@ -4,7 +4,8 @@ namespace {
 
 template<typename Queue>
 constexpr bool test_inplace_queue(Queue q)
-  requires(std::same_as<typename Queue::value_type, int>) {
+  requires(std::same_as<typename Queue::value_type, int>)
+{
   int const cap{static_cast<int>(q.capacity())};
 
   assert(q.empty());
@@ -14,7 +15,8 @@ constexpr bool test_inplace_queue(Queue q)
 
   if (q.capacity() != 1) {
     assert(!q.full());
-  } else {
+  }
+  else {
     assert(q.full());
   }
 
@@ -38,7 +40,8 @@ constexpr bool test_inplace_queue(Queue q)
 
   if (q.capacity() != 1) {
     assert(q.front() == 2);
-  } else {
+  }
+  else {
     assert(q.front() == cap + 1);
   }
 
@@ -73,7 +76,8 @@ constexpr bool test_inplace_queue(Queue q)
   assert(q.back() == 2 * cap);
   if (q.capacity() != 1) {
     assert(q.front() == cap + 1);
-  } else {
+  }
+  else {
     assert(q.front() == q.back());
   }
 
@@ -90,17 +94,20 @@ struct tracked {
   int* counter = nullptr;
 
   constexpr tracked() = default;
-  constexpr tracked(int v, int* c) : value(v), counter(c) {
+  constexpr tracked(int v, int* c) : value(v), counter(c)
+  {
     if (counter) ++*counter;
   }
-  constexpr tracked(tracked const& o) : value(o.value), counter(o.counter) {
+  constexpr tracked(tracked const& o) : value(o.value), counter(o.counter)
+  {
     if (counter) ++*counter;
   }
-  constexpr tracked(tracked&& o) noexcept
-      : value(o.value), counter(o.counter) {
+  constexpr tracked(tracked&& o) noexcept : value(o.value), counter(o.counter)
+  {
     o.counter = nullptr;
   }
-  constexpr tracked& operator=(tracked const& o) {
+  constexpr tracked& operator=(tracked const& o)
+  {
     if (this != &o) {
       if (counter) --*counter;
       value = o.value;
@@ -109,7 +116,8 @@ struct tracked {
     }
     return *this;
   }
-  constexpr tracked& operator=(tracked&& o) noexcept {
+  constexpr tracked& operator=(tracked&& o) noexcept
+  {
     if (this != &o) {
       if (counter) --*counter;
       value = o.value;
@@ -118,14 +126,16 @@ struct tracked {
     }
     return *this;
   }
-  constexpr ~tracked() {
+  constexpr ~tracked()
+  {
     if (counter) --*counter;
   }
 };
 
 static_assert(!std::is_trivially_destructible_v<tracked>);
 
-constexpr bool test_inplace_queue_lifecycle() {
+constexpr bool test_inplace_queue_lifecycle()
+{
   int alive = 0;
   {
     emb::inplace_queue<tracked, 4> q;
@@ -159,7 +169,8 @@ constexpr bool test_inplace_queue_lifecycle() {
   return true;
 }
 
-constexpr bool test_inplace_queue_copy() {
+constexpr bool test_inplace_queue_copy()
+{
   int alive = 0;
   emb::inplace_queue<tracked, 4> q;
   q.emplace(1, &alive);
@@ -187,7 +198,8 @@ constexpr bool test_inplace_queue_copy() {
   return true;
 }
 
-constexpr bool test_inplace_queue_move_push() {
+constexpr bool test_inplace_queue_move_push()
+{
   int alive = 0;
   emb::inplace_queue<tracked, 2> q;
 
@@ -201,7 +213,8 @@ constexpr bool test_inplace_queue_move_push() {
   return true;
 }
 
-constexpr bool test_inplace_queue_try_pop() {
+constexpr bool test_inplace_queue_try_pop()
+{
   int alive = 0;
   emb::inplace_queue<tracked, 2> q;
 
@@ -227,7 +240,8 @@ struct no_default {
 
 static_assert(!std::is_default_constructible_v<no_default>);
 
-constexpr bool test_inplace_queue_no_default_ctor() {
+constexpr bool test_inplace_queue_no_default_ctor()
+{
   emb::inplace_queue<no_default, 3> q;
   q.emplace(10);
   q.emplace(20);
@@ -242,7 +256,8 @@ constexpr bool test_inplace_queue_no_default_ctor() {
   return true;
 }
 
-constexpr bool test_inplace_queue_move() {
+constexpr bool test_inplace_queue_move()
+{
   int alive = 0;
   emb::inplace_queue<tracked, 4> src;
   src.emplace(1, &alive);
@@ -269,7 +284,8 @@ constexpr bool test_inplace_queue_move() {
   return true;
 }
 
-constexpr bool test_inplace_queue_move_wraparound() {
+constexpr bool test_inplace_queue_move_wraparound()
+{
   int alive = 0;
   emb::inplace_queue<tracked, 4> src;
   for (int i = 1; i <= 4; ++i) {

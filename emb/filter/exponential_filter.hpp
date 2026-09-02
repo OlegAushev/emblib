@@ -12,8 +12,8 @@ public:
   using reference = value_type&;
   using const_reference = value_type const&;
   using duration_type = Duration;
-  using factor_type =
-      decltype(std::declval<Duration>() / std::declval<Duration>());
+  using factor_type = decltype(std::declval<Duration>()
+                               / std::declval<Duration>());
 private:
   duration_type sampling_period_;
   duration_type time_constant_;
@@ -21,53 +21,55 @@ private:
   value_type init_output_;
   value_type output_;
 public:
-  constexpr exponential_filter(
-      duration_type sampling_period,
-      duration_type time_constant,
-      value_type const& init_output = value_type()
-  )
-      : init_output_(init_output) {
+  constexpr exponential_filter(duration_type sampling_period,
+                               duration_type time_constant,
+                               value_type const& init_output = value_type())
+      : init_output_(init_output)
+  {
     set_smoothing(sampling_period, time_constant);
     reset();
   }
 
-  constexpr void push(value_type const& input) {
+  constexpr void push(value_type const& input)
+  {
     output_ = output_ + smooth_factor_ * (input - output_);
   }
 
-  constexpr const_reference output() const {
+  constexpr const_reference output() const
+  {
     return output_;
   }
 
-  constexpr void set_output(value_type const& value) {
+  constexpr void set_output(value_type const& value)
+  {
     output_ = value;
   }
 
-  constexpr void reset() {
+  constexpr void reset()
+  {
     set_output(init_output_);
   }
 
-  constexpr void
-  set_smoothing(duration_type sampling_period, duration_type time_constant) {
+  constexpr void set_smoothing(duration_type sampling_period,
+                               duration_type time_constant)
+  {
     sampling_period_ = sampling_period;
     time_constant_ = time_constant;
-    smooth_factor_ = std::clamp(
-        sampling_period / time_constant,
-        factor_type(0),
-        factor_type(1)
-    );
+    smooth_factor_ = std::clamp(sampling_period / time_constant,
+                                factor_type(0),
+                                factor_type(1));
   }
 
-  constexpr void set_timestep(duration_type ts) {
+  constexpr void set_timestep(duration_type ts)
+  {
     sampling_period_ = ts;
-    smooth_factor_ = std::clamp(
-        sampling_period_ / time_constant_,
-        factor_type(0),
-        factor_type(1)
-    );
+    smooth_factor_ = std::clamp(sampling_period_ / time_constant_,
+                                factor_type(0),
+                                factor_type(1));
   }
 
-  constexpr factor_type smooth_factor() const {
+  constexpr factor_type smooth_factor() const
+  {
     return smooth_factor_;
   }
 };

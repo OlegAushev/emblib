@@ -14,7 +14,7 @@ namespace emb {
 // Constraints:
 //   - exactly one writer, multiple writers need separate mutual exclusion
 //   - readers retry while the writer is active (not wait-free)
-template <typename T>
+template<typename T>
   requires(std::is_trivially_copyable_v<T>)
 class seqlock {
   std::atomic<std::uint32_t> seq_ = 0;
@@ -24,7 +24,8 @@ public:
   seqlock(seqlock const&) = delete;
   seqlock& operator=(seqlock const&) = delete;
 
-  void store(T const& desired) {
+  void store(T const& desired)
+  {
     std::uint32_t const s = seq_.load(std::memory_order::relaxed);
     seq_.store(s + 1, std::memory_order::relaxed);
     std::atomic_thread_fence(std::memory_order::release);
@@ -33,7 +34,8 @@ public:
   }
 
   template<typename F>
-  void update(F&& f) {
+  void update(F&& f)
+  {
     std::uint32_t const s = seq_.load(std::memory_order::relaxed);
     seq_.store(s + 1, std::memory_order::relaxed);
     std::atomic_thread_fence(std::memory_order::release);
@@ -44,10 +46,11 @@ public:
     seq_.store(s + 2, std::memory_order::release);
   }
 
-  T load() const {
+  T load() const
+  {
     T snapshot;
     std::uint32_t s1, s2;
-    for(;;) {
+    for (;;) {
       s1 = seq_.load(std::memory_order::acquire);
       if (s1 & 1) {
         continue;
@@ -60,4 +63,4 @@ public:
   }
 };
 
-}
+} // namespace emb

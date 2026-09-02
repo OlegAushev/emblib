@@ -4,7 +4,8 @@
 
 namespace {
 
-constexpr bool test_mmio() {
+constexpr bool test_mmio()
+{
   return true;
 }
 

@@ -11,21 +11,20 @@ namespace fsm {
 
 namespace sp1 {
 
-template<
-    typename Clock,
-    typename Object,
-    typename State,
-    typename LockGuard = void*>
+template<typename Clock,
+         typename Object,
+         typename State,
+         typename LockGuard = void*>
 class abstract_state {
   static_assert(std::is_enum_v<State>);
 private:
   State const id_;
   std::chrono::time_point<Clock> enter_timepoint_;
 protected:
-  abstract_state(State id)
-      : id_{id}, enter_timepoint_{Clock::now()} {}
+  abstract_state(State id) : id_{id}, enter_timepoint_{Clock::now()} {}
 
-  static void change_state(Object* object, State state) {
+  static void change_state(Object* object, State state)
+  {
     [[maybe_unused]] LockGuard lock_guard;
     State const prev_state{object->state()};
     State const next_state{state};
@@ -40,9 +39,13 @@ protected:
 public:
   virtual ~abstract_state() {}
 
-  State id() const { return id_; }
+  State id() const
+  {
+    return id_;
+  }
 
-  std::chrono::milliseconds time_since_enter() const {
+  std::chrono::milliseconds time_since_enter() const
+  {
     return Clock::now() - enter_timepoint_;
   }
 };
@@ -55,37 +58,42 @@ private:
 protected:
   AbstractState* state_;
 
-  void change_state(State state) {
+  void change_state(State state)
+  {
     state_ = states_[std::to_underlying(state)];
   }
 public:
-  abstract_object(State init_state) {
+  abstract_object(State init_state)
+  {
     for (auto i{0uz}; i < StateNum; ++i) {
       states_[i] = AbstractState::create(static_cast<State>(i));
     }
     change_state(init_state);
   }
 
-  virtual ~abstract_object() {
+  virtual ~abstract_object()
+  {
     for (auto i{0uz}; i < StateNum; ++i) {
       AbstractState::destroy(static_cast<State>(i), states_[i]);
     }
   }
 
-  State state() const { return state_->id(); }
+  State state() const
+  {
+    return state_->id();
+  }
 };
 
 } // namespace sp1
 
 namespace sp2 {
 
-template<
-    typename Clock,
-    typename DerivedContext,
-    typename StateEnum,
-    typename BaseState,
-    std::size_t StatesNumber,
-    typename LockGuard = void*>
+template<typename Clock,
+         typename DerivedContext,
+         typename StateEnum,
+         typename BaseState,
+         std::size_t StatesNumber,
+         typename LockGuard = void*>
 class abstract_fsm {
 private:
   std::array<BaseState*, StatesNumber> states_;
@@ -93,7 +101,8 @@ private:
   std::chrono::time_point<Clock> enter_timepoint_;
 public:
   template<typename Event>
-  constexpr void dispatch(Event event) {
+  constexpr void dispatch(Event event)
+  {
     DerivedContext& context{static_cast<DerivedContext&>(*this)};
     if (std::optional<StateEnum> next_state{
             current_state_->dispatch(context, std::forward<Event>(event))}) {
@@ -106,7 +115,8 @@ public:
     }
   }
 public:
-  abstract_fsm(StateEnum init_state) {
+  abstract_fsm(StateEnum init_state)
+  {
     for (auto i{0uz}; i < StatesNumber; ++i) {
       states_[i] = BaseState::create(static_cast<StateEnum>(i));
     }
@@ -114,15 +124,20 @@ public:
     enter_timepoint_ = Clock::now();
   }
 
-  virtual ~abstract_fsm() {
+  virtual ~abstract_fsm()
+  {
     for (auto i{0uz}; i < StatesNumber; ++i) {
       BaseState::destroy(static_cast<StateEnum>(i), states_[i]);
     }
   }
 
-  StateEnum state() const { return current_state_->id(); }
+  StateEnum state() const
+  {
+    return current_state_->id();
+  }
 
-  std::chrono::milliseconds time_since_state_enter() const {
+  std::chrono::milliseconds time_since_state_enter() const
+  {
     return Clock::now() - enter_timepoint_;
   }
 };

@@ -18,23 +18,28 @@ private:
 public:
   explicit timeout(duration d) : duration_(d), start_(Clock::now()) {}
 
-  static timeout infinite() {
+  static timeout infinite()
+  {
     return timeout(duration::max());
   }
 
-  bool expired() const {
+  bool expired() const
+  {
     return (Clock::now() - start_) > duration_;
   }
 
-  duration elapsed() const {
+  duration elapsed() const
+  {
     return Clock::now() - start_;
   }
 
-  void reset() {
+  void reset()
+  {
     start_ = Clock::now();
   }
 
-  void reset(duration d) {
+  void reset(duration d)
+  {
     duration_ = d;
     start_ = Clock::now();
   }
@@ -59,11 +64,13 @@ public:
         delay_(delay),
         action_(action),
         trigger_detected_(false),
-        trigger_timepoint_(Clock::now()) {
+        trigger_timepoint_(Clock::now())
+  {
     check_and_execute();
   }
 
-  void check_and_execute() {
+  void check_and_execute()
+  {
     if (trigger_()) {
       auto now = Clock::now();
       if (!trigger_detected_) {
@@ -73,7 +80,8 @@ public:
       if (now > trigger_timepoint_ + delay_) {
         action_();
       }
-    } else {
+    }
+    else {
       trigger_detected_ = false;
     }
   }

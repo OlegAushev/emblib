@@ -4,10 +4,10 @@
 namespace {
 
 template<typename Filter>
-constexpr bool test_exponential_median_filter(
-    Filter filter,
-    typename Filter::value_type init_output
-) {
+constexpr bool
+test_exponential_median_filter(Filter filter,
+                               typename Filter::value_type init_output)
+{
   using value_type = Filter::value_type;
   constexpr std::size_t window_size = Filter::window_size;
 
@@ -20,15 +20,13 @@ constexpr bool test_exponential_median_filter(
   assert(filter.output() == init_output);
 
   // Test with known sequence
-  std::array<value_type, 7> input{
-      value_type{10},
-      value_type{90},
-      value_type{20},
-      value_type{80},
-      value_type{30},
-      value_type{70},
-      value_type{40}
-  };
+  std::array<value_type, 7> input{value_type{10},
+                                  value_type{90},
+                                  value_type{20},
+                                  value_type{80},
+                                  value_type{30},
+                                  value_type{70},
+                                  value_type{40}};
 
   // Push values - combines median filtering with exponential smoothing
   for (auto i = 0uz; i < window_size * 3; ++i) {
@@ -60,38 +58,29 @@ constexpr bool test_exponential_median_filter(
 static_assert(test_exponential_median_filter(
     emb::exponential_median_filter<float, 3, emb::units::sec_f32>(
         emb::units::sec_f32{0.01f},
-        emb::units::sec_f32{0.1f}
-    ),
-    0.0f
-));
+        emb::units::sec_f32{0.1f}),
+    0.0f));
 
 static_assert(test_exponential_median_filter(
     emb::exponential_median_filter<float, 5, emb::units::sec_f32>(
         emb::units::sec_f32{0.01f},
-        emb::units::sec_f32{0.1f}
-    ),
-    0.0f
-));
+        emb::units::sec_f32{0.1f}),
+    0.0f));
 
 static_assert(test_exponential_median_filter(
     emb::exponential_median_filter<float, 3, emb::units::sec_f32>(
         emb::units::sec_f32{0.01f},
         emb::units::sec_f32{0.1f},
-        3.14f
-    ),
-    3.14f
-));
+        3.14f),
+    3.14f));
 
 // Test with units
 static_assert(test_exponential_median_filter(
-    emb::exponential_median_filter<
-        emb::units::erad_f32,
-        3,
-        emb::units::sec_f32>(
+    emb::exponential_median_filter<emb::units::erad_f32,
+                                   3,
+                                   emb::units::sec_f32>(
         emb::units::sec_f32{0.01f},
-        emb::units::sec_f32{0.1f}
-    ),
-    emb::units::erad_f32{0}
-));
+        emb::units::sec_f32{0.1f}),
+    emb::units::erad_f32{0}));
 
 } // namespace

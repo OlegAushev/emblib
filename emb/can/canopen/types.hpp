@@ -17,13 +17,15 @@ namespace canopen {
 
 template<typename T>
   requires std::is_trivially_copyable_v<T> && (sizeof(T) == sizeof(payload_t))
-constexpr payload_t to_payload(T const& message) {
+constexpr payload_t to_payload(T const& message)
+{
   return std::bit_cast<payload_t>(message);
 }
 
 template<typename T>
   requires std::is_trivially_copyable_v<T> && (sizeof(T) == sizeof(payload_t))
-constexpr T from_payload(payload_t const& payload) {
+constexpr T from_payload(payload_t const& payload)
+{
   return std::bit_cast<T>(payload);
 }
 
@@ -72,8 +74,9 @@ constexpr std::array<id_t, cob_type_count> cob_function_codes = {
 };
 
 template<cob_type C>
-concept broadcast_cob =
-    C == cob_type::nmt || C == cob_type::sync || C == cob_type::time;
+concept broadcast_cob = C == cob_type::nmt
+                     || C == cob_type::sync
+                     || C == cob_type::time;
 
 template<cob_type C>
 concept pdo_cob = C == cob_type::tpdo || C == cob_type::rpdo;
@@ -83,24 +86,28 @@ concept peer_cob = !broadcast_cob<C> && !pdo_cob<C>;
 
 template<cob_type Service>
   requires broadcast_cob<Service>
-constexpr id_t cob_id_of() {
+constexpr id_t cob_id_of()
+{
   return cob_function_codes[std::to_underlying(Service)];
 }
 
 template<cob_type Service, std::uint8_t NodeId>
   requires peer_cob<Service>
-constexpr id_t cob_id_of() {
+constexpr id_t cob_id_of()
+{
   static_assert(valid_node_id<NodeId>, "node id must be in [1, 127]");
   return cob_function_codes[std::to_underlying(Service)] + NodeId;
 }
 
 template<cob_type Pdo, std::size_t I, std::uint8_t NodeId>
   requires pdo_cob<Pdo>
-constexpr id_t cob_id_of() {
+constexpr id_t cob_id_of()
+{
   static_assert(I >= 1 && I <= 4, "predefined COB-ID exists only for PDO 1..4");
   static_assert(valid_node_id<NodeId>, "node id must be in [1, 127]");
   return cob_function_codes[std::to_underlying(Pdo)]
-         + static_cast<id_t>(0x100 * (I - 1)) + NodeId;
+       + static_cast<id_t>(0x100 * (I - 1))
+       + NodeId;
 }
 
 struct pdo_id {
@@ -109,11 +116,13 @@ struct pdo_id {
 
   constexpr pdo_id() = default;
 
-  static constexpr pdo_id predefined() {
+  static constexpr pdo_id predefined()
+  {
     return {};
   }
 
-  static constexpr pdo_id custom(id_t v) {
+  static constexpr pdo_id custom(id_t v)
+  {
     return pdo_id(v, true);
   }
 

@@ -4,15 +4,18 @@
 
 namespace {
 
-constexpr int add3(int a, int b, int c) {
+constexpr int add3(int a, int b, int c)
+{
   return a + b + c;
 }
 
-constexpr int nullary() {
+constexpr int nullary()
+{
   return 42;
 }
 
-constexpr bool test_curry() {
+constexpr bool test_curry()
+{
   assert(emb::curry(nullary) == 42);
 
   assert(emb::curry(add3, 1, 2, 3) == 6);

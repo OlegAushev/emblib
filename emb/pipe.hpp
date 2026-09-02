@@ -12,7 +12,8 @@ namespace pipe {
 template<typename T, typename Function>
   requires(std::invocable<Function, T>)
 constexpr auto operator|(T&& t, Function&& f)
-    -> std::invoke_result_t<Function, T> {
+    -> std::invoke_result_t<Function, T>
+{
   return std::invoke(std::forward<Function>(f), std::forward<T>(t));
 }
 
@@ -23,18 +24,20 @@ struct bundle {
 };
 
 template<typename... Extra>
-constexpr auto with(Extra&&... args) {
-  return [...args = std::forward<Extra>(args)](auto&& value)
-      -> bundle<std::decay_t<decltype(value)>, std::decay_t<Extra>...> {
+constexpr auto with(Extra&&... args)
+{
+  return [... args = std::forward<Extra>(args)](auto&& value)
+             -> bundle<std::decay_t<decltype(value)>, std::decay_t<Extra>...> {
     return {std::forward<decltype(value)>(value), {args...}};
   };
 }
 
 template<typename T, typename... Extra, typename Function>
   requires(!std::invocable<Function, bundle<T, Extra...> const&>
-        && std::invocable<Function, T const&, Extra const&...>)
+           && std::invocable<Function, T const&, Extra const&...>)
 constexpr auto operator|(bundle<T, Extra...> const& b, Function&& f)
-    -> std::invoke_result_t<Function, T const&, Extra const&...> {
+    -> std::invoke_result_t<Function, T const&, Extra const&...>
+{
   return std::apply(
       [&](auto const&... a) -> decltype(auto) {
         return std::invoke(std::forward<Function>(f), b.value, a...);
@@ -44,9 +47,10 @@ constexpr auto operator|(bundle<T, Extra...> const& b, Function&& f)
 
 template<typename T, typename... Extra, typename Function>
   requires(!std::invocable<Function, bundle<T, Extra...>>
-        && std::invocable<Function, T, Extra...>)
+           && std::invocable<Function, T, Extra...>)
 constexpr auto operator|(bundle<T, Extra...>&& b, Function&& f)
-    -> std::invoke_result_t<Function, T, Extra...> {
+    -> std::invoke_result_t<Function, T, Extra...>
+{
   return std::apply(
       [&](auto&&... a) -> decltype(auto) {
         return std::invoke(std::forward<Function>(f),
@@ -61,14 +65,16 @@ struct tap_fn {
   F func;
 
   template<typename T>
-  constexpr T operator()(T&& value) const {
+  constexpr T operator()(T&& value) const
+  {
     std::invoke(func, value);
     return std::forward<T>(value);
   }
 };
 
 template<typename F>
-constexpr tap_fn<std::decay_t<F>> tap(F&& f) {
+constexpr tap_fn<std::decay_t<F>> tap(F&& f)
+{
   return {std::forward<F>(f)};
 }
 
@@ -78,7 +84,8 @@ class store_to {
 public:
   constexpr explicit store_to(T& dest) : dest_(dest) {}
 
-  constexpr T operator()(T const& value) const {
+  constexpr T operator()(T const& value) const
+  {
     dest_ = value;
     return value;
   }
@@ -90,13 +97,15 @@ struct transform_fn {
 
   template<typename T>
   constexpr auto operator()(T&& value) const
-      -> std::invoke_result_t<F const&, T> {
+      -> std::invoke_result_t<F const&, T>
+  {
     return std::invoke(func, std::forward<T>(value));
   }
 };
 
 template<typename F>
-constexpr transform_fn<std::decay_t<F>> transform(F&& f) {
+constexpr transform_fn<std::decay_t<F>> transform(F&& f)
+{
   return {std::forward<F>(f)};
 }
 

@@ -12,16 +12,19 @@ enum class polarity : std::int32_t { active_low = 0, active_high = 1 };
 
 enum class state : std::int32_t { inactive = 0, active = 1 };
 
-constexpr level operator!(level lvl) {
+constexpr level operator!(level lvl)
+{
   return lvl == level::low ? level::high : level::low;
 }
 
-constexpr state to_state(level l, polarity p) {
+constexpr state to_state(level l, polarity p)
+{
   bool const active = (l == level::high) == (p == polarity::active_high);
   return active ? state::active : state::inactive;
 }
 
-constexpr level to_level(state s, polarity p) {
+constexpr level to_level(state s, polarity p)
+{
   bool const high = (s == state::active) == (p == polarity::active_high);
   return high ? level::high : level::low;
 }

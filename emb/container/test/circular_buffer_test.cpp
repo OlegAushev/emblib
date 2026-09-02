@@ -4,7 +4,8 @@ namespace {
 
 template<typename CircularBuffer>
 constexpr bool test_circular_buffer(CircularBuffer buf)
-  requires(std::same_as<typename CircularBuffer::value_type, int>) {
+  requires(std::same_as<typename CircularBuffer::value_type, int>)
+{
   int const cap{static_cast<int>(buf.capacity())};
 
   assert(buf.empty());
@@ -14,7 +15,8 @@ constexpr bool test_circular_buffer(CircularBuffer buf)
 
   if (buf.capacity() != 1) {
     assert(!buf.full());
-  } else {
+  }
+  else {
     assert(buf.full());
   }
 
@@ -27,10 +29,9 @@ constexpr bool test_circular_buffer(CircularBuffer buf)
 
   for (auto i{1}; i <= cap; ++i) {
     buf.push_back(i);
-    assert(
-        buf.front() == 1 && buf.back() == i &&
-        buf.size() == static_cast<std::size_t>(i)
-    );
+    assert(buf.front() == 1
+           && buf.back() == i
+           && buf.size() == static_cast<std::size_t>(i));
   }
 
   assert(buf.size() == buf.capacity() && buf.full());
@@ -103,7 +104,8 @@ constexpr bool test_circular_buffer(CircularBuffer buf)
   assert(!buf.full());
   if (buf.capacity() != 1) {
     assert(buf.front() == 42 && buf.back() == 42);
-  } else {
+  }
+  else {
     assert(buf.empty());
   }
 

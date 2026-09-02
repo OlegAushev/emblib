@@ -20,7 +20,8 @@ struct backend {
   std::array<std::uint8_t, capacity> mem{};
 
   template<typename T>
-  constexpr auto read(addr_type addr) -> std::expected<T, nvm::error> {
+  constexpr auto read(addr_type addr) -> std::expected<T, nvm::error>
+  {
     std::array<std::uint8_t, sizeof(T)> buf{};
     for (auto i = 0uz; i < sizeof(T); ++i)
       buf[i] = mem[addr + i];
@@ -29,7 +30,8 @@ struct backend {
 
   template<typename T>
   constexpr auto write(addr_type addr, T const& val)
-      -> std::expected<void, nvm::error> {
+      -> std::expected<void, nvm::error>
+  {
     auto buf = std::bit_cast<std::array<std::uint8_t, sizeof(T)>>(val);
     for (auto i = 0uz; i < sizeof(T); ++i)
       mem[addr + i] = buf[i];
@@ -52,34 +54,30 @@ inline constexpr auto nvm_layout = nvm::make_layout<value_types>({
 using registry_type = nvm::registry<backend, nvm_layout, /*base=*/64>;
 
 static_assert(
-    std::same_as<registry_type::value_type<"motor.pole_pairs">, std::int32_t>
-);
+    std::same_as<registry_type::value_type<"motor.pole_pairs">, std::int32_t>);
 static_assert(std::same_as<registry_type::value_type<"motor.R">, float>);
 static_assert(
-    std::same_as<registry_type::value_type<"gains">, std::array<float, 3>>
-);
+    std::same_as<registry_type::value_type<"gains">, std::array<float, 3>>);
 static_assert(
-    std::same_as<registry_type::value_type<"angle.offset">, units::deg_f32>
-);
+    std::same_as<registry_type::value_type<"angle.offset">, units::deg_f32>);
 
 // -- Tests --
 
 static constexpr std::size_t frame_overhead = sizeof(nvm::fnv1a_32::type)
                                             + sizeof(nvm::crc32::type);
 
-static constexpr bool test_round_trip() {
+static constexpr bool test_round_trip()
+{
   backend storage{};
   registry_type settings{storage};
 
   // size includes hash+crc overhead per entry
-  assert(
-      settings.size
-      == 4 * frame_overhead
-             + sizeof(std::int32_t)
-             + sizeof(float)
-             + 3 * sizeof(float)
-             + sizeof(units::deg_f32)
-  );
+  assert(settings.size
+         == 4 * frame_overhead
+                + sizeof(std::int32_t)
+                + sizeof(float)
+                + 3 * sizeof(float)
+                + sizeof(units::deg_f32));
 
   auto r1 = settings.set<"motor.R">(0.42f);
   assert(r1.has_value());
@@ -106,7 +104,8 @@ static constexpr bool test_round_trip() {
   return true;
 }
 
-static constexpr bool test_hash_mismatch() {
+static constexpr bool test_hash_mismatch()
+{
   backend storage{};
   registry_type settings{storage};
 
@@ -116,9 +115,9 @@ static constexpr bool test_hash_mismatch() {
   assert(motor_p.has_value() && *motor_p == 10);
 
   // corrupt the hash byte of motor.pole_pairs frame
-  constexpr auto off =
-      registry_type::base
-      + nvm_layout.offset_of(nvm_layout.index_of("motor.pole_pairs"));
+  constexpr auto off = registry_type::base
+                     + nvm_layout.offset_of(
+                         nvm_layout.index_of("motor.pole_pairs"));
   storage.mem[off] ^= 0xFF;
 
   motor_p = settings.get<"motor.pole_pairs">();
@@ -128,7 +127,8 @@ static constexpr bool test_hash_mismatch() {
   return true;
 }
 
-static constexpr bool test_crc_mismatch() {
+static constexpr bool test_crc_mismatch()
+{
   backend storage{};
   registry_type settings{storage};
 
@@ -138,9 +138,8 @@ static constexpr bool test_crc_mismatch() {
   assert(motor_R.has_value() && *motor_R == 0.42f);
 
   // corrupt a value byte (hash stays valid, CRC will mismatch)
-  constexpr auto off =
-      registry_type::base
-      + nvm_layout.offset_of(nvm_layout.index_of("motor.R"));
+  constexpr auto off = registry_type::base
+                     + nvm_layout.offset_of(nvm_layout.index_of("motor.R"));
   storage.mem[off + sizeof(nvm::fnv1a_32::type)] ^=
       0xFF; // corrupt first byte of value
 
@@ -151,7 +150,8 @@ static constexpr bool test_crc_mismatch() {
   return true;
 }
 
-static constexpr bool test_reset() {
+static constexpr bool test_reset()
+{
   backend storage{};
   registry_type settings{storage};
 
@@ -168,7 +168,8 @@ static constexpr bool test_reset() {
   return true;
 }
 
-static constexpr bool test_reset_all() {
+static constexpr bool test_reset_all()
+{
   backend storage{};
   registry_type settings{storage};
 
@@ -179,8 +180,7 @@ static constexpr bool test_reset_all() {
   [[maybe_unused]] auto r2 = settings.set<"motor.R">(0.42f);
   [[maybe_unused]] auto r3 = settings.set<"gains">({1.f, 2.f, 3.f});
   [[maybe_unused]] auto r4 = settings.set<"angle.offset">(
-      units::deg_f32{30.0f}
-  );
+      units::deg_f32{30.0f});
 
   auto r = settings.reset_all();
   assert(r.has_value());

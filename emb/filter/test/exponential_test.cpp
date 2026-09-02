@@ -4,10 +4,9 @@
 namespace {
 
 template<typename Filter>
-constexpr bool test_exponential_filter(
-    Filter filter,
-    typename Filter::value_type init_output
-) {
+constexpr bool test_exponential_filter(Filter filter,
+                                       typename Filter::value_type init_output)
+{
   using value_type = Filter::value_type;
 
   assert(filter.output() == init_output);
@@ -30,7 +29,8 @@ constexpr bool test_exponential_filter(
     // Output should monotonically approach input
     if (prev_output < input_value) {
       assert(curr_output >= prev_output);
-    } else if (prev_output > input_value) {
+    }
+    else if (prev_output > input_value) {
       assert(curr_output <= prev_output);
     }
 
@@ -52,30 +52,24 @@ constexpr bool test_exponential_filter(
 }
 
 // Test with float
-static_assert(test_exponential_filter(
-    emb::exponential_filter<float, emb::units::sec_f32>(
-        emb::units::sec_f32{0.01f},
-        emb::units::sec_f32{0.1f}
-    ),
-    0.0f
-));
+static_assert(
+    test_exponential_filter(emb::exponential_filter<float, emb::units::sec_f32>(
+                                emb::units::sec_f32{0.01f},
+                                emb::units::sec_f32{0.1f}),
+                            0.0f));
 
-static_assert(test_exponential_filter(
-    emb::exponential_filter<float, emb::units::sec_f32>(
-        emb::units::sec_f32{0.01f},
-        emb::units::sec_f32{0.1f},
-        3.14f
-    ),
-    3.14f
-));
+static_assert(
+    test_exponential_filter(emb::exponential_filter<float, emb::units::sec_f32>(
+                                emb::units::sec_f32{0.01f},
+                                emb::units::sec_f32{0.1f},
+                                3.14f),
+                            3.14f));
 
 // Test with units
 static_assert(test_exponential_filter(
     emb::exponential_filter<emb::units::erad_f32, emb::units::sec_f32>(
         emb::units::sec_f32{0.01f},
-        emb::units::sec_f32{0.1f}
-    ),
-    emb::units::erad_f32{0}
-));
+        emb::units::sec_f32{0.1f}),
+    emb::units::erad_f32{0}));
 
 } // namespace

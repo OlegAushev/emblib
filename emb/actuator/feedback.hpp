@@ -25,9 +25,12 @@ private:
   Decoder decoder_;
 public:
   feedback(Sensor sensor, Decoder decoder)
-      : sensor_(std::move(sensor)), decoder_(std::move(decoder)) {}
+      : sensor_(std::move(sensor)), decoder_(std::move(decoder))
+  {
+  }
 
-  State read() {
+  State read()
+  {
     return decoder_(sensor_());
   }
 };

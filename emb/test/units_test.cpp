@@ -3,13 +3,14 @@
 namespace {
 
 template<typename Unit>
-constexpr Unit templated_conversion() {
+constexpr Unit templated_conversion()
+{
   return emb::units::convert_to<Unit>(
-      emb::units::erad_f32{std::numbers::pi_v<float>}
-  );
+      emb::units::erad_f32{std::numbers::pi_v<float>});
 }
 
-constexpr bool test_units_conversion() {
+constexpr bool test_units_conversion()
+{
   using namespace emb::units;
 
   float v1{90.0f};
@@ -43,14 +44,11 @@ constexpr bool test_units_conversion() {
   assert(convert_to<rpm_f32>(rpm1) == rpm1);
   assert(convert_to<eradps_f32>(rpm1, p) == eradps_f32{emb::to_eradps(v2, p)});
 
-  assert(
-      templated_conversion<erad_f32>() == erad_f32{std::numbers::pi_v<float>}
-  );
+  assert(templated_conversion<erad_f32>()
+         == erad_f32{std::numbers::pi_v<float>});
 
-  assert(
-      templated_conversion<edeg_f32>() ==
-      edeg_f32{emb::to_deg(std::numbers::pi_v<float>)}
-  );
+  assert(templated_conversion<edeg_f32>()
+         == edeg_f32{emb::to_deg(std::numbers::pi_v<float>)});
 
   [[maybe_unused]] hz_f32 freq{100};
   assert(1 / freq == sec_f32{1.0f / 100.0f});

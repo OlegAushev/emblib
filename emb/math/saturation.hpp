@@ -10,8 +10,9 @@
 namespace emb {
 
 template<std::integral T>
-constexpr T saturating_add(T x, T y) {
-#if __cpp_lib_saturation_arithmetic >= 202603L
+constexpr T saturating_add(T x, T y)
+{
+#if __cpp_lib_saturation_arithmetic >= 202603l
   return std::saturating_add(x, y);
 #else
   return std::add_sat(x, y);
@@ -19,8 +20,9 @@ constexpr T saturating_add(T x, T y) {
 }
 
 template<std::integral T>
-constexpr T saturating_sub(T x, T y) {
-#if __cpp_lib_saturation_arithmetic >= 202603L
+constexpr T saturating_sub(T x, T y)
+{
+#if __cpp_lib_saturation_arithmetic >= 202603l
   return std::saturating_sub(x, y);
 #else
   return std::sub_sat(x, y);
@@ -28,8 +30,9 @@ constexpr T saturating_sub(T x, T y) {
 }
 
 template<std::integral R, std::integral T>
-constexpr R saturating_cast(T x) {
-#if __cpp_lib_saturation_arithmetic >= 202603L
+constexpr R saturating_cast(T x)
+{
+#if __cpp_lib_saturation_arithmetic >= 202603l
   return std::saturating_cast<R>(x);
 #else
   return std::saturate_cast<R>(x);

@@ -23,54 +23,50 @@ struct node_options {
 template<node_options Opt>
 class node {
 public:
-  explicit node(transport& bus) : bus_(bus) {
+  explicit node(transport& bus) : bus_(bus)
+  {
     bus_.subscribe(emb::make_delegate<&node::enqueue_rx>(this));
   }
 
   node(node const&) = delete;
   node& operator=(node const&) = delete;
 
-  void add_rx(
-      format_t format,
-      id_t id,
-      id_t mask,
-      std::chrono::milliseconds timeout,
-      emb::delegate<void(frame_t const&)> handler,
-      emb::delegate<void()> on_timeout
-  ) {
-    bool ok = rx_.try_push_back(
-        {.format = format,
-         .id = id,
-         .mask = mask,
-         .timeout = timeout,
-         .last_rx = now_,
-         .timed_out = false,
-         .handler = handler,
-         .on_timeout = on_timeout}
-    );
+  void add_rx(format_t format,
+              id_t id,
+              id_t mask,
+              std::chrono::milliseconds timeout,
+              emb::delegate<void(frame_t const&)> handler,
+              emb::delegate<void()> on_timeout)
+  {
+    bool ok = rx_.try_push_back({.format = format,
+                                 .id = id,
+                                 .mask = mask,
+                                 .timeout = timeout,
+                                 .last_rx = now_,
+                                 .timed_out = false,
+                                 .handler = handler,
+                                 .on_timeout = on_timeout});
     emb::ensure(ok);
     bus_.add_filter(format, id, mask);
   }
 
-  void add_periodic_tx(
-      format_t format,
-      id_t id,
-      std::uint8_t len,
-      std::chrono::milliseconds period,
-      emb::delegate<payload_t()> provider
-  ) {
-    bool ok = tx_.try_push_back(
-        {.format = format,
-         .id = id,
-         .len = len,
-         .period = period,
-         .last_tx = now_,
-         .provider = provider}
-    );
+  void add_periodic_tx(format_t format,
+                       id_t id,
+                       std::uint8_t len,
+                       std::chrono::milliseconds period,
+                       emb::delegate<payload_t()> provider)
+  {
+    bool ok = tx_.try_push_back({.format = format,
+                                 .id = id,
+                                 .len = len,
+                                 .period = period,
+                                 .last_tx = now_,
+                                 .provider = provider});
     emb::ensure(ok);
   }
 
-  void run(std::chrono::milliseconds since_boot) {
+  void run(std::chrono::milliseconds since_boot)
+  {
     now_ = since_boot;
 
     while (auto frame = rx_queue_.try_pop()) {
@@ -93,12 +89,10 @@ public:
       }
       if ((now_ - s.last_tx) < s.period) continue;
 
-      frame_t frame = {
-          .format = s.format,
-          .id = s.id,
-          .len = s.len,
-          .payload = s.provider()
-      };
+      frame_t frame = {.format = s.format,
+                       .id = s.id,
+                       .len = s.len,
+                       .payload = s.provider()};
 
       if (bus_.send(frame)) {
         s.last_tx = now_;
@@ -127,11 +121,13 @@ private:
     emb::delegate<payload_t()> provider;
   };
 
-  void enqueue_rx(frame_t const& frame) {
+  void enqueue_rx(frame_t const& frame)
+  {
     (void)rx_queue_.try_push(frame); // drop-newest on full
   }
 
-  void dispatch_rx(frame_t const& frame) {
+  void dispatch_rx(frame_t const& frame)
+  {
     for (auto& s : rx_) {
       if (frame.format != s.format) continue;
       if ((frame.id & s.mask) != (s.id & s.mask)) continue;

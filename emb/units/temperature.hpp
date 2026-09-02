@@ -27,13 +27,15 @@ using kelvin_f32 = kelvin<float>;
 
 template<typename To, std::floating_point T>
   requires std::same_as<To, kelvin<T>>
-constexpr kelvin<T> convert_to(degree_celsius<T> v) {
+constexpr kelvin<T> convert_to(degree_celsius<T> v)
+{
   return units::kelvin<T>(v.value() + T{273.15});
 }
 
 template<typename To, std::floating_point T>
   requires std::same_as<To, degree_celsius<T>>
-constexpr degree_celsius<T> convert_to(kelvin<T> v) {
+constexpr degree_celsius<T> convert_to(kelvin<T> v)
+{
   return units::degree_celsius<T>(v.value() - T{273.15});
 }
 

@@ -58,10 +58,9 @@ public:
   // Forwarded for introspection; multiplexed itself is not a some_sensor
   // (see above).
   using sensor_category = typename first_type::sensor_category;
-  using sensors_type = std::conditional_t<
-      uniform_sensors,
-      std::array<first_type, source_count>,
-      std::tuple<Sensors...>>;
+  using sensors_type = std::conditional_t<uniform_sensors,
+                                          std::array<first_type, source_count>,
+                                          std::tuple<Sensors...>>;
   using values_type = std::conditional_t<
       uniform_values,
       std::array<typename first_type::value_type, source_count>,
@@ -71,7 +70,9 @@ private:
 
   template<typename... Args, std::size_t... I>
   constexpr multiplexed(std::index_sequence<I...>, Args const&... args)
-      : sensors_{((void)I, first_type(args...))...} {}
+      : sensors_{((void)I, first_type(args...))...}
+  {
+  }
 public:
   constexpr multiplexed() = default;
 
@@ -81,7 +82,9 @@ public:
   // default construction.
   constexpr explicit multiplexed(sensors_type sensors)
     requires(std::move_constructible<Sensors> && ...)
-      : sensors_(std::move(sensors)) {}
+      : sensors_(std::move(sensors))
+  {
+  }
 
   // Broadcast construction: every source's sensor is built from the same
   // arguments. Each source still keeps its own independent state. Uniform
@@ -89,35 +92,43 @@ public:
   // from. The array is initialized from prvalues, so sensors need not be
   // movable.
   template<typename... Args>
-    requires uniform_sensors && (sizeof...(Args) > 0)
+    requires uniform_sensors
+          && (sizeof...(Args) > 0)
           && std::constructible_from<first_type, Args const&...>
   constexpr explicit multiplexed(Args const&... args)
-      : multiplexed(std::make_index_sequence<source_count>{}, args...) {}
+      : multiplexed(std::make_index_sequence<source_count>{}, args...)
+  {
+  }
 
   template<std::size_t I>
-  constexpr sensor_type<I> const& sensor() const {
+  constexpr sensor_type<I> const& sensor() const
+  {
     return std::get<I>(sensors_);
   }
 
   template<std::size_t I>
-  constexpr sensor_type<I>& sensor() {
+  constexpr sensor_type<I>& sensor()
+  {
     return std::get<I>(sensors_);
   }
 
   constexpr first_type const& sensor(std::size_t source) const
-    requires uniform_sensors {
+    requires uniform_sensors
+  {
     return sensors_[source];
   }
 
   constexpr first_type& sensor(std::size_t source)
-    requires uniform_sensors {
+    requires uniform_sensors
+  {
     return sensors_[source];
   }
 
   // Producer-side: the sample taken while `source` was selected. Uniform
   // sources are indexed directly, otherwise selected through visit_at's
   // compare chain; `source` must be below source_count.
-  constexpr void submit(std::size_t source, sample_type sample) {
+  constexpr void submit(std::size_t source, sample_type sample)
+  {
     visit_at(sensors_, source, [&](auto& sensor) {
       sensor.submit(std::move(sample));
     });
@@ -126,31 +137,35 @@ public:
   // Consumer-side, present when the per-source sensors defer work to a
   // process() step (buffered): drains every source.
   constexpr void process()
-    requires(requires(Sensors& s) { s.process(); } && ...) {
+    requires(requires(Sensors& s) { s.process(); } && ...)
+  {
     if constexpr (uniform_sensors) {
       for (auto& sensor : sensors_) {
         sensor.process();
       }
-    } else {
-      unroll<source_count>([&]<std::size_t I>() {
-        std::get<I>(sensors_).process();
-      });
+    }
+    else {
+      unroll<source_count>(
+          [&]<std::size_t I>() { std::get<I>(sensors_).process(); });
     }
   }
 
   template<std::size_t I>
-  constexpr typename sensor_type<I>::value_type value() const {
+  constexpr typename sensor_type<I>::value_type value() const
+  {
     return std::get<I>(sensors_).value();
   }
 
   constexpr typename first_type::value_type value(std::size_t source) const
-    requires uniform_values {
+    requires uniform_values
+  {
     return visit_at(sensors_, source, [](auto const& sensor) {
       return sensor.value();
     });
   }
 
-  constexpr values_type values() const {
+  constexpr values_type values() const
+  {
     return [&]<std::size_t... I>(std::index_sequence<I...>) {
       return values_type{std::get<I>(sensors_).value()...};
     }(std::make_index_sequence<source_count>{});

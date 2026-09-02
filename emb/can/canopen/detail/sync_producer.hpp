@@ -17,20 +17,22 @@ class sync_producer {
 public:
   sync_producer(transport& bus) : bus_(bus) {}
 
-  void set_period(
-      std::chrono::milliseconds period,
-      std::chrono::milliseconds now
-  ) {
+  void set_period(std::chrono::milliseconds period,
+                  std::chrono::milliseconds now)
+  {
     period_ = period;
     last_tx_ = now;
   }
 
-  void tick(std::chrono::milliseconds now) {
+  void tick(std::chrono::milliseconds now)
+  {
     if (period_ == std::chrono::milliseconds::zero()) return;
     if ((now - last_tx_) < period_) return;
 
-    frame_t frame =
-        {.format = format_t::standard, .id = cob_id_, .len = 0, .payload = {}};
+    frame_t frame = {.format = format_t::standard,
+                     .id = cob_id_,
+                     .len = 0,
+                     .payload = {}};
 
     if (bus_.send(frame)) {
       last_tx_ = now;

@@ -15,12 +15,14 @@ namespace emb {
 // at runtime; falls back to assert() in constant evaluation. The linking
 // project should install a custom terminate handler via std::set_terminate
 // to perform an appropriate halt (e.g. breakpoint + spin, watchdog reset).
-constexpr void ensure(bool pred) {
+constexpr void ensure(bool pred)
+{
   if !consteval {
     if (!pred) {
       std::terminate();
     }
-  } else {
+  }
+  else {
     assert(pred);
   }
 }

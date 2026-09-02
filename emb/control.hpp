@@ -21,10 +21,7 @@ concept command_sink = requires(T& sink, Command const& cmd) {
   { sink.accept(cmd) } -> std::same_as<void>;
 };
 
-template<
-    typename Command,
-    typename Sink,
-    typename... Sources>
+template<typename Command, typename Sink, typename... Sources>
 class command_multiplexer {
 public:
   using command_type = Command;
@@ -36,42 +33,49 @@ private:
 public:
   constexpr explicit command_multiplexer(sink_type& obj)
     requires command_sink<sink_type, command_type>
-      : sink_(obj) {}
+      : sink_(obj)
+  {
+  }
 
   command_multiplexer(command_multiplexer const&) = delete;
   command_multiplexer(command_multiplexer&&) = delete;
   command_multiplexer& operator=(command_multiplexer const&) = delete;
   command_multiplexer& operator=(command_multiplexer&&) = delete;
 
-  constexpr source_type source() const {
+  constexpr source_type source() const
+  {
     return source_;
   }
 
   template<typename Device>
-    requires command_source<Device, command_type> &&
-             emb::same_as_any<Device, Sources...>
-  constexpr void activate(Device const& device) {
+    requires command_source<Device, command_type>
+          && emb::same_as_any<Device, Sources...>
+  constexpr void activate(Device const& device)
+  {
     source_ = &device;
     poll();
   }
 
-  constexpr void activate(source_type const& source) {
+  constexpr void activate(source_type const& source)
+  {
     source_ = source;
     poll();
   }
 
-  constexpr void deactivate() {
+  constexpr void deactivate()
+  {
     source_ = std::monostate{};
     sink_.accept(command_type{});
   }
 
-  constexpr void poll() {
+  constexpr void poll()
+  {
     auto visitor = [](auto const& s) -> command_type {
-      if constexpr (std::same_as<
-                        std::remove_cvref_t<decltype(s)>,
-                        std::monostate>) {
+      if constexpr (std::same_as<std::remove_cvref_t<decltype(s)>,
+                                 std::monostate>) {
         return command_type{};
-      } else {
+      }
+      else {
         return s->get(command<command_type>{});
       }
     };
@@ -79,9 +83,10 @@ public:
   }
 
   template<typename Device>
-    requires command_source<Device, command_type> &&
-             emb::same_as_any<Device, Sources...>
-  constexpr bool is_active(Device const& device) const {
+    requires command_source<Device, command_type>
+          && emb::same_as_any<Device, Sources...>
+  constexpr bool is_active(Device const& device) const
+  {
     auto ptr = std::get_if<Device const*>(&source_);
     return ptr && *ptr == &device;
   }

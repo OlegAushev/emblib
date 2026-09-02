@@ -38,11 +38,9 @@ class server {
   static_assert(valid_node_id<Opt.node_id>, "node id must be in [1, 127]");
 
 public:
-  server(
-      emb::delegate<std::chrono::milliseconds()> clock,
-      transport& bus,
-      std::span<od_entry> dictionary
-  )
+  server(emb::delegate<std::chrono::milliseconds()> clock,
+         transport& bus,
+         std::span<od_entry> dictionary)
       : clock_(clock),
         bus_(bus),
         hb_producer_(bus),
@@ -51,7 +49,8 @@ public:
         emcy_(bus),
         sdo_(bus, dictionary),
         tpdo_(bus),
-        rpdo_(bus) {
+        rpdo_(bus)
+  {
     bus_.subscribe(emb::make_delegate<&server::enqueue_rx>(this));
 
     bus_.add_filter(format_t::standard, nmt_.cob_id(), 0x7FF);
@@ -63,18 +62,22 @@ public:
 
   ~server() = default;
 
-  static constexpr server_options options() {
+  static constexpr server_options options()
+  {
     return Opt;
   }
 
-  void start() {
+  void start()
+  {
     apply_nmt_state(nmt_state::operational);
   }
-  void stop() {
+  void stop()
+  {
     apply_nmt_state(nmt_state::stopped);
   }
 
-  void run() {
+  void run()
+  {
     auto now = clock_();
 
     while (auto frame = rx_queue_.try_pop()) {
@@ -93,91 +96,93 @@ public:
     hb_consumer_.tick(now);
   }
 
-  nmt_state state() const {
+  nmt_state state() const
+  {
     return nmt_.state();
   }
 
   // ---- RPDO ----
 
   template<std::size_t I, pdo_id CobId = pdo_id::predefined()>
-  void setup_rpdo(rpdo_config cfg) {
+  void setup_rpdo(rpdo_config cfg)
+  {
     static_assert(I >= 1 && I <= Opt.rpdo_count, "RPDO index out of range");
-    static_assert(
-        CobId.is_custom || I <= 4,
-        "PDO >= 5 requires pdo_id::custom(...)"
-    );
-    static_assert(
-        !CobId.is_custom || (CobId.value >= 1 && CobId.value <= 0x7FF),
-        "COB-ID out of 11-bit range"
-    );
+    static_assert(CobId.is_custom || I <= 4,
+                  "PDO >= 5 requires pdo_id::custom(...)");
+    static_assert(!CobId.is_custom
+                      || (CobId.value >= 1 && CobId.value <= 0x7FF),
+                  "COB-ID out of 11-bit range");
     rpdo_.template setup<I, CobId>(cfg, clock_());
   }
 
   // ---- TPDO ----
 
   template<std::size_t I, pdo_id CobId = pdo_id::predefined()>
-  void setup_tpdo(tpdo_config cfg) {
+  void setup_tpdo(tpdo_config cfg)
+  {
     static_assert(I >= 1 && I <= Opt.tpdo_count, "TPDO index out of range");
-    static_assert(
-        CobId.is_custom || I <= 4,
-        "PDO >= 5 requires pdo_id::custom(...)"
-    );
-    static_assert(
-        !CobId.is_custom || (CobId.value >= 1 && CobId.value <= 0x7FF),
-        "COB-ID out of 11-bit range"
-    );
+    static_assert(CobId.is_custom || I <= 4,
+                  "PDO >= 5 requires pdo_id::custom(...)");
+    static_assert(!CobId.is_custom
+                      || (CobId.value >= 1 && CobId.value <= 0x7FF),
+                  "COB-ID out of 11-bit range");
     tpdo_.template setup<I, CobId>(cfg, clock_());
   }
 
   // ---- heartbeat / sync / nmt ----
 
-  void set_heartbeat_period(std::chrono::milliseconds period) {
+  void set_heartbeat_period(std::chrono::milliseconds period)
+  {
     auto now = clock_();
     hb_producer_.set_period(period, now);
   }
 
-  void set_sync_period(std::chrono::milliseconds period) {
+  void set_sync_period(std::chrono::milliseconds period)
+  {
     auto now = clock_();
     sync_producer_.set_period(period, now);
   }
 
-  void on_nmt_change(emb::delegate<void(nmt_state)> handler) {
+  void on_nmt_change(emb::delegate<void(nmt_state)> handler)
+  {
     on_nmt_change_ = handler;
   }
 
-  void on_reset_node(emb::delegate<void()> handler) {
+  void on_reset_node(emb::delegate<void()> handler)
+  {
     on_reset_node_ = handler;
   }
 
-  void on_reset_communication(emb::delegate<void()> handler) {
+  void on_reset_communication(emb::delegate<void()> handler)
+  {
     on_reset_communication_ = handler;
   }
 
   template<std::uint8_t Remote>
-  bool watch_heartbeat(
-      std::chrono::milliseconds timeout,
-      emb::delegate<void(std::uint8_t)> on_lost
-  ) {
+  bool watch_heartbeat(std::chrono::milliseconds timeout,
+                       emb::delegate<void(std::uint8_t)> on_lost)
+  {
     auto now = clock_();
     return hb_consumer_.watch<Remote>(timeout, on_lost, now);
   }
 
   // ---- emcy ----
 
-  bool emit_emcy(
-      std::uint16_t error_code,
-      std::uint8_t error_register,
-      std::array<std::uint8_t, 5> manufacturer = {}
-  ) {
+  bool emit_emcy(std::uint16_t error_code,
+                 std::uint8_t error_register,
+                 std::array<std::uint8_t, 5> manufacturer = {})
+  {
     return emcy_.emit(error_code, error_register, manufacturer);
   }
 
 private:
-  void enqueue_rx(frame_t const& frame) {
+  void enqueue_rx(frame_t const& frame)
+  {
     (void)rx_queue_.try_push(frame); // drop-newest on full
   }
 
-  void dispatch_rx(frame_t const& frame) {
+  void dispatch_rx(frame_t const& frame)
+  {
     if (nmt_.match(frame)) {
       handle_nmt_command(frame);
       return;
@@ -188,7 +193,8 @@ private:
     hb_consumer_.try_handle(frame, now);
   }
 
-  void apply_nmt_state(nmt_state s) {
+  void apply_nmt_state(nmt_state s)
+  {
     if (s == nmt_.state()) return;
     nmt_.set_state(s);
     auto now = clock_();
@@ -196,7 +202,8 @@ private:
     if (on_nmt_change_) on_nmt_change_(s);
   }
 
-  void handle_nmt_command(frame_t const& frame) {
+  void handle_nmt_command(frame_t const& frame)
+  {
     auto cmd = nmt_.decode(frame);
     if (!cmd) return;
 

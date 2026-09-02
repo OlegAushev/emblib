@@ -7,12 +7,11 @@
 namespace {
 
 template<typename Ramp>
-constexpr bool test_ramp_generator(
-    Ramp ramp,
-    typename Ramp::value_type target,
-    typename Ramp::value_type slope,
-    emb::units::sec_f32 timestep
-) {
+constexpr bool test_ramp_generator(Ramp ramp,
+                                   typename Ramp::value_type target,
+                                   typename Ramp::value_type slope,
+                                   emb::units::sec_f32 timestep)
+{
   using value_type = typename Ramp::value_type;
 
   value_type const init_output{ramp.output()};
@@ -32,10 +31,8 @@ constexpr bool test_ramp_generator(
                                + dir * step * static_cast<value_type>(i);
     [[maybe_unused]] value_type const expected = dir > value_type{0}
                                                    ? std::min(unclamped, target)
-                                                   : std::max(
-                                                         unclamped,
-                                                         target
-                                                     );
+                                                   : std::max(unclamped,
+                                                              target);
     assert(fabs(ramp.output() - expected) < 1e-4f);
     if (ramp.at_target()) break;
     ramp.update();
@@ -55,31 +52,28 @@ static_assert(test_ramp_generator(
     emb::ramp_generator<float>{emb::units::sec_f32{0.1f}, 1.0f},
     1.0f,
     1.0f,
-    emb::units::sec_f32{0.1f}
-));
+    emb::units::sec_f32{0.1f}));
 
 static_assert(test_ramp_generator(
     emb::ramp_generator<float>{emb::units::sec_f32{0.01f}, 50.0f, -10.0f},
     10.0f,
     50.0f,
-    emb::units::sec_f32{0.01f}
-));
+    emb::units::sec_f32{0.01f}));
 
 static_assert(test_ramp_generator(
     emb::ramp_generator<float>{emb::units::sec_f32{0.1f}, 100.0f, 100.0f},
     0.0f,
     100.0f,
-    emb::units::sec_f32{0.1f}
-));
+    emb::units::sec_f32{0.1f}));
 
 static_assert(test_ramp_generator(
     emb::ramp_generator<float>{emb::units::sec_f32{0.05f}, 5.0f, 2.0f},
     2.0f,
     5.0f,
-    emb::units::sec_f32{0.05f}
-));
+    emb::units::sec_f32{0.05f}));
 
-constexpr bool test_ramp_reset() {
+constexpr bool test_ramp_reset()
+{
   emb::ramp_generator<float> ramp(emb::units::sec_f32{0.1f}, 10.0f, 5.0f);
   assert(ramp.output() == 5.0f);
   assert(ramp.target() == 5.0f);
@@ -99,7 +93,8 @@ constexpr bool test_ramp_reset() {
   return true;
 }
 
-constexpr bool test_ramp_set_output() {
+constexpr bool test_ramp_set_output()
+{
   emb::ramp_generator<float> ramp(emb::units::sec_f32{0.1f}, 1.0f, 0.0f);
 
   ramp.set_target(10.0f);
@@ -115,7 +110,8 @@ constexpr bool test_ramp_set_output() {
   return true;
 }
 
-constexpr bool test_ramp_set_timestep() {
+constexpr bool test_ramp_set_timestep()
+{
   emb::ramp_generator<float> ramp(emb::units::sec_f32{0.1f}, 1.0f, 0.0f);
   ramp.set_target(1.0f);
 
@@ -129,7 +125,8 @@ constexpr bool test_ramp_set_timestep() {
   return true;
 }
 
-constexpr bool test_ramp_set_slope() {
+constexpr bool test_ramp_set_slope()
+{
   emb::ramp_generator<float> ramp(emb::units::sec_f32{0.1f}, 1.0f, 0.0f);
   ramp.set_target(1.0f);
 
@@ -143,7 +140,8 @@ constexpr bool test_ramp_set_slope() {
   return true;
 }
 
-constexpr bool test_ramp_change_target_midway() {
+constexpr bool test_ramp_change_target_midway()
+{
   emb::ramp_generator<float> ramp(emb::units::sec_f32{0.1f}, 1.0f, 0.0f);
 
   ramp.set_target(10.0f);

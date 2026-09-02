@@ -15,13 +15,17 @@ private:
 public:
   constexpr passthrough_filter() = default;
 
-  constexpr explicit passthrough_filter(value_type const& init) : value_(init) {}
+  constexpr explicit passthrough_filter(value_type const& init) : value_(init)
+  {
+  }
 
-  constexpr void push(value_type const& input) {
+  constexpr void push(value_type const& input)
+  {
     value_ = input;
   }
 
-  constexpr const_reference output() const {
+  constexpr const_reference output() const
+  {
     return value_;
   }
 };

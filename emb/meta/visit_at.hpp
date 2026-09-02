@@ -13,12 +13,15 @@ namespace emb {
 // last branch is unconditional.
 // TODO(C++26 expansion statements, GCC 16): template for
 template<std::size_t I = 0, typename Tuple, typename F>
-constexpr decltype(auto) visit_at(Tuple& t, std::size_t i, F&& f) {
+constexpr decltype(auto) visit_at(Tuple& t, std::size_t i, F&& f)
+{
   if constexpr (requires { t[i]; }) {
     return f(t[i]);
-  } else if constexpr (I + 1 == std::tuple_size_v<Tuple>) {
+  }
+  else if constexpr (I + 1 == std::tuple_size_v<Tuple>) {
     return f(std::get<I>(t));
-  } else {
+  }
+  else {
     return i == I ? f(std::get<I>(t)) : visit_at<I + 1>(t, i, f);
   }
 }

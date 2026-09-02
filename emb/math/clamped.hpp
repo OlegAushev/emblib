@@ -22,23 +22,28 @@ public:
 
   constexpr explicit clamped(value_type v) : v_(std::clamp(v, lo, hi)) {}
 
-  constexpr value_type value() const {
+  constexpr value_type value() const
+  {
     return v_;
   }
 
-  constexpr clamped& operator+=(clamped const& rhs) {
+  constexpr clamped& operator+=(clamped const& rhs)
+  {
     if constexpr (std::integral<value_type>) {
       v_ = std::clamp(saturating_add(v_, rhs.v_), lo, hi);
-    } else {
+    }
+    else {
       v_ = std::clamp(v_ + rhs.v_, lo, hi);
     }
     return *this;
   }
 
-  constexpr clamped& operator-=(clamped const& rhs) {
+  constexpr clamped& operator-=(clamped const& rhs)
+  {
     if constexpr (std::integral<value_type>) {
       v_ = std::clamp(saturating_sub(v_, rhs.v_), lo, hi);
-    } else {
+    }
+    else {
       v_ = std::clamp(v_ - rhs.v_, lo, hi);
     }
     return *this;
@@ -46,12 +51,14 @@ public:
 
   friend constexpr auto operator<=>(clamped const&, clamped const&) = default;
 
-  friend constexpr clamped operator+(clamped const& lhs, clamped const& rhs) {
+  friend constexpr clamped operator+(clamped const& lhs, clamped const& rhs)
+  {
     clamped tmp = lhs;
     return tmp += rhs;
   }
 
-  friend constexpr clamped operator-(clamped const& lhs, clamped const& rhs) {
+  friend constexpr clamped operator-(clamped const& lhs, clamped const& rhs)
+  {
     clamped tmp = lhs;
     return tmp -= rhs;
   }
@@ -59,17 +66,20 @@ public:
   // scaling by a scalar requires a rounding policy for integral types,
   // which this class does not impose; floating-point only
   friend constexpr clamped operator*(clamped const& lhs, value_type rhs)
-    requires std::floating_point<value_type> {
+    requires std::floating_point<value_type>
+  {
     return clamped(lhs.value() * rhs);
   }
 
   friend constexpr clamped operator*(value_type lhs, clamped const& rhs)
-    requires std::floating_point<value_type> {
+    requires std::floating_point<value_type>
+  {
     return rhs * lhs;
   }
 
   friend constexpr clamped operator/(clamped const& lhs, value_type rhs)
-    requires std::floating_point<value_type> {
+    requires std::floating_point<value_type>
+  {
     return clamped(lhs.value() / rhs);
   }
 };

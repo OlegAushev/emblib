@@ -19,10 +19,13 @@ class [[nodiscard]] scope_exit {
 public:
   template<typename Fn>
     requires(!std::same_as<std::remove_cvref_t<Fn>, scope_exit>)
-  explicit scope_exit(Fn&& callback) : callback_(std::forward<Fn>(callback)) {}
+  explicit scope_exit(Fn&& callback) : callback_(std::forward<Fn>(callback))
+  {
+  }
 
   scope_exit(scope_exit&& other)
-      : callback_(std::move(other.callback_)), active_(other.active_) {
+      : callback_(std::move(other.callback_)), active_(other.active_)
+  {
     other.release();
   }
 
@@ -30,13 +33,17 @@ public:
   scope_exit& operator=(scope_exit const& other) = delete;
   scope_exit& operator=(scope_exit&& other) = delete;
 
-  ~scope_exit() {
+  ~scope_exit()
+  {
     if (active_) {
       callback_();
     }
   }
 
-  void release() { active_ = false; }
+  void release()
+  {
+    active_ = false;
+  }
 
 private:
   Callback callback_;

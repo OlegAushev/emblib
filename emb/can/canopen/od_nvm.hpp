@@ -32,7 +32,8 @@ struct od_nvm {
   template<typename T>
   [[gnu::noinline]] static auto
   read_impl(typename registry_type::template parameter_ref<T> p)
-      -> od_read_result {
+      -> od_read_result
+  {
     auto r = RegistryFn().get(p);
     if (!r) {
       using enum nvm::error;
@@ -47,7 +48,8 @@ struct od_nvm {
   template<typename T>
   [[gnu::noinline]] static auto
   write_impl(typename registry_type::template parameter_ref<T> p, od_value val)
-      -> od_write_result {
+      -> od_write_result
+  {
     auto v = from_od_value<T>(val);
     if (!v) {
       return std::unexpected(sdo_abort_code::data_type_mismatch);
@@ -60,12 +62,14 @@ struct od_nvm {
   }
 
   template<nvm::parameter_name Name>
-  static auto read() -> od_read_result {
+  static auto read() -> od_read_result
+  {
     return read_impl(registry_type::template ref<Name>());
   }
 
   template<nvm::parameter_name Name>
-  static auto write(od_value val) -> od_write_result {
+  static auto write(od_value val) -> od_write_result
+  {
     return write_impl(registry_type::template ref<Name>(), val);
   }
 };

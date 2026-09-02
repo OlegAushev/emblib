@@ -25,7 +25,8 @@ extern "C" {
 namespace emb {
 
 // ---- sin ----
-inline float builtin_sin(float x) {
+inline float builtin_sin(float x)
+{
 #ifdef __arm__
   return arm_sin_f32(x);
 #endif
@@ -34,16 +35,19 @@ inline float builtin_sin(float x) {
 #endif
 }
 
-constexpr float sin(float x) {
+constexpr float sin(float x)
+{
   if !consteval {
     return builtin_sin(x);
-  } else {
+  }
+  else {
     return lookup_sin(x);
   }
 }
 
 // ---- cos ----
-inline float builtin_cos(float x) {
+inline float builtin_cos(float x)
+{
 #ifdef __arm__
   return arm_cos_f32(x);
 #endif
@@ -52,16 +56,19 @@ inline float builtin_cos(float x) {
 #endif
 }
 
-constexpr float cos(float x) {
+constexpr float cos(float x)
+{
   if !consteval {
     return builtin_cos(x);
-  } else {
+  }
+  else {
     return lookup_cos(x);
   }
 }
 
 // ---- atan2 ----
-inline float builtin_atan2(float y, float x) {
+inline float builtin_atan2(float y, float x)
+{
 #ifdef __arm__
   float ret;
   arm_atan2_f32(y, x, &ret);
@@ -72,22 +79,25 @@ inline float builtin_atan2(float y, float x) {
 #endif
 }
 
-constexpr float atan2(float y, float x) {
+constexpr float atan2(float y, float x)
+{
   if !consteval {
     return builtin_atan2(y, x);
-  } else {
+  }
+  else {
     return fast_atan2(y, x);
   }
 }
 
 // ---- rsqrt/sqrt ----
-constexpr float fast_rsqrt(float x) {
+constexpr float fast_rsqrt(float x)
+{
   assert(x >= FLT_MIN);
 
-  const float x2 = x * 0.5f;
+  float const x2 = x * 0.5f;
 
   auto i = std::bit_cast<std::uint32_t>(x);
-  i = 0x5f3759df - (i >> 1);
+  i = 0x5F3759DF - (i >> 1);
   float y = std::bit_cast<float>(i);
 
   y = y * (1.5f - (x2 * y * y));
@@ -96,7 +106,8 @@ constexpr float fast_rsqrt(float x) {
   return y;
 }
 
-inline float builtin_rsqrt(float x) {
+inline float builtin_rsqrt(float x)
+{
 #ifdef __arm__
   float ret;
   arm_sqrt_f32(x, &ret);
@@ -107,21 +118,25 @@ inline float builtin_rsqrt(float x) {
 #endif
 }
 
-constexpr float rsqrt(float x) {
+constexpr float rsqrt(float x)
+{
   if !consteval {
     return builtin_rsqrt(x);
-  } else {
+  }
+  else {
     return fast_rsqrt(x);
   }
 }
 
-constexpr float fast_sqrt(float x) {
+constexpr float fast_sqrt(float x)
+{
   assert(x >= 0.0f);
   if (x < FLT_MIN) return 0.0f;
   return x * fast_rsqrt(x);
 }
 
-inline float builtin_sqrt(float x) {
+inline float builtin_sqrt(float x)
+{
 #ifdef __arm__
   float ret;
   arm_sqrt_f32(x, &ret);
@@ -132,25 +147,30 @@ inline float builtin_sqrt(float x) {
 #endif
 }
 
-constexpr float sqrt(float x) {
+constexpr float sqrt(float x)
+{
   if !consteval {
     return builtin_sqrt(x);
-  } else {
+  }
+  else {
     return fast_sqrt(x);
   }
 }
 
 // ---- fmod ----
 template<std::floating_point T>
-consteval T fmod_trivial(T x, T y) {
+consteval T fmod_trivial(T x, T y)
+{
   return x - static_cast<T>(static_cast<long long>(x / y)) * y;
 }
 
 template<std::floating_point T>
-constexpr T fmod(T x, T y) {
+constexpr T fmod(T x, T y)
+{
   if !consteval {
     return std::fmod(x, y);
-  } else {
+  }
+  else {
     return fmod_trivial(x, y);
   }
 }
@@ -161,27 +181,29 @@ constexpr T fmod(T x, T y) {
 // zero and NaN all give 0. `T` comes first so the result type can be
 // named while `V` is deduced: `sgn<float>(x)`.
 template<typename T = int, typename V>
-constexpr T sgn(V v) {
+constexpr T sgn(V v)
+{
   return static_cast<T>((V{0} < v) - (v < V{0}));
 }
 
 // Returns whether `n` is even.
-constexpr bool iseven(std::integral auto n) {
+constexpr bool iseven(std::integral auto n)
+{
   return n % 2 == 0;
 }
 
 // Returns whether `n` is odd.
-constexpr bool isodd(std::integral auto n) {
+constexpr bool isodd(std::integral auto n)
+{
   return !iseven(n);
 }
 
 // ---- saturate_round ----
 template<std::integral Int, std::floating_point Float>
-constexpr Int saturate_round(Float x) {
-  static_assert(
-      sizeof(Int) < sizeof(long long) || std::is_signed_v<Int>,
-      "u64 upper range is unreachable via llround"
-  );
+constexpr Int saturate_round(Float x)
+{
+  static_assert(sizeof(Int) < sizeof(long long) || std::is_signed_v<Int>,
+                "u64 upper range is unreachable via llround");
   constexpr bool fits_long = sizeof(Int) < sizeof(long)
                           || (sizeof(Int) == sizeof(long)
                               && std::is_signed_v<Int>);
@@ -197,15 +219,20 @@ constexpr Int saturate_round(Float x) {
 
   if constexpr (fits_long) {
     return emb::saturating_cast<Int>(std::lround(x));
-  } else {
+  }
+  else {
     return emb::saturating_cast<Int>(std::llround(x));
   }
 }
 
 // ---- quantize ----
 template<std::integral Int, typename Step, std::floating_point Float>
-  requires requires { Step::num; Step::den; }
-constexpr Int quantize(Float x) {
+  requires requires {
+    Step::num;
+    Step::den;
+  }
+constexpr Int quantize(Float x)
+{
   static_assert(Step::num > 0, "Step must be a positive ratio");
   constexpr Float scale = static_cast<Float>(Step::den)
                         / static_cast<Float>(Step::num);
@@ -214,8 +241,12 @@ constexpr Int quantize(Float x) {
 
 // ---- dequantize ----
 template<typename Step, std::floating_point Float = float, std::integral Int>
-  requires requires { Step::num; Step::den; }
-constexpr Float dequantize(Int n) {
+  requires requires {
+    Step::num;
+    Step::den;
+  }
+constexpr Float dequantize(Int n)
+{
   static_assert(Step::num > 0, "Step must be a positive ratio");
   constexpr Float step = static_cast<Float>(Step::num)
                        / static_cast<Float>(Step::den);
@@ -224,27 +255,32 @@ constexpr Float dequantize(Int n) {
 
 // -----------------------------------------------------------------------------
 template<std::floating_point T>
-constexpr T to_rad(T deg) {
+constexpr T to_rad(T deg)
+{
   return deg * (std::numbers::pi_v<T> / T{180});
 }
 
 template<std::floating_point T>
-constexpr T to_deg(T rad) {
+constexpr T to_deg(T rad)
+{
   return rad * (T{180} / std::numbers::pi_v<T>);
 }
 
 template<std::floating_point T, std::integral P>
-constexpr T to_eradps(T n, P p) {
+constexpr T to_eradps(T n, P p)
+{
   return static_cast<T>(p) * n * (2 * std::numbers::pi_v<T> / T{60});
 }
 
 template<std::floating_point T, std::integral P>
-constexpr T to_rpm(T w, P p) {
+constexpr T to_rpm(T w, P p)
+{
   return w * (T{60} / (2 * std::numbers::pi_v<T>)) / static_cast<T>(p);
 }
 
 template<std::floating_point T>
-constexpr T norm2pi(T x) {
+constexpr T norm2pi(T x)
+{
   constexpr T two_pi = 2 * std::numbers::pi_v<T>;
   x = emb::fmod(x, two_pi);
   if (x < 0) {
@@ -254,12 +290,14 @@ constexpr T norm2pi(T x) {
 }
 
 template<std::floating_point T>
-constexpr T normpi(T x) {
+constexpr T normpi(T x)
+{
   return norm2pi(x + std::numbers::pi_v<T>) - std::numbers::pi_v<T>;
 }
 
 template<std::floating_point T>
-constexpr T norm2pi_fast(T x) {
+constexpr T norm2pi_fast(T x)
+{
   constexpr T two_pi = 2 * std::numbers::pi_v<T>;
   constexpr T inv_two_pi = 1 / (2 * std::numbers::pi_v<T>);
 
@@ -270,7 +308,8 @@ constexpr T norm2pi_fast(T x) {
 }
 
 template<std::floating_point T>
-constexpr T normpi_fast(T x) {
+constexpr T normpi_fast(T x)
+{
   return norm2pi_fast(x + std::numbers::pi_v<T>) - std::numbers::pi_v<T>;
 }
 

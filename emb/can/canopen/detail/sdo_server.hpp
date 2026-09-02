@@ -27,7 +27,8 @@ public:
   static constexpr std::size_t tsdo_queue_capacity = 16;
 
   sdo_server(transport& bus, std::span<od_entry> dictionary)
-      : bus_(bus), dictionary_(dictionary) {
+      : bus_(bus), dictionary_(dictionary)
+  {
     init_dictionary();
     bus_.add_filter(format_t::standard, rsdo_cob_id_, 0x7FF);
   }
@@ -35,16 +36,15 @@ public:
   sdo_server(sdo_server const&) = delete;
   sdo_server& operator=(sdo_server const&) = delete;
 
-  bool try_handle(frame_t const& frame) {
+  bool try_handle(frame_t const& frame)
+  {
     if (frame.id != rsdo_cob_id_) return false;
 
     expedited_sdo rsdo = from_payload<expedited_sdo>(frame.payload);
     if (rsdo.cs == sdo_cs_codes::abort) return true;
 
-    od_key key = {
-        static_cast<std::uint16_t>(rsdo.index),
-        static_cast<std::uint8_t>(rsdo.subindex)
-    };
+    od_key key = {static_cast<std::uint16_t>(rsdo.index),
+                  static_cast<std::uint8_t>(rsdo.subindex)};
     od_entry const* entry = find(key);
 
     auto result = [&]() -> std::expected<expedited_sdo, sdo_abort_code> {
@@ -63,12 +63,11 @@ public:
       return std::unexpected(sdo_abort_code::invalid_cs);
     }();
 
-    payload_t response = result ? to_payload<expedited_sdo>(*result)
-                                : to_payload<abort_sdo>(abort_sdo{
-                                      rsdo.index,
-                                      rsdo.subindex,
-                                      result.error()
-                                  });
+    payload_t response = result
+                           ? to_payload<expedited_sdo>(*result)
+                           : to_payload<abort_sdo>(abort_sdo{rsdo.index,
+                                                             rsdo.subindex,
+                                                             result.error()});
 
     if (!tsdo_queue_.full()) {
       tsdo_queue_.push(response);
@@ -76,14 +75,13 @@ public:
     return true;
   }
 
-  void drain() {
+  void drain()
+  {
     while (!tsdo_queue_.empty()) {
-      frame_t frame = {
-          .format = format_t::standard,
-          .id = tsdo_cob_id_,
-          .len = 8,
-          .payload = tsdo_queue_.front()
-      };
+      frame_t frame = {.format = format_t::standard,
+                       .id = tsdo_cob_id_,
+                       .len = 8,
+                       .payload = tsdo_queue_.front()};
       if (!bus_.send(frame)) return;
       tsdo_queue_.pop();
     }
@@ -95,7 +93,8 @@ private:
   static constexpr id_t rsdo_cob_id_ = cob_id_of<cob_type::rsdo, NodeId>();
   static constexpr id_t tsdo_cob_id_ = cob_id_of<cob_type::tsdo, NodeId>();
 
-  void init_dictionary() {
+  void init_dictionary()
+  {
     std::sort(dictionary_.begin(), dictionary_.end());
 
     for (auto i = 0uz; i < dictionary_.size(); ++i) {
@@ -107,21 +106,21 @@ private:
         assert(!(e.key == next.key) && "od: duplicate {index, subindex}");
       }
 
-      assert(
-          (obj.read != nullptr || obj.write != nullptr)
-          && "od: entry has no access method"
-      );
+      assert((obj.read != nullptr || obj.write != nullptr)
+             && "od: entry has no access method");
     }
   }
 
-  od_entry const* find(od_key key) const {
+  od_entry const* find(od_key key) const
+  {
     auto it = std::lower_bound(dictionary_.begin(), dictionary_.end(), key);
     if (it == dictionary_.end() || !(key == *it)) return nullptr;
     return &(*it);
   }
 
   std::expected<expedited_sdo, sdo_abort_code>
-  read_expedited(od_entry const* entry, expedited_sdo const& rsdo) {
+  read_expedited(od_entry const* entry, expedited_sdo const& rsdo)
+  {
     auto const& obj = entry->object;
     if (!obj.has_read_permission())
       return std::unexpected(sdo_abort_code::read_from_write_only);
@@ -145,7 +144,8 @@ private:
   }
 
   std::expected<expedited_sdo, sdo_abort_code>
-  write_expedited(od_entry const* entry, expedited_sdo const& rsdo) {
+  write_expedited(od_entry const* entry, expedited_sdo const& rsdo)
+  {
     auto const& obj = entry->object;
     if (!obj.has_write_permission())
       return std::unexpected(sdo_abort_code::write_to_read_only);
@@ -163,7 +163,8 @@ private:
   }
 
   std::expected<expedited_sdo, sdo_abort_code>
-  write_restore_default(expedited_sdo const& rsdo) {
+  write_restore_default(expedited_sdo const& rsdo)
+  {
     od_key target = {};
     std::memcpy(&target, rsdo.data.data(), sizeof(target));
     if (auto r = restore_default_parameter(target); !r) {
@@ -177,7 +178,8 @@ private:
     return tsdo;
   }
 
-  od_write_result restore_default_parameter(od_key key) {
+  od_write_result restore_default_parameter(od_key key)
+  {
     od_entry const* entry = find(key);
     if (entry == nullptr) {
       return std::unexpected(sdo_abort_code::object_not_found);

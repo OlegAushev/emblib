@@ -8,18 +8,20 @@ namespace emb {
 // Wait-free double buffer for single-writer / multi-reader
 //
 // Invariant: writer must not commit more than once during a single load().
-template <typename T>
+template<typename T>
   requires(std::is_trivially_copyable_v<T>)
 class double_buffer {
 public:
-  void store(T const& value) {
+  void store(T const& value)
+  {
     std::uint8_t back = 1 - front_;
     buf_[back] = value;
     std::atomic_signal_fence(std::memory_order_release);
     front_ = back;
   }
 
-  T load() const {
+  T load() const
+  {
     std::uint8_t front = front_;
     std::atomic_signal_fence(std::memory_order_acquire);
     return buf_[front];

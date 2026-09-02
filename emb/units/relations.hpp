@@ -14,17 +14,20 @@ namespace units {
 // electrical angle / time <-> electrical angular speed
 
 template<std::floating_point T>
-constexpr eradps<T> operator/(erad<T> lhs, sec<T> rhs) {
+constexpr eradps<T> operator/(erad<T> lhs, sec<T> rhs)
+{
   return eradps<T>(lhs.value() / rhs.value());
 }
 
 template<std::floating_point T>
-constexpr erad<T> operator*(eradps<T> lhs, sec<T> rhs) {
+constexpr erad<T> operator*(eradps<T> lhs, sec<T> rhs)
+{
   return erad<T>(lhs.value() * rhs.value());
 }
 
 template<std::floating_point T>
-constexpr erad<T> operator*(sec<T> lhs, eradps<T> rhs) {
+constexpr erad<T> operator*(sec<T> lhs, eradps<T> rhs)
+{
   return rhs * lhs;
 }
 

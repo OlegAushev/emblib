@@ -10,17 +10,19 @@ namespace emb {
 // No constraint on writer commit rate — the reader always gets
 // the latest committed value without torn reads.
 // Requires hardware atomics (LDREX/STREX on Cortex-M).
-template <typename T>
+template<typename T>
   requires(std::is_trivially_copyable_v<T>)
 class triple_buffer {
 public:
-  void store(T const& value) {
+  void store(T const& value)
+  {
     buf_[write_] = value;
     std::atomic_signal_fence(std::memory_order_release);
     write_ = shared_.exchange(write_, std::memory_order_relaxed);
   }
 
-  T load() const {
+  T load() const
+  {
     read_ = shared_.exchange(read_, std::memory_order_relaxed);
     std::atomic_signal_fence(std::memory_order_acquire);
     return buf_[read_];

@@ -25,7 +25,8 @@ public:
   rpdo_consumer& operator=(rpdo_consumer const&) = delete;
 
   template<std::size_t I, pdo_id CobId>
-  void setup(rpdo_config const& cfg, std::chrono::milliseconds now) {
+  void setup(rpdo_config const& cfg, std::chrono::milliseconds now)
+  {
     static_assert(I >= 1 && I <= N, "RPDO index out of range");
     auto& s = slots_[I - 1];
     s.handler = cfg.handler;
@@ -37,7 +38,8 @@ public:
     id_t id;
     if constexpr (CobId.is_custom) {
       id = CobId.value;
-    } else {
+    }
+    else {
       id = cob_id_of<cob_type::rpdo, I, NodeId>();
     }
     if (s.cob_id != id) {
@@ -48,11 +50,10 @@ public:
     }
   }
 
-  bool try_handle(
-      frame_t const& frame,
-      std::chrono::milliseconds now,
-      nmt_state state
-  ) {
+  bool try_handle(frame_t const& frame,
+                  std::chrono::milliseconds now,
+                  nmt_state state)
+  {
     for (auto& s : slots_) {
       if (s.cob_id != frame.id) continue;
       if (state != nmt_state::operational) return true;
@@ -65,7 +66,8 @@ public:
   }
 
   // Returns the number of slots that newly timed out on this tick.
-  std::size_t tick(std::chrono::milliseconds now, nmt_state state) {
+  std::size_t tick(std::chrono::milliseconds now, nmt_state state)
+  {
     if (state != nmt_state::operational) return 0;
 
     std::size_t just_timed_out = 0;
@@ -82,7 +84,8 @@ public:
     return just_timed_out;
   }
 
-  void reset_timers(std::chrono::milliseconds now) {
+  void reset_timers(std::chrono::milliseconds now)
+  {
     for (auto& s : slots_) {
       s.last_rx = now;
       s.timed_out = false;

@@ -4,7 +4,8 @@
 
 namespace {
 
-constexpr bool test_algorithm() {
+constexpr bool test_algorithm()
+{
   assert(emb::median3(1, 2, 3) == 2);
   assert(emb::median3(10, 2, 3) == 3);
   assert(emb::median3(-1.0f, 2.0f, 0.0f) == 0.0f);

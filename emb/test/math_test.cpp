@@ -2,7 +2,8 @@
 
 namespace {
 
-constexpr bool test_math() {
+constexpr bool test_math()
+{
   [[maybe_unused]] constexpr auto near = [](float a, float b) {
     return (a - b) < 1e-4f && (b - a) < 1e-4f;
   };

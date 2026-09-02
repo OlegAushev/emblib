@@ -25,7 +25,8 @@ constexpr std::uint32_t client_block_read = 5;
 constexpr std::uint32_t server_block_read = 6;
 } // namespace sdo_cs_codes
 
-inline std::uint32_t get_cs_code(frame_t const& frame) {
+inline std::uint32_t get_cs_code(frame_t const& frame)
+{
   return (frame.payload[0] >> 5) & 0x07;
 }
 
@@ -50,7 +51,9 @@ struct expedited_sdo {
         cs(0),
         index(0),
         subindex(0),
-        data{} {}
+        data{}
+  {
+  }
 };
 
 enum class sdo_abort_code : std::uint32_t {
@@ -79,18 +82,19 @@ struct abort_sdo {
   std::uint32_t error_code;
   abort_sdo() = default;
 
-  abort_sdo(
-      std::uint16_t index_,
-      std::uint8_t subindex_,
-      sdo_abort_code error_code_
-  )
+  abort_sdo(std::uint16_t index_,
+            std::uint8_t subindex_,
+            sdo_abort_code error_code_)
       : _reserved(0),
         cs(sdo_cs_codes::abort),
         index(index_),
         subindex(subindex_),
-        error_code(std::to_underlying(error_code_)) {}
+        error_code(std::to_underlying(error_code_))
+  {
+  }
 
-  bool valid() const {
+  bool valid() const
+  {
     return cs == sdo_cs_codes::abort;
   }
 };

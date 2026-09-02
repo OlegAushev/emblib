@@ -32,37 +32,43 @@ using atmosphere_f32 = atmosphere<float>;
 
 template<typename To, std::floating_point T>
   requires std::same_as<To, megapascal<T>>
-constexpr megapascal<T> convert_to(pascal<T> v) {
+constexpr megapascal<T> convert_to(pascal<T> v)
+{
   return units::megapascal<T>(v.value() / T{1000000});
 }
 
 template<typename To, std::floating_point T>
   requires std::same_as<To, pascal<T>>
-constexpr pascal<T> convert_to(megapascal<T> v) {
+constexpr pascal<T> convert_to(megapascal<T> v)
+{
   return units::pascal<T>(v.value() * T{1000000});
 }
 
 template<typename To, std::floating_point T>
   requires std::same_as<To, atmosphere<T>>
-constexpr atmosphere<T> convert_to(pascal<T> v) {
+constexpr atmosphere<T> convert_to(pascal<T> v)
+{
   return units::atmosphere<T>(v.value() / T{101325});
 }
 
 template<typename To, std::floating_point T>
   requires std::same_as<To, pascal<T>>
-constexpr pascal<T> convert_to(atmosphere<T> v) {
+constexpr pascal<T> convert_to(atmosphere<T> v)
+{
   return units::pascal<T>(v.value() * T{101325});
 }
 
 template<typename To, std::floating_point T>
   requires std::same_as<To, atmosphere<T>>
-constexpr atmosphere<T> convert_to(megapascal<T> v) {
+constexpr atmosphere<T> convert_to(megapascal<T> v)
+{
   return units::atmosphere<T>(v.value() * T{1000000} / T{101325});
 }
 
 template<typename To, std::floating_point T>
   requires std::same_as<To, megapascal<T>>
-constexpr megapascal<T> convert_to(atmosphere<T> v) {
+constexpr megapascal<T> convert_to(atmosphere<T> v)
+{
   return units::megapascal<T>(v.value() * T{101325} / T{1000000});
 }
 

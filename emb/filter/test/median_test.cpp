@@ -4,10 +4,9 @@
 namespace {
 
 template<typename Filter>
-constexpr bool test_median_filter(
-    Filter filter,
-    typename Filter::value_type init_output
-) {
+constexpr bool test_median_filter(Filter filter,
+                                  typename Filter::value_type init_output)
+{
   using value_type = Filter::value_type;
   constexpr std::size_t window_size = decltype(filter)::window_size;
 
@@ -20,15 +19,13 @@ constexpr bool test_median_filter(
   assert(filter.output() == init_output);
 
   // Test with known sequence
-  std::array<value_type, 7> input{
-      value_type{10},
-      value_type{90},
-      value_type{20},
-      value_type{80},
-      value_type{30},
-      value_type{70},
-      value_type{40}
-  };
+  std::array<value_type, 7> input{value_type{10},
+                                  value_type{90},
+                                  value_type{20},
+                                  value_type{80},
+                                  value_type{30},
+                                  value_type{70},
+                                  value_type{40}};
 
   // Fill window with first value
   for (auto i = 0uz; i < window_size; ++i) {
@@ -73,9 +70,7 @@ static_assert(test_median_filter(emb::median_filter<float, 5>{}, 0.0f));
 static_assert(test_median_filter(emb::median_filter<float, 3>{3.14f}, 3.14f));
 
 // Test with units
-static_assert(test_median_filter(
-    emb::median_filter<emb::units::erad_f32, 3>{},
-    emb::units::erad_f32{0}
-));
+static_assert(test_median_filter(emb::median_filter<emb::units::erad_f32, 3>{},
+                                 emb::units::erad_f32{0}));
 
 } // namespace

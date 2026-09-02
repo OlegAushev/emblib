@@ -34,29 +34,37 @@ public:
   constexpr singlechannel() = default;
 
   constexpr singlechannel(Converter converter, Filter filter)
-      : converter_(std::move(converter)), filter_(std::move(filter)) {}
+      : converter_(std::move(converter)), filter_(std::move(filter))
+  {
+  }
 
-  constexpr Converter const& converter() const {
+  constexpr Converter const& converter() const
+  {
     return converter_;
   }
 
-  constexpr Converter& converter() {
+  constexpr Converter& converter()
+  {
     return converter_;
   }
 
-  constexpr Filter const& filter() const {
+  constexpr Filter const& filter() const
+  {
     return filter_;
   }
 
-  constexpr Filter& filter() {
+  constexpr Filter& filter()
+  {
     return filter_;
   }
 
-  constexpr value_type value() const {
+  constexpr value_type value() const
+  {
     return filter_.output();
   }
 
-  constexpr void submit(sample_type sample) {
+  constexpr void submit(sample_type sample)
+  {
     filter_.push(converter_(sample));
   }
 };

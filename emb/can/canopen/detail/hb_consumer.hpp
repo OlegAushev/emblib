@@ -25,11 +25,10 @@ public:
   hb_consumer& operator=(hb_consumer const&) = delete;
 
   template<std::uint8_t Remote>
-  bool watch(
-      std::chrono::milliseconds timeout,
-      emb::delegate<void(std::uint8_t)> on_lost,
-      std::chrono::milliseconds now
-  ) {
+  bool watch(std::chrono::milliseconds timeout,
+             emb::delegate<void(std::uint8_t)> on_lost,
+             std::chrono::milliseconds now)
+  {
     static_assert(valid_node_id<Remote>, "node id must be in [1, 127]");
     constexpr id_t cob_id = cob_id_of<cob_type::heartbeat, Remote>();
 
@@ -44,14 +43,12 @@ public:
     }
 
     // register new
-    if (!watches_.try_push_back(
-            {.cob_id = cob_id,
-             .remote = Remote,
-             .timeout = timeout,
-             .last_rx = now,
-             .lost = false,
-             .on_lost = on_lost}
-        )) {
+    if (!watches_.try_push_back({.cob_id = cob_id,
+                                 .remote = Remote,
+                                 .timeout = timeout,
+                                 .last_rx = now,
+                                 .lost = false,
+                                 .on_lost = on_lost})) {
       return false;
     }
     bus_.add_filter(format_t::standard, cob_id, 0x7FF);

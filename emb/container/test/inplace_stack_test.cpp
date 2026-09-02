@@ -4,7 +4,8 @@ namespace {
 
 template<typename Stack>
 constexpr bool test_inplace_stack(Stack s)
-  requires(std::same_as<typename Stack::value_type, int>) {
+  requires(std::same_as<typename Stack::value_type, int>)
+{
   int const cap{static_cast<int>(s.capacity())};
 
   assert(s.empty());
@@ -14,7 +15,8 @@ constexpr bool test_inplace_stack(Stack s)
 
   if (s.capacity() != 1) {
     assert(!s.full());
-  } else {
+  }
+  else {
     assert(s.full());
   }
 
@@ -57,17 +59,20 @@ struct tracked {
   int* counter = nullptr;
 
   constexpr tracked() = default;
-  constexpr tracked(int v, int* c) : value(v), counter(c) {
+  constexpr tracked(int v, int* c) : value(v), counter(c)
+  {
     if (counter) ++*counter;
   }
-  constexpr tracked(tracked const& o) : value(o.value), counter(o.counter) {
+  constexpr tracked(tracked const& o) : value(o.value), counter(o.counter)
+  {
     if (counter) ++*counter;
   }
-  constexpr tracked(tracked&& o) noexcept
-      : value(o.value), counter(o.counter) {
+  constexpr tracked(tracked&& o) noexcept : value(o.value), counter(o.counter)
+  {
     o.counter = nullptr;
   }
-  constexpr tracked& operator=(tracked const& o) {
+  constexpr tracked& operator=(tracked const& o)
+  {
     if (this != &o) {
       if (counter) --*counter;
       value = o.value;
@@ -76,7 +81,8 @@ struct tracked {
     }
     return *this;
   }
-  constexpr tracked& operator=(tracked&& o) noexcept {
+  constexpr tracked& operator=(tracked&& o) noexcept
+  {
     if (this != &o) {
       if (counter) --*counter;
       value = o.value;
@@ -85,14 +91,16 @@ struct tracked {
     }
     return *this;
   }
-  constexpr ~tracked() {
+  constexpr ~tracked()
+  {
     if (counter) --*counter;
   }
 };
 
 static_assert(!std::is_trivially_destructible_v<tracked>);
 
-constexpr bool test_inplace_stack_lifecycle() {
+constexpr bool test_inplace_stack_lifecycle()
+{
   int alive = 0;
   {
     emb::inplace_stack<tracked, 4> s;
@@ -120,7 +128,8 @@ constexpr bool test_inplace_stack_lifecycle() {
   return true;
 }
 
-constexpr bool test_inplace_stack_copy() {
+constexpr bool test_inplace_stack_copy()
+{
   int alive = 0;
   emb::inplace_stack<tracked, 4> s;
   s.emplace(1, &alive);
@@ -146,7 +155,8 @@ constexpr bool test_inplace_stack_copy() {
   return true;
 }
 
-constexpr bool test_inplace_stack_move() {
+constexpr bool test_inplace_stack_move()
+{
   int alive = 0;
   emb::inplace_stack<tracked, 4> src;
   src.emplace(1, &alive);
@@ -171,7 +181,8 @@ constexpr bool test_inplace_stack_move() {
   return true;
 }
 
-constexpr bool test_inplace_stack_move_push() {
+constexpr bool test_inplace_stack_move_push()
+{
   int alive = 0;
   emb::inplace_stack<tracked, 2> s;
 
@@ -185,7 +196,8 @@ constexpr bool test_inplace_stack_move_push() {
   return true;
 }
 
-constexpr bool test_inplace_stack_try_pop() {
+constexpr bool test_inplace_stack_try_pop()
+{
   int alive = 0;
   emb::inplace_stack<tracked, 2> s;
 
@@ -204,7 +216,8 @@ constexpr bool test_inplace_stack_try_pop() {
   return true;
 }
 
-constexpr bool test_inplace_stack_try_push() {
+constexpr bool test_inplace_stack_try_push()
+{
   [[maybe_unused]] emb::inplace_stack<int, 2> s;
   assert(s.try_push(1));
   assert(s.try_push(2));
@@ -221,7 +234,8 @@ struct no_default {
 
 static_assert(!std::is_default_constructible_v<no_default>);
 
-constexpr bool test_inplace_stack_no_default_ctor() {
+constexpr bool test_inplace_stack_no_default_ctor()
+{
   emb::inplace_stack<no_default, 3> s;
   s.emplace(10);
   s.emplace(20);

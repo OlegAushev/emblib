@@ -14,7 +14,7 @@ namespace emb {
 //   - exactly one writer, multiple writers need separate mutual exclusion
 //   - a reader must not preempt the writer mid-write: ensure by priorities
 //     or by masking interrupts around store()/update()
-template <typename T>
+template<typename T>
   requires(std::is_trivially_copyable_v<T>)
 class isr_seqlock {
   using seq_type = std::atomic_unsigned_lock_free::value_type;
@@ -25,7 +25,8 @@ public:
   isr_seqlock(isr_seqlock const&) = delete;
   isr_seqlock& operator=(isr_seqlock const&) = delete;
 
-  void store(T const& desired) {
+  void store(T const& desired)
+  {
     seq_type s = seq_;
     seq_ = s + 1;
     std::atomic_signal_fence(std::memory_order::release);
@@ -34,8 +35,9 @@ public:
     seq_ = s + 2;
   }
 
-  template <typename F>
-  void update(F&& f) {
+  template<typename F>
+  void update(F&& f)
+  {
     seq_type s = seq_;
     seq_ = s + 1;
     std::atomic_signal_fence(std::memory_order::release);
@@ -44,7 +46,8 @@ public:
     seq_ = s + 2;
   }
 
-  T load() const {
+  T load() const
+  {
     T snapshot;
     seq_type s1, s2;
     do {
@@ -58,4 +61,4 @@ public:
   }
 };
 
-}
+} // namespace emb

@@ -16,22 +16,26 @@ namespace emb::sensor {
 namespace detail {
 
 template<typename X>
-constexpr X transform_forward(X x) {
+constexpr X transform_forward(X x)
+{
   return x;
 }
 
 template<typename X, typename Stage, typename... Rest>
-constexpr auto transform_forward(X x, Stage const& s, Rest const&... rest) {
+constexpr auto transform_forward(X x, Stage const& s, Rest const&... rest)
+{
   return transform_forward(s.forward(x), rest...);
 }
 
 template<typename Y>
-constexpr Y transform_inverse(Y y) {
+constexpr Y transform_inverse(Y y)
+{
   return y;
 }
 
 template<typename Y, typename Stage, typename... Rest>
-constexpr auto transform_inverse(Y y, Stage const& s, Rest const&... rest) {
+constexpr auto transform_inverse(Y y, Stage const& s, Rest const&... rest)
+{
   return s.inverse(transform_inverse(y, rest...));
 }
 
@@ -48,24 +52,25 @@ public:
 
   // measured value -> sensor output (e.g. ADC code)
   // composes stages front to back
-  constexpr auto forward(auto in) const {
+  constexpr auto forward(auto in) const
+  {
     return std::apply(
         [&](auto const&... s) { return detail::transform_forward(in, s...); },
-        stages
-    );
+        stages);
   }
 
   // sensor output (e.g. ADC code) -> measured value
   // inverts stages back to front
-  constexpr auto inverse(auto out) const {
+  constexpr auto inverse(auto out) const
+  {
     return std::apply(
         [&](auto const&... s) { return detail::transform_inverse(out, s...); },
-        stages
-    );
+        stages);
   }
 
   // a transform is itself an emb::sensor::some_converter
-  constexpr auto operator()(auto out) const {
+  constexpr auto operator()(auto out) const
+  {
     return inverse(out);
   }
 };
@@ -74,11 +79,13 @@ public:
 // so it composes into a default-constructed transform next to stateless stages.
 template<auto device>
 struct bind {
-  static constexpr auto forward(auto x) {
+  static constexpr auto forward(auto x)
+  {
     return device.forward(x);
   }
 
-  static constexpr auto inverse(auto y) {
+  static constexpr auto inverse(auto y)
+  {
     return device.inverse(y);
   }
 };

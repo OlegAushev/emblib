@@ -33,42 +33,51 @@ private:
 public:
   template<typename... Args>
     requires std::constructible_from<Core, Args...>
-  explicit buffered(Args&&... args) : core_(std::forward<Args>(args)...) {}
+  explicit buffered(Args&&... args) : core_(std::forward<Args>(args)...)
+  {
+  }
 
-  Core const& core() const {
+  Core const& core() const
+  {
     return core_;
   }
 
-  Core& core() {
+  Core& core()
+  {
     return core_;
   }
 
   // Convenience forwarder for singlechannel cores; absent for multichannel,
   // which is read through values() / value(channel) below.
   value_type value() const
-      requires requires(Core const& c) { c.value(); } {
+    requires requires(Core const& c) { c.value(); }
+  {
     return core_.value();
   }
 
   // Convenience forwarders for multichannel cores; absent for singlechannel
   // cores.
   auto values() const
-      requires requires(Core const& c) { c.values(); } {
+    requires requires(Core const& c) { c.values(); }
+  {
     return core_.values();
   }
 
   auto value(std::size_t channel) const
-      requires requires(Core const& c) { c.value(channel); } {
+    requires requires(Core const& c) { c.value(channel); }
+  {
     return core_.value(channel);
   }
 
   // Producer-side (ISR). On overflow the newest sample is dropped.
-  void submit(sample_type sample) {
+  void submit(sample_type sample)
+  {
     auto _ = queue_.try_push(std::move(sample));
   }
 
   // Consumer-side (main loop). Drains the queue through the core pipeline.
-  void process() {
+  void process()
+  {
     while (auto const raw = queue_.try_pop()) {
       core_.submit(*raw);
     }

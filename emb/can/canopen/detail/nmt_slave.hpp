@@ -16,23 +16,28 @@ namespace detail {
 template<std::uint8_t NodeId>
 class nmt_slave {
 public:
-  static constexpr id_t cob_id() {
+  static constexpr id_t cob_id()
+  {
     return cob_id_;
   }
 
-  bool match(frame_t const& frame) const {
+  bool match(frame_t const& frame) const
+  {
     return frame.id == cob_id();
   }
 
-  nmt_state state() const {
+  nmt_state state() const
+  {
     return state_;
   }
 
-  void set_state(nmt_state s) {
+  void set_state(nmt_state s)
+  {
     state_ = s;
   }
 
-  std::optional<nmt_command> decode(frame_t const& frame) const {
+  std::optional<nmt_command> decode(frame_t const& frame) const
+  {
     if (frame.len < 2) return std::nullopt;
     std::uint8_t cs = frame.payload[0];
     std::uint8_t target = frame.payload[1];

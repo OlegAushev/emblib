@@ -12,20 +12,26 @@ struct wide_error {
   constexpr wide_error(error e) : err(e) {}
 };
 
-constexpr auto make(std::expected<int, error> e) { return e; }
+constexpr auto make(std::expected<int, error> e)
+{
+  return e;
+}
 
 constexpr auto sum(std::expected<int, error> a, std::expected<int, error> b)
-    -> std::expected<int, error> {
+    -> std::expected<int, error>
+{
   return TRY(a) + TRY(b);
 }
 
-constexpr bool test_value() {
+constexpr bool test_value()
+{
   auto r = sum(1, 2);
   assert(r.has_value() && *r == 3);
   return true;
 }
 
-[[maybe_unused]] constexpr bool test_error_propagation() {
+[[maybe_unused]] constexpr bool test_error_propagation()
+{
   auto r = sum(1, std::unexpected(error::two));
   assert(!r.has_value() && r.error() == error::two);
 
@@ -35,7 +41,8 @@ constexpr bool test_value() {
   return true;
 }
 
-[[maybe_unused]] constexpr bool test_lvalue_not_consumed() {
+[[maybe_unused]] constexpr bool test_lvalue_not_consumed()
+{
   auto e = make(42);
   auto f = [](std::expected<int, error>& x) -> std::expected<int, error> {
     return TRY(x);
@@ -47,13 +54,15 @@ constexpr bool test_value() {
 }
 
 constexpr auto run(std::expected<void, error> step, int& counter)
-    -> std::expected<void, error> {
+    -> std::expected<void, error>
+{
   TRY(step);
   ++counter;
   return {};
 }
 
-[[maybe_unused]] constexpr bool test_void() {
+[[maybe_unused]] constexpr bool test_void()
+{
   int counter = 0;
 
   auto r = run({}, counter);
@@ -65,11 +74,13 @@ constexpr auto run(std::expected<void, error> step, int& counter)
 }
 
 constexpr auto widen(std::expected<int, error> e)
-    -> std::expected<int, wide_error> {
+    -> std::expected<int, wide_error>
+{
   return TRY(e);
 }
 
-[[maybe_unused]] constexpr bool test_error_conversion() {
+[[maybe_unused]] constexpr bool test_error_conversion()
+{
   auto r = widen(std::unexpected(error::two));
   assert(!r.has_value() && r.error().err == error::two);
   return true;
@@ -82,13 +93,14 @@ struct move_only {
   constexpr move_only(move_only&&) = default;
 };
 
-constexpr auto forward_move_only(int v) -> std::expected<move_only, error> {
-  return TRY([](int x) -> std::expected<move_only, error> {
-    return move_only{x};
-  }(v));
+constexpr auto forward_move_only(int v) -> std::expected<move_only, error>
+{
+  return TRY(
+      [](int x) -> std::expected<move_only, error> { return move_only{x}; }(v));
 }
 
-constexpr bool test_rvalue_moved() {
+constexpr bool test_rvalue_moved()
+{
   auto r = forward_move_only(7);
   assert(r.has_value() && r->val == 7);
   return true;

@@ -18,11 +18,9 @@ concept some_converter = requires(C c, Input in) {
 };
 
 template<typename F>
-concept some_filter = requires(
-    F f,
-    F const cf,
-    typename F::value_type const v
-) {
+concept some_filter = requires(F f,
+                               F const cf,
+                               typename F::value_type const v) {
   typename F::value_type;
   { cf.output() } -> std::convertible_to<typename F::value_type>;
   f.push(v);

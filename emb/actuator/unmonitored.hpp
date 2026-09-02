@@ -24,16 +24,19 @@ public:
   unmonitored(Encoder encoder, Driver driver, State initial)
       : encoder_(std::move(encoder)),
         driver_(std::move(driver)),
-        desired_(initial) {
+        desired_(initial)
+  {
     driver_(encoder_(desired_));
   }
 
-  void command(State s) {
+  void command(State s)
+  {
     desired_ = s;
     driver_(encoder_(desired_));
   }
 
-  State state() const {
+  State state() const
+  {
     return desired_;
   }
 };

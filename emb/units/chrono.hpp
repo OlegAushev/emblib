@@ -26,13 +26,15 @@ using sec_f32 = sec<float>;
 
 template<std::floating_point T, typename V>
   requires std::is_arithmetic_v<V>
-constexpr sec<T> operator/(V lhs, hz<T> rhs) {
+constexpr sec<T> operator/(V lhs, hz<T> rhs)
+{
   return sec<T>(static_cast<T>(lhs) / rhs.value());
 }
 
 template<std::floating_point T, typename V>
   requires std::is_arithmetic_v<V>
-constexpr hz<T> operator/(V lhs, sec<T> rhs) {
+constexpr hz<T> operator/(V lhs, sec<T> rhs)
+{
   return hz<T>(static_cast<T>(lhs) / rhs.value());
 }
 

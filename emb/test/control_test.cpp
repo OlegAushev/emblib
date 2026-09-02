@@ -18,19 +18,23 @@ private:
   bool should_start_ = false;
   float speed_ref_ = 0.0f;
 public:
-  constexpr void accept(bool should_start) {
+  constexpr void accept(bool should_start)
+  {
     should_start_ = should_start;
   }
 
-  constexpr void accept(float ref) {
+  constexpr void accept(float ref)
+  {
     speed_ref_ = ref;
   }
 
-  constexpr bool should_start() const {
+  constexpr bool should_start() const
+  {
     return should_start_;
   }
 
-  constexpr float speed_ref() const {
+  constexpr float speed_ref() const
+  {
     return speed_ref_;
   }
 };
@@ -39,11 +43,13 @@ class button {
 private:
   bool pressed_ = false;
 public:
-  constexpr bool get(emb::control::command<bool>) const {
+  constexpr bool get(emb::control::command<bool>) const
+  {
     return pressed_;
   }
 
-  constexpr void toggle() {
+  constexpr void toggle()
+  {
     pressed_ = !pressed_;
   }
 };
@@ -52,11 +58,13 @@ class knob {
 private:
   float val_ = 0.0f;
 public:
-  constexpr float get(emb::control::command<float>) const {
+  constexpr float get(emb::control::command<float>) const
+  {
     return val_;
   }
 
-  constexpr void set(float val) {
+  constexpr void set(float val)
+  {
     val_ = val;
   }
 };
@@ -66,21 +74,25 @@ private:
   bool should_start_ = false;
   float speed_ref_ = 0.0f;
 public:
-  constexpr bool get(emb::control::command<bool>) const {
+  constexpr bool get(emb::control::command<bool>) const
+  {
     return should_start_;
   }
 
-  constexpr float get(emb::control::command<float>) const {
+  constexpr float get(emb::control::command<float>) const
+  {
     return speed_ref_;
   }
 
-  constexpr void set(bool should_start, float val) {
+  constexpr void set(bool should_start, float val)
+  {
     should_start_ = should_start;
     speed_ref_ = val;
   }
 };
 
-constexpr bool test_control_device() {
+constexpr bool test_control_device()
+{
   drive drv;
   startmux_type startmux(drv);
   speedmux_type speedmux(drv);

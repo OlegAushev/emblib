@@ -20,15 +20,14 @@ namespace canopen {
 
 // User-facing typed OD value. Covers every scalar type representable in a
 // 4-byte expedited SDO payload.
-using od_value = std::variant<
-    bool,
-    std::int8_t,
-    std::int16_t,
-    std::int32_t,
-    std::uint8_t,
-    std::uint16_t,
-    std::uint32_t,
-    float>;
+using od_value = std::variant<bool,
+                              std::int8_t,
+                              std::int16_t,
+                              std::int32_t,
+                              std::uint8_t,
+                              std::uint16_t,
+                              std::uint32_t,
+                              float>;
 
 // T is one of od_value's alternatives; derived from od_value itself so the
 // two cannot drift apart.
@@ -56,22 +55,26 @@ using od_write_result = std::expected<void, sdo_abort_code>;
 
 // ---- od accessors ----
 
-inline od_read_result od_no_read() {
+inline od_read_result od_no_read()
+{
   return std::unexpected(sdo_abort_code::unsupported_access);
 }
 
-inline od_write_result od_no_write(od_value /*val*/) {
+inline od_write_result od_no_write(od_value /*val*/)
+{
   return std::unexpected(sdo_abort_code::unsupported_access);
 }
 
 // Helpers for plain-variable entries. NTTP requires static storage.
 template<auto Var>
-od_read_result od_read_var() {
+od_read_result od_read_var()
+{
   return od_value{*Var};
 }
 
 template<auto Var>
-od_write_result od_write_var(od_value val) {
+od_write_result od_write_var(od_value val)
+{
   using T = std::remove_pointer_t<decltype(Var)>;
   if (auto* v = std::get_if<T>(&val)) {
     *Var = *v;
@@ -85,7 +88,8 @@ od_write_result od_write_var(od_value val) {
 // carry a semantic value; the user write_func interprets the bytes as a
 // magic command (e.g. "save"/"load"). `string` returns uint32{0} — not
 // supported by the current SDO path (requires block transfer).
-inline od_value make_od_value(expedited_sdo_data raw, od_value_type type) {
+inline od_value make_od_value(expedited_sdo_data raw, od_value_type type)
+{
   switch (type) {
   case od_value_type::boolean: return raw[0] != 0;
   case od_value_type::int8: return static_cast<std::int8_t>(raw[0]);
@@ -121,7 +125,8 @@ inline od_value make_od_value(expedited_sdo_data raw, od_value_type type) {
 }
 
 // Serialize a typed od_value back into raw 4 bytes.
-inline expedited_sdo_data to_raw(od_value v) {
+inline expedited_sdo_data to_raw(od_value v)
+{
   expedited_sdo_data raw{};
   v.visit([&](auto const& x) { std::memcpy(raw.data(), &x, sizeof(x)); });
   return raw;
@@ -137,8 +142,7 @@ constexpr std::array<std::size_t, 10> od_data_type_sizes = {
     sizeof(std::uint32_t),
     sizeof(float),
     4,
-    4
-};
+    4};
 
 struct od_key {
   std::uint16_t index;
@@ -156,11 +160,13 @@ struct od_object {
   od_read_result (*read)();
   od_write_result (*write)(od_value val);
 
-  bool has_read_permission() const {
+  bool has_read_permission() const
+  {
     return access != od_access::wo;
   }
 
-  bool has_write_permission() const {
+  bool has_write_permission() const
+  {
     return (access == od_access::rw) || (access == od_access::wo);
   }
 };
@@ -170,27 +176,32 @@ struct od_entry {
   od_object object;
 };
 
-inline bool operator<(od_entry const& lhs, od_entry const& rhs) {
+inline bool operator<(od_entry const& lhs, od_entry const& rhs)
+{
   return (lhs.key.index < rhs.key.index)
       || ((lhs.key.index == rhs.key.index)
           && (lhs.key.subindex < rhs.key.subindex));
 }
 
-inline bool operator<(od_entry const& lhs, od_key const& rhs) {
+inline bool operator<(od_entry const& lhs, od_key const& rhs)
+{
   return (lhs.key.index < rhs.index)
       || ((lhs.key.index == rhs.index) && (lhs.key.subindex < rhs.subindex));
 }
 
-inline bool operator<(od_key const& lhs, od_entry const& rhs) {
+inline bool operator<(od_key const& lhs, od_entry const& rhs)
+{
   return (lhs.index < rhs.key.index)
       || ((lhs.index == rhs.key.index) && (lhs.subindex < rhs.key.subindex));
 }
 
-inline bool operator==(od_key const& lhs, od_entry const& rhs) {
+inline bool operator==(od_key const& lhs, od_entry const& rhs)
+{
   return (lhs.index == rhs.key.index) && (lhs.subindex == rhs.key.subindex);
 }
 
-inline bool operator==(od_key const& lhs, od_key const& rhs) {
+inline bool operator==(od_key const& lhs, od_key const& rhs)
+{
   return (lhs.index == rhs.index) && (lhs.subindex == rhs.subindex);
 }
 
