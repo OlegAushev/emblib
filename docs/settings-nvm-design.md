@@ -1,6 +1,6 @@
 # Settings and NVM: design and migration plan
 
-Status: in progress. Steps 1-5 of the plan are implemented; everything
+Status: in progress. Steps 1-6 of the plan are implemented; everything
 else is designed but not written. Nothing in this document is wired into the
 running firmware yet — the existing `emb::nvm::registry` stack keeps working
 untouched until the switch-over phase.
@@ -168,15 +168,27 @@ the old config on failure.
 One self-describing record per section, not a fixed-address cell array:
 
 ```
-record (16 + 8N bytes, 4-aligned):
+record (24 + 8N bytes):
   offset  size  field
-  0x00     4    magic     section marker
-  0x04     2    format    layout version of the record itself (not the schema)
-  0x06     2    count     number of cells
-  0x08     4    seq       monotonic write counter
-  0x0C  8*N     cells     N x { u32 id; u32 raw }
-  ...      4    crc32     over everything above; written last = commit
+  0x00     4    magic      section marker
+  0x04     2    format     layout version of the record itself (not the schema)
+  0x06     2    count      number of cells
+  0x08     4    seq        monotonic write counter
+  0x0C     4    schema_id  fingerprint of the identifiers that wrote it
+  0x10  8*N     cells      N x { u32 id; u32 raw }
+  ...      4    magic      repeated: a torn record is visible at a glance
+  ...      4    crc32      over everything above; the footer commits
 ```
+
+Header and footer are sized so that *both* the body and the footer are
+multiples of eight bytes. Every plausible write granularity — 1 on FRAM, 4
+on F4 word programming, 8 on a double-word medium — divides them, so the
+same two writes commit a record everywhere. The repeated magic fills the
+footer's second word with something useful instead of padding.
+
+`schema_id` gates nothing: the directory already handles migration. It
+tells an operator whether a record was written by this build of the schema
+or another one.
 
 - `raw` is the value bit-cast and zero-padded to 4 bytes. Every current type
   fits, which is also the expedited-SDO limit.
@@ -197,7 +209,7 @@ current parameter count** — otherwise adding a parameter would shift the
 slot stride and invalidate everything already stored.
 `static_assert(record_size <= slot_capacity)`.
 
-For the 57 parameters of the current product: record = 472 B,
+For the 57 parameters of the current product: record = 480 B,
 `slot_capacity` = 1024 B (room for about 125).
 
 - FRAM (FM25W256, 32 KB): two slots, 2 KB of 32; endurance is a non-issue.
@@ -215,8 +227,9 @@ For the 57 parameters of the current product: record = 472 B,
    and mandatory anyway for flash granularity.
 2. Pick the next slot; erase it if the medium needs it.
 3. Write header and cells.
-4. **Write `crc32` last.** A record interrupted by power loss has no valid
-   CRC and is invisible to the loader; the previous record is untouched.
+4. **Write the footer last.** A record interrupted by power loss has no
+   valid CRC and is invisible to the loader; the previous record is
+   untouched.
 5. Read back and verify the CRC; only then update the in-RAM notion of the
    active slot. This catches a dead FRAM or a failed program — the current
    stack has no such check.
@@ -346,7 +359,7 @@ external/emblib/emb/
                                       descriptor table, uniqueness checks
   settings/image.hpp           [done] RAM image, typed and erased access
   settings/pending.hpp         [done] dirty groups, split by apply policy
-  settings/record.hpp                 record layout, build and parse
+  settings/record.hpp          [done] record layout, encode and decode
   settings/store.hpp                  slots, active record, commit, load report
   can/canopen/od_settings.hpp         OD section generated from the schema
   test/mock/block_storage.hpp  [done] constexpr RAM backend for tests
@@ -375,7 +388,7 @@ firmware behaviourally unchanged.
 3. `settings/value.hpp` — **done**
 4. `settings/param.hpp` + `settings/schema.hpp` — **done**
 5. `settings/image.hpp` + `settings/pending.hpp` — **done**
-6. `settings/record.hpp`
+6. `settings/record.hpp` — **done**
 7. `settings/store.hpp`
 8. Store tests: two mock media (FRAM-like; flash-like with granularity,
    write-once and block erase) and the scenarios — clean memory, power cut
@@ -486,6 +499,16 @@ phase 2 comes up with defaults. Decided deliberately — no converter.
 - **`writable` gates the erased path only.** A parameter closed to a
   protocol — a factory calibration — must still be writable by the code
   that owns it, and that code goes through the typed path.
+- **A decode either loads everything or touches nothing.** An invalid
+  record leaves the image exactly as it was, so a store can try the other
+  slot and only then fall back to defaults. A valid one starts from the
+  defaults, so a parameter the record does not carry comes up defined
+  rather than keeping whatever the image held.
+- **The load report counts what happened** — stored, loaded, unknown,
+  rejected, missing, plus whether the schema matched. Today "the parameter
+  did not read" and "the parameter is like that" are indistinguishable.
+- **CRC-32 is computed a bit at a time.** A table would cost a kilobyte of
+  flash to save microseconds on an operation that runs twice a boot.
 - **Tests follow the in-tree convention** (`emb/test/*_test.cpp`, anonymous
   namespace, `static_assert` only): they cost compile time and contribute no
   symbols to the image.
