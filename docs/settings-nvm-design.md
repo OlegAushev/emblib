@@ -1,6 +1,6 @@
 # Settings and NVM: design and migration plan
 
-Status: in progress. Steps 1-3 of the plan are implemented; everything
+Status: in progress. Steps 1-4 of the plan are implemented; everything
 else is designed but not written. Nothing in this document is wired into the
 running firmware yet — the existing `emb::nvm::registry` stack keeps working
 untouched until the switch-over phase.
@@ -48,13 +48,30 @@ struct descriptor {
   std::uint32_t    id;        // hash of name mixed with the type code
   value_type       type;
   raw_value        def, min, max;  // cells, ordered under `type`
-  bool           (*validate)(raw_value);
-  bool             writable;  // may ever change at run time
   group_id         group;     // which config struct it feeds
   apply_policy     apply;     // live / on_safe_state / on_restart
+  bool             writable;  // may ever change at run time
   bool             expose;    // meant for external access at all
 };
 ```
+
+Declared as:
+
+```cpp
+inline constexpr auto schema = settings::make_schema(
+  param("drive.phase_swap", false, {.group = group::drive}),
+  param("drive.runout_speed", rpm{100.0f},
+        {.min = rpm{0.0f}, .max = rpm{5000.0f},
+         .group = group::drive, .apply = apply_policy::live}),
+  param("drive.stopping_torque", pu{0.05f},          // clamped: own bounds
+        {.group = group::drive, .apply = apply_policy::live}));
+```
+
+The type comes from the default, so a literal needs its suffix — `param("x",
+0.05)` does not compile. Per-parameter checks (default within bounds, min
+below max) live in `param()` so that a bad declaration is reported on its
+own line; cross-parameter ones (duplicate name, identifier collision) live
+in `make_schema`.
 
 No offset and no size: every value occupies one four-byte cell, so a
 parameter's index *is* its position in the RAM image, and the image is a
@@ -313,10 +330,10 @@ external/emblib/emb/
   meta/fixed_string.hpp        [done] structural string for NTTP names
   nvm/storage.hpp              [done] block storage concept + is_erased
   settings/value.hpp           [done] value_type, value, cell conversions
-  settings/param.hpp                  param<Name, T>: def/min/max/validate,
-                                      writable, group, apply_policy, expose
-  settings/schema.hpp                 make_schema, consteval lookup by name,
-                                      descriptor table, static_asserts
+  settings/param.hpp           [done] param(): def/min/max, writable, group,
+                                      apply_policy, expose
+  settings/schema.hpp          [done] make_schema, lookup by name and by id,
+                                      descriptor table, uniqueness checks
   settings/image.hpp                  RAM image, typed get/set, dirty groups
   settings/record.hpp                 record layout, build and parse
   settings/store.hpp                  slots, active record, commit, load report
@@ -345,7 +362,7 @@ firmware behaviourally unchanged.
 1. `meta/fixed_string.hpp` — **done**
 2. `nvm/storage.hpp` + mock backend — **done**
 3. `settings/value.hpp` — **done**
-4. `settings/param.hpp` + `settings/schema.hpp`
+4. `settings/param.hpp` + `settings/schema.hpp` — **done**
 5. `settings/image.hpp`
 6. `settings/record.hpp`
 7. `settings/store.hpp`
@@ -422,6 +439,23 @@ phase 2 comes up with defaults. Decided deliberately — no converter.
 - **Cells are ordered under their type tag**, never as raw words: as int32
   the cell `0xFFFFFFFB` is -5 and belongs in [-10, 10], while as a word it
   is above every positive bound.
+- **No per-parameter `validate` hook.** Bounds cover what a single value can
+  be judged on; anything else is a relation between parameters, and that
+  check belongs to the owner's `configure()`, which sees the whole config
+  struct. A type-erased hook would also need a thunk per parameter for no
+  gain.
+- **`group_id` takes any scoped enum with a one-byte underlying type.** The
+  set of groups belongs to the product, and the runtime table can only hold
+  a number; requiring `: std::uint8_t` rather than truncating turns an enum
+  that does not fit into a compile error.
+- **`apply_policy` defaults to `on_restart`.** Opting into live application
+  is a claim about the consuming code; a parameter whose policy was never
+  considered should cost a restart rather than silently take effect halfway
+  through a control cycle.
+- **A bool cell holds 0 or 1.** `less_equal` compares bool cells as words,
+  so a cell holding anything else is out of range and falls back to the
+  default — even though `from_raw` would read it as true. Totality and
+  range checking are separate mechanisms and both are wanted.
 - **Tests follow the in-tree convention** (`emb/test/*_test.cpp`, anonymous
   namespace, `static_assert` only): they cost compile time and contribute no
   symbols to the image.
