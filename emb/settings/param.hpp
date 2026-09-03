@@ -53,6 +53,16 @@ struct group_id {
   friend constexpr bool operator==(group_id, group_id) = default;
 };
 
+// What a successful write changed. Handed back rather than acted upon: the
+// image is data, and which task may apply a group and when is the
+// application's decision — see pending_changes.
+struct change {
+  group_id group;
+  apply_policy apply;
+
+  friend constexpr bool operator==(change, change) = default;
+};
+
 // One parameter as the runtime sees it: everything type-erased into cells,
 // so a table of these is uniform and a transport can walk it without
 // knowing any parameter's static type.

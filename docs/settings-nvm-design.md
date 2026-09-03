@@ -1,6 +1,6 @@
 # Settings and NVM: design and migration plan
 
-Status: in progress. Steps 1-4 of the plan are implemented; everything
+Status: in progress. Steps 1-5 of the plan are implemented; everything
 else is designed but not written. Nothing in this document is wired into the
 running firmware yet — the existing `emb::nvm::registry` stack keeps working
 untouched until the switch-over phase.
@@ -93,8 +93,8 @@ enum class error { unknown_name, read_only, out_of_range, type_mismatch, storage
 
 auto descriptors() -> std::span<descriptor const>;
 auto find(std::string_view name) -> std::optional<index>;
-auto get(index) -> value;
-auto set(index, value) -> std::expected<void, error>;
+auto get_at(index) -> std::expected<value, error>;
+auto set_at(index, value) -> std::expected<change, error>;
 }
 ```
 
@@ -124,12 +124,22 @@ communication task.
 - The owner checks the mask where it knows the state is consistent:
 
 ```cpp
-if (settings::changed(settings::group::model)) {
-  if (!model_.configure(settings::read_model_config(), settings::read_mras_config()))
+if (settings::pending().take(group::model, apply_policy::live)) {
+  if (!model_.configure(settings::read_model_config(),
+                        settings::read_mras_config()))
     trouble::set(trouble::invalid_config{});
-  settings::acknowledge(settings::group::model);
 }
 ```
+
+One operation tests and clears, rather than a query followed by an
+acknowledgement: a change that lands between the two would otherwise be
+dropped — its bit cleared, its value never applied. Taking first and
+reconfiguring afterwards can at worst apply the same value twice.
+
+`up_to` is what the caller can honour: a running drive takes
+`apply_policy::live` and leaves `on_safe_state` changes waiting for a state
+where they are safe; nothing takes `on_restart`, which is what keeps
+`restart_required` standing until the restart.
 
 Pull, not registration: no lifetimes, no reverse dependency, no hidden
 observers, and the safe point sits literally in the code that knows it is
@@ -334,7 +344,8 @@ external/emblib/emb/
                                       apply_policy, expose
   settings/schema.hpp          [done] make_schema, lookup by name and by id,
                                       descriptor table, uniqueness checks
-  settings/image.hpp                  RAM image, typed get/set, dirty groups
+  settings/image.hpp           [done] RAM image, typed and erased access
+  settings/pending.hpp         [done] dirty groups, split by apply policy
   settings/record.hpp                 record layout, build and parse
   settings/store.hpp                  slots, active record, commit, load report
   can/canopen/od_settings.hpp         OD section generated from the schema
@@ -363,7 +374,7 @@ firmware behaviourally unchanged.
 2. `nvm/storage.hpp` + mock backend — **done**
 3. `settings/value.hpp` — **done**
 4. `settings/param.hpp` + `settings/schema.hpp` — **done**
-5. `settings/image.hpp`
+5. `settings/image.hpp` + `settings/pending.hpp` — **done**
 6. `settings/record.hpp`
 7. `settings/store.hpp`
 8. Store tests: two mock media (FRAM-like; flash-like with granularity,
@@ -456,6 +467,25 @@ phase 2 comes up with defaults. Decided deliberately — no converter.
   so a cell holding anything else is out of range and falls back to the
   default — even though `from_raw` would read it as true. Totality and
   range checking are separate mechanisms and both are wanted.
+- **The image holds no atomics.** It is plain data with typed and erased
+  access, which keeps it usable in constant expressions — and therefore
+  testable the way everything else in the library is. Sharing one between
+  contexts is the application's business; the image only reports what a
+  write changed, and `pending_changes` records it.
+- **`take()` instead of `changed()` + `acknowledge()`.** Test-and-clear in
+  one operation cannot drop a change that arrives between the two calls.
+- **`pending_changes` is templated on its word type**, so the bit
+  arithmetic is checked in constant expressions with a plain word while
+  production uses `std::atomic<std::uint32_t>`; the test also instantiates
+  the atomic form so it is compiled for the target.
+- **The erased accessors are spelled apart from the typed ones** —
+  `get_at`/`set_at` by index, `get`/`set` by name, `cell`/`assign_cell` for
+  raw cells. Not merely different addressing: the by-index path enforces
+  `writable` and the by-name path does not, and one name for two promises
+  hides that at every call site.
+- **`writable` gates the erased path only.** A parameter closed to a
+  protocol — a factory calibration — must still be writable by the code
+  that owns it, and that code goes through the typed path.
 - **Tests follow the in-tree convention** (`emb/test/*_test.cpp`, anonymous
   namespace, `static_assert` only): they cost compile time and contribute no
   symbols to the image.
