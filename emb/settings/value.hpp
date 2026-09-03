@@ -203,28 +203,31 @@ constexpr auto to_value(value_type type, raw_value r) -> value
 }
 
 // Ordering of cells under their type tag: bit patterns are not ordered, the
-// values they encode are — as int32, cell 0xFFFFFFFB is -5 and belongs in
-// [-10, 10], while as a raw word it is above any positive bound.
+// values they encode are — as int32 the cell 0xFFFFFFFB is -5 and compares
+// below 10, while as a raw word it is above it.
 //
-// A NaN compares false against both bounds and is therefore out of range,
-// which is what a value restored from corrupted storage should be.
+// A NaN compares false against everything, so a float restored from a
+// corrupted cell falls outside every range — which is what it should do. A
+// bool cell holds 0 or 1; any other word is corruption and compares outside
+// [false, true], even though from_raw would read it as true.
+constexpr bool less_equal(value_type type, raw_value a, raw_value b)
+{
+  switch (type) {
+  case value_type::boolean:
+  case value_type::uint32: return a <= b;
+  case value_type::int32: {
+    using i32 = std::int32_t;
+    return from_raw<i32>(a) <= from_raw<i32>(b);
+  }
+  case value_type::float32: return from_raw<float>(a) <= from_raw<float>(b);
+  }
+  return false;
+}
+
 constexpr bool
 in_range(value_type type, raw_value v, raw_value lo, raw_value hi)
 {
-  switch (type) {
-  case value_type::boolean: return true;
-  case value_type::int32: {
-    using i32 = std::int32_t;
-    auto const x = from_raw<i32>(v);
-    return (from_raw<i32>(lo) <= x) && (x <= from_raw<i32>(hi));
-  }
-  case value_type::uint32: return (lo <= v) && (v <= hi);
-  case value_type::float32: {
-    auto const x = from_raw<float>(v);
-    return (from_raw<float>(lo) <= x) && (x <= from_raw<float>(hi));
-  }
-  }
-  return false;
+  return less_equal(type, lo, v) && less_equal(type, v, hi);
 }
 
 } // namespace settings

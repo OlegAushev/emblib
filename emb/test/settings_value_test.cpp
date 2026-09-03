@@ -152,6 +152,8 @@ consteval bool test_erased_raw_conversions()
 
 consteval bool test_in_range()
 {
+  constexpr raw_value quiet_nan = 0x7FC00000u;
+
   // As a raw word, -5 is above any positive bound; as int32 it is not.
   auto const lo = to_raw(std::int32_t{-10});
   auto const hi = to_raw(std::int32_t{10});
@@ -173,11 +175,22 @@ consteval bool test_in_range()
 
   // A NaN restored from a corrupted cell is out of range whatever the
   // bounds are.
-  constexpr raw_value quiet_nan = 0x7FC00000u;
   if (in_range(value_type::float32, quiet_nan, flo, fhi)) return false;
 
-  // A bool has no range to be outside of.
-  if (!in_range(value_type::boolean, 1u, 0u, 0u)) return false;
+  // A bool cell holds 0 or 1; the default bounds admit both.
+  if (!in_range(value_type::boolean, to_raw(true), to_raw(false), to_raw(true)))
+    return false;
+  // Any other word in a bool cell is corruption, even though from_raw
+  // would read it as true.
+  if (in_range(value_type::boolean, 0xFFu, to_raw(false), to_raw(true)))
+    return false;
+
+  // less_equal is the primitive in_range is built from.
+  if (!less_equal(value_type::int32, to_raw(std::int32_t{-5}), to_raw(5)))
+    return false;
+  if (less_equal(value_type::uint32, 6u, 5u)) return false;
+  if (less_equal(value_type::float32, quiet_nan, to_raw(0.0f))) return false;
+  if (less_equal(value_type::float32, to_raw(0.0f), quiet_nan)) return false;
 
   return true;
 }
