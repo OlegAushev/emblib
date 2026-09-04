@@ -1,8 +1,10 @@
 # Settings and NVM: design and migration plan
 
-Status: in progress. The consumers are switched over and changes are
-applied without a restart wherever the schema says they may be. What
-remains is the cleanup (step 16).
+Status: done. Every step of the plan is implemented: the settings live in
+a schema with bounds, groups and apply policies; they are stored as whole
+records that commit or do not; they are reached by name from the
+application and by index from a protocol; and a change takes effect without
+a restart wherever the schema says it may. The stack it replaced is gone.
 
 ## 1. Scope
 
@@ -366,6 +368,7 @@ Completeness is still checked at compile time, without coupling:
 ```
 external/emblib/emb/
   meta/fixed_string.hpp        [done] structural string for NTTP names
+  nvm/error.hpp                [done] what an NVM driver can fail with
   nvm/storage.hpp              [done] block storage concept + is_erased
   settings/value.hpp           [done] value_type, value, cell conversions
   settings/param.hpp           [done] param(): def/min/max, writable, group,
@@ -455,8 +458,13 @@ whole-image reset is `restore_all_defaults()`, which pairs with
     `hall::angle_sensor` grew a `configure()`; each keeps what it has
     learned, since gains are tuned while running. Latency is one task tick,
     33 ms.
-16. Cleanup: delete `parameters.hpp`, the old `settings.hpp/.cpp` parts,
-    `od_nvm.hpp`, move `emb/nvm.hpp` to obsolete.
+16. Cleanup — **done**: `parameters.hpp`, `emb/nvm.hpp`, `od_nvm.hpp` and
+    the registry's test are deleted rather than parked; git keeps the
+    history. What the drivers still needed from the old header — the
+    `emb::nvm::error` vocabulary — moved to `emb/nvm/error.hpp`, without
+    the two codes that were about the meaning of stored data rather than
+    about a medium: integrity is a record's business now, and a record
+    reports it as a load result.
 
 Verification after each step of phases 1-2: both presets
 (`miniboard-debug`, `rev-a-debug`); for emblib headers additionally a host

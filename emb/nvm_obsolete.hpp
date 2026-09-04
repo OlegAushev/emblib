@@ -1,9 +1,13 @@
 #pragma once
 
-// Superseded by <emb/nvm.hpp>, whose layout is a constexpr array of
-// {name, default} entries over a typelist instead of this pack of
-// parameter<Name, Default> types. Kept for reference. Same namespace: not to
-// be included in the same translation unit as <emb/nvm.hpp>.
+// The first of three takes on NVM parameters, kept for reference: a pack of
+// parameter<Name, Default> types. It was superseded by a constexpr array of
+// {name, default} entries over a typelist, and that in turn by <emb/settings>,
+// where the schema carries bounds, groups and apply policies and the medium
+// holds whole records rather than fixed cells.
+//
+// Defines its own emb::nvm::error, so it cannot share a translation unit
+// with <emb/nvm/error.hpp>.
 
 #include <emb/meta.hpp>
 
