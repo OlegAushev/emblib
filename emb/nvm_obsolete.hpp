@@ -6,8 +6,8 @@
 // where the schema carries bounds, groups and apply policies and the medium
 // holds whole records rather than fixed cells.
 //
-// Defines its own emb::nvm::error, so it cannot share a translation unit
-// with <emb/nvm/error.hpp>.
+// Defines its own emb::nvm::error, from the days when that vocabulary was
+// the library's rather than each driver's.
 
 #include <emb/meta.hpp>
 

@@ -26,10 +26,10 @@ namespace nvm {
 // in place is never a thing to assume from the name — consult
 // needs_erase.
 //
-// The error type belongs to the backend: drivers already have their own
-// vocabulary (emb::nvm::error for the FRAM driver, an HAL status for
-// internal flash), and imposing a common enum here would only add a mapping
-// layer at the wrong end. Callers that need one error type map at their own
+// The error type belongs to the backend: a driver's failures are its own —
+// a write-enable latch that did not take on one part, an HAL status on
+// another — and imposing a common enum here would only add a mapping layer
+// at the wrong end. Callers that need one error type map at their own
 // boundary, where the backend is known.
 //
 // Erase block geometry is deliberately absent: flash sectors are not
