@@ -1,10 +1,10 @@
 # Settings and NVM: design and migration plan
 
-Status: in progress. Phase 0 is complete and step 9 is done — the FRAM
-driver now models the storage concept; everything else is designed but not
-written. None of the new stack runs in the firmware yet: the existing
-`emb::nvm::registry` keeps working untouched until the switch-over phase,
-though the driver underneath it now carries the new contract as well.
+Status: in progress. Phase 1 is complete — the driver models the storage
+concept, the product's schema is declared and the facade is built against
+it; nothing is switched over yet. The existing `emb::nvm::registry` keeps
+working untouched and still holds every consumer, while the new stack sits
+beside it, compiled for the target but called by nobody.
 
 ## 1. Scope
 
@@ -389,9 +389,11 @@ src/common/nvm/
                                       traits, erase(), default timeout
 
 src/app/inverter/settings/
-  schema.hpp                          the product's parameter list
-  params.hpp / params.cpp             load/store/get/set/changed/acknowledge,
-                                      section-to-slot layout, hw::nvm binding
+  schema.hpp                   [done] the product's parameter list, with
+                                      bounds, groups and apply policies
+  params.hpp / params.cpp      [done] the facade: load/save/wipe, access by
+                                      name and by index, pending changes,
+                                      the section's place on the medium
 ```
 
 ## 9. Implementation plan
@@ -419,12 +421,21 @@ firmware behaviourally unchanged.
 
 9. `src/common/nvm/fm25w256_fram.hpp` — **done**: the driver models
    `some_block_storage` directly, no adapter
-10. `src/app/inverter/settings/schema.hpp` (same parameters, plus ranges,
-    groups, apply policy)
-11. `src/app/inverter/settings/params.hpp/.cpp`
+10. `src/app/inverter/settings/schema.hpp` — **done**: same parameters,
+    plus bounds, groups and apply policies; checked against the old layout
+    mechanically, same names in the same order with the same defaults
+11. `src/app/inverter/settings/params.hpp/.cpp` — **done**
 
-Not called by anything yet; instantiation is verified with `nm` on the
-object file, not the map — `--gc-sections` drops unreferenced code.
+Not called by anything yet; instantiation was verified with `nm` on the
+object file rather than the map, since `--gc-sections` drops unreferenced
+code. The store, the image and the record codec are all instantiated
+against the real FRAM driver there, so phase 0 is compiled for the target
+and not only for the host.
+
+Two names had to differ from the plan while both stacks coexist: the
+facade's entry point is `load(memory)`, which pairs with `save()`, and the
+whole-image reset is `restore_all_defaults()`, which pairs with
+`restore_default_at(index)`. Both read better than the names they avoid.
 
 **Phase 2 — consumers, one at a time.**
 
