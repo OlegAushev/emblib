@@ -5,6 +5,7 @@
 #include <emb/settings/record.hpp>
 
 #include <array>
+#include <bitset>
 #include <expected>
 #include <optional>
 #include <span>
@@ -76,7 +77,6 @@ class store {
   static_assert(Section.slot_count >= 2,
                 "a store needs a second slot: a save must never be the only "
                 "copy of the settings");
-  static_assert(Section.slot_count <= 32, "slot bookkeeping is one word");
   static_assert(Section.slots_per_block >= 1);
   static_assert(Section.slot_count % Section.slots_per_block == 0);
   static_assert(!Storage::needs_erase || block_count >= 2,
@@ -114,12 +114,16 @@ public:
   constexpr auto load(image<Schema>& values) -> load_result
   {
     load_result result;
-    std::uint32_t tried = 0;
+
+    // Which slots have been looked at. Sized by the section rather than by
+    // a machine word, so how many slots a section may have is the medium's
+    // business and not this loop's.
+    slot_set tried;
 
     while (true) {
       auto const best = newest_untried(tried, result.read_failed);
       if (!best) break;
-      tried |= std::uint32_t{1} << best->slot;
+      tried.set(best->slot);
 
       auto const stored = read_record(best->slot, result.read_failed);
       if (!stored) continue;
@@ -242,15 +246,17 @@ private:
     std::uint32_t seq;
   };
 
+  using slot_set = std::bitset<Section.slot_count>;
+
   // The newest slot whose header names this section and fits, among those
   // not tried yet.
-  constexpr auto newest_untried(std::uint32_t tried, bool& read_failed)
+  constexpr auto newest_untried(slot_set const& tried, bool& read_failed)
       -> std::optional<candidate>
   {
     std::optional<candidate> best;
 
     for (auto slot = 0uz; slot < Section.slot_count; ++slot) {
-      if ((tried & (std::uint32_t{1} << slot)) != 0) continue;
+      if (tried.test(slot)) continue;
 
       auto const head = std::span{buffer_}.first(record_header_size);
       if (!storage_.read(address_of(slot), head)) {
@@ -281,7 +287,7 @@ private:
   constexpr void survey()
   {
     bool ignored = false;
-    auto const best = newest_untried(0, ignored);
+    auto const best = newest_untried(slot_set{}, ignored);
     if (!best) {
       next_slot_ = 0;
       last_seq_ = 0;

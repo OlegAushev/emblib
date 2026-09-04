@@ -360,6 +360,45 @@ consteval bool test_flash_round_trip()
   return true;
 }
 
+// A section with more slots than a word has bits: what a 128 KiB erase
+// block looks like when slots are a kilobyte.
+using wide = test::block_storage<4096, 4, true, 1024>;
+inline constexpr section wide_section{.magic = magic,
+                                      .base = 0,
+                                      .slot_capacity = 64,
+                                      .slot_count = 64,
+                                      .slots_per_block = 16};
+using wide_store = store<schema, wide, wide_section>;
+
+consteval bool test_more_slots_than_a_word_has_bits()
+{
+  wide memory;
+  wide_store store{memory};
+  image<schema> values;
+
+  // Past one full lap, so the newest record sits in a slot the search must
+  // reach after wrapping.
+  for (auto i = 1uz; i <= 70; ++i) {
+    if (!values.set<"motor.p">(static_cast<std::int32_t>((i % 60) + 1))) {
+      return false;
+    }
+    if (!store.save(values)) return false;
+  }
+
+  wide_store restarted{memory};
+  image<schema> restored;
+  auto const result = restarted.load(restored);
+
+  if (!result.record.valid) return false;
+  if (result.record.seq != 70) return false;
+  if (result.slot != (70 - 1) % 64) return false;
+  if (restored.get<"motor.p">() != static_cast<std::int32_t>((70 % 60) + 1)) {
+    return false;
+  }
+
+  return true;
+}
+
 // -- Wipe --
 
 consteval bool test_wipe()
@@ -451,6 +490,7 @@ static_assert(test_a_save_that_landed_but_could_not_be_read_back());
 static_assert(test_flash_rolls_over_between_blocks());
 static_assert(test_flash_erase_never_takes_the_last_good_record());
 static_assert(test_flash_round_trip());
+static_assert(test_more_slots_than_a_word_has_bits());
 static_assert(test_wipe());
 static_assert(test_saving_before_loading_keeps_the_sequence());
 static_assert(test_a_record_written_by_a_richer_firmware_still_loads());
