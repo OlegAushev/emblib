@@ -1,10 +1,10 @@
 # Settings and NVM: design and migration plan
 
-Status: in progress. Phase 0 is complete — steps 1-8 of the plan are
-implemented and tested; everything else is designed but not written.
-Nothing in this document is wired into the running firmware yet — the
-existing `emb::nvm::registry` stack keeps working untouched until the
-switch-over phase.
+Status: in progress. Phase 0 is complete and step 9 is done — the FRAM
+driver now models the storage concept; everything else is designed but not
+written. None of the new stack runs in the firmware yet: the existing
+`emb::nvm::registry` keeps working untouched until the switch-over phase,
+though the driver underneath it now carries the new contract as well.
 
 ## 1. Scope
 
@@ -385,8 +385,8 @@ external/emblib/emb/
                                       static_assert only
 
 src/common/nvm/
-  fram_block_storage.hpp              fm25w256 adapter to the new concept
-                                      (or extend the driver itself, see 10)
+  fm25w256_fram.hpp            [done] the driver itself models the concept:
+                                      traits, erase(), default timeout
 
 src/app/inverter/settings/
   schema.hpp                          the product's parameter list
@@ -417,7 +417,8 @@ firmware behaviourally unchanged.
 
 **Phase 1 — the application, alongside the old stack, nothing switched.**
 
-9. `src/common/nvm/fram_block_storage.hpp`
+9. `src/common/nvm/fm25w256_fram.hpp` — **done**: the driver models
+   `some_block_storage` directly, no adapter
 10. `src/app/inverter/settings/schema.hpp` (same parameters, plus ranges,
     groups, apply policy)
 11. `src/app/inverter/settings/params.hpp/.cpp`
@@ -555,10 +556,10 @@ phase 2 comes up with defaults. Decided deliberately — no converter.
 
 ## 11. Open questions
 
-- **Adapter or driver?** With the concept spelled `write`, `fm25w256::fram`
-  is nearly a model already: it needs a default `timeout`, the trait
-  constants and `erase`. Extending the driver in `src/common/` may be
-  cheaper than a separate adapter. Decide at step 9.
+- ~~**Adapter or driver?**~~ Settled at step 9: the driver models the
+  concept directly. It needed the trait constants, a default timeout and
+  `erase`, which on ferroelectric memory is an overwrite with
+  `erased_value` — no adapter, no second layer to keep in step.
 - **`settings::value` variant vs raw bytes + type tag** at the transport
   boundary. The variant is friendlier to future consumers; raw bytes would
   feed `make_od_value(raw, type)` directly and avoid a variant-to-variant
