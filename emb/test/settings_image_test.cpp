@@ -214,6 +214,33 @@ consteval bool test_pending_respects_the_policy()
   return true;
 }
 
+consteval bool test_a_group_waiting_on_more_is_refused()
+{
+  test_pending pending;
+  constexpr group_id model{group::model};
+
+  pending.mark(model, apply_policy::live);
+  pending.mark(model, apply_policy::on_safe_state);
+
+  // A caller that can only apply live changes gets nothing: the group is
+  // rebuilt whole, and half of it must wait for a safe state.
+  if (pending.take(model, apply_policy::live)) return false;
+  // And nothing was consumed on the way out.
+  if (!pending.changed(model, apply_policy::live)) return false;
+
+  // A caller that can honour both takes both.
+  if (!pending.take(model, apply_policy::on_safe_state)) return false;
+  if (pending.changed(model, apply_policy::on_safe_state)) return false;
+
+  // A change that needs a restart refuses the group to everyone.
+  pending.mark(model, apply_policy::live);
+  pending.mark(model, apply_policy::on_restart);
+  if (pending.take(model, apply_policy::on_safe_state)) return false;
+  if (!pending.changed(model, apply_policy::live)) return false;
+
+  return true;
+}
+
 consteval bool test_pending_groups_are_independent()
 {
   test_pending pending;
@@ -272,6 +299,7 @@ static_assert(test_erased_access());
 static_assert(test_cells());
 static_assert(test_pending_is_taken_once());
 static_assert(test_pending_respects_the_policy());
+static_assert(test_a_group_waiting_on_more_is_refused());
 static_assert(test_pending_groups_are_independent());
 static_assert(test_restart_required());
 

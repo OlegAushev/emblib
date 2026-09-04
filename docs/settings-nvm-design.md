@@ -1,9 +1,8 @@
 # Settings and NVM: design and migration plan
 
-Status: in progress. The consumers are switched over — the config readers,
-the object dictionary and the save commands all run on the new stack, and
-no symbol of `emb::nvm::registry` is left in the image. What remains is the
-reconfiguration points (step 15) and the cleanup (step 16).
+Status: in progress. The consumers are switched over and changes are
+applied without a restart wherever the schema says they may be. What
+remains is the cleanup (step 16).
 
 ## 1. Scope
 
@@ -447,7 +446,15 @@ whole-image reset is `restore_all_defaults()`, which pairs with
     emblib's `od.hpp`; generating the table from the schema (dropping the
     hand-written type and default columns) is still worth doing and is now
     a purely cosmetic step.
-15. `configure()` entry points and dirty groups.
+15. `configure()` entry points and dirty groups — **done**. The seam is
+    the drive's periodic task tick, which already runs in task context with
+    the control timebase masked: `motor_drive::apply_pending_settings()`
+    decides from its own state what it can promise (`on_safe_state` when
+    standing still, `live` otherwise) and applies the groups it can reach —
+    drive, motor, model and hall. `pmsm::model`, `pmsm::mras_observer` and
+    `hall::angle_sensor` grew a `configure()`; each keeps what it has
+    learned, since gains are tuned while running. Latency is one task tick,
+    33 ms.
 16. Cleanup: delete `parameters.hpp`, the old `settings.hpp/.cpp` parts,
     `od_nvm.hpp`, move `emb/nvm.hpp` to obsolete.
 
@@ -581,6 +588,35 @@ tool:
 - **A value outside a parameter's bounds is refused**, with
   `value_range_exceeded`, where before it was silently clamped by the
   wrapper the config reader applied. The operator now learns.
+
+## 10b. What applying taught us
+
+- **A group is applied whole, so a group that also waits on something
+  stricter must not be applied at all.** Group `drive` holds fifteen live
+  protection thresholds next to `drive.phase_swap`, which may only change
+  standing still; taking the live part would rebuild `drive_config` from
+  values that include the swap. The rule lives inside `take()` rather than
+  in its callers: a caller that forgets it gets no diagnostic, only a phase
+  swap in a spinning machine. A consequence worth knowing: one parameter
+  needing a restart freezes live tuning of its group until the restart,
+  which is the safe direction.
+- **What `take()` cannot promise**: a stricter change marked after it
+  returned is in the image by the time the caller reads its configuration.
+  Narrowing that window inside the masks does not close it — the take and
+  the reading of the configuration would have to be one operation. Where it
+  matters, keep marking and applying out of each other's way; in the
+  inverter both run as tasks in the same loop.
+- **Reconfiguration is not atomic against the current loop.** The task
+  tick masks the timebase and below; the ADC and PWM interrupts (priority
+  0 and 2) still preempt. No value tears — every one is a word — and each
+  group's derived state tolerates a single control step built from a mix of
+  old and new coefficients. The one structure that would not, the angle
+  sensor's sector maps, is only ever rebuilt in a state where no current
+  flows, which is what its `on_safe_state` policy is for.
+- **`isense.zero_drift_th` went back to `on_restart`.** Nothing can reach
+  the zero-drift calibrator to tell it otherwise: it is not owned by the
+  drive and has no periodic task of its own. Declaring it live would have
+  been a promise the code does not keep.
 
 ## 11. Open questions
 

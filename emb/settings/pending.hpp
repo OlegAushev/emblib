@@ -64,8 +64,24 @@ public:
   // those. `up_to` is what the caller can honour: a running drive takes
   // apply_policy::live, one in a state where reconfiguration is safe takes
   // on_safe_state and gets both.
+  //
+  // All or nothing. A group is reconfigured from its whole configuration,
+  // so a group that is also waiting on something stricter is refused
+  // entirely — taking the live half would rebuild the group from values
+  // that include the half meant to wait. The refusal lives here rather than
+  // in the caller because a caller that forgets it gets no diagnostic, only
+  // a phase swap in a spinning machine.
+  //
+  // What this cannot promise: a stricter change marked after the refusal
+  // was decided is still in the image by the time the caller reads its
+  // configuration. Narrowing that window inside these masks does not close
+  // it — the take and the reading of the configuration would have to be one
+  // operation. Where it matters, keep the marking and the applying out of
+  // each other's way: in the inverter both run as tasks in the same loop.
   constexpr bool take(group_id group, apply_policy up_to)
   {
+    if (blocked_above(group, up_to)) return false;
+
     auto const bit = detail::group_bit(group);
     bool taken = false;
     for (auto i = 0uz; i <= detail::policy_index(up_to); ++i) {
@@ -101,6 +117,16 @@ public:
   {
     for (auto& m : masks_)
       m.fetch_and(0u, std::memory_order_acq_rel);
+  }
+
+private:
+  // Whether the group is waiting on something this caller may not apply.
+  constexpr bool blocked_above(group_id group, apply_policy up_to) const
+  {
+    auto const bit = detail::group_bit(group);
+    for (auto i = detail::policy_index(up_to) + 1; i < masks_.size(); ++i)
+      if ((masks_[i].load(std::memory_order_acquire) & bit) != 0) return true;
+    return false;
   }
 };
 
