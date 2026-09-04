@@ -1,10 +1,9 @@
 # Settings and NVM: design and migration plan
 
-Status: in progress. Phase 1 is complete — the driver models the storage
-concept, the product's schema is declared and the facade is built against
-it; nothing is switched over yet. The existing `emb::nvm::registry` keeps
-working untouched and still holds every consumer, while the new stack sits
-beside it, compiled for the target but called by nobody.
+Status: in progress. The consumers are switched over — the config readers,
+the object dictionary and the save commands all run on the new stack, and
+no symbol of `emb::nvm::registry` is left in the image. What remains is the
+reconfiguration points (step 15) and the cleanup (step 16).
 
 ## 1. Scope
 
@@ -439,13 +438,15 @@ whole-image reset is `restore_all_defaults()`, which pairs with
 
 **Phase 2 — consumers, one at a time.**
 
-12. `read_*_config()` move to the new image **keeping their signatures**;
-    `main.cpp` changes by one line (`settings::init` -> `settings::load`).
-13. OD `config` section generated from the schema, using per-row thunks so
-    emblib's `od.hpp` needs no change; the tagged accessor in `od_object` is
-    a later, optional optimization.
-14. `save_all_parameters` / `restore_*` / `erase_*` / `save_hall_calibration`
-    move to `store()`; hall calibration becomes atomic.
+12-14. **done, and necessarily as one change**: reading from the new image
+    while writes still went to the old registry would have left the firmware
+    unable to persist anything, and `settings::init` — which built the old
+    registry — had to go at the same time. So the config readers, the OD
+    accessors and the save commands switched together. The OD accessors are
+    per-row thunks into one shared by-index body, which needs no change to
+    emblib's `od.hpp`; generating the table from the schema (dropping the
+    hand-written type and default columns) is still worth doing and is now
+    a purely cosmetic step.
 15. `configure()` entry points and dirty groups.
 16. Cleanup: delete `parameters.hpp`, the old `settings.hpp/.cpp` parts,
     `od_nvm.hpp`, move `emb/nvm.hpp` to obsolete.
@@ -564,6 +565,22 @@ phase 2 comes up with defaults. Decided deliberately — no converter.
 - **Tests follow the in-tree convention** (`emb/test/*_test.cpp`, anonymous
   namespace, `static_assert` only): they cost compile time and contribute no
   symbols to the image.
+
+## 10a. What the switch-over changed for an operator
+
+Two behaviours changed on purpose, and both are visible from a CANopen
+tool:
+
+- **A write no longer persists by itself.** It lands in the image; `1010h`
+  puts it on the medium as one record. That is what buys atomicity — a
+  calibration reaches the memory whole or not at all — and it is what the
+  object is for. Saving on every write was considered and rejected: it
+  writes a whole record per parameter, which is harmless on FRAM and not on
+  flash. A debounced save (a quiet period after the last write) belongs
+  with the reconfiguration points in step 15.
+- **A value outside a parameter's bounds is refused**, with
+  `value_range_exceeded`, where before it was silently clamped by the
+  wrapper the config reader applied. The operator now learns.
 
 ## 11. Open questions
 
