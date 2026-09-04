@@ -97,8 +97,8 @@ consteval bool test_typed_access()
 consteval bool test_erased_access()
 {
   img values;
-  constexpr auto speed = schema.index_of("drive.runout_speed");
-  constexpr auto serial = schema.index_of("prod.serial");
+  constexpr auto speed = *schema.index_of("drive.runout_speed");
+  constexpr auto serial = *schema.index_of("prod.serial");
 
   auto const read = values.get_at(speed);
   if (!read || *read != value{100.0f}) return false;
@@ -131,7 +131,7 @@ consteval bool test_erased_access()
 consteval bool test_cells()
 {
   img values;
-  constexpr auto p = schema.index_of("motor.p");
+  constexpr auto p = *schema.index_of("motor.p");
 
   if (values.cell(p) != to_raw(std::int32_t{11})) return false;
 

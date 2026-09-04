@@ -50,7 +50,7 @@ static_assert(std::same_as<schema_t<schema>::types,
 static_assert(schema.index_of("drive.phase_swap") == 0);
 static_assert(schema.index_of("motor.p") == 2);
 static_assert(schema.index_of("prot.watchdog_timeout") == 4);
-static_assert(schema.index_of("nope") == schema_t<schema>::npos);
+static_assert(!schema.index_of("nope"));
 
 // -- Static types recovered --
 
@@ -115,9 +115,8 @@ consteval bool test_find_by_id()
     if (schema.find(schema.parameters[i].id) != i) return false;
 
   // An identifier from another schema belongs to nothing here.
-  if (schema.find(as_float.parameters[0].id) != schema_t<schema>::npos)
-    return false;
-  if (schema.find(0u) != schema_t<schema>::npos) return false;
+  if (schema.find(as_float.parameters[0].id)) return false;
+  if (schema.find(0u)) return false;
 
   return true;
 }
@@ -126,10 +125,7 @@ consteval bool test_single_parameter_schema()
 {
   if (as_float.count != 1) return false;
   if (as_float.find(as_float.parameters[0].id) != 0) return false;
-  if (as_float.find(as_float.parameters[0].id + 1)
-      != schema_t<as_float>::npos) {
-    return false;
-  }
+  if (as_float.find(as_float.parameters[0].id + 1)) return false;
   return true;
 }
 

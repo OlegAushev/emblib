@@ -204,7 +204,7 @@ consteval bool test_a_value_outside_todays_range_is_refused()
   // and re-stamp the crc, so the record is whole but the value is not one
   // this firmware accepts.
   constexpr auto at = record_header_size
-                    + (schema.index_of("motor.p") * record_cell_size);
+                    + (*schema.index_of("motor.p") * record_cell_size);
   // Qualified: emb::detail and emb::settings::detail are both in scope
   // through the using-directives above.
   namespace bytes = settings::detail;

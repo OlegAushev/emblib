@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <array>
+#include <optional>
 #include <string_view>
 #include <type_traits>
 
@@ -41,23 +42,23 @@ struct basic_schema {
   using types = Types;
 
   static constexpr std::size_t count = N;
-  static constexpr std::size_t npos = SIZE_MAX;
 
   std::array<descriptor, N> parameters;
   std::array<std::uint16_t, N> by_id;
 
-  consteval auto index_of(std::string_view name) const -> std::size_t
+  consteval auto index_of(std::string_view name) const
+      -> std::optional<std::size_t>
   {
     for (auto i = 0uz; i < N; ++i)
       if (parameters[i].name == name) return i;
-    return npos;
+    return std::nullopt;
   }
 
-  constexpr auto find(std::uint32_t id) const -> std::size_t
+  constexpr auto find(std::uint32_t id) const -> std::optional<std::size_t>
   {
     auto const id_at = [this](std::uint16_t i) { return parameters[i].id; };
     auto const it = std::ranges::lower_bound(by_id, id, {}, id_at);
-    if ((it == by_id.end()) || (id_at(*it) != id)) return npos;
+    if ((it == by_id.end()) || (id_at(*it) != id)) return std::nullopt;
     return *it;
   }
 };
@@ -117,15 +118,13 @@ using type_at = typelist_at_t<typename schema_t<Schema>::types, I>;
 // and its whole typelist into every symbol that mentions it.
 template<auto& Schema, fixed_string Name>
 struct parameter {
-  static constexpr std::size_t lookup = Schema.index_of(Name.view());
-  static_assert(lookup != schema_t<Schema>::npos,
-                detail::unknown_parameter_message<Name>());
+  static constexpr auto lookup = Schema.index_of(Name.view());
+  static_assert(lookup.has_value(), detail::unknown_parameter_message<Name>());
 
-  // Clamped so that a wrong name produces the static_assert alone: fed npos,
-  // the accessors below would pile an out-of-bounds error on top of it.
-  static constexpr std::size_t index = (lookup == schema_t<Schema>::npos)
-                                         ? 0
-                                         : lookup;
+  // Falls back to the first parameter so that a wrong name produces the
+  // static_assert alone: fed nothing, the accessors below would pile an
+  // out-of-bounds error on top of it.
+  static constexpr std::size_t index = lookup.value_or(0);
 
   static constexpr auto name = Name;
   using type = type_at<Schema, index>;

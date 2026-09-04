@@ -68,7 +68,7 @@ consteval bool test_nothing_stored()
   auto const result = store.load(values);
 
   if (result.record.valid) return false;
-  if (result.slot != fram_store::npos) return false;
+  if (result.slot) return false;
   if (result.read_failed) return false;
   // Whatever the image held, it comes up defined.
   if (values.get<"motor.p">() != 11) return false;

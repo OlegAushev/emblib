@@ -242,18 +242,18 @@ constexpr auto decode_record(std::span<std::byte const> src,
     auto const cell = detail::get_u32(src, at + 4);
 
     auto const index = Schema.find(id);
-    if (index == schema_t<Schema>::npos) {
+    if (!index) {
       ++report.unknown;
       continue;
     }
 
-    auto const& desc = Schema.parameters[index];
+    auto const& desc = Schema.parameters[*index];
     if (!in_range(desc.type, cell, desc.min, desc.max)) {
       ++report.rejected;
       continue;
     }
 
-    values.assign_cell(index, cell);
+    values.assign_cell(*index, cell);
     ++report.loaded;
   }
 

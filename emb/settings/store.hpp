@@ -53,7 +53,7 @@ struct save_failure {
 // What a load found, on top of what the record itself said.
 struct load_result {
   load_report record;
-  std::size_t slot = SIZE_MAX;
+  std::optional<std::size_t> slot;
   bool read_failed = false;
 };
 
@@ -106,8 +106,6 @@ class store {
   bool surveyed_ = false;
 
 public:
-  static constexpr std::size_t npos = SIZE_MAX;
-
   constexpr explicit store(Storage& storage) : storage_(storage) {}
 
   // Restores the image from the newest record that is whole. Tries the next
@@ -120,18 +118,18 @@ public:
 
     while (true) {
       auto const best = newest_untried(tried, result.read_failed);
-      if (best.slot == npos) break;
-      tried |= std::uint32_t{1} << best.slot;
+      if (!best) break;
+      tried |= std::uint32_t{1} << best->slot;
 
-      auto const stored = read_record(best.slot, result.read_failed);
+      auto const stored = read_record(best->slot, result.read_failed);
       if (!stored) continue;
 
       auto const report = decode_record(*stored, Section.magic, values);
       if (!report.valid) continue;
 
       result.record = report;
-      result.slot = best.slot;
-      adopt(best.slot, report.seq);
+      result.slot = best->slot;
+      adopt(best->slot, report.seq);
       return result;
     }
 
@@ -240,16 +238,16 @@ private:
   }
 
   struct candidate {
-    std::size_t slot = npos;
-    std::uint32_t seq = 0;
+    std::size_t slot;
+    std::uint32_t seq;
   };
 
   // The newest slot whose header names this section and fits, among those
   // not tried yet.
   constexpr auto newest_untried(std::uint32_t tried, bool& read_failed)
-      -> candidate
+      -> std::optional<candidate>
   {
-    candidate best;
+    std::optional<candidate> best;
 
     for (auto slot = 0uz; slot < Section.slot_count; ++slot) {
       if ((tried & (std::uint32_t{1} << slot)) != 0) continue;
@@ -264,8 +262,8 @@ private:
       if (!header) continue;
       if (record_size(header->count) > Section.slot_capacity) continue;
 
-      if ((best.slot == npos) || seq_newer(header->seq, best.seq)) {
-        best = {slot, header->seq};
+      if (!best || seq_newer(header->seq, best->seq)) {
+        best = candidate{slot, header->seq};
       }
     }
     return best;
@@ -284,13 +282,13 @@ private:
   {
     bool ignored = false;
     auto const best = newest_untried(0, ignored);
-    if (best.slot == npos) {
+    if (!best) {
       next_slot_ = 0;
       last_seq_ = 0;
       surveyed_ = true;
       return;
     }
-    adopt(best.slot, best.seq);
+    adopt(best->slot, best->seq);
   }
 
   constexpr auto read_record(std::size_t slot, bool& read_failed)
