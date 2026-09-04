@@ -18,6 +18,7 @@ enum class storage_fault {
   misaligned,
   not_erased,
   power_loss,
+  unreadable,
 };
 
 // A RAM-backed some_block_storage for tests. Constexpr throughout, so whole
@@ -25,7 +26,8 @@ enum class storage_fault {
 // and cost nothing at run time.
 //
 // Parameterized by the three traits that actually differ between media:
-//   block_storage<256>                     — FRAM: byte writes, no erase
+//   block_storage<256>                     — FRAM: byte writes, no erase,
+//                                            any range erasable
 //   block_storage<1024, 4, true, 256>      — flash: 4-byte write units,
 //                                            erased target required,
 //                                            256-byte erase blocks
@@ -37,7 +39,7 @@ enum class storage_fault {
 template<std::size_t Capacity,
          std::size_t WriteGranularity = 1,
          bool NeedsErase = false,
-         std::size_t EraseBlock = Capacity,
+         std::size_t EraseBlock = 1,
          std::byte ErasedValue = std::byte{0xFF}>
 class block_storage {
 public:
@@ -61,6 +63,7 @@ public:
 
   constexpr auto read(addr_type addr, std::span<std::byte> dest) -> result
   {
+    if (read_fault_) return std::unexpected(storage_fault::unreadable);
     if (!in_range(addr, dest.size())) {
       return std::unexpected(storage_fault::out_of_range);
     }
@@ -85,6 +88,8 @@ public:
           return std::unexpected(storage_fault::not_erased);
         }
     }
+
+    if (write_sink_) return {};
 
     auto const written = std::min(src.size(), power_budget_);
     std::copy_n(src.begin(), written, cells_.begin() + addr);
@@ -122,6 +127,21 @@ public:
     power_budget_ = bytes;
   }
 
+  // A medium that acknowledges every write and keeps nothing — what a worn
+  // out FRAM or EEPROM looks like from the outside, and the reason a save
+  // reads back what it wrote.
+  constexpr void set_write_sink(bool on)
+  {
+    write_sink_ = on;
+  }
+
+  // A medium that keeps what it is given but cannot be read back: the case
+  // where a save's own verification fails although the record landed.
+  constexpr void set_read_fault(bool on)
+  {
+    read_fault_ = on;
+  }
+
   constexpr auto bytes() -> std::span<std::byte>
   {
     return cells_;
@@ -148,6 +168,8 @@ private:
 
   std::array<std::byte, Capacity> cells_{};
   std::size_t power_budget_ = unlimited;
+  bool write_sink_ = false;
+  bool read_fault_ = false;
 };
 
 } // namespace test

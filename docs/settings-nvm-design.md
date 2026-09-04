@@ -1,9 +1,10 @@
 # Settings and NVM: design and migration plan
 
-Status: in progress. Steps 1-6 of the plan are implemented; everything
-else is designed but not written. Nothing in this document is wired into the
-running firmware yet — the existing `emb::nvm::registry` stack keeps working
-untouched until the switch-over phase.
+Status: in progress. Phase 0 is complete — steps 1-8 of the plan are
+implemented and tested; everything else is designed but not written.
+Nothing in this document is wired into the running firmware yet — the
+existing `emb::nvm::registry` stack keeps working untouched until the
+switch-over phase.
 
 ## 1. Scope
 
@@ -204,6 +205,22 @@ or another one.
 
 ### Slots
 
+Placement is declared once, as a value the store is instantiated with:
+
+```cpp
+inline constexpr section config_section{.magic = ..., .base = 0,
+                                        .slot_capacity = 1024,
+                                        .slot_count = 2};
+// flash: .slot_count = 32, .slots_per_block = 16  // two 16 KB sectors
+```
+
+Slots hold successive records; a save writes the next one and leaves the
+previous intact. Where erasing is required, slots are grouped into blocks
+the size of the medium's erase unit, and only the first slot of a block
+pays for an erase — by which time the newest record lives in another block.
+That is asserted, not assumed: with `needs_erase`, the slots must span at
+least two blocks.
+
 Each section declares `slot_capacity` as a **constant, not derived from the
 current parameter count** — otherwise adding a parameter would shift the
 slot stride and invalidate everything already stored.
@@ -360,7 +377,8 @@ external/emblib/emb/
   settings/image.hpp           [done] RAM image, typed and erased access
   settings/pending.hpp         [done] dirty groups, split by apply policy
   settings/record.hpp          [done] record layout, encode and decode
-  settings/store.hpp                  slots, active record, commit, load report
+  settings/store.hpp           [done] slots, active record, commit, load
+                                      report
   can/canopen/od_settings.hpp         OD section generated from the schema
   test/mock/block_storage.hpp  [done] constexpr RAM backend for tests
   test/*_test.cpp                     in-tree convention: anonymous namespace,
@@ -389,11 +407,13 @@ firmware behaviourally unchanged.
 4. `settings/param.hpp` + `settings/schema.hpp` — **done**
 5. `settings/image.hpp` + `settings/pending.hpp` — **done**
 6. `settings/record.hpp` — **done**
-7. `settings/store.hpp`
-8. Store tests: two mock media (FRAM-like; flash-like with granularity,
-   write-once and block erase) and the scenarios — clean memory, power cut
-   at every step of the commit, added/removed parameter, retyped parameter,
-   out-of-range value, sector overflow and rollover.
+7. `settings/store.hpp` — **done**
+8. Store tests — **done**: two mock media (FRAM-like; flash-like with
+   granularity, write-once and block erase) and the scenarios — clean
+   memory, power cut while writing the body and at the commit, a corrupted
+   newest record, a medium that acknowledges writes and keeps nothing,
+   block rollover, an erase that must not take the last good record, wipe,
+   saving before loading, and a record written by a richer firmware.
 
 **Phase 1 — the application, alongside the old stack, nothing switched.**
 
@@ -509,6 +529,26 @@ phase 2 comes up with defaults. Decided deliberately — no converter.
   did not read" and "the parameter is like that" are indistinguishable.
 - **CRC-32 is computed a bit at a time.** A table would cost a kilobyte of
   flash to save microseconds on an operation that runs twice a boot.
+- **The store's buffer is a slot, not a record.** A firmware that declared
+  more parameters wrote a longer record, and refusing to read it would
+  silently discard the settings of anyone downgrading. The RAM cost is
+  `slot_capacity`, which is the application's own number — the same one it
+  reserved on the medium.
+- **A failed save says which step failed** — erase, body, commit or
+  verify — and carries the medium's own error code, except after a
+  successful write that did not read back, where there is no code to carry
+  and the absence is the diagnosis.
+- **The slot and the sequence number are both spent before the first
+  write**, whether or not the attempt succeeds. The slot, so a retry never
+  lands on the debris of the attempt before it. The sequence number,
+  because a failed save can still have landed — the record wrote and only
+  the read-back failed — and reusing the number would leave two records
+  claiming one generation, which a load orders by slot rather than by age,
+  silently preferring the older one.
+- **A save before the first load surveys the headers.** Otherwise it would
+  start counting from one and write a record that looks older than what is
+  stored — invisible to the next load, which takes the highest sequence
+  number. The regression test fails without the survey.
 - **Tests follow the in-tree convention** (`emb/test/*_test.cpp`, anonymous
   namespace, `static_assert` only): they cost compile time and contribute no
   symbols to the image.
