@@ -556,6 +556,21 @@ phase 2 comes up with defaults. Decided deliberately — no converter.
   did not read" and "the parameter is like that" are indistinguishable.
 - **CRC-32 is computed a bit at a time.** A table would cost a kilobyte of
   flash to save microseconds on an operation that runs twice a boot.
+- **The slot ahead is only known to be erased while the store runs.** It
+  advances one slot at a time and erases each block on entering it, so
+  nothing needs checking — until the chain breaks. A restart resumes from
+  what the medium says; a failed save leaves the position past whatever it
+  managed to write. In both cases the next save looks at the slot first and,
+  if it is neither a record nor erased, steps to the next block — the block
+  it is standing in cannot be erased, since the record just restored may
+  live there. Erasing on every restart instead would cost a block per boot,
+  which on a section of 128 slots to a block is 128 times the wear.
+- **A restart takes its position and its sequence number from the newest
+  header, not from the newest whole record.** Where the medium stopped and
+  what it holds are different questions: a save interrupted before it
+  committed leaves a header claiming a generation that no record backs, and
+  numbering the next record below it would put two records on one
+  generation, which a load can then only order by slot.
 - **The store's buffer is a slot, not a record.** A firmware that declared
   more parameters wrote a longer record, and refusing to read it would
   silently discard the settings of anyone downgrading. The RAM cost is
