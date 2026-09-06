@@ -192,6 +192,47 @@ consteval bool test_power_lost_at_the_commit()
   return true;
 }
 
+// A restart after a torn save must not aim the next save at the record it
+// just restored: on two slots, the slot past the debris is that record.
+// Two torn saves with a restart between them would otherwise leave nothing.
+consteval bool test_a_second_tear_after_a_restart()
+{
+  fram memory;
+  image<schema> values;
+  if (!values.set<"motor.p">(std::int32_t{4})) return false;
+
+  {
+    fram_store store{memory};
+    if (!store.save(values)) return false;                    // slot 0, seq 1
+    if (!values.set<"motor.p">(std::int32_t{5})) return false;
+    memory.set_power_budget(record_body_size(schema.count));
+    if (store.save(values)) return false;                     // slot 1: torn
+  }
+  memory.set_power_budget(fram::unlimited);
+
+  {
+    fram_store store{memory};
+    image<schema> restored;
+    auto const result = store.load(restored);
+    if (!result.record.valid || result.slot != 0) return false;
+    // The next save goes over the debris, not over the record restored.
+    if (store.next_slot() != 1) return false;
+
+    if (!restored.set<"motor.p">(std::int32_t{6})) return false;
+    memory.set_power_budget(record_body_size(schema.count));
+    if (store.save(restored)) return false;                   // torn again
+  }
+  memory.set_power_budget(fram::unlimited);
+
+  fram_store restarted{memory};
+  image<schema> again;
+  auto const result = restarted.load(again);
+  if (!result.record.valid || result.slot != 0) return false;
+  if (again.get<"motor.p">() != 4) return false;
+
+  return true;
+}
+
 consteval bool test_a_corrupted_record_falls_back_to_the_previous_one()
 {
   fram memory;
@@ -213,6 +254,8 @@ consteval bool test_a_corrupted_record_falls_back_to_the_previous_one()
   if (!result.record.valid) return false;
   if (result.slot != 0 || result.record.seq != 1) return false;
   if (restored.get<"motor.p">() != 11) return false;
+  // The next save goes over the corrupt record, not over the one restored.
+  if (restarted.next_slot() != 1) return false;
 
   return true;
 }
@@ -424,9 +467,60 @@ consteval bool test_a_restart_onto_debris_with_no_header()
   return true;
 }
 
-// A restart is not the only way the chain breaks. An erase that fails
-// leaves the position past a block that was never cleared, and the slot
-// there still holds the record of a previous lap.
+// A header can also lie about its age. NOR loses programmed bits upwards,
+// and a lap-old record whose sequence number gained a high bit compares
+// newer than everything. The position must still follow the record
+// restored: taken from that header instead, it would sit in the old block,
+// and the step over the debris there would take the block of the record
+// restored — and erase it.
+consteval bool test_a_lap_old_header_that_rotted_newer()
+{
+  flash memory;
+  image<schema> values;
+
+  {
+    flash_store store{memory};
+    // A lap and one more: slot 0 holds seq 5 in a freshly erased block,
+    // block 1 still holds seq 3 and 4.
+    for (auto i = 1uz; i <= 5; ++i) {
+      if (!values.set<"motor.p">(static_cast<std::int32_t>(i))) return false;
+      if (!store.save(values)) return false;
+    }
+    if (memory.erase_calls != 3) return false;
+  }
+
+  // Bit 15 of the sequence number in slot 2: seq 3 now reads as 32771.
+  memory.bytes()[2 * flash_section.slot_capacity + 9] |= std::byte{0x80};
+
+  flash_store store{memory};
+  image<schema> restored;
+  auto const result = store.load(restored);
+  if (!result.record.valid || result.slot != 0) return false;
+  if (restored.get<"motor.p">() != 5) return false;
+  if (store.next_slot() != 1) return false;
+
+  // The next save tears one byte in. Nothing may have been erased for it.
+  if (!restored.set<"motor.p">(std::int32_t{6})) return false;
+  memory.set_power_budget(1);
+  auto const interrupted = store.save(restored);
+  if (interrupted) return false;
+  if (interrupted.error().stage != save_stage::body) return false;
+  memory.set_power_budget(flash::unlimited);
+  if (memory.erase_calls != 3) return false;
+
+  flash_store restarted{memory};
+  image<schema> again;
+  auto const after = restarted.load(again);
+  if (!after.record.valid || after.slot != 0) return false;
+  if (again.get<"motor.p">() != 5) return false;
+
+  return true;
+}
+
+// A restart is not the only way the chain breaks. An erase that is refused
+// leaves its block uncleared with nothing written, while the newest record
+// lives in the other block — so the slot is not spent, and the next save
+// erases the same block again rather than moving on to one it must keep.
 consteval bool test_a_save_after_an_erase_that_failed()
 {
   flash memory;
@@ -446,15 +540,57 @@ consteval bool test_a_save_after_an_erase_that_failed()
   if (refused) return false;
   if (refused.error().stage != save_stage::erase) return false;
   memory.set_power_budget(flash::unlimited);
+  if (store.next_slot() != 0) return false;
 
-  // Slot 1 is next, and it still holds the record from the first lap.
+  // The sixth erases the block and takes slot 0. The record in slot 3
+  // stands throughout.
   if (!values.set<"motor.p">(std::int32_t{6})) return false;
   if (!store.save(values)) return false;
+  if (store.next_slot() != 1) return false;
+  if (memory.erase_calls != 4) return false;
 
   flash_store restarted{memory};
   image<schema> restored;
-  if (!restarted.load(restored).record.valid) return false;
+  auto const result = restarted.load(restored);
+  if (!result.record.valid || result.slot != 0) return false;
   if (restored.get<"motor.p">() != 6) return false;
+
+  return true;
+}
+
+// The same refusal, and then the retry tears one byte in. The erase that
+// went through took the block it was meant to, not the one holding the
+// newest record, so that record is what comes back.
+consteval bool test_a_torn_save_after_an_erase_that_failed()
+{
+  flash memory;
+  image<schema> values;
+
+  {
+    flash_store store{memory};
+    for (auto i = 1uz; i <= 4; ++i) {
+      if (!values.set<"motor.p">(static_cast<std::int32_t>(i))) return false;
+      if (!store.save(values)) return false;
+    }
+
+    memory.set_power_budget(0);
+    if (!values.set<"motor.p">(std::int32_t{5})) return false;
+    if (store.save(values)) return false;                    // erase refused
+
+    memory.set_power_budget(1);
+    if (!values.set<"motor.p">(std::int32_t{6})) return false;
+    auto const interrupted = store.save(values);
+    if (interrupted) return false;
+    if (interrupted.error().stage != save_stage::body) return false;
+  }
+  memory.set_power_budget(flash::unlimited);
+
+  flash_store restarted{memory};
+  image<schema> restored;
+  auto const result = restarted.load(restored);
+  if (!result.record.valid) return false;
+  if (result.slot != 3 || result.record.seq != 4) return false;
+  if (restored.get<"motor.p">() != 4) return false;
 
   return true;
 }
@@ -601,6 +737,7 @@ static_assert(test_save_and_load());
 static_assert(test_slots_alternate());
 static_assert(test_power_lost_while_writing_the_body());
 static_assert(test_power_lost_at_the_commit());
+static_assert(test_a_second_tear_after_a_restart());
 static_assert(test_a_corrupted_record_falls_back_to_the_previous_one());
 static_assert(test_a_write_that_does_not_stick_is_caught());
 static_assert(test_a_save_that_landed_but_could_not_be_read_back());
@@ -608,7 +745,9 @@ static_assert(test_flash_rolls_over_between_blocks());
 static_assert(test_flash_erase_never_takes_the_last_good_record());
 static_assert(test_a_restart_onto_the_debris_of_a_torn_save());
 static_assert(test_a_restart_onto_debris_with_no_header());
+static_assert(test_a_lap_old_header_that_rotted_newer());
 static_assert(test_a_save_after_an_erase_that_failed());
+static_assert(test_a_torn_save_after_an_erase_that_failed());
 static_assert(test_flash_round_trip());
 static_assert(test_more_slots_than_a_word_has_bits());
 static_assert(test_wipe());

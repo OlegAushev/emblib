@@ -129,10 +129,14 @@ public:
 
     // Where the medium stopped and what it holds are two questions. The
     // first candidate answers the first: it is the newest header there is,
-    // whether or not the record behind it turns out to be whole. The
-    // bookkeeping follows it, so the next record is written past everything
-    // present and numbered above everything present — including the debris
-    // of a save that never committed.
+    // whether or not the record behind it turns out to be whole. The next
+    // record is numbered above it, so the debris of a save that never
+    // committed never shares a generation with a record. The position,
+    // though, follows the record restored and not the header: on two slots
+    // the slot past the newest header is the record restored itself, and on
+    // flash a lap-old header whose sequence number rotted upwards would put
+    // the position in its block, from where a step over the debris lands in
+    // the block of the record restored — and erases it.
     std::optional<candidate> newest;
 
     while (true) {
@@ -149,7 +153,7 @@ public:
 
       result.record = report;
       result.slot = best->slot;
-      adopt(newest->slot, newest->seq);
+      adopt(best->slot, newest->seq);
       return result;
     }
 
@@ -185,14 +189,23 @@ public:
     // Spent whether or not the attempt succeeds. A failed save can still
     // have landed — the record wrote and only the read-back failed — and
     // reusing the number would leave two records claiming one generation,
-    // where a load picks by slot order rather than by age.
+    // where a load picks by slot order rather than by age. The one
+    // exception is an erase that was refused, below.
     next_slot_ = (slot + 1) % Section.slot_count;
     last_seq_ = seq;
 
     if constexpr (Storage::needs_erase) {
       if (slot % Section.slots_per_block == 0) {
         auto const erased = storage_.erase(address_of(slot), block_bytes);
-        if (!erased) return fail(save_stage::erase, erased.error());
+        if (!erased) {
+          // Nothing was written, so there is no debris to move past, and
+          // the block still has to be erased: the slot is not spent. Moving
+          // on would put the position inside a block that was never
+          // cleared, and the step over the debris would then take the next
+          // block — the one holding the newest record.
+          next_slot_ = slot;
+          return fail(save_stage::erase, erased.error());
+        }
       }
     }
 
@@ -300,6 +313,12 @@ private:
     return best;
   }
 
+  // Resumes from what the medium says, after a restart or a save before
+  // the first load: the sequence continues above the number given, the
+  // next record goes to the slot after the one given, and the slot ahead
+  // is no longer known to be erased. The two need not come from one slot —
+  // a load passes the record it restored and the newest header there is,
+  // which differ after a torn save; a survey has only headers to go by.
   constexpr void adopt(std::size_t slot, std::uint32_t seq)
   {
     last_seq_ = seq;
@@ -309,14 +328,16 @@ private:
   }
 
   // Once after the chain breaks, before the next save. The slot ahead may
-  // hold neither a record nor an erased state — a save interrupted before
-  // it committed, or one whose erase never happened — and writing into it
-  // would corrupt the new record rather than the old one.
+  // hold the debris of a save interrupted before it committed — neither a
+  // record nor an erased state — and writing into it would corrupt the new
+  // record rather than the old one.
   //
-  // The block that slot belongs to cannot be erased: the record just
-  // restored may live in it. So the next block is taken instead, which the
-  // rollover erases anyway. A slot that already starts a block needs
-  // nothing — entering it erases it.
+  // The block that slot belongs to cannot be erased: the position follows
+  // the record restored, so a slot that is not the first of its block
+  // shares the block with that record. The next block is taken instead,
+  // which the rollover erases anyway — one erase per such incident, not
+  // per boot. A slot that already starts a block needs nothing: entering
+  // it erases it.
   constexpr void step_over_debris()
   {
     slot_ahead_unknown_ = false;

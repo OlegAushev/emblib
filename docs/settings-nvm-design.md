@@ -565,12 +565,20 @@ phase 2 comes up with defaults. Decided deliberately — no converter.
   it is standing in cannot be erased, since the record just restored may
   live there. Erasing on every restart instead would cost a block per boot,
   which on a section of 128 slots to a block is 128 times the wear.
-- **A restart takes its position and its sequence number from the newest
-  header, not from the newest whole record.** Where the medium stopped and
-  what it holds are different questions: a save interrupted before it
-  committed leaves a header claiming a generation that no record backs, and
-  numbering the next record below it would put two records on one
-  generation, which a load can then only order by slot.
+- **A restart takes its sequence number from the newest header and its
+  position from the newest whole record.** Where the medium stopped and
+  what it holds are different questions. A save interrupted before it
+  committed leaves a header claiming a generation that no record backs,
+  and numbering the next record below it would put two records on one
+  generation, which a load can then only order by slot — so the number
+  follows the header. The position cannot: on two slots the slot past the
+  debris is the record just restored, and on flash a lap-old header whose
+  sequence number rotted upwards — NOR loses programmed bits, and a
+  sequence number is mostly zeros — would put the position in the old
+  block, from where the step over the debris lands in the block of the
+  record restored and erases it. Following the record instead costs, after
+  a torn save whose header landed, the rest of that block: one erase per
+  such incident, not per boot.
 - **The store's buffer is a slot, not a record.** A firmware that declared
   more parameters wrote a longer record, and refusing to read it would
   silently discard the settings of anyone downgrading. The RAM cost is
@@ -581,16 +589,24 @@ phase 2 comes up with defaults. Decided deliberately — no converter.
   successful write that did not read back, where there is no code to carry
   and the absence is the diagnosis.
 - **The slot and the sequence number are both spent before the first
-  write**, whether or not the attempt succeeds. The slot, so a retry never
-  lands on the debris of the attempt before it. The sequence number,
-  because a failed save can still have landed — the record wrote and only
-  the read-back failed — and reusing the number would leave two records
-  claiming one generation, which a load orders by slot rather than by age,
-  silently preferring the older one.
+  write**, whether or not the attempt succeeds — with one exception. The
+  slot, so a retry never lands on the debris of the attempt before it. The
+  sequence number, because a failed save can still have landed — the record
+  wrote and only the read-back failed — and reusing the number would leave
+  two records claiming one generation, which a load orders by slot rather
+  than by age, silently preferring the older one. The exception is an erase
+  that was refused: nothing was written, so there is no debris to avoid,
+  and the block still has to be erased. Spending the slot would put the
+  position inside a block that was never cleared, and the step over the
+  debris would then take the next block — the one holding the newest
+  record. So the slot stays, and a sector that never erases makes every
+  save fail with `save_stage::erase` rather than quietly turning the store
+  into a single block that erases its own newest record on every lap.
 - **A save before the first load surveys the headers.** Otherwise it would
   start counting from one and write a record that looks older than what is
   stored — invisible to the next load, which takes the highest sequence
-  number. The regression test fails without the survey.
+  number. The regression test fails without the survey. Headers are all it
+  reads, which leaves one gap — see the open question on it.
 - **Tests follow the in-tree convention** (`emb/test/*_test.cpp`, anonymous
   namespace, `static_assert` only): they cost compile time and contribute no
   symbols to the image.
@@ -654,3 +670,13 @@ tool:
   OD, beyond a `restart_required` flag and a `pending_changes` mask.
 - **Counters** (hour meter, energy, fault counts) need their own append-log
   region; out of scope here, but the region layout should leave room.
+- **`survey()` trusts headers.** A save before the first load, after a
+  save that tore, is positioned by the newest header — which on two slots
+  is the slot past the debris, i.e. the last good record; if that save
+  tears too, nothing is left. On flash a lap-old header that rotted newer
+  puts the position in the old block the same way, from where the step
+  over the debris erases the block of the newest record. The application
+  loads before anything can save, so the gap is latent. Closing it means
+  the survey checking records as the load does: a `record_whole()` in
+  `record.hpp`, shared by both, at the cost of a CRC per candidate on that
+  path.
