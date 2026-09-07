@@ -6,45 +6,60 @@
 
 #include <emb/gpio.hpp>
 
+#include <concepts>
 #include <cstdint>
+#include <type_traits>
 
 namespace emb::actuator::discrete {
-
-// Two-position state of a discrete actuator.
-enum class position : std::uint8_t { closed, open };
 
 // Logical drive/feedback signal of a discrete actuator, independent of the
 // medium that carries it: encoders emit it, decoders consume it. A concrete
 // driver/sensor (e.g. the GPIO ones below) translates it to and from hardware.
 enum class signal : std::uint8_t { inactive, active };
 
+// Binds a two-position state type onto the open/closed axis this module speaks:
+// which of its values is the open position and which the closed one. Naming
+// those values, and numbering them, stays with whoever declares the state, so
+// that a contactor, a valve and a brake each keep their own vocabulary.
+template<typename P>
+concept some_positions = requires {
+  requires std::same_as<std::remove_cv_t<decltype(P::open)>,
+                        std::remove_cv_t<decltype(P::closed)>>;
+  requires std::equality_comparable<decltype(P::open)>;
+  // Via bool_constant: a comparison that is no constant expression (non-static
+  // members) then fails substitution instead of making the concept ill-formed.
+  requires std::bool_constant<(P::open != P::closed)>::value;
+};
+
 // Position<->signal bijection for a normally-closed actuator: de-energized rest
-// is closed. As an encoder it maps a desired position to a drive signal; as a
-// decoder it maps a feedback signal back to a position (active = open, i.e. a
-// break aux contact).
+// is closed. As a decoder, active = open, i.e. a break aux contact.
+template<some_positions P>
 struct normally_closed {
-  static constexpr signal operator()(position desired)
+  using position_type = std::remove_cv_t<decltype(P::open)>;
+
+  static constexpr signal operator()(position_type desired)
   {
-    return desired != position::closed ? signal::active : signal::inactive;
+    return desired == P::open ? signal::active : signal::inactive;
   }
-  static constexpr position operator()(signal s)
+  static constexpr position_type operator()(signal s)
   {
-    return s == signal::active ? position::open : position::closed;
+    return s == signal::active ? P::open : P::closed;
   }
 };
 
 // Position<->signal bijection for a normally-open actuator: de-energized rest
-// is open. As an encoder it maps a desired position to a drive signal; as a
-// decoder it maps a feedback signal back to a position (active = closed, i.e. a
-// make aux contact).
+// is open. As a decoder, active = closed, i.e. a make aux contact.
+template<some_positions P>
 struct normally_open {
-  static constexpr signal operator()(position desired)
+  using position_type = std::remove_cv_t<decltype(P::open)>;
+
+  static constexpr signal operator()(position_type desired)
   {
-    return desired != position::open ? signal::active : signal::inactive;
+    return desired == P::closed ? signal::active : signal::inactive;
   }
-  static constexpr position operator()(signal s)
+  static constexpr position_type operator()(signal s)
   {
-    return s == signal::active ? position::closed : position::open;
+    return s == signal::active ? P::closed : P::open;
   }
 };
 
@@ -82,11 +97,13 @@ public:
 
 // A two-position actuator driven by a single GPIO line.
 template<typename Encoder, typename Pin>
-using gpio_actuator = unmonitored<position, Encoder, gpio_driver<Pin>>;
+using gpio_actuator =
+    unmonitored<typename Encoder::position_type, Encoder, gpio_driver<Pin>>;
 
 // A feedback channel sensing position through a GPIO input pin.
 template<typename Decoder, typename Pin>
-using gpio_feedback = feedback<position, gpio_sensor<Pin>, Decoder>;
+using gpio_feedback =
+    feedback<typename Decoder::position_type, gpio_sensor<Pin>, Decoder>;
 
 // A two-position actuator with closed-loop position feedback: a control output
 // pin plus a feedback input pin.
