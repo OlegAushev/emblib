@@ -485,6 +485,46 @@ constexpr bool test_mixed_fsm_v3()
 
 static_assert(test_mixed_fsm_v3());
 
+constexpr bool test_is_in_state_v3()
+{
+  Switch s;
+  assert(s.is_in_state<ClosedState>());
+  assert((s.is_in_state<ClosedState, OpenState>()));
+  assert((s.is_in_state<DestroyedState, ClosedState>()));
+  assert(!(s.is_in_state<OpenState, DestroyedState>()));
+
+  s.force_transition<OpenState>();
+  assert(!s.is_in_state<ClosedState>());
+  assert((s.is_in_state<ClosedState, OpenState>()));
+  assert((s.is_in_state<OpenState, DestroyedState>()));
+
+  s.dispatch(DestroyEvent{});
+  assert(s.is_in_state<DestroyedState>());
+  assert(!(s.is_in_state<ClosedState, OpenState>()));
+  assert((s.is_in_state<OpenState, DestroyedState>()));
+  assert((s.is_in_state<OpenState, ClosedState, DestroyedState>()));
+
+  return true;
+}
+
+static_assert(test_is_in_state_v3());
+
+template<typename... States>
+concept state_query = requires(Switch const& s) {
+  s.template is_in_state<States...>();
+};
+
+static_assert(state_query<OpenState>);
+static_assert(state_query<OpenState, ClosedState, DestroyedState>);
+// an empty query must not silently answer `false`
+static_assert(!state_query<>);
+// a type that is not a state of this machine
+static_assert(!state_query<int>);
+static_assert(!state_query<OpenState, int>);
+// a repeated state
+static_assert(!state_query<OpenState, OpenState>);
+static_assert(!state_query<OpenState, ClosedState, OpenState>);
+
 } // namespace mixed_fsm
 
 } // namespace

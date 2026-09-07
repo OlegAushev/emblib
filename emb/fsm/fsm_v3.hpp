@@ -304,11 +304,13 @@ public:
     return std::visit(std::forward<Visitor>(visitor), state_);
   }
 
-  template<typename State>
-    requires typelist_contains<state_list, State>
-  constexpr bool is_in_state() const
+  template<typename... State>
+    requires(sizeof...(State) > 0)
+             && (typelist_contains<state_list, State> && ...)
+             && typelist_unique<typelist<State...>>
+  [[nodiscard]] constexpr bool is_in_state() const
   {
-    return std::holds_alternative<State>(state_);
+    return (std::holds_alternative<State>(state_) || ...);
   }
 
   [[nodiscard]] constexpr auto state_id() const
