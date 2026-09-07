@@ -652,6 +652,50 @@ consteval bool test_more_slots_than_a_word_has_bits()
   return true;
 }
 
+// A run of candidates that fail their checks is what a search rereading
+// the medium once per candidate paid for quadratically. The headers are
+// read once; each candidate after that costs the record behind it and
+// nothing more.
+consteval bool test_a_run_of_corrupt_records_costs_one_pass()
+{
+  wide memory;
+  wide_store store{memory};
+  image<schema> values;
+
+  for (auto i = 1uz; i <= 10; ++i) {
+    if (!values.set<"motor.p">(static_cast<std::int32_t>(i))) return false;
+    if (!store.save(values)) return false; // slot i - 1, seq i
+  }
+
+  // The five newest records lose their crc. Their headers stay candidates,
+  // so the search has to reach past all five.
+  for (auto slot = 5uz; slot <= 9uz; ++slot) {
+    auto const crc = (slot * wide_section.slot_capacity)
+                   + record_size(schema_t<schema>::count) - 1;
+    memory.bytes()[crc] ^= std::byte{0xFF};
+  }
+
+  wide_store restarted{memory};
+  image<schema> restored;
+  memory.read_calls = 0;
+  auto const result = restarted.load(restored);
+
+  if (!result.record.valid) return false;
+  if (result.slot != 4 || result.record.seq != 5) return false;
+  if (restored.get<"motor.p">() != 5) return false;
+
+  // The sequence still follows the newest header and the position the
+  // record restored, whichever way the candidates were found.
+  if (restarted.sequence() != 10) return false;
+  if (restarted.next_slot() != 5) return false;
+
+  // One header from every slot, then two reads for each of the six
+  // candidates tried: the header again and the record behind it.
+  if (memory.read_calls != wide_section.slot_count + (2 * 6)) return false;
+
+  return true;
+}
+
 // -- Wipe --
 
 consteval bool test_wipe()
@@ -750,6 +794,7 @@ static_assert(test_a_save_after_an_erase_that_failed());
 static_assert(test_a_torn_save_after_an_erase_that_failed());
 static_assert(test_flash_round_trip());
 static_assert(test_more_slots_than_a_word_has_bits());
+static_assert(test_a_run_of_corrupt_records_costs_one_pass());
 static_assert(test_wipe());
 static_assert(test_saving_before_loading_keeps_the_sequence());
 static_assert(test_a_record_written_by_a_richer_firmware_still_loads());

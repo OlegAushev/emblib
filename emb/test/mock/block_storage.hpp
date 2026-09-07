@@ -63,6 +63,7 @@ public:
 
   constexpr auto read(addr_type addr, std::span<std::byte> dest) -> result
   {
+    ++read_calls;
     if (read_fault_) return std::unexpected(storage_fault::unreadable);
     if (!in_range(addr, dest.size())) {
       return std::unexpected(storage_fault::out_of_range);
@@ -152,6 +153,7 @@ public:
     return cells_;
   }
 
+  std::size_t read_calls = 0;
   std::size_t write_calls = 0;
   std::size_t erase_calls = 0;
 

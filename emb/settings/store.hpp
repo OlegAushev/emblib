@@ -122,10 +122,12 @@ public:
   {
     load_result result;
 
-    // Which slots have been looked at. Sized by the section rather than by
-    // a machine word, so how many slots a section may have is the medium's
-    // business and not this loop's.
-    slot_set tried;
+    // One pass over the section, and the only time a load asks the medium
+    // about a slot it will not read whole. Everything the loop below needs
+    // to order the candidates is here, so a candidate that fails its checks
+    // costs the record it read and not another pass.
+    slot_map map;
+    map_slots(map, result.read_failed);
 
     // Where the medium stopped and what it holds are two questions. The
     // first candidate answers the first: it is the newest header there is,
@@ -140,9 +142,9 @@ public:
     std::optional<candidate> newest;
 
     while (true) {
-      auto const best = newest_untried(tried, result.read_failed);
+      auto const best = newest_untried(map);
       if (!best) break;
-      tried.set(best->slot);
+      map.tried.set(best->slot);
       if (!newest) newest = best;
 
       auto const stored = read_record(best->slot, result.read_failed);
@@ -284,30 +286,62 @@ private:
     std::uint32_t seq;
   };
 
+  // Which slots have been looked at. Sized by the section rather than by a
+  // machine word, so how many slots a section may have is the medium's
+  // business and not this loop's.
   using slot_set = std::bitset<Section.slot_count>;
 
-  // The newest slot whose header names this section and fits, among those
-  // not tried yet.
-  constexpr auto newest_untried(slot_set const& tried, bool& read_failed)
+  // What one pass over the section found: the sequence number of every
+  // slot that holds a candidate. A slot that holds none is tried from the
+  // start — there is nothing in it to try — which is what leaves the
+  // search below a single predicate.
+  struct slot_map {
+    std::array<std::uint32_t, Section.slot_count> seq{};
+    slot_set tried;
+  };
+
+  // The header of every slot, sixteen bytes each and once per load. A
+  // header that does not name this section is not a candidate, nor is one
+  // claiming a record too large for a slot: that is not a record but
+  // debris or noise, and it is what rules out a header whose magic and
+  // format landed while its count stayed erased. A slot that will not read
+  // is not a candidate either: read_failed carries the fact out, and there
+  // is nothing to be had from asking it again.
+  constexpr void map_slots(slot_map& map, bool& read_failed)
+  {
+    for (auto slot = 0uz; slot < Section.slot_count; ++slot) {
+      auto const head = std::span{buffer_}.first(record_header_size);
+      if (!storage_.read(address_of(slot), head)) {
+        read_failed = true;
+        map.tried.set(slot);
+        continue;
+      }
+
+      auto const header = decode_header(head, Section.magic);
+      if (!header || record_size(header->count) > Section.slot_capacity) {
+        map.tried.set(slot);
+        continue;
+      }
+
+      map.seq[slot] = header->seq;
+    }
+  }
+
+  // The newest candidate among those not tried yet. A scan for the maximum
+  // and not a sort: seq_newer compares modulo 2^32, which is no ordering
+  // across the whole circle — three numbers spaced by a third of it are
+  // each newer than the next. Equal numbers leave the lower slot, the one
+  // the scan reached first.
+  static constexpr auto newest_untried(slot_map const& map)
       -> std::optional<candidate>
   {
     std::optional<candidate> best;
 
     for (auto slot = 0uz; slot < Section.slot_count; ++slot) {
-      if (tried.test(slot)) continue;
+      if (map.tried.test(slot)) continue;
 
-      auto const head = std::span{buffer_}.first(record_header_size);
-      if (!storage_.read(address_of(slot), head)) {
-        read_failed = true;
-        continue;
-      }
-
-      auto const header = decode_header(head, Section.magic);
-      if (!header) continue;
-      if (record_size(header->count) > Section.slot_capacity) continue;
-
-      if (!best || seq_newer(header->seq, best->seq)) {
-        best = candidate{slot, header->seq};
+      if (!best || seq_newer(map.seq[slot], best->seq)) {
+        best = candidate{slot, map.seq[slot]};
       }
     }
     return best;
@@ -363,8 +397,11 @@ private:
   // without reading or trusting any record.
   constexpr void survey()
   {
+    slot_map map;
     bool ignored = false;
-    auto const best = newest_untried(slot_set{}, ignored);
+    map_slots(map, ignored);
+
+    auto const best = newest_untried(map);
     if (!best) {
       next_slot_ = 0;
       last_seq_ = 0;
