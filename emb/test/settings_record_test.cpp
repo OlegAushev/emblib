@@ -220,7 +220,8 @@ consteval bool test_a_value_outside_todays_range_is_refused()
   if (!report.valid) return false;
   if (report.rejected != 1) return false;
   if (report.loaded != schema.count - 1) return false;
-  if (report.missing != 1) return false;
+  // Carried and refused, not absent: the two read differently.
+  if (report.missing != 0) return false;
   // Refused, so the parameter comes up with its default rather than with a
   // value the control code was never meant to see.
   if (read.get<"motor.p">() != 11) return false;

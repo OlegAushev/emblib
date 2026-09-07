@@ -257,8 +257,11 @@ constexpr auto decode_record(std::span<std::byte const> src,
     ++report.loaded;
   }
 
-  report.missing = static_cast<std::uint16_t>(schema_t<Schema>::count
-                                              - report.loaded);
+  auto const covered = static_cast<std::size_t>(report.loaded)
+                     + static_cast<std::size_t>(report.rejected);
+  report.missing = static_cast<std::uint16_t>(
+      covered < schema_t<Schema>::count ? schema_t<Schema>::count - covered
+                                        : 0);
   return report;
 }
 
