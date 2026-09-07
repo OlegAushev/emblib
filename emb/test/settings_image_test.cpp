@@ -123,6 +123,13 @@ consteval bool test_erased_access()
   if (!values.restore_default_at(speed)) return false;
   if (values.get<"drive.runout_speed">() != rpm{100.0f}) return false;
 
+  // Nor may a closed parameter be put back to its default: restoring is a
+  // write like any other, and what production recorded has to survive it.
+  if (!values.set<"prod.serial">(std::uint32_t{12345})) return false;
+  auto const reset = values.restore_default_at(serial);
+  if (reset || reset.error() != error::read_only) return false;
+  if (values.get<"prod.serial">() != 12345u) return false;
+
   return true;
 }
 

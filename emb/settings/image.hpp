@@ -111,7 +111,13 @@ public:
     if (index >= count) {
       return std::unexpected(error::unknown_parameter);
     }
-    return write(index, Schema.parameters[index].def);
+
+    auto const& desc = Schema.parameters[index];
+    if (!desc.writable) {
+      return std::unexpected(error::read_only);
+    }
+
+    return write(index, desc.def);
   }
 
   constexpr void restore_defaults()
