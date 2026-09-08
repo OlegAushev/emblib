@@ -129,7 +129,8 @@ consteval bool groups_valid(typelist<Statuses...>)
       else {
         // in the list, not grouped itself, and wide enough to carry every
         // level the status can be raised to
-        return typelist_contains_v<List, G> && !grouped<G>
+        return typelist_contains_v<List, G>
+            && !grouped<G>
             && (G::level_min <= S::level_min)
             && (S::level_max <= G::level_max);
       }
@@ -245,7 +246,7 @@ public:
   // concurrently cannot mistake it for stale.
   template<typename Status, Level L>
     requires valid_level<StatusList, Status, L>
-  static void raise(Status, std::integral_constant<Level, L>)
+  void raise(Status, std::integral_constant<Level, L>)
   {
     escalate<Status>(index_of(L));
     if constexpr (grouped<Status>) {
@@ -257,7 +258,7 @@ public:
   template<typename Status>
     requires contains<StatusList, Status>
           && (Status::level_min == Status::level_max)
-  static void raise(Status s)
+  void raise(Status s)
   {
     raise(s, std::integral_constant<Level, Status::level_min>{});
   }
@@ -269,9 +270,7 @@ public:
   template<typename Status, Level L>
     requires valid_level<StatusList, Status, L>
           && (hold_of<Status>() == hold_policy::tracking)
-  static void update(Status s,
-                     std::integral_constant<Level, L> lvl,
-                     condition cond)
+  void update(Status s, std::integral_constant<Level, L> lvl, condition cond)
   {
     if (cond.raise) {
       raise(s, lvl);
@@ -285,9 +284,7 @@ public:
   template<typename Status, Level L>
     requires valid_level<StatusList, Status, L>
           && (hold_of<Status>() == hold_policy::tracking)
-  static void update(Status s,
-                     std::integral_constant<Level, L> lvl,
-                     bool active)
+  void update(Status s, std::integral_constant<Level, L> lvl, bool active)
   {
     update(s, lvl, condition{.raise = active, .clear = !active});
   }
@@ -296,14 +293,13 @@ public:
   // acknowledgement, not a retraction.
   template<typename Status>
     requires contains<StatusList, Status>
-  static void clear(Status)
+  void clear(Status)
   {
-    words_[word_of(Status::id)].fetch_and(
-        ~(slot_mask << shift_of(Status::id)),
-        std::memory_order::relaxed);
+    words_[word_of(Status::id)].fetch_and(~(slot_mask << shift_of(Status::id)),
+                                          std::memory_order::relaxed);
   }
 
-  static void clear()
+  void clear()
   {
     for (auto& word : words_) {
       word.store(0, std::memory_order::relaxed);
@@ -316,16 +312,17 @@ public:
   // has to know to read that. The sweep retracts at level_min and leaves
   // anything above it, the same rule update() follows: a condition that
   // recurs at its own level must not take back a trip somebody else raised.
-  static void refresh()
+  void refresh()
   {
     if constexpr (has_expiring) {
-      []<typename... Statuses>(typelist<Statuses...>) {
-        ([] {
-          if constexpr (hold_of<Statuses>() == hold_policy::expiring) {
-            sweep(Statuses::id, index_of(Statuses::level_min));
-          }
-        }(),
-         ...);
+      [this]<typename... Statuses>(typelist<Statuses...>) {
+        (
+            [this] {
+              if constexpr (hold_of<Statuses>() == hold_policy::expiring) {
+                sweep(Statuses::id, index_of(Statuses::level_min));
+              }
+            }(),
+            ...);
       }(StatusList{});
     }
   }
@@ -336,14 +333,14 @@ public:
 
   template<typename Status>
     requires contains<StatusList, Status>
-  static bool active(Status)
+  bool active(Status) const
   {
     return (slot_of(Status::id) & level_mask) != 0;
   }
 
   template<typename Status>
     requires contains<StatusList, Status>
-  static std::optional<Level> severity(Status)
+  std::optional<Level> severity(Status) const
   {
     auto const slot = slot_of(Status::id) & level_mask;
     if (slot == 0) return std::nullopt;
@@ -351,7 +348,7 @@ public:
   }
 
   // Anything active at lvl or above it.
-  static bool at_least(Level lvl)
+  bool at_least(Level lvl) const
   {
     auto const plane = planes[index_of(lvl)];
     for (auto const& word : words_) {
@@ -361,19 +358,18 @@ public:
   }
 
   // Anything whose severity is lvl exactly.
-  static bool exactly(Level lvl)
+  bool exactly(Level lvl) const
   {
     auto const l = index_of(lvl);
     for (auto const& word : words_) {
-      if (exactly_bits(word.load(std::memory_order::relaxed), l) != 0) {
-        return true;
-      }
+      auto const bits = word.load(std::memory_order::relaxed);
+      if (exactly_bits(bits, l) != 0) return true;
     }
     return false;
   }
 
   // Highest level with at least one active status.
-  static std::optional<Level> worst()
+  std::optional<Level> worst() const
   {
     word_type seen = 0;
     for (auto const& word : words_) {
@@ -388,24 +384,25 @@ public:
   // Calls f(Status{}, severity) for every status that stands, in
   // declaration order.
   template<typename F>
-  static void for_each_active(F&& f)
+  void for_each_active(F&& f) const
   {
-    [&]<typename... Statuses>(typelist<Statuses...>) {
-      ([&] {
-        if (auto const lvl = severity(Statuses{})) f(Statuses{}, *lvl);
-      }(),
-       ...);
+    [this, &f]<typename... Statuses>(typelist<Statuses...>) {
+      (
+          [this, &f] {
+            if (auto const lvl = severity(Statuses{})) f(Statuses{}, *lvl);
+          }(),
+          ...);
     }(StatusList{});
   }
 
   // The statuses sitting exactly at lvl — the view a protocol carries.
-  static flags_type flags_at(Level lvl)
+  flags_type flags_at(Level lvl) const
   {
     auto const l = index_of(lvl);
     flags_type flags;
     for (auto w = 0uz; w < word_count; ++w) {
-      auto const bits =
-          exactly_bits(words_[w].load(std::memory_order::relaxed), l);
+      auto const word = words_[w].load(std::memory_order::relaxed);
+      auto const bits = exactly_bits(word, l);
       if (bits == 0) continue;
       for (auto s = 0uz; s < slots_per_word; ++s) {
         auto const id = w * slots_per_word + s;
@@ -475,14 +472,7 @@ private:
     return level_mask >> (LevelCount - 1 - lvl);
   }
 
-  static word_type slot_of(id_type id)
-  {
-    return (words_[word_of(id)].load(std::memory_order::relaxed)
-            >> shift_of(id))
-         & slot_mask;
-  }
-
-  static word_type exactly_bits(word_type word, std::size_t lvl)
+  static constexpr word_type exactly_bits(word_type word, std::size_t lvl)
   {
     auto bits = word & planes[lvl];
     if (lvl + 1 < LevelCount) {
@@ -491,14 +481,41 @@ private:
     return bits;
   }
 
+  word_type slot_of(id_type id) const
+  {
+    auto const word = words_[word_of(id)].load(std::memory_order::relaxed);
+    return (word >> shift_of(id)) & slot_mask;
+  }
+
   template<typename Status>
-  static void escalate(std::size_t lvl)
+  void escalate(std::size_t lvl)
   {
     constexpr word_type mark =
         hold_of<Status>() == hold_policy::expiring ? seen_bit : word_type{0};
-    words_[word_of(Status::id)].fetch_or(
-        (prefix_of(lvl) | mark) << shift_of(Status::id),
-        std::memory_order::relaxed);
+    words_[word_of(Status::id)].fetch_or((prefix_of(lvl) | mark)
+                                             << shift_of(Status::id),
+                                         std::memory_order::relaxed);
+  }
+
+  void deassert(id_type id, std::size_t lvl)
+  {
+    auto const shift = shift_of(id);
+    auto const above =
+        lvl + 1 < LevelCount ? word_type{1} << (lvl + 1) : word_type{0};
+
+    auto& word = words_[word_of(id)];
+    auto current = word.load(std::memory_order::relaxed);
+    while (true) {
+      auto const slot = (current >> shift) & level_mask;
+      // already down, or standing above the level being retracted
+      if (slot == 0 || (slot & above) != 0) return;
+      auto const wanted = current & ~(slot_mask << shift);
+      if (word.compare_exchange_weak(current,
+                                     wanted,
+                                     std::memory_order::relaxed)) {
+        return;
+      }
+    }
   }
 
   // One sweep of an expiring status: the mark set by the last raise buys it
@@ -507,13 +524,13 @@ private:
   // above lvl, which is somebody else's trip and not this sweep's business.
   // Every outcome is one compare-exchange on the word the status lives in, so
   // a raise landing mid-sweep either wins the exchange or is seen by it.
-  static void sweep(id_type id, std::size_t lvl)
+  void sweep(id_type id, std::size_t lvl)
   {
-    auto& word = words_[word_of(id)];
     auto const shift = shift_of(id);
     auto const above =
         lvl + 1 < LevelCount ? word_type{1} << (lvl + 1) : word_type{0};
 
+    auto& word = words_[word_of(id)];
     auto current = word.load(std::memory_order::relaxed);
     while (true) {
       auto const slot = (current >> shift) & slot_mask;
@@ -538,156 +555,139 @@ private:
     }
   }
 
-  static void deassert(id_type id, std::size_t lvl)
-  {
-    auto& word = words_[word_of(id)];
-    auto const shift = shift_of(id);
-    auto const above =
-        (lvl + 1 < LevelCount) ? word_type{1} << (lvl + 1) : word_type{0};
-
-    auto current = word.load(std::memory_order::relaxed);
-    while (true) {
-      auto const slot = (current >> shift) & level_mask;
-      // already down, or standing above the level being retracted
-      if (slot == 0 || (slot & above) != 0) return;
-      auto const wanted = current & ~(slot_mask << shift);
-      if (word.compare_exchange_weak(current,
-                                     wanted,
-                                     std::memory_order::relaxed)) {
-        return;
-      }
-    }
-  }
-
-  inline static std::array<std::atomic<word_type>, word_count> words_{};
+  std::array<std::atomic<word_type>, word_count> words_{};
 };
 
 //
 // ---- app-side forwarding function objects ----
 //
 // Instantiate as inline constexpr objects in the namespace holding the
-// statuses:
-//   inline constexpr emb::trouble::set_fn<registry> set{};
+// statuses, naming the registry they speak for:
+//   inline constinit registry_type registry{};
+//   inline constexpr emb::trouble::raise_fn<registry> raise{};
 //
-template<typename Registry>
+// The parameter is the object, not its type: the call sites keep saying what
+// happened, and which registry remembers it is settled once, here.
+//
+template<auto& Registry>
 struct raise_fn {
   template<typename Status, typename LevelTag>
-    requires requires(Status s, LevelTag l) { Registry::raise(s, l); }
+    requires requires(Status s, LevelTag l) { Registry.raise(s, l); }
   static void operator()(Status s, LevelTag l)
   {
-    Registry::raise(s, l);
+    Registry.raise(s, l);
   }
 
   template<typename Status>
-    requires requires(Status s) { Registry::raise(s); }
+    requires requires(Status s) { Registry.raise(s); }
   static void operator()(Status s)
   {
-    Registry::raise(s);
+    Registry.raise(s);
   }
 };
 
-template<typename Registry>
+template<auto& Registry>
 struct update_fn {
   template<typename Status, typename LevelTag>
     requires requires(Status s, LevelTag l, condition c) {
-      Registry::update(s, l, c);
+      Registry.update(s, l, c);
     }
   static void operator()(Status s, LevelTag l, condition cond)
   {
-    Registry::update(s, l, cond);
+    Registry.update(s, l, cond);
   }
 
   template<typename Status, typename LevelTag>
     requires requires(Status s, LevelTag l, bool b) {
-      Registry::update(s, l, b);
+      Registry.update(s, l, b);
     }
   static void operator()(Status s, LevelTag l, bool active)
   {
-    Registry::update(s, l, active);
+    Registry.update(s, l, active);
   }
 };
 
-template<typename Registry>
+template<auto& Registry>
+struct refresh_fn {
+  static void operator()()
+  {
+    Registry.refresh();
+  }
+};
+
+template<auto& Registry>
 struct active_fn {
   template<typename Status>
-    requires requires(Status s) { Registry::active(s); }
+    requires requires(Status s) { Registry.active(s); }
   static bool operator()(Status s)
   {
-    return Registry::active(s);
+    return Registry.active(s);
   }
 };
 
-template<typename Registry>
+template<auto& Registry>
 struct severity_fn {
   template<typename Status>
-    requires requires(Status s) { Registry::severity(s); }
+    requires requires(Status s) { Registry.severity(s); }
   static auto operator()(Status s)
   {
-    return Registry::severity(s);
+    return Registry.severity(s);
   }
 };
 
-template<typename Registry>
+template<auto& Registry>
 struct at_least_fn {
   static bool operator()(auto lvl)
   {
-    return Registry::at_least(lvl);
+    return Registry.at_least(lvl);
   }
 };
 
-template<typename Registry>
+template<auto& Registry>
 struct exactly_fn {
   static bool operator()(auto lvl)
   {
-    return Registry::exactly(lvl);
+    return Registry.exactly(lvl);
   }
 };
 
-template<typename Registry>
+template<auto& Registry>
 struct worst_fn {
   static auto operator()()
   {
-    return Registry::worst();
+    return Registry.worst();
   }
 };
 
-template<typename Registry>
+template<auto& Registry>
 struct flags_at_fn {
-  static Registry::flags_type operator()(auto lvl)
+  static auto operator()(auto lvl)
   {
-    return Registry::flags_at(lvl);
+    return Registry.flags_at(lvl);
   }
 };
 
-template<typename Registry>
+template<auto& Registry>
 struct for_each_active_fn {
   template<typename F>
   static void operator()(F&& f)
   {
-    Registry::for_each_active(std::forward<F>(f));
+    Registry.for_each_active(std::forward<F>(f));
   }
 };
 
-template<typename Registry>
+template<auto& Registry>
 struct clear_fn {
   static void operator()()
   {
-    Registry::clear();
+    Registry.clear();
   }
 
   template<typename Status>
-    requires requires(Status s) { Registry::clear(s); }
+    requires requires(Status s) { Registry.clear(s); }
   static void operator()(Status s)
   {
-    Registry::clear(s);
-  }
-};
-
-template<typename Registry>
-struct refresh_fn {
-  static void operator()()
-  {
-    Registry::refresh();
+    Registry.clear(s);
   }
 };
 
@@ -774,10 +774,11 @@ public:
   void for_each_active(F&& f) const
   {
     [&]<typename... Statuses>(typelist<Statuses...>) {
-      ([&] {
-        if (auto const lvl = severity(Statuses{})) f(Statuses{}, *lvl);
-      }(),
-       ...);
+      (
+          [&] {
+            if (auto const lvl = severity(Statuses{})) f(Statuses{}, *lvl);
+          }(),
+          ...);
     }(StatusList{});
   }
 
