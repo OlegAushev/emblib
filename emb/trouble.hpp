@@ -6,6 +6,7 @@
 #include <atomic>
 #include <bit>
 #include <bitset>
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -200,9 +201,11 @@ consteval bool all_empty(typelist<Statuses...>)
 template<std::size_t LevelCount, typename... Statuses>
 consteval bool levels_within(typelist<Statuses...>)
 {
-  return (
-      ...
-      && std::cmp_less(std::to_underlying(Statuses::level_max), LevelCount));
+  auto within = []<typename S>() {
+    return std::cmp_greater_equal(std::to_underlying(S::level_min), 0)
+        && std::cmp_less(std::to_underlying(S::level_max), LevelCount);
+  };
+  return (within.template operator()<Statuses>() && ...);
 }
 
 } // namespace detail
@@ -259,7 +262,7 @@ class registry {
   static_assert(detail::all_empty(StatusList{}),
                 "statuses must be stateless tag types");
   static_assert(detail::levels_within<LevelCount>(StatusList{}),
-                "status level_max must be within LevelCount");
+                "status levels must lie between 0 and LevelCount - 1");
   static_assert(detail::ids_unique(StatusList{}), "status ids must be unique");
   static_assert(detail::groups_valid(StatusList{}),
                 "a status's group must be a status in the list, must not be "
@@ -456,6 +459,10 @@ public:
 
 private:
   using word_type = std::uint32_t;
+
+  static_assert(std::atomic<word_type>::is_always_lock_free,
+                "the registry's word must be lock-free");
+
   static constexpr std::size_t word_bits =
       std::size_t{std::numeric_limits<word_type>::digits};
 
@@ -743,10 +750,15 @@ template<typename StatusList, typename Level, std::size_t LevelCount>
 class registry_mirror {
   static_assert(level_like<Level>, "Level must be a scoped enum");
   static_assert(LevelCount > 0, "LevelCount must not be zero");
+  static_assert(detail::all_status_like<Level>(StatusList{}),
+                "every status must provide an id and level_min/level_max of "
+                "type Level");
   static_assert(typelist_unique_v<StatusList>,
                 "status list must not contain duplicate statuses");
   static_assert(detail::all_empty(StatusList{}),
                 "statuses must be stateless tag types");
+  static_assert(detail::levels_within<LevelCount>(StatusList{}),
+                "status levels must lie between 0 and LevelCount - 1");
   static_assert(detail::ids_unique(StatusList{}), "status ids must be unique");
 
 public:
