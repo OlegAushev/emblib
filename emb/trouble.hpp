@@ -32,6 +32,46 @@ concept status_like = level_like<L> && requires {
 template<typename S>
 concept grouped = requires { typename S::group; };
 
+// What may take a status down. The policy is a property of the status, not
+// of the code that raises it: it decides which calls a call site is allowed
+// to make at all.
+enum class hold_policy : std::uint8_t {
+  latched,  // an operator's clear, and nothing else
+  tracking, // update() may retract it at the level it watches
+  expiring, // refresh() retracts it unless it has been raised again
+};
+
+inline constexpr hold_policy latched = hold_policy::latched;
+inline constexpr hold_policy tracking = hold_policy::tracking;
+inline constexpr hold_policy expiring = hold_policy::expiring;
+
+template<typename S>
+concept declares_hold = requires {
+  { S::hold } -> std::same_as<hold_policy const&>;
+};
+
+// Latched unless the status says otherwise: the policy that keeps whatever
+// was raised is the safe default.
+template<typename S>
+consteval hold_policy hold_of()
+{
+  if constexpr (declares_hold<S>) {
+    return S::hold;
+  }
+  else {
+    return hold_policy::latched;
+  }
+}
+
+// The two conditions a producer evaluates from its own thresholds: one to
+// raise on, one to clear on. Between them nothing changes, which is what
+// hysteresis is — and the memory it needs is the severity the registry
+// already holds, so the producer keeps no state of its own.
+struct condition {
+  bool raise = false;
+  bool clear = false;
+};
+
 template<typename List, typename S>
 concept contains = typelist_contains<List, S>;
 
@@ -67,6 +107,12 @@ consteval std::size_t id_space(typelist<Statuses...>)
      ...);
     return top + 1;
   }
+}
+
+template<typename... Statuses>
+consteval bool any_expiring(typelist<Statuses...>)
+{
+  return ((hold_of<Statuses>() == hold_policy::expiring) || ...);
 }
 
 template<typename... Statuses>
@@ -194,14 +240,16 @@ public:
   // Raises the status to L, or leaves it where it stands if that is higher.
   // One atomic or: safe from any interrupt, and no interrupt is masked. A
   // status that names a group raises the group with it — the aggregate is a
-  // consequence of the declaration, not of remembering a second call.
+  // consequence of the declaration, not of remembering a second call. An
+  // expiring status is marked as seen in the same write, so a sweep running
+  // concurrently cannot mistake it for stale.
   template<typename Status, Level L>
     requires valid_level<StatusList, Status, L>
-  static void set(Status, std::integral_constant<Level, L>)
+  static void raise(Status, std::integral_constant<Level, L>)
   {
-    escalate(Status::id, index_of(L));
+    escalate<Status>(index_of(L));
     if constexpr (grouped<Status>) {
-      escalate(Status::group::id, index_of(L));
+      escalate<typename Status::group>(index_of(L));
     }
   }
 
@@ -209,25 +257,46 @@ public:
   template<typename Status>
     requires contains<StatusList, Status>
           && (Status::level_min == Status::level_max)
-  static void set(Status s)
+  static void raise(Status s)
   {
-    set(s, std::integral_constant<Level, Status::level_min>{});
+    raise(s, std::integral_constant<Level, Status::level_min>{});
   }
 
-  // Clears the status if its severity is at most L; one that has escalated
-  // above L stands, and only reset(Status) or clear() takes it down. That is
-  // what a producer watching a condition at its own level wants: cooling
-  // below the warning threshold must not retract the trip above it.
+  // Follows a condition at L: raises on one edge, retracts on the other,
+  // holds between them. Retracting at L leaves a status that stands above it
+  // — cooling below the warning threshold must not take back the trip above
+  // it — so a status can track at one level and latch at another.
   template<typename Status, Level L>
     requires valid_level<StatusList, Status, L>
-  static void reset(Status, std::integral_constant<Level, L>)
+          && (hold_of<Status>() == hold_policy::tracking)
+  static void update(Status s,
+                     std::integral_constant<Level, L> lvl,
+                     condition cond)
   {
-    deassert(Status::id, index_of(L));
+    if (cond.raise) {
+      raise(s, lvl);
+    }
+    else if (cond.clear) {
+      deassert(Status::id, index_of(L));
+    }
   }
 
+  // no hysteresis: the condition is the whole story
+  template<typename Status, Level L>
+    requires valid_level<StatusList, Status, L>
+          && (hold_of<Status>() == hold_policy::tracking)
+  static void update(Status s,
+                     std::integral_constant<Level, L> lvl,
+                     bool active)
+  {
+    update(s, lvl, condition{.raise = active, .clear = !active});
+  }
+
+  // Takes the status down whatever it holds and whatever its policy: an
+  // acknowledgement, not a retraction.
   template<typename Status>
     requires contains<StatusList, Status>
-  static void reset(Status)
+  static void clear(Status)
   {
     words_[word_of(Status::id)].fetch_and(
         ~(slot_mask << shift_of(Status::id)),
@@ -241,6 +310,26 @@ public:
     }
   }
 
+  // Retracts every expiring status that has not been raised since the last
+  // call. Run it from one periodic task: a status then outlives its condition
+  // by between one and two periods, and the period is the only thing anyone
+  // has to know to read that. The sweep retracts at level_min and leaves
+  // anything above it, the same rule update() follows: a condition that
+  // recurs at its own level must not take back a trip somebody else raised.
+  static void refresh()
+  {
+    if constexpr (has_expiring) {
+      []<typename... Statuses>(typelist<Statuses...>) {
+        ([] {
+          if constexpr (hold_of<Statuses>() == hold_policy::expiring) {
+            sweep(Statuses::id, index_of(Statuses::level_min));
+          }
+        }(),
+         ...);
+      }(StatusList{});
+    }
+  }
+
   //
   // ---- querying ----
   //
@@ -249,14 +338,14 @@ public:
     requires contains<StatusList, Status>
   static bool active(Status)
   {
-    return slot_of(Status::id) != 0;
+    return (slot_of(Status::id) & level_mask) != 0;
   }
 
   template<typename Status>
     requires contains<StatusList, Status>
   static std::optional<Level> severity(Status)
   {
-    auto const slot = slot_of(Status::id);
+    auto const slot = slot_of(Status::id) & level_mask;
     if (slot == 0) return std::nullopt;
     return static_cast<Level>(std::bit_width(slot) - 1);
   }
@@ -332,17 +421,27 @@ private:
   static constexpr std::size_t word_bits =
       std::size_t{std::numeric_limits<word_type>::digits};
 
-  static_assert(LevelCount <= word_bits,
+  // one bit per level, all of a status's levels in one slot; a list with
+  // expiring statuses takes one bit more, the mark a sweep reads and clears.
+  // It shares the slot rather than sitting in a word of its own so that
+  // raising stays a single write: a sweep can then neither see half a raise
+  // nor undo one it did not see.
+  static constexpr bool has_expiring = detail::any_expiring(StatusList{});
+  static constexpr std::size_t slot_bits = LevelCount + (has_expiring ? 1 : 0);
+
+  static_assert(slot_bits <= word_bits,
                 "a status's levels must fit in one word");
 
-  // one bit per level, all of a status's levels in one slot
-  static constexpr std::size_t slot_bits = LevelCount;
   static constexpr std::size_t slots_per_word = word_bits / slot_bits;
   static constexpr std::size_t word_count =
       (id_space + slots_per_word - 1) / slots_per_word;
 
   static constexpr word_type slot_mask =
       ~word_type{0} >> (word_bits - slot_bits);
+  static constexpr word_type level_mask =
+      ~word_type{0} >> (word_bits - LevelCount);
+  static constexpr word_type seen_bit =
+      has_expiring ? word_type{1} << LevelCount : word_type{0};
 
   // planes[l] picks bit l out of every slot in a word
   static constexpr std::array<word_type, LevelCount> planes = [] {
@@ -373,7 +472,7 @@ private:
   // the thermometer for severity l: bits 0..l of a slot
   static constexpr word_type prefix_of(std::size_t lvl)
   {
-    return slot_mask >> (LevelCount - 1 - lvl);
+    return level_mask >> (LevelCount - 1 - lvl);
   }
 
   static word_type slot_of(id_type id)
@@ -392,10 +491,51 @@ private:
     return bits;
   }
 
-  static void escalate(id_type id, std::size_t lvl)
+  template<typename Status>
+  static void escalate(std::size_t lvl)
   {
-    words_[word_of(id)].fetch_or(prefix_of(lvl) << shift_of(id),
-                                 std::memory_order::relaxed);
+    constexpr word_type mark =
+        hold_of<Status>() == hold_policy::expiring ? seen_bit : word_type{0};
+    words_[word_of(Status::id)].fetch_or(
+        (prefix_of(lvl) | mark) << shift_of(Status::id),
+        std::memory_order::relaxed);
+  }
+
+  // One sweep of an expiring status: the mark set by the last raise buys it
+  // this round and is spent doing so; a status that arrives here unmarked has
+  // not been raised since the previous sweep and goes down, unless it stands
+  // above lvl, which is somebody else's trip and not this sweep's business.
+  // Every outcome is one compare-exchange on the word the status lives in, so
+  // a raise landing mid-sweep either wins the exchange or is seen by it.
+  static void sweep(id_type id, std::size_t lvl)
+  {
+    auto& word = words_[word_of(id)];
+    auto const shift = shift_of(id);
+    auto const above =
+        lvl + 1 < LevelCount ? word_type{1} << (lvl + 1) : word_type{0};
+
+    auto current = word.load(std::memory_order::relaxed);
+    while (true) {
+      auto const slot = (current >> shift) & slot_mask;
+      if ((slot & level_mask) == 0) return;
+
+      word_type wanted;
+      if ((slot & seen_bit) != 0) {
+        wanted = current & ~(seen_bit << shift);
+      }
+      else if ((slot & above) != 0) {
+        return;
+      }
+      else {
+        wanted = current & ~(slot_mask << shift);
+      }
+
+      if (word.compare_exchange_weak(current,
+                                     wanted,
+                                     std::memory_order::relaxed)) {
+        return;
+      }
+    }
   }
 
   static void deassert(id_type id, std::size_t lvl)
@@ -407,7 +547,7 @@ private:
 
     auto current = word.load(std::memory_order::relaxed);
     while (true) {
-      auto const slot = (current >> shift) & slot_mask;
+      auto const slot = (current >> shift) & level_mask;
       // already down, or standing above the level being retracted
       if (slot == 0 || (slot & above) != 0) return;
       auto const wanted = current & ~(slot_mask << shift);
@@ -430,36 +570,40 @@ private:
 //   inline constexpr emb::trouble::set_fn<registry> set{};
 //
 template<typename Registry>
-struct set_fn {
+struct raise_fn {
   template<typename Status, typename LevelTag>
-    requires requires(Status s, LevelTag l) { Registry::set(s, l); }
+    requires requires(Status s, LevelTag l) { Registry::raise(s, l); }
   static void operator()(Status s, LevelTag l)
   {
-    Registry::set(s, l);
+    Registry::raise(s, l);
   }
 
   template<typename Status>
-    requires requires(Status s) { Registry::set(s); }
+    requires requires(Status s) { Registry::raise(s); }
   static void operator()(Status s)
   {
-    Registry::set(s);
+    Registry::raise(s);
   }
 };
 
 template<typename Registry>
-struct reset_fn {
+struct update_fn {
   template<typename Status, typename LevelTag>
-    requires requires(Status s, LevelTag l) { Registry::reset(s, l); }
-  static void operator()(Status s, LevelTag l)
+    requires requires(Status s, LevelTag l, condition c) {
+      Registry::update(s, l, c);
+    }
+  static void operator()(Status s, LevelTag l, condition cond)
   {
-    Registry::reset(s, l);
+    Registry::update(s, l, cond);
   }
 
-  template<typename Status>
-    requires requires(Status s) { Registry::reset(s); }
-  static void operator()(Status s)
+  template<typename Status, typename LevelTag>
+    requires requires(Status s, LevelTag l, bool b) {
+      Registry::update(s, l, b);
+    }
+  static void operator()(Status s, LevelTag l, bool active)
   {
-    Registry::reset(s);
+    Registry::update(s, l, active);
   }
 };
 
@@ -529,6 +673,21 @@ struct clear_fn {
   static void operator()()
   {
     Registry::clear();
+  }
+
+  template<typename Status>
+    requires requires(Status s) { Registry::clear(s); }
+  static void operator()(Status s)
+  {
+    Registry::clear(s);
+  }
+};
+
+template<typename Registry>
+struct refresh_fn {
+  static void operator()()
+  {
+    Registry::refresh();
   }
 };
 
