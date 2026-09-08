@@ -63,6 +63,27 @@ consteval hold_policy hold_of()
   }
 }
 
+template<typename S, typename L>
+concept declares_expiry_level = requires {
+  { S::expires_at } -> std::same_as<L const&>;
+};
+
+// The level a sweep governs: what recurs at it is retracted, what stands
+// above it is somebody else's trip and stays. It defaults to level_min, the
+// level a recurring condition normally uses, but a status whose condition
+// recurs higher must say so — otherwise the sweep would find a level it does
+// not govern and leave the status standing for good.
+template<typename S, typename L>
+consteval L expires_at_of()
+{
+  if constexpr (declares_expiry_level<S, L>) {
+    return S::expires_at;
+  }
+  else {
+    return S::level_min;
+  }
+}
+
 // The two conditions a producer evaluates from its own thresholds: one to
 // raise on, one to clear on. Between them nothing changes, which is what
 // hysteresis is — and the memory it needs is the severity the registry
@@ -137,6 +158,22 @@ consteval bool groups_valid(typelist<Statuses...>)
     }
     else {
       return true;
+    }
+  };
+  return (valid.template operator()<Statuses>() && ...);
+}
+
+template<typename L, typename... Statuses>
+consteval bool expiry_levels_valid(typelist<Statuses...>)
+{
+  auto valid = []<typename S>() {
+    if constexpr (hold_of<S>() == hold_policy::expiring) {
+      auto const lvl = expires_at_of<S, L>();
+      return (S::level_min <= lvl) && (lvl <= S::level_max);
+    }
+    else {
+      // naming a level a sweep will never read is a copy-paste, not a wish
+      return !declares_expiry_level<S, L>;
     }
   };
   return (valid.template operator()<Statuses>() && ...);
@@ -227,6 +264,9 @@ class registry {
   static_assert(detail::groups_valid(StatusList{}),
                 "a status's group must be a status in the list, must not be "
                 "grouped itself, and must span the status's levels");
+  static_assert(detail::expiry_levels_valid<Level>(StatusList{}),
+                "expires_at must lie within the status's levels, and only an "
+                "expiring status may name one");
 
 public:
   static constexpr std::size_t status_count = StatusList::size;
@@ -309,9 +349,10 @@ public:
   // Retracts every expiring status that has not been raised since the last
   // call. Run it from one periodic task: a status then outlives its condition
   // by between one and two periods, and the period is the only thing anyone
-  // has to know to read that. The sweep retracts at level_min and leaves
-  // anything above it, the same rule update() follows: a condition that
-  // recurs at its own level must not take back a trip somebody else raised.
+  // has to know to read that. A sweep retracts at the status's expires_at,
+  // level_min unless it says otherwise, and leaves anything standing above
+  // it: the same rule update() follows, so a condition that recurs at its own
+  // level cannot take back a trip somebody else raised higher.
   void refresh()
   {
     if constexpr (has_expiring) {
@@ -319,7 +360,7 @@ public:
         (
             [this] {
               if constexpr (hold_of<Statuses>() == hold_policy::expiring) {
-                sweep(Statuses::id, index_of(Statuses::level_min));
+                sweep(Statuses::id, index_of(expires_at_of<Statuses, Level>()));
               }
             }(),
             ...);
