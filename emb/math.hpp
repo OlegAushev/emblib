@@ -198,18 +198,11 @@ constexpr bool isodd(std::integral auto n)
   return !iseven(n);
 }
 
+// Comparison within a tolerance, stated in the units of what is compared.
 template<typename T>
-constexpr bool approx(T a, T b, float eps = 1e-4f)
+constexpr bool approx(T a, T b, T eps)
 {
-  auto const d = [&] {
-    if constexpr (requires { a.value(); }) {
-      return a.value() - b.value();
-    }
-    else {
-      return a - b;
-    }
-  }();
-  return (d < 0 ? -d : d) < eps;
+  return (a < b ? b - a : a - b) < eps;
 }
 
 // ---- saturate_round ----
