@@ -198,6 +198,20 @@ constexpr bool isodd(std::integral auto n)
   return !iseven(n);
 }
 
+template<typename T>
+constexpr bool approx(T a, T b, float eps = 1e-4f)
+{
+  auto const d = [&] {
+    if constexpr (requires { a.value(); }) {
+      return a.value() - b.value();
+    }
+    else {
+      return a - b;
+    }
+  }();
+  return (d < 0 ? -d : d) < eps;
+}
+
 // ---- saturate_round ----
 template<std::integral Int, std::floating_point Float>
 constexpr Int saturate_round(Float x)
