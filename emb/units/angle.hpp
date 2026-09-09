@@ -38,22 +38,22 @@ using deg_f32 = deg<float>;
 
 template<typename T>
 concept unit_of_electrical_angle =
-    unit<T>
+    some_unit<T>
     && (std::same_as<typename T::unit_type, tags::erad>
         || std::same_as<typename T::unit_type, tags::edeg>);
 
 template<typename T>
-concept unit_of_angle = unit<T>
+concept unit_of_angle = some_unit<T>
                      && (std::same_as<typename T::unit_type, tags::rad>
                          || std::same_as<typename T::unit_type, tags::deg>);
 
 template<typename T>
-concept unit_of_radians = unit<T>
+concept unit_of_radians = some_unit<T>
                        && (std::same_as<typename T::unit_type, tags::erad>
                            || std::same_as<typename T::unit_type, tags::rad>);
 
 template<typename T>
-concept unit_of_degrees = unit<T>
+concept unit_of_degrees = some_unit<T>
                        && (std::same_as<typename T::unit_type, tags::edeg>
                            || std::same_as<typename T::unit_type, tags::deg>);
 

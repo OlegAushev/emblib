@@ -129,7 +129,7 @@ constexpr named_unit<T, Unit> abs(named_unit<T, Unit> v)
 }
 
 template<typename T>
-concept unit =
+concept some_unit =
     std::same_as<T, named_unit<typename T::value_type, typename T::unit_type>>;
 
 template<typename To, typename From, typename... Args>
