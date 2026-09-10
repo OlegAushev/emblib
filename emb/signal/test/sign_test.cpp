@@ -6,6 +6,7 @@
 #include <emb/signal/proportional.hpp>
 #include <emb/units.hpp>
 
+#include <cstdint>
 #include <type_traits>
 
 namespace {
@@ -19,6 +20,29 @@ using emb::signal::path;
 // the path costs
 static_assert(std::is_empty_v<identity>);
 static_assert(std::is_empty_v<negation>);
+
+// a sign convention is about a quantity that has a sign; a raw code has none,
+// and negating one either wraps around or lands in another type
+static_assert(emb::signal::sign_reversible<amp_f32>);
+static_assert(emb::signal::sign_reversible<float>);
+static_assert(emb::signal::sign_reversible<std::int32_t>);
+static_assert(!emb::signal::sign_reversible<std::uint16_t>);
+static_assert(!emb::signal::sign_reversible<std::uint32_t>);
+
+// so negation refuses a code, at the point of use rather than inside itself,
+// while identity carries one without complaint
+template<typename T>
+constexpr bool negates =
+    requires(T x) { negation::forward(x); negation::inverse(x); };
+template<typename T>
+constexpr bool passes =
+    requires(T x) { identity::forward(x); identity::inverse(x); };
+
+static_assert(negates<amp_f32>);
+static_assert(negates<std::int32_t>);
+static_assert(!negates<std::uint16_t>);
+static_assert(!negates<std::uint32_t>);
+static_assert(passes<std::uint16_t>);
 
 // a transducer reading a current as a voltage, to sit behind the convention
 inline constexpr emb::signal::proportional transducer{amp_f32{600.f},
