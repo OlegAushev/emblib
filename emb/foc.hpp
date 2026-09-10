@@ -11,13 +11,3 @@
 #include <emb/foc/types.hpp>
 #include <emb/foc/utility.hpp>
 #include <emb/pipe.hpp>
-
-namespace emb {
-namespace foc {
-using emb::pipe::operator|;
-using emb::pipe::tap;
-using emb::pipe::store_to;
-using emb::pipe::transform;
-using emb::pipe::with;
-} // namespace foc
-} // namespace emb

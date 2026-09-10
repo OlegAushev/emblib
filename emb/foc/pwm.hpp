@@ -2,6 +2,7 @@
 
 #include <emb/foc/types.hpp>
 #include <emb/math.hpp>
+#include <emb/pipe.hpp>
 
 #include <algorithm>
 
@@ -81,29 +82,35 @@ struct dpwmmax {
 } // namespace pwm_mode
 
 template<typename Mode>
-constexpr three_phase<emb::unsigned_pu_f32> modulate(voltage_abc const& Vs,
-                                                     float Vdc)
-{
-  if (Vdc <= 0.f) {
-    return {.a = unsigned_pu_f32{0.5f},
-            .b = unsigned_pu_f32{0.5f},
-            .c = unsigned_pu_f32{0.5f}};
+class modulate : public pipe::pipeable<modulate<Mode>> {
+  float Vdc_;
+public:
+  constexpr explicit modulate(float Vdc) : Vdc_{Vdc} {}
+
+  constexpr three_phase<emb::unsigned_pu_f32>
+  operator()(voltage_abc const& Vs) const
+  {
+    if (Vdc_ <= 0.f) {
+      return {.a = unsigned_pu_f32{0.5f},
+              .b = unsigned_pu_f32{0.5f},
+              .c = unsigned_pu_f32{0.5f}};
+    }
+
+    // normalization: [−1, +1]
+    float const inv = 2.f / Vdc_;
+    float const Va = Vs.a * inv;
+    float const Vb = Vs.b * inv;
+    float const Vc = Vs.c * inv;
+
+    // common-mode offset
+    float const Voff = Mode::offset(Va, Vb, Vc);
+
+    // duty cycles
+    return {.a = emb::unsigned_pu_f32{(Va + Voff + 1.f) * 0.5f},
+            .b = emb::unsigned_pu_f32{(Vb + Voff + 1.f) * 0.5f},
+            .c = emb::unsigned_pu_f32{(Vc + Voff + 1.f) * 0.5f}};
   }
-
-  // normalization: [−1, +1]
-  float const inv = 2.f / Vdc;
-  float const Va = Vs.a * inv;
-  float const Vb = Vs.b * inv;
-  float const Vc = Vs.c * inv;
-
-  // common-mode offset
-  float const Voff = Mode::offset(Va, Vb, Vc);
-
-  // duty cycles
-  return {.a = emb::unsigned_pu_f32{(Va + Voff + 1.f) * 0.5f},
-          .b = emb::unsigned_pu_f32{(Vb + Voff + 1.f) * 0.5f},
-          .c = emb::unsigned_pu_f32{(Vc + Voff + 1.f) * 0.5f}};
-}
+};
 
 } // namespace foc
 } // namespace emb
