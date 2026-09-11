@@ -119,8 +119,8 @@ public:
     // about a slot it will not read whole. Everything the loop below needs
     // to order the candidates is here, so a candidate that fails its checks
     // costs the record it read and not another pass.
-    slot_map map;
-    map_slots(map, result.read_failed);
+    auto map = map_slots();
+    result.read_failed = map.read_failed;
 
     // Where the medium stopped and what it holds are two questions. The
     // first candidate answers the first: it is the newest header there is,
@@ -140,8 +140,11 @@ public:
       map.tried.set(best->slot);
       if (!newest) newest = best;
 
-      auto const stored = read_record(best->slot, result.read_failed);
-      if (!stored) continue;
+      auto const stored = read_record(best->slot);
+      if (!stored) {
+        result.read_failed |= stored.error() == no_record::unreadable;
+        continue;
+      }
 
       auto const report = decode_record(*stored, Section.magic, values);
       if (!report.valid) continue;
@@ -275,18 +278,29 @@ private:
     std::uint32_t seq;
   };
 
+  // Why a candidate came to nothing. Only a medium that refused is worth
+  // carrying out of a load: whatever else a slot holds — the debris of a
+  // save that never committed, the noise of a section never written — is
+  // ordinary, and outliving it is what the search is for.
+  enum class no_record : std::uint8_t {
+    unreadable,
+    debris,
+  };
+
   // Which slots have been looked at. Sized by the section rather than by a
   // machine word, so how many slots a section may have is the medium's
   // business and not this loop's.
   using slot_set = std::bitset<Section.slot_count>;
 
   // What one pass over the section found: the sequence number of every
-  // slot that holds a candidate. A slot that holds none is tried from the
-  // start — there is nothing in it to try — which is what leaves the
-  // search below a single predicate.
+  // slot that holds a candidate, and whether the medium refused a read on
+  // the way. A slot that holds none is tried from the start — there is
+  // nothing in it to try — which is what leaves the search below a single
+  // predicate.
   struct slot_map {
     std::array<std::uint32_t, Section.slot_count> seq{};
     slot_set tried;
+    bool read_failed = false;
   };
 
   // The header of every slot, sixteen bytes each and once per load. A
@@ -294,14 +308,16 @@ private:
   // claiming a record too large for a slot: that is not a record but
   // debris or noise, and it is what rules out a header whose magic and
   // format landed while its count stayed erased. A slot that will not read
-  // is not a candidate either: read_failed carries the fact out, and there
-  // is nothing to be had from asking it again.
-  constexpr void map_slots(slot_map& map, bool& read_failed)
+  // is not a candidate either: the map carries the fact out, and there is
+  // nothing to be had from asking it again.
+  constexpr auto map_slots() -> slot_map
   {
+    slot_map map;
+
     for (auto slot = 0uz; slot < Section.slot_count; ++slot) {
       auto const head = std::span{buffer_}.first(record_header_size);
       if (!storage_.read(address_of(slot), head)) {
-        read_failed = true;
+        map.read_failed = true;
         map.tried.set(slot);
         continue;
       }
@@ -314,6 +330,7 @@ private:
 
       map.seq[slot] = header->seq;
     }
+    return map;
   }
 
   // The newest candidate among those not tried yet. A scan for the maximum
@@ -394,9 +411,7 @@ private:
   // without reading or trusting any record.
   constexpr void survey()
   {
-    slot_map map;
-    bool ignored = false;
-    map_slots(map, ignored);
+    auto const map = map_slots();
 
     auto const best = newest_untried(map);
     if (!best) {
@@ -408,25 +423,25 @@ private:
     adopt(best->slot, best->seq);
   }
 
-  constexpr auto read_record(std::size_t slot, bool& read_failed)
-      -> std::optional<std::span<std::byte const>>
+  constexpr auto read_record(std::size_t slot)
+      -> std::expected<std::span<std::byte const>, no_record>
   {
     auto const head = std::span{buffer_}.first(record_header_size);
     if (!storage_.read(address_of(slot), head)) {
-      read_failed = true;
-      return std::nullopt;
+      return std::unexpected(no_record::unreadable);
     }
 
     auto const header = decode_header(head, Section.magic);
-    if (!header) return std::nullopt;
+    if (!header) return std::unexpected(no_record::debris);
 
     auto const stored = record_size(header->count);
-    if (stored > Section.slot_capacity) return std::nullopt;
+    if (stored > Section.slot_capacity) {
+      return std::unexpected(no_record::debris);
+    }
 
     auto const whole = std::span{buffer_}.first(stored);
     if (!storage_.read(address_of(slot), whole)) {
-      read_failed = true;
-      return std::nullopt;
+      return std::unexpected(no_record::unreadable);
     }
     return std::span<std::byte const>{whole};
   }
