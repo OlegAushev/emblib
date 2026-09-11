@@ -9,8 +9,6 @@ template<typename T, typename Duration>
 class exponential_filter {
 public:
   using value_type = T;
-  using reference = value_type&;
-  using const_reference = value_type const&;
   using duration_type = Duration;
   using factor_type = decltype(std::declval<Duration>()
                                / std::declval<Duration>());
@@ -23,24 +21,24 @@ private:
 public:
   constexpr exponential_filter(duration_type sampling_period,
                                duration_type time_constant,
-                               value_type const& init_output = value_type())
+                               value_type init_output = value_type())
       : init_output_(init_output)
   {
     set_smoothing(sampling_period, time_constant);
     reset();
   }
 
-  constexpr void push(value_type const& input)
+  constexpr void push(value_type input)
   {
     output_ = output_ + smooth_factor_ * (input - output_);
   }
 
-  constexpr const_reference output() const
+  constexpr value_type output() const
   {
     return output_;
   }
 
-  constexpr void set_output(value_type const& value)
+  constexpr void set_output(value_type value)
   {
     output_ = value;
   }

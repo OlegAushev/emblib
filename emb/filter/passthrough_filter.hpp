@@ -8,23 +8,21 @@ template<typename T>
 class passthrough_filter {
 public:
   using value_type = T;
-  using reference = value_type&;
-  using const_reference = value_type const&;
 private:
   value_type value_{};
 public:
   constexpr passthrough_filter() = default;
 
-  constexpr explicit passthrough_filter(value_type const& init) : value_(init)
+  constexpr explicit passthrough_filter(value_type init) : value_(init)
   {
   }
 
-  constexpr void push(value_type const& input)
+  constexpr void push(value_type input)
   {
     value_ = input;
   }
 
-  constexpr const_reference output() const
+  constexpr value_type output() const
   {
     return value_;
   }

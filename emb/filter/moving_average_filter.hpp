@@ -13,8 +13,6 @@ class moving_average_filter {
 public:
   using value_type = T;
   using size_type = std::size_t;
-  using reference = value_type&;
-  using const_reference = value_type const&;
   using underlying_type = emb::circular_buffer<value_type, WindowSize>;
   using divider_type = decltype(std::declval<value_type>()
                                 / std::declval<value_type>());
@@ -26,13 +24,13 @@ private:
   value_type output_;
 public:
   constexpr explicit moving_average_filter(
-      value_type const& init_output = value_type{})
+      value_type init_output = value_type{})
       : init_output_(init_output)
   {
     reset();
   }
 
-  constexpr void push(value_type const& input)
+  constexpr void push(value_type input)
   {
     if (!data_.full()) {
       data_.push_back(input);
@@ -45,12 +43,12 @@ public:
     output_ = sum_ / static_cast<divider_type>(data_.size());
   }
 
-  constexpr const_reference output() const
+  constexpr value_type output() const
   {
     return output_;
   }
 
-  constexpr void set_output(value_type const& value)
+  constexpr void set_output(value_type value)
   {
     data_.clear();
     sum_ = value_type{0};

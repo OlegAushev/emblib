@@ -13,21 +13,19 @@ template<typename T, std::size_t WindowSize>
 class median_filter {
 public:
   using value_type = T;
-  using reference = value_type&;
-  using const_reference = value_type const&;
   static constexpr std::size_t window_size = WindowSize;
 private:
   emb::circular_buffer<value_type, window_size> window_;
   value_type init_output_;
   value_type output_;
 public:
-  constexpr median_filter(value_type const& init_output = value_type())
+  constexpr median_filter(value_type init_output = value_type())
       : init_output_(init_output)
   {
     reset();
   }
 
-  constexpr void push(value_type const& input)
+  constexpr void push(value_type input)
   {
     window_.push_back(input);
     std::array<value_type, window_size> window_sorted = {};
@@ -38,12 +36,12 @@ public:
     output_ = window_sorted[window_size / 2];
   }
 
-  constexpr const_reference output() const
+  constexpr value_type output() const
   {
     return output_;
   }
 
-  constexpr void set_output(value_type const& value)
+  constexpr void set_output(value_type value)
   {
     window_.fill(value);
     output_ = value;
