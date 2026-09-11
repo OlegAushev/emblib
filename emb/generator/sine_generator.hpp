@@ -11,7 +11,6 @@ template<typename T>
 class sine_generator {
 public:
   using value_type = T;
-  using const_reference = value_type const&;
 private:
   units::sec_f32 update_period_;
   value_type ampl_;
@@ -23,10 +22,10 @@ private:
   value_type output_;
 public:
   constexpr sine_generator(
-      units::sec_f32 const& update_period,
-      value_type const& ampl,
-      units::hz_f32 const& freq,
-      emb::units::rad_f32 const& init_phase = emb::units::rad_f32(0),
+      units::sec_f32 update_period,
+      value_type ampl,
+      units::hz_f32 freq,
+      emb::units::rad_f32 init_phase = emb::units::rad_f32(0),
       value_type bias = value_type())
       : update_period_(update_period),
         ampl_(ampl),
@@ -38,7 +37,7 @@ public:
     reset();
   }
 
-  constexpr const_reference output() const
+  constexpr value_type output() const
   {
     return output_;
   }
@@ -61,12 +60,12 @@ public:
     return update_period_;
   }
 
-  constexpr const_reference ampl() const
+  constexpr value_type ampl() const
   {
     return ampl_;
   }
 
-  constexpr const_reference bias() const
+  constexpr value_type bias() const
   {
     return bias_;
   }

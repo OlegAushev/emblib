@@ -12,7 +12,6 @@ template<typename T>
 class ramp_generator {
 public:
   using value_type = T;
-  using const_reference = value_type const&;
 private:
   units::sec_f32 ts_;
   value_type slope_;
@@ -22,9 +21,9 @@ private:
   value_type init_output_;
   value_type output_;
 public:
-  constexpr ramp_generator(units::sec_f32 const& timestep,
-                           value_type const& slope,
-                           value_type const& init_output = T{})
+  constexpr ramp_generator(units::sec_f32 timestep,
+                           value_type slope,
+                           value_type init_output = T{})
       : init_output_(init_output)
   {
     set_slope(timestep, slope);
@@ -41,12 +40,12 @@ public:
     return output_;
   }
 
-  constexpr void set_target(const_reference value)
+  constexpr void set_target(value_type value)
   {
     target_ = value;
   }
 
-  constexpr void set_output(const_reference value)
+  constexpr void set_output(value_type value)
   {
     target_ = value;
     output_ = value;
@@ -57,8 +56,7 @@ public:
     set_output(init_output_);
   }
 
-  constexpr void set_slope(units::sec_f32 const& timestep,
-                           const_reference slope)
+  constexpr void set_slope(units::sec_f32 timestep, value_type slope)
   {
     assert(timestep.value() > 0);
     assert(slope > T(0));
@@ -67,7 +65,7 @@ public:
     step_ = timestep.value() * slope;
   }
 
-  constexpr void set_timestep(units::sec_f32 const& ts)
+  constexpr void set_timestep(units::sec_f32 ts)
   {
     set_slope(ts, slope_);
   }
