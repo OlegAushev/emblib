@@ -467,6 +467,81 @@ consteval bool test_a_restart_onto_debris_with_no_header()
   return true;
 }
 
+// Blocks deep enough to hold a hole: a record, the slot a save spent
+// without writing to it, and the debris of the save after that.
+using deep = test::block_storage<2048, 4, true, 256>;
+inline constexpr section deep_section{.magic = magic,
+                                      .base = 0,
+                                      .slot_capacity = 64,
+                                      .slot_count = 8,
+                                      .slots_per_block = 4};
+using deep_store = store<schema, deep, deep_section>;
+
+// A failed save spends its slot whether or not the medium took a byte of
+// it, so the debris of the next one need not sit right behind the record:
+// between them there may be a slot nobody ever wrote. A store that probed
+// the slot ahead once and called the block clean would walk into that
+// debris a save later.
+consteval bool test_a_hole_between_the_record_and_the_debris()
+{
+  deep memory;
+  image<schema> values;
+
+  {
+    deep_store store{memory};
+    if (!values.set<"motor.p">(std::int32_t{1})) return false;
+    if (!store.save(values)) return false;              // slot 0, seq 1
+
+    // A save the medium refuses before taking a byte. Slot 1 stays erased,
+    // and the position moves past it all the same.
+    memory.set_power_budget(0);
+    auto const nothing = store.save(values);
+    if (nothing) return false;
+    if (nothing.error().stage != save_stage::body) return false;
+    if (store.next_slot() != 2) return false;
+
+    // The next one tears at the commit: slot 2 keeps a body and a header,
+    // and no footer to make a record of them.
+    memory.set_power_budget(record_body_size(schema.count));
+    auto const torn = store.save(values);
+    if (torn) return false;
+    if (torn.error().stage != save_stage::commit) return false;
+  }
+  memory.set_power_budget(deep::unlimited);
+
+  // The restart finds the record in slot 0, a hole in slot 1 and the
+  // debris in slot 2 — all three in one block, which therefore cannot be
+  // erased to clean it.
+  deep_store store{memory};
+  image<schema> restored;
+  auto const result = store.load(restored);
+  if (!result.record.valid || result.slot != 0) return false;
+  if (store.next_slot() != 1) return false;
+
+  // The hole takes this save: the slot ahead is erased, and nothing is in
+  // the way of writing into it.
+  if (!restored.set<"motor.p">(std::int32_t{2})) return false;
+  if (!store.save(restored)) return false;              // slot 1, seq 4
+  if (store.next_slot() != 2) return false;
+  if (memory.erase_calls != 1) return false;
+
+  // The save after it must not walk into the debris. The rest of the block
+  // is abandoned instead, and the block taken is erased on entry.
+  if (!restored.set<"motor.p">(std::int32_t{3})) return false;
+  if (!store.save(restored)) return false;              // slot 4, seq 5
+  if (store.next_slot() != 5) return false;
+  if (memory.erase_calls != 2) return false;
+
+  deep_store restarted{memory};
+  image<schema> again;
+  auto const after = restarted.load(again);
+  if (!after.record.valid) return false;
+  if (after.slot != 4 || after.record.seq != 5) return false;
+  if (again.get<"motor.p">() != 3) return false;
+
+  return true;
+}
+
 // A header can also lie about its age. NOR loses programmed bits upwards,
 // and a lap-old record whose sequence number gained a high bit compares
 // newer than everything. The position must still follow the record
@@ -789,6 +864,7 @@ static_assert(test_flash_rolls_over_between_blocks());
 static_assert(test_flash_erase_never_takes_the_last_good_record());
 static_assert(test_a_restart_onto_the_debris_of_a_torn_save());
 static_assert(test_a_restart_onto_debris_with_no_header());
+static_assert(test_a_hole_between_the_record_and_the_debris());
 static_assert(test_a_lap_old_header_that_rotted_newer());
 static_assert(test_a_save_after_an_erase_that_failed());
 static_assert(test_a_torn_save_after_an_erase_that_failed());

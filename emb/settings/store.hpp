@@ -105,13 +105,6 @@ class store {
   std::uint32_t last_seq_ = 0;
   bool surveyed_ = false;
 
-  // Whether the slot the next save will take is known to be erased. It is
-  // while a store runs — it advances one slot at a time and erases each
-  // block on entering it — and it is not after the chain breaks: a restart
-  // resumes from what the medium says, and a save that failed left the
-  // position past whatever it managed to write.
-  bool slot_ahead_unknown_ = false;
-
 public:
   constexpr explicit store(Storage& storage) : storage_(storage) {}
 
@@ -163,7 +156,6 @@ public:
     next_slot_ = 0;
     last_seq_ = 0;
     surveyed_ = true;
-    slot_ahead_unknown_ = true;
     return result;
   }
 
@@ -178,11 +170,8 @@ public:
     // and write a record that looks older than what is already stored —
     // invisible to the next load, which takes the highest sequence number.
     if (!surveyed_) survey();
-    if constexpr (Storage::needs_erase) {
-      if (slot_ahead_unknown_) step_over_debris();
-    }
 
-    auto const slot = next_slot_;
+    auto const slot = slot_to_write();
     auto const seq = last_seq_ + 1;
     auto const record = std::span{buffer_}.first(record_bytes);
 
@@ -270,14 +259,14 @@ private:
         Section.base + (slot * Section.slot_capacity) + offset);
   }
 
-  // Every way out of a save that is not success. It leaves the slot ahead
-  // in whatever state the failure left it — an erase that did not happen,
-  // a record half written — so the next save has to look before it writes.
-  constexpr auto fail(save_stage stage,
-                      std::optional<error_type> cause = std::nullopt)
+  // Every way out of a save that is not success. What the failure left on
+  // the medium — an erase that did not happen, a record half written, a
+  // slot spent without a byte in it — is no concern of its own: the next
+  // save looks at the slot it is about to take, whatever brought it there.
+  static constexpr auto fail(save_stage stage,
+                             std::optional<error_type> cause = std::nullopt)
       -> std::unexpected<save_failure<error_type>>
   {
-    slot_ahead_unknown_ = true;
     return std::unexpected(save_failure<error_type>{stage, cause});
   }
 
@@ -349,38 +338,46 @@ private:
 
   // Resumes from what the medium says, after a restart or a save before
   // the first load: the sequence continues above the number given, the
-  // next record goes to the slot after the one given, and the slot ahead
-  // is no longer known to be erased. The two need not come from one slot —
-  // a load passes the record it restored and the newest header there is,
-  // which differ after a torn save; a survey has only headers to go by.
+  // next record goes to the slot after the one given. The two need not
+  // come from one slot — a load passes the record it restored and the
+  // newest header there is, which differ after a torn save; a survey has
+  // only headers to go by.
   constexpr void adopt(std::size_t slot, std::uint32_t seq)
   {
     last_seq_ = seq;
     next_slot_ = (slot + 1) % Section.slot_count;
     surveyed_ = true;
-    slot_ahead_unknown_ = true;
   }
 
-  // Once after the chain breaks, before the next save. The slot ahead may
-  // hold the debris of a save interrupted before it committed — neither a
-  // record nor an erased state — and writing into it would corrupt the new
-  // record rather than the old one.
+  // Which slot this save takes: the one the position names, unless a
+  // medium that must be erased finds the debris of a save interrupted
+  // before it committed there — neither a record nor an erased state, and
+  // writing into it would corrupt the new record rather than the old one.
   //
-  // The block that slot belongs to cannot be erased: the position follows
-  // the record restored, so a slot that is not the first of its block
-  // shares the block with that record. The next block is taken instead,
-  // which the rollover erases anyway — one erase per such incident, not
-  // per boot. A slot that already starts a block needs nothing: entering
-  // it erases it.
-  constexpr void step_over_debris()
+  // Every save asks. A position is reached by a restart or by a failure as
+  // readily as by a record, and a failure spends its slot whether or not
+  // the medium took a byte of it — so the debris need not sit right behind
+  // the newest record, and no slot is erased on anyone's word.
+  //
+  // The block the debris belongs to cannot be erased to clean it: the
+  // position follows the record restored, so a slot that is not the first
+  // of its block shares the block with that record. The next block is
+  // taken instead, which the rollover erases anyway. A slot that already
+  // starts a block needs nothing: entering it erases it.
+  //
+  // Reads into buffer_, so the answer has to be had before the record is
+  // encoded there.
+  constexpr auto slot_to_write() -> std::size_t
   {
-    slot_ahead_unknown_ = false;
+    if constexpr (!Storage::needs_erase) {
+      return next_slot_;
+    } else {
+      if (next_slot_ % Section.slots_per_block == 0) return next_slot_;
+      if (slot_is_erased(next_slot_)) return next_slot_;
 
-    if (next_slot_ % Section.slots_per_block == 0) return;
-    if (slot_is_erased(next_slot_)) return;
-
-    auto const block = next_slot_ / Section.slots_per_block;
-    next_slot_ = ((block + 1) * Section.slots_per_block) % Section.slot_count;
+      auto const block = next_slot_ / Section.slots_per_block;
+      return ((block + 1) * Section.slots_per_block) % Section.slot_count;
+    }
   }
 
   // A slot that cannot be read counts as written: stepping past it costs a
@@ -406,7 +403,6 @@ private:
       next_slot_ = 0;
       last_seq_ = 0;
       surveyed_ = true;
-      slot_ahead_unknown_ = true;
       return;
     }
     adopt(best->slot, best->seq);
