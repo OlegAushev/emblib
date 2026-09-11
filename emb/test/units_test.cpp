@@ -56,6 +56,17 @@ constexpr bool test_units_conversion()
   [[maybe_unused]] sec_f32 per{0.0001f};
   assert(1 / per == hz_f32(1 / 0.0001f));
 
+  // sec -> chrono duration
+  assert(to_duration<std::chrono::milliseconds>(sec_f32{1.5f})
+         == std::chrono::milliseconds{1500});
+  assert(to_duration<std::chrono::microseconds>(sec_f32{0.25f})
+         == std::chrono::microseconds{250000});
+  assert(to_milliseconds(sec_f32{0.125f}) == std::chrono::milliseconds{125});
+
+  // truncates towards zero, as a cast to a coarser unit does
+  assert(to_milliseconds(sec_f32{0.0015f}) == std::chrono::milliseconds{1});
+  assert(to_milliseconds(sec_f32{-0.0015f}) == std::chrono::milliseconds{-1});
+
   // abs
   assert(abs(rpm_f32{-100.0f}) == rpm_f32{100.0f});
   assert(abs(rpm_f32{100.0f}) == rpm_f32{100.0f});

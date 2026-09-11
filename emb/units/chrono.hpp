@@ -1,7 +1,9 @@
 #pragma once
 
+#include <emb/chrono.hpp>
 #include <emb/units/named_unit.hpp>
 
+#include <chrono>
 #include <concepts>
 #include <type_traits>
 
@@ -36,6 +38,19 @@ template<std::floating_point T, typename V>
 constexpr hz<T> operator/(V lhs, sec<T> rhs)
 {
   return hz<T>(static_cast<T>(lhs) / rhs.value());
+}
+
+template<emb::chrono::some_duration Duration, std::floating_point T>
+constexpr Duration to_duration(sec<T> t)
+{
+  return std::chrono::duration_cast<Duration>(
+      std::chrono::duration<T>{t.value()});
+}
+
+template<std::floating_point T>
+constexpr std::chrono::milliseconds to_milliseconds(sec<T> t)
+{
+  return to_duration<std::chrono::milliseconds>(t);
 }
 
 } // namespace units
