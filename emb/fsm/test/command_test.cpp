@@ -10,7 +10,13 @@
 // strength of the context, its states and its controls alone
 namespace {
 
-using emb::fsm::command::tag;
+using emb::fsm::command::channel_for;
+using emb::fsm::command::control_of;
+using emb::fsm::command::deliver;
+using emb::fsm::command::deliver_all;
+using emb::fsm::command::deliverable;
+using emb::fsm::command::sink_of;
+using emb::fsm::command::some_channel;
 
 enum class gear { neutral, forward };
 
@@ -21,16 +27,46 @@ struct speed {
 
 class vehicle;
 
+// ---- channels --------------------------------------------------------------
+
+struct gear_channel {
+  using command = gear;
+  template<typename S>
+  using control = typename S::gear_control;
+};
+
+struct speed_channel {
+  using command = speed;
+  template<typename S>
+  using control = typename S::speed_control;
+};
+
+// the command type of speed_channel, and a channel of its own
+struct limit_channel {
+  using command = speed;
+  template<typename S>
+  using control = typename S::limit_control;
+};
+
+// only some states name a cruise control
+struct cruise_channel {
+  using command = speed;
+  template<typename S>
+  using control = typename S::cruise_control;
+};
+
+using channels = emb::typelist<gear_channel, speed_channel, limit_channel>;
+
 // ---- controls --------------------------------------------------------------
 
-// nobody drives: the safe value of every command
+// nobody drives: the safe value of every channel
 struct idle_control {
-  static constexpr gear value(tag<gear>, vehicle const&)
+  static constexpr gear value(gear_channel, vehicle const&)
   {
     return gear::neutral;
   }
 
-  static constexpr speed value(tag<speed>, vehicle const&)
+  static constexpr speed value(speed_channel, vehicle const&)
   {
     return speed{};
   }
@@ -38,8 +74,15 @@ struct idle_control {
 
 // reads the pedals out of the context and keeps nothing itself
 struct driver_control {
-  static constexpr gear value(tag<gear>, vehicle const& v);
-  static constexpr speed value(tag<speed>, vehicle const& v);
+  static constexpr gear value(gear_channel, vehicle const& v);
+  static constexpr speed value(speed_channel, vehicle const& v);
+  static constexpr speed value(cruise_channel, vehicle const& v);
+};
+
+// serves the limit channel only, though the speed channel carries the same
+// command type
+struct limiter_control {
+  static constexpr speed value(limit_channel, vehicle const& v);
 };
 
 // ---- states ----------------------------------------------------------------
@@ -56,37 +99,16 @@ struct parked {
   static constexpr int id = 0;
   using gear_control = driver_control;
   using speed_control = idle_control;
+  using limit_control = limiter_control;
 };
 
 struct rolling {
   static constexpr int id = 1;
   using gear_control = driver_control;
   using speed_control = driver_control;
+  using limit_control = limiter_control;
   using cruise_control = driver_control;
 };
-
-// ---- channels --------------------------------------------------------------
-
-struct gear_channel {
-  using command_type = gear;
-  template<typename S>
-  using control = typename S::gear_control;
-};
-
-struct speed_channel {
-  using command_type = speed;
-  template<typename S>
-  using control = typename S::speed_control;
-};
-
-// only some states name a cruise control
-struct cruise_channel {
-  using command_type = speed;
-  template<typename S>
-  using control = typename S::cruise_control;
-};
-
-using channels = emb::typelist<gear_channel, speed_channel>;
 
 // ---- the context -----------------------------------------------------------
 
@@ -107,16 +129,19 @@ class vehicle : public emb::fsm::v3::finite_state_machine<
 public:
   gear pedal_gear = gear::neutral;
   speed pedal_speed{};
+  speed speed_limit{};
 
   gear last_gear = gear::neutral;
   speed last_speed{};
+  speed last_limit{};
+  speed last_cruise{};
   int deliveries = 0;
 
   constexpr vehicle() : fsm_type(parked{}) {}
 
   // a held level turned into an event, the way a drive turns a held start into
   // a transition: accepting this command moves the state machine
-  constexpr void accept(tag<gear>, gear const& g)
+  constexpr void accept(gear_channel, gear const& g)
   {
     last_gear = g;
     ++deliveries;
@@ -125,49 +150,105 @@ public:
     }
   }
 
-  constexpr void accept(tag<speed>, speed const& s)
+  constexpr void accept(speed_channel, speed const& s)
   {
     last_speed = s;
     ++deliveries;
   }
+
+  constexpr void accept(limit_channel, speed const& s)
+  {
+    last_limit = s;
+    ++deliveries;
+  }
+
+  constexpr void accept(cruise_channel, speed const& s)
+  {
+    last_cruise = s;
+    ++deliveries;
+  }
 };
 
-constexpr gear driver_control::value(tag<gear>, vehicle const& v)
+constexpr gear driver_control::value(gear_channel, vehicle const& v)
 {
   return v.pedal_gear;
 }
 
-constexpr speed driver_control::value(tag<speed>, vehicle const& v)
+constexpr speed driver_control::value(speed_channel, vehicle const& v)
 {
   return v.pedal_speed;
 }
 
+constexpr speed driver_control::value(cruise_channel, vehicle const& v)
+{
+  return v.pedal_speed;
+}
+
+constexpr speed limiter_control::value(limit_channel, vehicle const& v)
+{
+  return v.speed_limit;
+}
+
+// ---- what a channel is -----------------------------------------------------
+
+static_assert(some_channel<gear_channel>);
+
+// a channel names the command it carries
+struct commandless_channel {
+  template<typename S>
+  using control = typename S::gear_control;
+};
+
+static_assert(!some_channel<commandless_channel>);
+
+// and it is passed by value as a key, so it carries nothing
+struct laden_channel {
+  using command = gear;
+  template<typename S>
+  using control = typename S::gear_control;
+
+  int payload = 0;
+};
+
+static_assert(!some_channel<laden_channel>);
+
 // ---- what a control is -----------------------------------------------------
 
-static_assert(emb::fsm::command::control_of<idle_control, gear, vehicle>);
-static_assert(emb::fsm::command::control_of<driver_control, speed, vehicle>);
+static_assert(control_of<idle_control, gear_channel, vehicle>);
+static_assert(control_of<driver_control, speed_channel, vehicle>);
+
+// a control serves a channel by naming it: the limiter returns the command
+// type the speed channel carries, and still is no control for it
+static_assert(control_of<limiter_control, limit_channel, vehicle>);
+static_assert(!control_of<limiter_control, speed_channel, vehicle>);
 
 // a control that keeps something is not one
 struct keeping_control {
   gear kept = gear::neutral;
 
-  static constexpr gear value(tag<gear>, vehicle const&)
+  static constexpr gear value(gear_channel, vehicle const&)
   {
     return gear::neutral;
   }
 };
 
-static_assert(!emb::fsm::command::control_of<keeping_control, gear, vehicle>);
+static_assert(!control_of<keeping_control, gear_channel, vehicle>);
 
 // convertible is not enough
+struct odometer_channel {
+  using command = long;
+  template<typename S>
+  using control = typename S::odometer_control;
+};
+
 struct widening_control {
-  static constexpr int value(tag<long>, vehicle const&)
+  static constexpr int value(odometer_channel, vehicle const&)
   {
     return 0;
   }
 };
 
-static_assert(!emb::fsm::command::control_of<widening_control, long, vehicle>);
+static_assert(!control_of<widening_control, odometer_channel, vehicle>);
 
 // the documented limit: is_empty_v does not see static members, so a control
 // with class-level state still passes. Keeping controls free of it is a review
@@ -175,46 +256,55 @@ static_assert(!emb::fsm::command::control_of<widening_control, long, vehicle>);
 struct class_state_control {
   [[maybe_unused]] static inline gear kept = gear::neutral;
 
-  static constexpr gear value(tag<gear>, vehicle const&)
+  static constexpr gear value(gear_channel, vehicle const&)
   {
     return gear::neutral;
   }
 };
 
-static_assert(
-    emb::fsm::command::control_of<class_state_control, gear, vehicle>);
+static_assert(control_of<class_state_control, gear_channel, vehicle>);
 
 // ---- what a sink is --------------------------------------------------------
 
-struct untagged_sink {
+struct keyless_sink {
   constexpr void accept(speed const&) {}
 };
 
-static_assert(emb::fsm::command::sink_of<vehicle, speed>);
-static_assert(!emb::fsm::command::sink_of<untagged_sink, speed>);
-static_assert(!emb::fsm::command::sink_of<vehicle, long>);
+// one command type, two channels: a sink accepts a channel by naming it
+struct speed_only_sink {
+  constexpr void accept(speed_channel, speed const&) {}
+};
+
+static_assert(sink_of<vehicle, speed_channel>);
+static_assert(sink_of<vehicle, limit_channel>);
+static_assert(!sink_of<vehicle, odometer_channel>);
+static_assert(!sink_of<keyless_sink, speed_channel>);
+static_assert(sink_of<speed_only_sink, speed_channel>);
+static_assert(!sink_of<speed_only_sink, limit_channel>);
 
 // ---- what is deliverable ---------------------------------------------------
 
-static_assert(emb::fsm::command::channel_for<speed_channel, parked, vehicle>);
-static_assert(emb::fsm::command::channel_for<cruise_channel, rolling, vehicle>);
-static_assert(!emb::fsm::command::channel_for<cruise_channel, parked, vehicle>);
+static_assert(channel_for<speed_channel, parked, vehicle>);
+static_assert(channel_for<cruise_channel, rolling, vehicle>);
+static_assert(!channel_for<cruise_channel, parked, vehicle>);
 
-static_assert(emb::fsm::command::deliverable<gear_channel, vehicle>);
-static_assert(emb::fsm::command::deliverable<speed_channel, vehicle>);
+static_assert(deliverable<gear_channel, vehicle>);
+static_assert(deliverable<speed_channel, vehicle>);
+static_assert(deliverable<limit_channel, vehicle>);
 
-// exhaustiveness: rolling names a cruise control and parked does not
-static_assert(!emb::fsm::command::deliverable<cruise_channel, vehicle>);
+// exhaustiveness: the vehicle accepts the cruise channel and rolling names a
+// control for it, but parked does not
+static_assert(!deliverable<cruise_channel, vehicle>);
 
-// A state that names no control, a control that keeps something, or a sink that
-// does not accept the command stop deliver() with a sentence. Those are
-// static_asserts -- a hard error, not a substitution failure -- so they cannot
-// be written as negative checks; deliverable<> above is the testable half, and
-// the wording is checked by uncommenting:
+// A state that names no control, a control that keeps something, a sink that
+// does not accept the channel, or a channel listed twice stop delivery with a
+// sentence. Those are static_asserts -- a hard error, not a substitution
+// failure -- so they cannot be written as negative checks; deliverable<> above
+// is the testable half, and the wording is checked by uncommenting:
 //
 //   constexpr void no_cruise(vehicle& v)
 //   {
-//     emb::fsm::command::deliver<cruise_channel>(v);
+//     deliver<cruise_channel>(v);
 //   }
 
 // ---- delivery --------------------------------------------------------------
@@ -223,14 +313,14 @@ constexpr bool test_state_names_the_control()
 {
   vehicle v;
 
-  emb::fsm::command::deliver_all<channels>(v);
+  deliver_all<channels>(v);
   assert(v.is_in_state<parked>());
   assert(v.last_gear == gear::neutral);
   assert(v.last_speed == speed{});
 
   // the pedal is there to read, but in parked nobody drives the speed
   v.pedal_speed = speed{10.f};
-  emb::fsm::command::deliver<speed_channel>(v);
+  deliver<speed_channel>(v);
   assert(v.last_speed == speed{});
 
   return true;
@@ -244,11 +334,11 @@ constexpr bool test_delivery_order()
 
   // one pass: the gear channel goes first, accepting forward moves the vehicle
   // to rolling, and the speed channel reads the state it moved to
-  emb::fsm::command::deliver_all<channels>(v);
+  deliver_all<channels>(v);
   assert(v.is_in_state<rolling>());
   assert(v.last_gear == gear::forward);
   assert(v.last_speed == speed{10.f});
-  assert(v.deliveries == 2);
+  assert(v.deliveries == 3);
 
   return true;
 }
@@ -259,10 +349,10 @@ constexpr bool test_level_semantics()
   v.pedal_gear = gear::forward;
 
   // delivered on every pass, not on change
-  emb::fsm::command::deliver_all<channels>(v);
-  emb::fsm::command::deliver_all<channels>(v);
-  emb::fsm::command::deliver_all<channels>(v);
-  assert(v.deliveries == 6);
+  deliver_all<channels>(v);
+  deliver_all<channels>(v);
+  deliver_all<channels>(v);
+  assert(v.deliveries == 9);
   assert(v.last_gear == gear::forward);
 
   return true;
@@ -273,17 +363,33 @@ constexpr bool test_nothing_to_restore()
   vehicle v;
   v.pedal_gear = gear::forward;
   v.pedal_speed = speed{10.f};
-  emb::fsm::command::deliver_all<channels>(v);
+  deliver_all<channels>(v);
   assert(v.last_speed == speed{10.f});
 
   // the owner is what the state declares: leaving a state leaves nothing
   // behind that a later state would have to restore
   v.pedal_gear = gear::neutral;
   v.dispatch(halt{});
-  emb::fsm::command::deliver_all<channels>(v);
+  deliver_all<channels>(v);
   assert(v.is_in_state<parked>());
   assert(v.last_gear == gear::neutral);
   assert(v.last_speed == speed{});
+
+  return true;
+}
+
+constexpr bool test_one_command_type_two_channels()
+{
+  vehicle v;
+  v.pedal_gear = gear::forward;
+  v.pedal_speed = speed{10.f};
+  v.speed_limit = speed{30.f};
+
+  // speed and limit carry the same command type, and each channel still
+  // reaches its own control and its own accept()
+  deliver_all<channels>(v);
+  assert(v.last_speed == speed{10.f});
+  assert(v.last_limit == speed{30.f});
 
   return true;
 }
@@ -292,5 +398,6 @@ static_assert(test_state_names_the_control());
 static_assert(test_delivery_order());
 static_assert(test_level_semantics());
 static_assert(test_nothing_to_restore());
+static_assert(test_one_command_type_two_channels());
 
 } // namespace
