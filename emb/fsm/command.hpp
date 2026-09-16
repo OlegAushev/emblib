@@ -18,9 +18,15 @@ namespace emb::fsm::command {
 //
 //   emb::fsm::command::deliver_all<channels>(drive);
 
-// The first parameter on both sides. Overloads are then chosen by the command
-// and never by a conversion of its value: two commands with one underlying type
-// stay apart, and an accept(int) cannot quietly take a bool.
+// The first parameter on both sides: the key an overload is picked by.
+//
+// A control may drive several commands, all through value(), and a function
+// cannot be overloaded by its return type alone. On the sink it makes accept()
+// match the command exactly rather than whatever its value converts to, so an
+// accept(int) cannot quietly take a bool.
+//
+// It does not tell apart two commands of one C++ type -- tag<float> is a single
+// tag -- so such commands need types of their own.
 template<typename C>
 struct tag {};
 
