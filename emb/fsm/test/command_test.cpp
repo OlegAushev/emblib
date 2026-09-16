@@ -1,4 +1,4 @@
-#include <emb/command.hpp>
+#include <emb/fsm/command.hpp>
 #include <emb/fsm/fsm_v3.hpp>
 
 #include <cassert>
@@ -6,11 +6,11 @@
 #include <type_traits>
 #include <variant>
 
-// deliberately outside emb::command: a delivery has to compile on the strength
-// of the context, its states and its controls alone
+// deliberately outside emb::fsm::command: a delivery has to compile on the
+// strength of the context, its states and its controls alone
 namespace {
 
-using emb::command::tag;
+using emb::fsm::command::tag;
 
 enum class gear { neutral, forward };
 
@@ -144,8 +144,8 @@ constexpr speed driver_control::value(tag<speed>, vehicle const& v)
 
 // ---- what a control is -----------------------------------------------------
 
-static_assert(emb::command::control_of<idle_control, gear, vehicle>);
-static_assert(emb::command::control_of<driver_control, speed, vehicle>);
+static_assert(emb::fsm::command::control_of<idle_control, gear, vehicle>);
+static_assert(emb::fsm::command::control_of<driver_control, speed, vehicle>);
 
 // a control that keeps something is not one
 struct keeping_control {
@@ -157,7 +157,7 @@ struct keeping_control {
   }
 };
 
-static_assert(!emb::command::control_of<keeping_control, gear, vehicle>);
+static_assert(!emb::fsm::command::control_of<keeping_control, gear, vehicle>);
 
 // convertible is not enough
 struct widening_control {
@@ -167,7 +167,7 @@ struct widening_control {
   }
 };
 
-static_assert(!emb::command::control_of<widening_control, long, vehicle>);
+static_assert(!emb::fsm::command::control_of<widening_control, long, vehicle>);
 
 // the documented limit: is_empty_v does not see static members, so a control
 // with class-level state still passes. Keeping controls free of it is a review
@@ -181,7 +181,8 @@ struct class_state_control {
   }
 };
 
-static_assert(emb::command::control_of<class_state_control, gear, vehicle>);
+static_assert(
+    emb::fsm::command::control_of<class_state_control, gear, vehicle>);
 
 // ---- what a sink is --------------------------------------------------------
 
@@ -189,21 +190,21 @@ struct untagged_sink {
   constexpr void accept(speed const&) {}
 };
 
-static_assert(emb::command::sink_of<vehicle, speed>);
-static_assert(!emb::command::sink_of<untagged_sink, speed>);
-static_assert(!emb::command::sink_of<vehicle, long>);
+static_assert(emb::fsm::command::sink_of<vehicle, speed>);
+static_assert(!emb::fsm::command::sink_of<untagged_sink, speed>);
+static_assert(!emb::fsm::command::sink_of<vehicle, long>);
 
 // ---- what is deliverable ---------------------------------------------------
 
-static_assert(emb::command::channel_for<speed_channel, parked, vehicle>);
-static_assert(emb::command::channel_for<cruise_channel, rolling, vehicle>);
-static_assert(!emb::command::channel_for<cruise_channel, parked, vehicle>);
+static_assert(emb::fsm::command::channel_for<speed_channel, parked, vehicle>);
+static_assert(emb::fsm::command::channel_for<cruise_channel, rolling, vehicle>);
+static_assert(!emb::fsm::command::channel_for<cruise_channel, parked, vehicle>);
 
-static_assert(emb::command::deliverable<gear_channel, vehicle>);
-static_assert(emb::command::deliverable<speed_channel, vehicle>);
+static_assert(emb::fsm::command::deliverable<gear_channel, vehicle>);
+static_assert(emb::fsm::command::deliverable<speed_channel, vehicle>);
 
 // exhaustiveness: rolling names a cruise control and parked does not
-static_assert(!emb::command::deliverable<cruise_channel, vehicle>);
+static_assert(!emb::fsm::command::deliverable<cruise_channel, vehicle>);
 
 // A state that names no control, a control that keeps something, or a sink that
 // does not accept the command stop deliver() with a sentence. Those are
@@ -213,7 +214,7 @@ static_assert(!emb::command::deliverable<cruise_channel, vehicle>);
 //
 //   constexpr void no_cruise(vehicle& v)
 //   {
-//     emb::command::deliver<cruise_channel>(v);
+//     emb::fsm::command::deliver<cruise_channel>(v);
 //   }
 
 // ---- delivery --------------------------------------------------------------
@@ -222,14 +223,14 @@ constexpr bool test_state_names_the_control()
 {
   vehicle v;
 
-  emb::command::deliver_all<channels>(v);
+  emb::fsm::command::deliver_all<channels>(v);
   assert(v.is_in_state<parked>());
   assert(v.last_gear == gear::neutral);
   assert(v.last_speed == speed{});
 
   // the pedal is there to read, but in parked nobody drives the speed
   v.pedal_speed = speed{10.f};
-  emb::command::deliver<speed_channel>(v);
+  emb::fsm::command::deliver<speed_channel>(v);
   assert(v.last_speed == speed{});
 
   return true;
@@ -243,7 +244,7 @@ constexpr bool test_delivery_order()
 
   // one pass: the gear channel goes first, accepting forward moves the vehicle
   // to rolling, and the speed channel reads the state it moved to
-  emb::command::deliver_all<channels>(v);
+  emb::fsm::command::deliver_all<channels>(v);
   assert(v.is_in_state<rolling>());
   assert(v.last_gear == gear::forward);
   assert(v.last_speed == speed{10.f});
@@ -258,9 +259,9 @@ constexpr bool test_level_semantics()
   v.pedal_gear = gear::forward;
 
   // delivered on every pass, not on change
-  emb::command::deliver_all<channels>(v);
-  emb::command::deliver_all<channels>(v);
-  emb::command::deliver_all<channels>(v);
+  emb::fsm::command::deliver_all<channels>(v);
+  emb::fsm::command::deliver_all<channels>(v);
+  emb::fsm::command::deliver_all<channels>(v);
   assert(v.deliveries == 6);
   assert(v.last_gear == gear::forward);
 
@@ -272,14 +273,14 @@ constexpr bool test_nothing_to_restore()
   vehicle v;
   v.pedal_gear = gear::forward;
   v.pedal_speed = speed{10.f};
-  emb::command::deliver_all<channels>(v);
+  emb::fsm::command::deliver_all<channels>(v);
   assert(v.last_speed == speed{10.f});
 
   // the owner is what the state declares: leaving a state leaves nothing
   // behind that a later state would have to restore
   v.pedal_gear = gear::neutral;
   v.dispatch(halt{});
-  emb::command::deliver_all<channels>(v);
+  emb::fsm::command::deliver_all<channels>(v);
   assert(v.is_in_state<parked>());
   assert(v.last_gear == gear::neutral);
   assert(v.last_speed == speed{});

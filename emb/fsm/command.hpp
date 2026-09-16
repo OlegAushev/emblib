@@ -5,7 +5,7 @@
 #include <concepts>
 #include <type_traits>
 
-namespace emb::command {
+namespace emb::fsm::command {
 
 // A command goes from a control to a sink. Which control drives it is declared
 // by the sink's current state, not assigned from outside: there is no owner to
@@ -16,7 +16,7 @@ namespace emb::command {
 //     ...
 //   };
 //
-//   emb::command::deliver_all<channels>(drive);
+//   emb::fsm::command::deliver_all<channels>(drive);
 
 // The first parameter on both sides. Overloads are then chosen by the command
 // and never by a conversion of its value: two commands with one underlying type
@@ -87,12 +87,11 @@ inline constexpr bool controls_every_state<Ch, typelist<States...>, Ctx> =
 //
 // This is the testable form of what deliver() insists on with sentences.
 template<typename Ch, typename Ctx>
-concept deliverable = requires { typename Ch::command_type; }
-                   && detail::publishes_states<Ctx>
-                   && sink_of<Ctx, typename Ch::command_type>
-                   && detail::controls_every_state<Ch,
-                                                   typename Ctx::state_list,
-                                                   Ctx>;
+concept deliverable =
+    requires { typename Ch::command_type; }
+    && detail::publishes_states<Ctx>
+    && sink_of<Ctx, typename Ch::command_type>
+    && detail::controls_every_state<Ch, typename Ctx::state_list, Ctx>;
 
 // ---------------------------------------------------------------- diagnostics
 
@@ -119,11 +118,12 @@ struct diagnose_control<Ch, S, Ctx, true> {
 
   static_assert(
       std::is_empty_v<control_type>,
-      "emb::command: a control must be empty: it projects the context onto a "
-      "command and keeps nothing, and what it reads belongs to the context");
+      "emb::fsm::command: a control must be empty: it projects the context "
+      "onto a command and keeps nothing, and what it reads belongs to the "
+      "context");
   static_assert(
       projects<control_type, command_type, Ctx>,
-      "emb::command: a control must define `static C value(tag<C>, "
+      "emb::fsm::command: a control must define `static C value(tag<C>, "
       "context const&)` returning exactly the command type of the channel");
   static constexpr bool ok = true;
 };
@@ -132,7 +132,7 @@ template<typename Ch, typename S, typename Ctx>
 struct diagnose_state {
   static_assert(
       names_control<Ch, S>,
-      "emb::command: every state must name the control that drives this "
+      "emb::fsm::command: every state must name the control that drives this "
       "command; a state in which nobody drives it names an idle control");
   static constexpr bool ok =
       diagnose_control<Ch, S, Ctx, names_control<Ch, S>>::ok;
@@ -155,8 +155,8 @@ template<typename Ch, typename Ctx>
 struct diagnose_delivery_details<Ch, Ctx, true> {
   static_assert(
       sink_of<Ctx, typename Ch::command_type>,
-      "emb::command: the context must accept every command delivered to it "
-      "as `void accept(emb::command::tag<C>, C const&)`");
+      "emb::fsm::command: the context must accept every command delivered to "
+      "it as `void accept(emb::fsm::command::tag<C>, C const&)`");
   static constexpr bool ok =
       diagnose_states<Ch, typename Ctx::state_list, Ctx>::ok;
 };
@@ -164,17 +164,15 @@ struct diagnose_delivery_details<Ch, Ctx, true> {
 template<typename Ch, typename Ctx>
 struct diagnose_delivery {
   static_assert(declares_command<Ch>,
-                "emb::command: a channel must declare the command it carries "
-                "as `using command_type = ...`");
+                "emb::fsm::command: a channel must declare the command it "
+                "carries as `using command_type = ...`");
   static_assert(
       publishes_states<Ctx>,
-      "emb::command: the context must be a state machine that publishes its "
-      "states as `state_list`, an emb::typelist; "
+      "emb::fsm::command: the context must be a state machine that publishes "
+      "its states as `state_list`, an emb::typelist; "
       "emb::fsm::v3::finite_state_machine does");
-  static constexpr bool ok = diagnose_delivery_details<
-      Ch,
-      Ctx,
-      declares_command<Ch> && publishes_states<Ctx>>::ok;
+  static constexpr bool ok = diagnose_delivery_details < Ch, Ctx,
+                        declares_command<Ch>&&publishes_states < Ctx >> ::ok;
 };
 
 template<bool Proceed, typename... Channels>
@@ -186,23 +184,24 @@ template<typename... Channels>
 struct diagnose_commands<true, Channels...> {
   static_assert(
       typelist_unique<typelist<typename Channels::command_type...>>,
-      "emb::command::deliver_all: two channels carry the same command, which "
-      "would reach the sink twice per pass");
+      "emb::fsm::command::deliver_all: two channels carry the same command, "
+      "which would reach the sink twice per pass");
   static constexpr bool ok = true;
 };
 
 template<typename ChannelList, typename Ctx>
 struct diagnose_channels {
   static_assert(always_false<ChannelList>,
-                "emb::command::deliver_all: the channel list must be "
+                "emb::fsm::command::deliver_all: the channel list must be "
                 "emb::typelist<Channels...>");
   static constexpr bool ok = true;
 };
 
 template<typename... Channels, typename Ctx>
 struct diagnose_channels<typelist<Channels...>, Ctx> {
-  static_assert(sizeof...(Channels) > 0,
-                "emb::command::deliver_all: at least one channel is required");
+  static_assert(
+      sizeof...(Channels) > 0,
+      "emb::fsm::command::deliver_all: at least one channel is required");
   static_assert((diagnose_delivery<Channels, Ctx>::ok && ...));
   static constexpr bool ok =
       diagnose_commands<(declares_command<Channels> && ...), Channels...>::ok;
@@ -256,4 +255,4 @@ constexpr void deliver_all(Ctx& ctx)
   }
 }
 
-} // namespace emb::command
+} // namespace emb::fsm::command
