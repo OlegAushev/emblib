@@ -2,6 +2,7 @@
 
 #include <emb/assert.hpp>
 
+#include <functional>
 #include <type_traits>
 #include <utility>
 
@@ -23,19 +24,13 @@ private:
   template<auto F>
   static constexpr R fn_stub(void*, Args... args)
   {
-    return F(std::forward<Args>(args)...);
+    return std::invoke_r<R>(F, std::forward<Args>(args)...);
   }
 
   template<auto M, typename T>
   static constexpr R memfn_stub(void* p, Args... args)
   {
-    return (static_cast<T*>(p)->*M)(std::forward<Args>(args)...);
-  }
-
-  template<auto M, typename T>
-  static constexpr R const_memfn_stub(void* p, Args... args)
-  {
-    return (static_cast<T const*>(p)->*M)(std::forward<Args>(args)...);
+    return std::invoke_r<R>(M, static_cast<T*>(p), std::forward<Args>(args)...);
   }
 
 public:
@@ -62,7 +57,7 @@ public:
   {
     static_assert(std::is_invocable_r_v<R, decltype(M), T const*, Args...>,
                   "emb::delegate: member function not callable as R(Args...)");
-    return {const_cast<T*>(obj), &const_memfn_stub<M, T>};
+    return {const_cast<T*>(obj), &memfn_stub<M, T const>};
   }
 
   template<auto M, typename T>

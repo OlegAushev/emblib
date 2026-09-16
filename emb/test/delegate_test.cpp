@@ -120,6 +120,38 @@ constexpr bool test_comparison()
 
 static_assert(test_comparison());
 
+// a void delegate discards the target's return value
+constexpr bool test_void_return_discarded()
+{
+  foo f(1, 2);
+  auto add_delegate = emb::delegate<void(int)>::bind<&foo::add>(f);
+  add_delegate(3);
+  auto sum_delegate = emb::delegate<void()>::bind<&foo::sum>(f);
+  sum_delegate();
+  auto free_delegate = emb::delegate<void(int, int)>::bind<&add>();
+  free_delegate(1, 2);
+  return true;
+}
+
+static_assert(test_void_return_discarded());
+
+// a free function that takes the bound object as its first argument
+constexpr int scaled_sum(foo const* f, int k)
+{
+  return f->sum() * k;
+}
+
+constexpr bool test_free_function_with_context()
+{
+  foo const f(1, 2);
+  [[maybe_unused]] auto scaled_delegate =
+      emb::delegate<int(int)>::bind<&scaled_sum>(f);
+  assert(scaled_delegate(3) == 9);
+  return true;
+}
+
+static_assert(test_free_function_with_context());
+
 // binding to a temporary must be rejected at compile time
 template<typename T>
 concept bind_accepts = requires(T&& obj) {
