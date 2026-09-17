@@ -29,6 +29,17 @@ template<typename T>
   requires(std::is_trivially_copyable_v<T>
            && std::is_default_constructible_v<T>)
 class triple_buffer {
+private:
+  static constexpr std::uint8_t index_mask = 0b011;
+  static constexpr std::uint8_t fresh_bit = 0b100;
+
+  static_assert(std::atomic<std::uint8_t>::is_always_lock_free,
+                "triple_buffer requires hardware atomics");
+
+  T buf_[3]{};
+  std::atomic<std::uint8_t> shared_{0};
+  std::uint8_t write_ = 1;
+  std::uint8_t read_ = 2;
 public:
   void store(T const& value)
   {
@@ -45,18 +56,6 @@ public:
     }
     return buf_[read_];
   }
-
-private:
-  static constexpr std::uint8_t index_mask = 0b011;
-  static constexpr std::uint8_t fresh_bit = 0b100;
-
-  static_assert(std::atomic<std::uint8_t>::is_always_lock_free,
-                "triple_buffer requires hardware atomics");
-
-  T buf_[3]{};
-  std::atomic<std::uint8_t> shared_{0};
-  std::uint8_t write_ = 1;
-  std::uint8_t read_ = 2;
 };
 
 } // namespace emb
