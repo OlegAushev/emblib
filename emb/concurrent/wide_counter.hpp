@@ -17,8 +17,8 @@ namespace emb {
 // bit 31 and the reader takes the missing step itself. Dropping the release
 // or the acquire, or loading lo_ first, breaks this.
 //
-// Unlike isr_seqlock, a reader may preempt the writer anywhere or run on
-// another core, so load() is safe at any priority, NMI included.
+// Unlike seqlock, a reader may preempt the writer anywhere, so load() is
+// safe at any priority, NMI included.
 // Constraints:
 //   - exactly one context calls increment()
 //   - a reader must not stall between its two loads for 2^31 increments

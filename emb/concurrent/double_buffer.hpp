@@ -16,7 +16,7 @@ namespace emb {
 // a single load(). It holds by construction when the writer cannot preempt
 // the reader: reader in an ISR, writer in main or in a lower-priority ISR.
 // For the other direction, writer in an ISR and reader in main, use
-// triple_buffer or isr_seqlock instead.
+// triple_buffer or local_seqlock instead.
 template<typename T>
   requires(std::is_trivially_copyable_v<T>)
 class double_buffer {
