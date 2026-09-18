@@ -8,7 +8,7 @@
 
 #include <emb/can.hpp>
 #include <emb/can/bus.hpp>
-#include <emb/concurrent/isr_spsc_inplace_queue.hpp>
+#include <emb/concurrent/spsc_queue.hpp>
 #include <emb/delegate.hpp>
 
 #include "detail/emcy_producer.hpp"
@@ -228,7 +228,7 @@ private:
 
   transport& bus_;
 
-  emb::isr_spsc_inplace_queue<frame_t, Opt.rx_queue_capacity> rx_queue_;
+  emb::spsc_queue<frame_t, Opt.rx_queue_capacity> rx_queue_;
 
   detail::nmt_slave<Opt.node_id> nmt_;
   detail::hb_producer<Opt.node_id> hb_producer_;

@@ -10,7 +10,12 @@
 
 namespace emb {
 
-// Lock-free single-producer / single-consumer queue for ISR context.
+// Lock-free single-producer / single-consumer queue of fixed capacity.
+//
+// Either side may be an interrupt handler, the code it preempts or another
+// core: no operation waits for the other side, and the indices pass between
+// the sides with release/acquire (memory_scope::smp; there is no local
+// version).
 //
 // Concurrency contract:
 //   - Producer side (one thread/ISR only): try_push, try_emplace.
@@ -23,7 +28,7 @@ namespace emb {
 // only pushed elements are alive.
 template<typename T, std::size_t Capacity>
   requires(std::has_single_bit(Capacity))
-class isr_spsc_inplace_queue {
+class spsc_queue {
 public:
   using value_type = T;
   using atomic_index_type = std::atomic_unsigned_lock_free;
@@ -59,17 +64,17 @@ private:
   atomic_index_type back_ = 0;
 
 public:
-  isr_spsc_inplace_queue() = default;
-  isr_spsc_inplace_queue(isr_spsc_inplace_queue const&) = delete;
-  isr_spsc_inplace_queue(isr_spsc_inplace_queue&&) = delete;
-  isr_spsc_inplace_queue& operator=(isr_spsc_inplace_queue const&) = delete;
-  isr_spsc_inplace_queue& operator=(isr_spsc_inplace_queue&&) = delete;
+  spsc_queue() = default;
+  spsc_queue(spsc_queue const&) = delete;
+  spsc_queue(spsc_queue&&) = delete;
+  spsc_queue& operator=(spsc_queue const&) = delete;
+  spsc_queue& operator=(spsc_queue&&) = delete;
 
-  ~isr_spsc_inplace_queue()
+  ~spsc_queue()
     requires(std::is_trivially_destructible_v<T>)
   = default;
 
-  ~isr_spsc_inplace_queue()
+  ~spsc_queue()
     requires(!std::is_trivially_destructible_v<T>)
   {
     clear();

@@ -6,7 +6,7 @@
 #include <emb/assert.hpp>
 #include <emb/can.hpp>
 #include <emb/can/bus.hpp>
-#include <emb/concurrent/isr_spsc_inplace_queue.hpp>
+#include <emb/concurrent/spsc_queue.hpp>
 #include <emb/container/inplace_vector.hpp>
 #include <emb/delegate.hpp>
 
@@ -142,7 +142,7 @@ private:
   std::chrono::milliseconds now_{0};
   emb::inplace_vector<rx_slot, Opt.rx_slots> rx_;
   emb::inplace_vector<tx_slot, Opt.tx_slots> tx_;
-  emb::isr_spsc_inplace_queue<frame_t, Opt.rx_queue_capacity> rx_queue_;
+  emb::spsc_queue<frame_t, Opt.rx_queue_capacity> rx_queue_;
 };
 
 } // namespace raw
