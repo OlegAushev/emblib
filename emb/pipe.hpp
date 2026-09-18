@@ -174,6 +174,44 @@ template<typename F, typename... A>
                                                      std::forward<A>(a)...};
 }
 
+// Builds a step at the moment the chain reaches it, from a factory that takes
+// nothing. A step copies its arguments where it is constructed, and for a step
+// written in a chain that point is as unsequenced as with()'s: in
+//
+//   x | store(m) | step(m)
+//
+// step may be handed the value m held before the chain ran, while in
+//
+//   x | store(m) | defer([&] { return step(m); })
+//
+// it is handed the value store() wrote. The factory runs every time the step
+// does.
+//
+// Capture by reference. The factory itself is built where defer() is written,
+// so [=] copies m at that unsequenced point and the step sees the old value
+// again.
+template<typename F>
+class defer_t : public pipeable<defer_t<F>> {
+  F make_;
+public:
+  constexpr explicit defer_t(F make) : make_{std::move(make)} {}
+
+  // by value: the step lives only for this call, a reference into it would not
+  // outlive it
+  constexpr auto operator()(auto&& in) const
+    requires pipeable_for<std::invoke_result_t<F const&>, decltype(in)>
+  {
+    auto const step = make_();
+    return step(decltype(in)(in));
+  }
+};
+
+template<typename F>
+[[nodiscard]] constexpr auto defer(F&& make)
+{
+  return defer_t<std::decay_t<F>>{std::forward<F>(make)};
+}
+
 // --------------------------------------------------------------- side effects
 
 // Looks at what passes and hands it on unchanged.

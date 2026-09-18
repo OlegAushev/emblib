@@ -8,6 +8,7 @@
 // to compile on the strength of the steps alone
 namespace {
 
+using emb::pipe::defer;
 using emb::pipe::fn;
 using emb::pipe::store;
 using emb::pipe::tap;
@@ -31,6 +32,18 @@ struct to_int : emb::pipe::pipeable<to_int> {
   static constexpr int operator()(float x)
   {
     return static_cast<int>(x);
+  }
+};
+
+// a step that copies its argument where it is constructed
+struct offset : emb::pipe::pipeable<offset> {
+  float k;
+
+  constexpr explicit offset(float k_) : k{k_} {}
+
+  constexpr float operator()(float x) const
+  {
+    return x + k;
   }
 };
 
@@ -167,9 +180,66 @@ constexpr bool test_with()
   return true;
 }
 
+// ---- deferred construction -------------------------------------------------
+
+static_assert(emb::pipe::some_pipeable<decltype(defer([] { return twice{}; }))>);
+
+// the factory has to make a step, and one that takes what the chain carries
+static_assert(
+    emb::pipe::pipeable_for<decltype(defer([] { return twice{}; })), float>);
+static_assert(
+    !emb::pipe::pipeable_for<decltype(defer([] { return plain{}; })), float>);
+static_assert(
+    !emb::pipe::pipeable_for<decltype(defer([] { return to_int{}; })),
+                             char const*>);
+
+constexpr bool test_defer()
+{
+  // a step built where it is written keeps what it was given then; a deferred
+  // one is built when it runs
+  {
+    float k = 2.f;
+    [[maybe_unused]] auto const early = offset{k};
+    [[maybe_unused]] auto const late = defer([&] { return offset{k}; });
+    k = 10.f;
+    assert((1.f | early) == 3.f);
+    assert((1.f | late) == 11.f);
+  }
+
+  // in a chain: the step sees what an earlier step stored
+  {
+    [[maybe_unused]] float m = 0.f;
+    [[maybe_unused]] float const out = 3.f
+                    | twice{}
+                    | store(m)
+                    | defer([&] { return offset{m}; });
+    assert(m == 6.f);
+    assert(out == 12.f);
+  }
+
+  // the factory runs every time the step does
+  {
+    [[maybe_unused]] int made = 0;
+    [[maybe_unused]] auto const step = defer([&] {
+      ++made;
+      return twice{};
+    });
+    assert((1.f | step) == 2.f);
+    assert((2.f | step) == 4.f);
+    assert(made == 2);
+  }
+
+  // what the factory makes may be a pipeline, and the result composes
+  assert((1.f | defer([] { return twice{} | add_one{}; })) == 3.f);
+  assert((1.f | (add_one{} | defer([] { return twice{}; }) | to_int{})) == 4);
+
+  return true;
+}
+
 static_assert(test_composition());
 static_assert(test_fn());
 static_assert(test_store_and_tap());
 static_assert(test_with());
+static_assert(test_defer());
 
 } // namespace
