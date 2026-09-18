@@ -10,4 +10,3 @@
 #include <emb/foc/to_polar.hpp>
 #include <emb/foc/types.hpp>
 #include <emb/foc/utility.hpp>
-#include <emb/pipe.hpp>

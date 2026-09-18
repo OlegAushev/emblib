@@ -2,21 +2,16 @@
 
 #include <emb/foc/types.hpp>
 #include <emb/math.hpp>
-#include <emb/pipe.hpp>
 
 namespace emb {
 namespace foc {
 
-struct to_polar_fn : pipe::pipeable<to_polar_fn> {
-  template<typename Q>
-  static constexpr vec_polar<Q> operator()(vec_ab<Q> arg)
-  {
-    return {.mag = emb::sqrt(arg.alpha * arg.alpha + arg.beta * arg.beta),
-            .theta = emb::atan2(arg.beta, arg.alpha)};
-  }
-};
-
-inline constexpr to_polar_fn to_polar{};
+template<typename Q>
+constexpr vec_polar<Q> to_polar(vec_ab<Q> arg)
+{
+  return {.mag = emb::sqrt(arg.alpha * arg.alpha + arg.beta * arg.beta),
+          .theta = emb::atan2(arg.beta, arg.alpha)};
+}
 
 } // namespace foc
 } // namespace emb
