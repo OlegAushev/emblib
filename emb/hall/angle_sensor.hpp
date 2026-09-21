@@ -4,6 +4,7 @@
 #include <emb/filter/exponential_median_filter.hpp>
 #include <emb/gpio.hpp>
 #include <emb/hall/calibration.hpp>
+#include <emb/hall/error.hpp>
 #include <emb/hall/sector.hpp>
 #include <emb/units.hpp>
 
@@ -15,12 +16,6 @@
 #include <optional>
 
 namespace emb::hall {
-
-enum class error : std::uint8_t {
-  invalid_config,      // the settings do not describe a usable sensor
-  invalid_calibration, // the measured angles do not describe a usable machine
-  invalid_input,       // the inputs read a code no sector owns
-};
 
 template<typename T>
 concept some_timebase = requires(T const t) {
@@ -40,19 +35,14 @@ concept some_capture_timer = requires(T const t) {
 struct angle_sensor_config {
   emb::units::sec_f32 speed_timeconstant;
   calibration_result cal_result;
-
-  constexpr bool valid() const
-  {
-    return speed_timeconstant.value() > 0 && cal_result.valid();
-  }
 };
 
 constexpr std::expected<void, error> validate(angle_sensor_config const& conf)
 {
-  if (!conf.cal_result.valid()) {
-    return std::unexpected(error::invalid_calibration);
+  if (auto const calibration = validate(conf.cal_result); !calibration) {
+    return calibration;
   }
-  if (!conf.valid()) {
+  if (conf.speed_timeconstant.value() <= 0) {
     return std::unexpected(error::invalid_config);
   }
   return {};
@@ -186,8 +176,8 @@ public:
   [[nodiscard]] std::expected<void, error>
   apply_calibration(calibration_result const& data)
   {
-    if (!data.valid()) {
-      return std::unexpected(error::invalid_calibration);
+    if (auto const checked = validate(data); !checked) {
+      return checked;
     }
     conf_.cal_result = data;
     geometry_ = make_geometry(data);
