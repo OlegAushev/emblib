@@ -37,6 +37,10 @@ constexpr bool test_math()
   assert(near(emb::norm2pi(0.0f), 0.0f));
   assert(near(emb::norm2pi(two_pi + 1.0f), 1.0f));
   assert(near(emb::norm2pi(-1.0f), two_pi - 1.0f));
+  // a tiny negative input must not round onto the upper bound
+  assert(emb::norm2pi(-1e-8f) == 0.0f);
+  assert(emb::norm2pi(-2e-7f) < two_pi);
+  assert(emb::norm2pi(-two_pi) == 0.0f);
 
   // rempi
   assert(near(emb::normpi(0.0f), 0.0f));

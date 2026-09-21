@@ -285,13 +285,18 @@ constexpr T to_rpm(T w, P p)
   return w * (T{60} / (2 * std::numbers::pi_v<T>)) / static_cast<T>(p);
 }
 
+// Normalizes `x` into [0, 2pi).
 template<std::floating_point T>
 constexpr T norm2pi(T x)
 {
   constexpr T two_pi = 2 * std::numbers::pi_v<T>;
   x = emb::fmod(x, two_pi);
-  if (x < 0) {
+  if (x <= 0) { // `fmod` returns -0 for the multiples of 2pi
     x += two_pi;
+    if (x >= two_pi) {
+      // |x| was below half an ulp of 2pi, so the sum rounded onto the bound.
+      x = T{0};
+    }
   }
   return x;
 }
