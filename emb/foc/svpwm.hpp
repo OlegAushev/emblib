@@ -15,17 +15,20 @@ inline three_phase<emb::unsigned_pu_f32> calculate_svpwm(voltage_polar v_s,
                                                          float v_dc)
 {
   v_s.theta = norm2pi(v_s.theta);
-  v_s.mag = std::clamp<float>(v_s.mag, 0, v_dc / std::numbers::sqrt3_v<float>);
+  v_s.mag = std::clamp<float>(
+      v_s.mag, 0, v_dc * std::numbers::inv_sqrt3_v<float>);
 
-  std::int32_t const sector = static_cast<std::int32_t>(
-      v_s.theta / (std::numbers::pi_v<float> / 3.0f));
-  float const theta = v_s.theta
-                    - float(sector) * (std::numbers::pi_v<float> / 3.0f);
+  constexpr float pi_over_3 = std::numbers::pi_v<float> / 3.0f;
+  constexpr float inv_pi_over_3 = 1.0f / pi_over_3;
+
+  std::int32_t const sector =
+      static_cast<std::int32_t>(v_s.theta * inv_pi_over_3);
+  float const theta = v_s.theta - float(sector) * pi_over_3;
 
   // base vector times calculation
   float const tb1 = std::numbers::sqrt3_v<float>
                   * (v_s.mag / v_dc)
-                  * emb::sin((std::numbers::pi_v<float> / 3.0f) - theta);
+                  * emb::sin(pi_over_3 - theta);
   float const tb2 = std::numbers::sqrt3_v<float>
                   * (v_s.mag / v_dc)
                   * emb::sin(theta);

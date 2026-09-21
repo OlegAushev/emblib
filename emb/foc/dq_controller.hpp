@@ -51,7 +51,7 @@ public:
                       voltage_dq const& Vcomp,
                       float Vdc)
   {
-    float const Vdc_over_sqrt3 = Vdc / std::numbers::sqrt3_v<float>;
+    float const Vdc_over_sqrt3 = Vdc * std::numbers::inv_sqrt3_v<float>;
 
     // D-axis controller
     float const Vd_avail = Vdc_over_sqrt3 * Vd_limit_factor_.value();
