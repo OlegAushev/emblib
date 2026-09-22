@@ -14,8 +14,8 @@ class exponential_median_filter {
 public:
   using value_type = T;
   using duration_type = Duration;
-  using factor_type = decltype(std::declval<Duration>()
-                               / std::declval<Duration>());
+  using factor_type =
+      decltype(std::declval<Duration>() / std::declval<Duration>());
   static constexpr std::size_t window_size = WindowSize;
 private:
   emb::circular_buffer<value_type, window_size> window_;

@@ -251,8 +251,8 @@ public:
   {
     value_type error = Policy::template error<value_type>(ref, meas);
     value_type out_p = error * kp_;
-    value_type out_i = (error + error_) * value_type(0.5) * ki_ * ts_.value()
-                     + out_i_;
+    value_type out_i =
+        (error + error_) * value_type(0.5) * ki_ * ts_.value() + out_i_;
     error_ = error;
     value_type out = out_p + out_i;
 

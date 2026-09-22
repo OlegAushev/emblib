@@ -44,9 +44,8 @@ static_assert(!std::is_same_v<tag<"a">, tag<"b">>);
 
 // -- Concatenation --
 
-static_assert(
-    std::is_same_v<decltype(fixed_string{"ab"} + fixed_string{"cd"}),
-                   fixed_string<5>>);
+static_assert(std::is_same_v<decltype(fixed_string{"ab"} + fixed_string{"cd"}),
+                             fixed_string<5>>);
 
 static_assert((fixed_string{"ab"} + fixed_string{"cd"}).size() == 4);
 static_assert((fixed_string{"ab"} + fixed_string{"cd"}).view() == "abcd");
@@ -58,9 +57,8 @@ static_assert((fixed_string{"ab"} + fixed_string{""}).view() == "ab");
 // The terminating NUL survives concatenation.
 static_assert(std::string_view{(fixed_string{"ab"} + "cd").data()} == "abcd");
 
-static_assert(
-    ("unknown parameter '" + fixed_string{"motor.p"} + "'").view()
-    == "unknown parameter 'motor.p'");
+static_assert(("unknown parameter '" + fixed_string{"motor.p"} + "'").view()
+              == "unknown parameter 'motor.p'");
 
 // -- Use as a static_assert message --
 

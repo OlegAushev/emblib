@@ -69,10 +69,10 @@ class store {
   static constexpr std::size_t count = schema_t<Schema>::count;
   static constexpr std::size_t record_bytes = record_size(count);
   static constexpr std::size_t body_bytes = record_body_size(count);
-  static constexpr std::size_t block_bytes = Section.slots_per_block
-                                           * Section.slot_capacity;
-  static constexpr std::size_t block_count = Section.slot_count
-                                           / Section.slots_per_block;
+  static constexpr std::size_t block_bytes =
+      Section.slots_per_block * Section.slot_capacity;
+  static constexpr std::size_t block_count =
+      Section.slot_count / Section.slots_per_block;
 
   static_assert(Section.slot_count >= 2,
                 "a store needs a second slot: a save must never be the only "
@@ -203,13 +203,13 @@ public:
       }
     }
 
-    auto const body = storage_.write(address_of(slot),
-                                     record.first(body_bytes));
+    auto const body =
+        storage_.write(address_of(slot), record.first(body_bytes));
     if (!body) return fail(save_stage::body, body.error());
 
-    auto const footer = storage_.write(
-        address_of(slot, body_bytes),
-        record.subspan(body_bytes, record_footer_size));
+    auto const footer =
+        storage_.write(address_of(slot, body_bytes),
+                       record.subspan(body_bytes, record_footer_size));
     if (!footer) return fail(save_stage::commit, footer.error());
 
     if (auto const back = storage_.read(address_of(slot), record); !back) {
@@ -388,7 +388,8 @@ private:
   {
     if constexpr (!Storage::needs_erase) {
       return next_slot_;
-    } else {
+    }
+    else {
       if (next_slot_ % Section.slots_per_block == 0) return next_slot_;
       if (slot_is_erased(next_slot_)) return next_slot_;
 

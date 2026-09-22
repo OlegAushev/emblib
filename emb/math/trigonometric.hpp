@@ -165,11 +165,10 @@ constexpr float lookup_sin(float x)
   float cost = detail::sincos_lookup_table[128 - zf];
 
   float zz = z * z;
-  float ss = z
-           * (0.012271846303085128928f
-              + zz
-                    * (-3.0801968454884792651e-7f
-                       + 2.3193461291439683491e-12f * zz));
+  float ss =
+      z
+      * (0.012271846303085128928f
+         + zz * (-3.0801968454884792651e-7f + 2.3193461291439683491e-12f * zz));
   float cc = 1.0f
            - zz
                  * (0.000075299105843272081f

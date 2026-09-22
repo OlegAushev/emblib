@@ -40,18 +40,27 @@ static_assert(!some_parameter_type<value>);
 struct wraps_a_double {
   using value_type = double;
   constexpr explicit wraps_a_double(double) {}
-  constexpr double value() const { return 0.0; }
+  constexpr double value() const
+  {
+    return 0.0;
+  }
 };
 
 struct not_reconstructible {
   using value_type = float;
-  constexpr float value() const { return 0.0f; }
+  constexpr float value() const
+  {
+    return 0.0f;
+  }
 };
 
 struct value_type_disagrees {
   using value_type = float;
   constexpr explicit value_type_disagrees(float) {}
-  constexpr double value() const { return 0.0; }
+  constexpr double value() const
+  {
+    return 0.0;
+  }
 };
 
 static_assert(!some_parameter_type<wraps_a_double>);

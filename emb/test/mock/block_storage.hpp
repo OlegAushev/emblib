@@ -72,8 +72,7 @@ public:
     return {};
   }
 
-  constexpr auto write(addr_type addr, std::span<std::byte const> src)
-      -> result
+  constexpr auto write(addr_type addr, std::span<std::byte const> src) -> result
   {
     ++write_calls;
     if (!in_range(addr, src.size())) {

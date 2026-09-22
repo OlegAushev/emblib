@@ -130,8 +130,7 @@ constexpr bool test_stateful_stage()
 {
   // a stage with run-time state is handed in as a value; the rest of the
   // path is still default-constructed alongside it
-  path<zero_trim, bind<transducer>> const trimmed{zero_trim{amp_f32{2.5f}},
-                                                  {}};
+  path<zero_trim, bind<transducer>> const trimmed{zero_trim{amp_f32{2.5f}}, {}};
 
   assert(emb::approx(trimmed.forward(amp_f32{0.f}),
                      transducer.forward(amp_f32{2.5f}),
@@ -153,8 +152,11 @@ constexpr bool test_single_stage()
 {
   constexpr path<bind<transducer>> bare;
 
-  assert(emb::approx(bare.forward(amp_f32{600.f}), volt_f32{4.f}, volt_f32{1e-4f}));
-  assert(emb::approx(bare.inverse(volt_f32{4.f}), amp_f32{600.f}, amp_f32{1e-2f}));
+  assert(emb::approx(bare.forward(amp_f32{600.f}),
+                     volt_f32{4.f},
+                     volt_f32{1e-4f}));
+  assert(
+      emb::approx(bare.inverse(volt_f32{4.f}), amp_f32{600.f}, amp_f32{1e-2f}));
 
   return true;
 }

@@ -15,28 +15,28 @@ using emb::test::storage_fault;
 
 inline constexpr std::uint32_t magic = 0x4746434Fu; // "OCFG"
 
-inline constexpr auto schema = make_schema(
-    param("motor.p",
-          std::int32_t{11},
-          {.min = std::int32_t{1}, .max = std::int32_t{64}}),
-    param("motor.R", 0.0014f, {.min = 0.0f, .max = 1.0f}),
-    param("drive.phase_swap", false),
-    param("drive.runout_speed",
-          rpm{100.0f},
-          {.min = rpm{0.0f}, .max = rpm{5000.0f}}));
+inline constexpr auto schema =
+    make_schema(param("motor.p",
+                      std::int32_t{11},
+                      {.min = std::int32_t{1}, .max = std::int32_t{64}}),
+                param("motor.R", 0.0014f, {.min = 0.0f, .max = 1.0f}),
+                param("drive.phase_swap", false),
+                param("drive.runout_speed",
+                      rpm{100.0f},
+                      {.min = rpm{0.0f}, .max = rpm{5000.0f}}));
 
 // A later firmware, two parameters richer.
-inline constexpr auto next_schema = make_schema(
-    param("motor.p",
-          std::int32_t{11},
-          {.min = std::int32_t{1}, .max = std::int32_t{64}}),
-    param("motor.R", 0.0014f, {.min = 0.0f, .max = 1.0f}),
-    param("drive.phase_swap", false),
-    param("drive.runout_speed",
-          rpm{100.0f},
-          {.min = rpm{0.0f}, .max = rpm{5000.0f}}),
-    param("hall.enabled", true),
-    param("hall.poll_num", std::int32_t{4}));
+inline constexpr auto next_schema =
+    make_schema(param("motor.p",
+                      std::int32_t{11},
+                      {.min = std::int32_t{1}, .max = std::int32_t{64}}),
+                param("motor.R", 0.0014f, {.min = 0.0f, .max = 1.0f}),
+                param("drive.phase_swap", false),
+                param("drive.runout_speed",
+                      rpm{100.0f},
+                      {.min = rpm{0.0f}, .max = rpm{5000.0f}}),
+                param("hall.enabled", true),
+                param("hall.poll_num", std::int32_t{4}));
 
 // FRAM: byte writes, no erase, two slots.
 using fram = test::block_storage<512>;
@@ -115,9 +115,9 @@ consteval bool test_slots_alternate()
   fram_store store{memory};
   image<schema> values;
 
-  if (!store.save(values)) return false;              // slot 0, seq 1
+  if (!store.save(values)) return false; // slot 0, seq 1
   if (!values.set<"motor.p">(std::int32_t{5})) return false;
-  if (!store.save(values)) return false;              // slot 1, seq 2
+  if (!store.save(values)) return false; // slot 1, seq 2
   if (store.next_slot() != 0) return false;
 
   fram_store restarted{memory};
@@ -203,10 +203,10 @@ consteval bool test_a_second_tear_after_a_restart()
 
   {
     fram_store store{memory};
-    if (!store.save(values)) return false;                    // slot 0, seq 1
+    if (!store.save(values)) return false; // slot 0, seq 1
     if (!values.set<"motor.p">(std::int32_t{5})) return false;
     memory.set_power_budget(record_body_size(schema.count));
-    if (store.save(values)) return false;                     // slot 1: torn
+    if (store.save(values)) return false; // slot 1: torn
   }
   memory.set_power_budget(fram::unlimited);
 
@@ -220,7 +220,7 @@ consteval bool test_a_second_tear_after_a_restart()
 
     if (!restored.set<"motor.p">(std::int32_t{6})) return false;
     memory.set_power_budget(record_body_size(schema.count));
-    if (store.save(restored)) return false;                   // torn again
+    if (store.save(restored)) return false; // torn again
   }
   memory.set_power_budget(fram::unlimited);
 
@@ -239,9 +239,9 @@ consteval bool test_a_corrupted_record_falls_back_to_the_previous_one()
   image<schema> values;
   fram_store store{memory};
 
-  if (!store.save(values)) return false;               // slot 0, seq 1
+  if (!store.save(values)) return false; // slot 0, seq 1
   if (!values.set<"motor.p">(std::int32_t{5})) return false;
-  if (!store.save(values)) return false;               // slot 1, seq 2
+  if (!store.save(values)) return false; // slot 1, seq 2
 
   // A bit rots in the newest record.
   memory.bytes()[fram_section.slot_capacity + record_header_size + 2] ^=
@@ -286,15 +286,15 @@ consteval bool test_a_save_that_landed_but_could_not_be_read_back()
   image<schema> values;
   fram_store store{memory};
 
-  if (!store.save(values)) return false;                     // slot 0, seq 1
+  if (!store.save(values)) return false; // slot 0, seq 1
   if (!values.set<"motor.p">(std::int32_t{2})) return false;
-  if (!store.save(values)) return false;                     // slot 1, seq 2
+  if (!store.save(values)) return false; // slot 1, seq 2
 
   // The record lands, but the read-back cannot be performed: the medium
   // holds a third generation the store does not know about.
   if (!values.set<"motor.p">(std::int32_t{3})) return false;
   memory.set_read_fault(true);
-  auto const unverified = store.save(values);                // slot 0, seq 3
+  auto const unverified = store.save(values); // slot 0, seq 3
   memory.set_read_fault(false);
 
   if (unverified) return false;
@@ -307,7 +307,7 @@ consteval bool test_a_save_that_landed_but_could_not_be_read_back()
   // one generation are ordered by slot, not by age, and this one would be
   // shadowed by the record above it.
   if (!values.set<"motor.p">(std::int32_t{4})) return false;
-  if (!store.save(values)) return false;                     // slot 1, seq 4
+  if (!store.save(values)) return false; // slot 1, seq 4
 
   fram_store restarted{memory};
   image<schema> restored;
@@ -392,7 +392,7 @@ consteval bool test_a_restart_onto_the_debris_of_a_torn_save()
 
   {
     flash_store store{memory};
-    if (!store.save(values)) return false;   // slot 0, erasing its block
+    if (!store.save(values)) return false; // slot 0, erasing its block
     if (!values.set<"motor.p">(std::int32_t{2})) return false;
 
     // The body of the next record lands in slot 1; the footer does not.
@@ -440,7 +440,7 @@ consteval bool test_a_restart_onto_debris_with_no_header()
 
   {
     flash_store store{memory};
-    if (!store.save(values)) return false;   // slot 0, erasing its block
+    if (!store.save(values)) return false; // slot 0, erasing its block
     if (!values.set<"motor.p">(std::int32_t{2})) return false;
 
     // Four bytes into slot 1: the magic landed, nothing after it did.
@@ -490,7 +490,7 @@ consteval bool test_a_hole_between_the_record_and_the_debris()
   {
     deep_store store{memory};
     if (!values.set<"motor.p">(std::int32_t{1})) return false;
-    if (!store.save(values)) return false;              // slot 0, seq 1
+    if (!store.save(values)) return false; // slot 0, seq 1
 
     // A save the medium refuses before taking a byte. Slot 1 stays erased,
     // and the position moves past it all the same.
@@ -521,14 +521,14 @@ consteval bool test_a_hole_between_the_record_and_the_debris()
   // The hole takes this save: the slot ahead is erased, and nothing is in
   // the way of writing into it.
   if (!restored.set<"motor.p">(std::int32_t{2})) return false;
-  if (!store.save(restored)) return false;              // slot 1, seq 4
+  if (!store.save(restored)) return false; // slot 1, seq 4
   if (store.next_slot() != 2) return false;
   if (memory.erase_calls != 1) return false;
 
   // The save after it must not walk into the debris. The rest of the block
   // is abandoned instead, and the block taken is erased on entry.
   if (!restored.set<"motor.p">(std::int32_t{3})) return false;
-  if (!store.save(restored)) return false;              // slot 4, seq 5
+  if (!store.save(restored)) return false; // slot 4, seq 5
   if (store.next_slot() != 5) return false;
   if (memory.erase_calls != 2) return false;
 
@@ -650,7 +650,7 @@ consteval bool test_a_torn_save_after_an_erase_that_failed()
 
     memory.set_power_budget(0);
     if (!values.set<"motor.p">(std::int32_t{5})) return false;
-    if (store.save(values)) return false;                    // erase refused
+    if (store.save(values)) return false; // erase refused
 
     memory.set_power_budget(1);
     if (!values.set<"motor.p">(std::int32_t{6})) return false;
@@ -746,7 +746,8 @@ consteval bool test_a_run_of_corrupt_records_costs_one_pass()
   // so the search has to reach past all five.
   for (auto slot = 5uz; slot <= 9uz; ++slot) {
     auto const crc = (slot * wide_section.slot_capacity)
-                   + record_size(schema_t<schema>::count) - 1;
+                   + record_size(schema_t<schema>::count)
+                   - 1;
     memory.bytes()[crc] ^= std::byte{0xFF};
   }
 
@@ -798,8 +799,8 @@ consteval bool test_saving_before_loading_keeps_the_sequence()
 
   {
     fram_store store{memory};
-    if (!store.save(values)) return false;   // slot 0, seq 1
-    if (!store.save(values)) return false;   // slot 1, seq 2
+    if (!store.save(values)) return false; // slot 0, seq 1
+    if (!store.save(values)) return false; // slot 1, seq 2
   }
 
   // A restart that saves without loading first. Counting from one again

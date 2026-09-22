@@ -211,9 +211,9 @@ constexpr Int saturate_round(Float x)
 {
   static_assert(sizeof(Int) < sizeof(long long) || std::is_signed_v<Int>,
                 "u64 upper range is unreachable via llround");
-  constexpr bool fits_long = sizeof(Int) < sizeof(long)
-                          || (sizeof(Int) == sizeof(long)
-                              && std::is_signed_v<Int>);
+  constexpr bool fits_long =
+      sizeof(Int) < sizeof(long)
+      || (sizeof(Int) == sizeof(long) && std::is_signed_v<Int>);
   using Wide = std::conditional_t<fits_long, long, long long>;
 
   assert(!std::isnan(x));
@@ -241,8 +241,8 @@ template<std::integral Int, typename Step, std::floating_point Float>
 constexpr Int quantize(Float x)
 {
   static_assert(Step::num > 0, "Step must be a positive ratio");
-  constexpr Float scale = static_cast<Float>(Step::den)
-                        / static_cast<Float>(Step::num);
+  constexpr Float scale =
+      static_cast<Float>(Step::den) / static_cast<Float>(Step::num);
   return saturate_round<Int>(x * scale);
 }
 
@@ -255,8 +255,8 @@ template<typename Step, std::floating_point Float = float, std::integral Int>
 constexpr Float dequantize(Int n)
 {
   static_assert(Step::num > 0, "Step must be a positive ratio");
-  constexpr Float step = static_cast<Float>(Step::num)
-                       / static_cast<Float>(Step::den);
+  constexpr Float step =
+      static_cast<Float>(Step::num) / static_cast<Float>(Step::den);
   return static_cast<Float>(n) * step;
 }
 

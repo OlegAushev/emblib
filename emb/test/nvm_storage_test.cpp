@@ -31,8 +31,7 @@ struct no_erase {
   static constexpr std::byte erased_value{0xFF};
 
   auto read(addr_type, std::span<std::byte>) -> std::expected<void, int>;
-  auto write(addr_type, std::span<std::byte const>)
-      -> std::expected<void, int>;
+  auto write(addr_type, std::span<std::byte const>) -> std::expected<void, int>;
 };
 
 struct no_error_type {
@@ -43,8 +42,7 @@ struct no_error_type {
   static constexpr std::byte erased_value{0xFF};
 
   auto read(addr_type, std::span<std::byte>) -> std::expected<void, int>;
-  auto write(addr_type, std::span<std::byte const>)
-      -> std::expected<void, int>;
+  auto write(addr_type, std::span<std::byte const>) -> std::expected<void, int>;
   auto erase(addr_type, std::size_t) -> std::expected<void, int>;
 };
 
@@ -72,8 +70,7 @@ struct untyped_erased_value {
   static constexpr int erased_value = 0xFF;
 
   auto read(addr_type, std::span<std::byte>) -> std::expected<void, int>;
-  auto write(addr_type, std::span<std::byte const>)
-      -> std::expected<void, int>;
+  auto write(addr_type, std::span<std::byte const>) -> std::expected<void, int>;
   auto erase(addr_type, std::size_t) -> std::expected<void, int>;
 };
 
@@ -124,8 +121,7 @@ consteval bool test_erase_wipes_a_memory_without_an_erased_state()
 consteval bool test_write_needs_an_erased_target()
 {
   flash_storage s;
-  std::array const word{std::byte{1}, std::byte{2}, std::byte{3},
-                        std::byte{4}};
+  std::array const word{std::byte{1}, std::byte{2}, std::byte{3}, std::byte{4}};
 
   if (!s.write(0, word)) return false;
 
@@ -142,8 +138,7 @@ consteval bool test_write_needs_an_erased_target()
 consteval bool test_alignment()
 {
   flash_storage s;
-  std::array const word{std::byte{1}, std::byte{2}, std::byte{3},
-                        std::byte{4}};
+  std::array const word{std::byte{1}, std::byte{2}, std::byte{3}, std::byte{4}};
   std::array const partial{std::byte{1}, std::byte{2}, std::byte{3}};
 
   auto const off_address = s.write(1, word);
@@ -172,9 +167,14 @@ consteval bool test_alignment()
 consteval bool test_power_loss_leaves_the_written_prefix()
 {
   flash_storage s;
-  std::array const data{std::byte{1}, std::byte{2}, std::byte{3},
-                        std::byte{4}, std::byte{5}, std::byte{6},
-                        std::byte{7}, std::byte{8}};
+  std::array const data{std::byte{1},
+                        std::byte{2},
+                        std::byte{3},
+                        std::byte{4},
+                        std::byte{5},
+                        std::byte{6},
+                        std::byte{7},
+                        std::byte{8}};
 
   s.set_power_budget(4);
 

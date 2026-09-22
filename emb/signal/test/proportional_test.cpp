@@ -18,9 +18,8 @@ constexpr bool test_proportional()
   assert(emb::approx(volts.forward(amp_f32{-600.f}),
                      volt_f32{-4.f},
                      volt_f32{1e-4f}));
-  assert(emb::approx(volts.forward(amp_f32{0.f}),
-                     volt_f32{0.f},
-                     volt_f32{1e-4f}));
+  assert(
+      emb::approx(volts.forward(amp_f32{0.f}), volt_f32{0.f}, volt_f32{1e-4f}));
   assert(emb::approx(volts.inverse(volt_f32{2.f}),
                      amp_f32{300.f},
                      amp_f32{1e-2f}));
@@ -37,9 +36,8 @@ constexpr bool test_proportional()
   // secondary carries a fixed fraction of the primary
   [[maybe_unused]] proportional const amps{amp_f32{500.f}, amp_f32{0.1f}};
 
-  assert(emb::approx(amps.forward(amp_f32{500.f}),
-                     amp_f32{0.1f},
-                     amp_f32{1e-6f}));
+  assert(
+      emb::approx(amps.forward(amp_f32{500.f}), amp_f32{0.1f}, amp_f32{1e-6f}));
   assert(emb::approx(amps.forward(amp_f32{-250.f}),
                      amp_f32{-0.05f},
                      amp_f32{1e-6f}));

@@ -14,36 +14,36 @@ using pu = unsigned_pu_f32;
 
 enum class group : std::uint8_t { drive, model };
 
-inline constexpr auto schema = make_schema(
-    param("drive.phase_swap", false, {.group = group::drive}),
-    param("drive.runout_speed",
-          rpm{100.0f},
-          {.min = rpm{0.0f},
-           .max = rpm{5000.0f},
-           .group = group::drive,
-           .apply = apply_policy::live}),
-    param("motor.p",
-          std::int32_t{11},
-          {.min = std::int32_t{1},
-           .max = std::int32_t{64},
-           .group = group::model}),
-    // A clamped brings its own bounds: nothing to spell out.
-    param("drive.stopping_torque",
-          pu{0.05f},
-          {.group = group::drive, .apply = apply_policy::live}),
-    param("prot.watchdog_timeout",
-          std::uint32_t{1000},
-          {.max = std::uint32_t{60000},
-           .group = group::drive,
-           .writable = false,
-           .expose = false}));
+inline constexpr auto schema =
+    make_schema(param("drive.phase_swap", false, {.group = group::drive}),
+                param("drive.runout_speed",
+                      rpm{100.0f},
+                      {.min = rpm{0.0f},
+                       .max = rpm{5000.0f},
+                       .group = group::drive,
+                       .apply = apply_policy::live}),
+                param("motor.p",
+                      std::int32_t{11},
+                      {.min = std::int32_t{1},
+                       .max = std::int32_t{64},
+                       .group = group::model}),
+                // A clamped brings its own bounds: nothing to spell out.
+                param("drive.stopping_torque",
+                      pu{0.05f},
+                      {.group = group::drive, .apply = apply_policy::live}),
+                param("prot.watchdog_timeout",
+                      std::uint32_t{1000},
+                      {.max = std::uint32_t{60000},
+                       .group = group::drive,
+                       .writable = false,
+                       .expose = false}));
 
 // -- Shape --
 
 static_assert(schema.count == 5);
-static_assert(std::same_as<schema_t<schema>::types,
-                           typelist<bool, rpm, std::int32_t, pu,
-                                    std::uint32_t>>);
+static_assert(
+    std::same_as<schema_t<schema>::types,
+                 typelist<bool, rpm, std::int32_t, pu, std::uint32_t>>);
 
 // -- Lookup by name --
 

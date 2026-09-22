@@ -13,24 +13,24 @@ using rpm = units::rpm_f32;
 
 inline constexpr std::uint32_t magic = 0x53544553u; // "SETS"
 
-inline constexpr auto schema = make_schema(
-    param("motor.p",
-          std::int32_t{11},
-          {.min = std::int32_t{1}, .max = std::int32_t{64}}),
-    param("motor.R", 0.0014f, {.min = 0.0f, .max = 1.0f}),
-    param("drive.phase_swap", false),
-    param("drive.runout_speed",
-          rpm{100.0f},
-          {.min = rpm{0.0f}, .max = rpm{5000.0f}}));
+inline constexpr auto schema =
+    make_schema(param("motor.p",
+                      std::int32_t{11},
+                      {.min = std::int32_t{1}, .max = std::int32_t{64}}),
+                param("motor.R", 0.0014f, {.min = 0.0f, .max = 1.0f}),
+                param("drive.phase_swap", false),
+                param("drive.runout_speed",
+                      rpm{100.0f},
+                      {.min = rpm{0.0f}, .max = rpm{5000.0f}}));
 
 // A later firmware: one parameter added, one retyped, one dropped.
-inline constexpr auto next_schema = make_schema(
-    param("motor.p",
-          std::int32_t{11},
-          {.min = std::int32_t{1}, .max = std::int32_t{64}}),
-    param("motor.R", 0.0014f, {.min = 0.0f, .max = 1.0f}),
-    param("drive.phase_swap", std::int32_t{0}),
-    param("hall.enabled", true));
+inline constexpr auto next_schema =
+    make_schema(param("motor.p",
+                      std::int32_t{11},
+                      {.min = std::int32_t{1}, .max = std::int32_t{64}}),
+                param("motor.R", 0.0014f, {.min = 0.0f, .max = 1.0f}),
+                param("drive.phase_swap", std::int32_t{0}),
+                param("hall.enabled", true));
 
 using record_buffer = std::array<std::byte, record_size(schema.count)>;
 
@@ -203,8 +203,8 @@ consteval bool test_a_value_outside_todays_range_is_refused()
   // Stand in for a record written when the range was wider: patch the cell
   // and re-stamp the crc, so the record is whole but the value is not one
   // this firmware accepts.
-  constexpr auto at = record_header_size
-                    + (*schema.index_of("motor.p") * record_cell_size);
+  constexpr auto at =
+      record_header_size + (*schema.index_of("motor.p") * record_cell_size);
   // Qualified: emb::detail and emb::settings::detail are both in scope
   // through the using-directives above.
   namespace bytes = settings::detail;

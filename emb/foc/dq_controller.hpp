@@ -62,8 +62,8 @@ public:
 
     // Q-axis controller
     if (std::fabs(Vd) < Vdc_over_sqrt3) {
-      float const Vq_avail = emb::sqrt(Vdc_over_sqrt3 * Vdc_over_sqrt3
-                                       - Vd * Vd);
+      float const Vq_avail =
+          emb::sqrt(Vdc_over_sqrt3 * Vdc_over_sqrt3 - Vd * Vd);
       q_.set_lower_limit(-Vq_avail - Vcomp.q);
       q_.set_upper_limit(Vq_avail - Vcomp.q);
     }

@@ -129,14 +129,14 @@ constexpr bool test_store_and_tap()
   [[maybe_unused]] float kept = 0.f;
 
   [[maybe_unused]] float const out = 3.f
-                  | twice{}
-                  | store(kept)
-                  | tap([&](float x) { seen = x + 1.f; })
-                  | add_one{};
+                                   | twice{}
+                                   | store(kept)
+                                   | tap([&](float x) { seen = x + 1.f; })
+                                   | add_one{};
 
   assert(out == 7.f);
-  assert(kept == 6.f);  // what passed, unchanged
-  assert(seen == 7.f);  // the observer saw the same value
+  assert(kept == 6.f); // what passed, unchanged
+  assert(seen == 7.f); // the observer saw the same value
 
   // store writes wherever the value is assignable, not only to its own type
   [[maybe_unused]] double wide = 0.;
@@ -172,26 +172,26 @@ constexpr bool test_with()
   }
 
   // more than one bound argument, in the order written
-  assert((1.f | with([](float x, float a, float b) { return (x + a) * b; },
-                     2.f,
-                     10.f))
-         == 30.f);
+  assert(
+      (1.f
+       | with([](float x, float a, float b) { return (x + a) * b; }, 2.f, 10.f))
+      == 30.f);
 
   return true;
 }
 
 // ---- deferred construction -------------------------------------------------
 
-static_assert(emb::pipe::some_pipeable<decltype(defer([] { return twice{}; }))>);
+static_assert(
+    emb::pipe::some_pipeable<decltype(defer([] { return twice{}; }))>);
 
 // the factory has to make a step, and one that takes what the chain carries
 static_assert(
     emb::pipe::pipeable_for<decltype(defer([] { return twice{}; })), float>);
 static_assert(
     !emb::pipe::pipeable_for<decltype(defer([] { return plain{}; })), float>);
-static_assert(
-    !emb::pipe::pipeable_for<decltype(defer([] { return to_int{}; })),
-                             char const*>);
+static_assert(!emb::pipe::pipeable_for<decltype(defer([] { return to_int{}; })),
+                                       char const*>);
 
 constexpr bool test_defer()
 {
@@ -209,10 +209,8 @@ constexpr bool test_defer()
   // in a chain: the step sees what an earlier step stored
   {
     [[maybe_unused]] float m = 0.f;
-    [[maybe_unused]] float const out = 3.f
-                    | twice{}
-                    | store(m)
-                    | defer([&] { return offset{m}; });
+    [[maybe_unused]] float const out =
+        3.f | twice{} | store(m) | defer([&] { return offset{m}; });
     assert(m == 6.f);
     assert(out == 12.f);
   }

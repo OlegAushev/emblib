@@ -14,8 +14,8 @@ public:
   using value_type = T;
   using size_type = std::size_t;
   using underlying_type = emb::circular_buffer<value_type, WindowSize>;
-  using divider_type = decltype(std::declval<value_type>()
-                                / std::declval<value_type>());
+  using divider_type =
+      decltype(std::declval<value_type>() / std::declval<value_type>());
   static constexpr std::size_t window_size = WindowSize;
 private:
   underlying_type data_;

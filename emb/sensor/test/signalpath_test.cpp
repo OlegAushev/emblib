@@ -45,10 +45,12 @@ struct zero_trim {
   }
 };
 
-using channel_path = emb::sensor::signalpath<emb::signal::bind<transducer>, adc>;
+using channel_path =
+    emb::sensor::signalpath<emb::signal::bind<transducer>, adc>;
 
 // a sensor takes it as it is, with nothing wrapped around it
-static_assert(emb::sensor::some_converter<channel_path, std::uint16_t, amp_f32>);
+static_assert(
+    emb::sensor::some_converter<channel_path, std::uint16_t, amp_f32>);
 
 constexpr bool test_call_is_the_measuring_direction()
 {
@@ -88,7 +90,9 @@ constexpr bool test_stateful_head()
   emb::sensor::signalpath<zero_trim, emb::signal::bind<transducer>, adc> const
       trimmed{zero_trim{amp_f32{5.f}}, {}, {}};
 
-  constexpr emb::sensor::signalpath<zero_trim, emb::signal::bind<transducer>, adc>
+  constexpr emb::sensor::signalpath<zero_trim,
+                                    emb::signal::bind<transducer>,
+                                    adc>
       untrimmed;
 
   assert(trimmed.forward(amp_f32{0.f}) == untrimmed.forward(amp_f32{5.f}));

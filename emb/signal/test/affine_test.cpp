@@ -12,9 +12,9 @@ constexpr bool test_affine()
   // a range that does not start at zero: the intercept is found by
   // subtraction, which is where this form loses accuracy if it ever does
   [[maybe_unused]] affine const hot{degree_celsius_f32{100.f},
-                   degree_celsius_f32{200.f},
-                   volt_f32{1.f},
-                   volt_f32{5.f}};
+                                    degree_celsius_f32{200.f},
+                                    volt_f32{1.f},
+                                    volt_f32{5.f}};
   assert(emb::approx(hot.forward(degree_celsius_f32{100.f}),
                      volt_f32{1.f},
                      volt_f32{1e-5f}));
@@ -30,9 +30,9 @@ constexpr bool test_affine()
 
   // an output range that falls as the input rises
   [[maybe_unused]] affine const falling{megapascal_f32{0.f},
-                       megapascal_f32{2.5f},
-                       amp_f32{0.020f},
-                       amp_f32{0.004f}};
+                                        megapascal_f32{2.5f},
+                                        amp_f32{0.020f},
+                                        amp_f32{0.004f}};
   assert(emb::approx(falling.forward(megapascal_f32{0.f}),
                      amp_f32{0.020f},
                      amp_f32{1e-7f}));

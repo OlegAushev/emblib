@@ -74,9 +74,8 @@ constexpr std::array<id_t, cob_type_count> cob_function_codes = {
 };
 
 template<cob_type C>
-concept broadcast_cob = C == cob_type::nmt
-                     || C == cob_type::sync
-                     || C == cob_type::time;
+concept broadcast_cob =
+    C == cob_type::nmt || C == cob_type::sync || C == cob_type::time;
 
 template<cob_type C>
 concept pdo_cob = C == cob_type::tpdo || C == cob_type::rpdo;

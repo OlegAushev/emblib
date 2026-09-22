@@ -31,8 +31,8 @@ test_moving_average_filter(Filter filter,
     filter.push(val);
     idx = (idx + 1) % input.size();
     sum += val;
-    [[maybe_unused]] auto out = sum
-                              / static_cast<divider_type>(filter.data().size());
+    [[maybe_unused]] auto out =
+        sum / static_cast<divider_type>(filter.data().size());
     assert(filter.output() == out);
   }
 

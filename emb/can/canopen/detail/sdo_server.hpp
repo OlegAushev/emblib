@@ -63,11 +63,10 @@ public:
       return std::unexpected(sdo_abort_code::invalid_cs);
     }();
 
-    payload_t response = result
-                           ? to_payload<expedited_sdo>(*result)
-                           : to_payload<abort_sdo>(abort_sdo{rsdo.index,
-                                                             rsdo.subindex,
-                                                             result.error()});
+    payload_t response =
+        result ? to_payload<expedited_sdo>(*result)
+               : to_payload<abort_sdo>(
+                     abort_sdo{rsdo.index, rsdo.subindex, result.error()});
 
     if (!tsdo_queue_.full()) {
       tsdo_queue_.push(response);

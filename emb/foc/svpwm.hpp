@@ -15,8 +15,8 @@ inline three_phase<emb::unsigned_pu_f32> calculate_svpwm(voltage_polar v_s,
                                                          float v_dc)
 {
   v_s.theta = norm2pi(v_s.theta);
-  v_s.mag = std::clamp<float>(
-      v_s.mag, 0, v_dc * std::numbers::inv_sqrt3_v<float>);
+  v_s.mag =
+      std::clamp<float>(v_s.mag, 0, v_dc * std::numbers::inv_sqrt3_v<float>);
 
   constexpr float pi_over_3 = std::numbers::pi_v<float> / 3.0f;
   constexpr float inv_pi_over_3 = 1.0f / pi_over_3;
@@ -29,9 +29,8 @@ inline three_phase<emb::unsigned_pu_f32> calculate_svpwm(voltage_polar v_s,
   float const tb1 = std::numbers::sqrt3_v<float>
                   * (v_s.mag / v_dc)
                   * emb::sin(pi_over_3 - theta);
-  float const tb2 = std::numbers::sqrt3_v<float>
-                  * (v_s.mag / v_dc)
-                  * emb::sin(theta);
+  float const tb2 =
+      std::numbers::sqrt3_v<float> * (v_s.mag / v_dc) * emb::sin(theta);
   float const tb0 = (1.f - tb1 - tb2) / 2.f;
 
   std::array<float, 3> pulse_durations{};

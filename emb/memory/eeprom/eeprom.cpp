@@ -4,14 +4,14 @@ namespace emb {
 namespace mem {
 namespace eeprom {
 
-storage::storage(
-    driver& driver_,
-    std::uint32_t (*calc_crc32_func_)(std::uint8_t const*, std::size_t)
-)
+storage::storage(driver& driver_,
+                 std::uint32_t (*calc_crc32_func_)(std::uint8_t const*,
+                                                   std::size_t))
     : _driver(driver_),
       _calc_crc32(calc_crc32_func_),
       available_page_bytes(_driver.page_bytes() - 4),
-      available_page_count((_driver.page_count() - 2) / 2) {
+      available_page_count((_driver.page_count() - 2) / 2)
+{
   _errors.read = 0;
   _errors.write = 0;
   _errors.crc_mismatch = 0;
@@ -23,14 +23,16 @@ storage::storage(
   _backup_buf = new std::uint8_t[available_page_bytes];
 }
 
-storage::~storage() {
+storage::~storage()
+{
   delete[] _backup_buf;
 }
 
 emb::mem::status storage::write(std::size_t page,
                                 std::uint8_t const* buf,
                                 std::size_t len,
-                                std::chrono::milliseconds timeout) {
+                                std::chrono::milliseconds timeout)
+{
   assert(page < available_page_count);
   assert(len < available_page_bytes);
 
@@ -78,12 +80,11 @@ write_end:
   return sts;
 }
 
-emb::mem::status storage::read(
-    std::size_t page,
-    std::uint8_t* buf,
-    std::size_t len,
-    std::chrono::milliseconds timeout
-) {
+emb::mem::status storage::read(std::size_t page,
+                               std::uint8_t* buf,
+                               std::size_t len,
+                               std::chrono::milliseconds timeout)
+{
   assert(page < available_page_count);
   assert(len < available_page_bytes);
 
@@ -124,7 +125,8 @@ emb::mem::status storage::read(
   primary_crc = _calc_crc32(buf, len);
   if (primary_crc == primary_stored_crc) {
     primary_ok = true;
-  } else {
+  }
+  else {
     ++_errors.crc_mismatch;
   }
 
@@ -149,15 +151,17 @@ read_backup:
   secondary_crc = _calc_crc32(_backup_buf, len);
   if (secondary_crc == secondary_stored_crc) {
     secondary_ok = true;
-  } else {
+  }
+  else {
     ++_errors.crc_mismatch;
   }
 
 read_end:
   if (primary_ok && secondary_ok && (primary_crc == secondary_crc)) {
     return emb::mem::status::ok;
-  } else if ((primary_ok && !secondary_ok) ||
-             (primary_ok && secondary_ok && (primary_crc != secondary_crc))) {
+  }
+  else if ((primary_ok && !secondary_ok)
+           || (primary_ok && secondary_ok && (primary_crc != secondary_crc))) {
     // backup is corrupted or outdated
     ++_errors.secondary_data_corrupted;
     _driver.write(page + available_page_count, 0, buf, len, timeout);
@@ -168,7 +172,8 @@ read_end:
 #endif
     _driver.write(page + available_page_count, len, crc_bytes, 4, timeout);
     return emb::mem::status::ok;
-  } else if (!primary_ok && secondary_ok) {
+  }
+  else if (!primary_ok && secondary_ok) {
     // restore backup
     ++_errors.primary_data_corrupted;
     memcpy(buf, _backup_buf, len); // update output buffer
@@ -180,7 +185,8 @@ read_end:
 #endif
     _driver.write(page, len, crc_bytes, 4, timeout);
     return emb::mem::status::ok;
-  } else if (sts == emb::mem::status::ok) {
+  }
+  else if (sts == emb::mem::status::ok) {
     ++_errors.fatal;
     return emb::mem::status::data_corrupted;
   }

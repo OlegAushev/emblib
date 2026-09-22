@@ -10,8 +10,8 @@ class exponential_filter {
 public:
   using value_type = T;
   using duration_type = Duration;
-  using factor_type = decltype(std::declval<Duration>()
-                               / std::declval<Duration>());
+  using factor_type =
+      decltype(std::declval<Duration>() / std::declval<Duration>());
 private:
   duration_type sampling_period_;
   duration_type time_constant_;

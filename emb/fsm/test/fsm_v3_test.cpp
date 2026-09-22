@@ -510,9 +510,8 @@ constexpr bool test_is_in_state_v3()
 static_assert(test_is_in_state_v3());
 
 template<typename... States>
-concept state_query = requires(Switch const& s) {
-  s.template is_in_state<States...>();
-};
+concept state_query =
+    requires(Switch const& s) { s.template is_in_state<States...>(); };
 
 static_assert(state_query<OpenState>);
 static_assert(state_query<OpenState, ClosedState, DestroyedState>);

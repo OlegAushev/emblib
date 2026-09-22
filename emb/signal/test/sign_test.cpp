@@ -32,11 +32,15 @@ static_assert(!emb::signal::sign_reversible<std::uint32_t>);
 // so negation refuses a code, at the point of use rather than inside itself,
 // while identity carries one without complaint
 template<typename T>
-constexpr bool negates =
-    requires(T x) { negation::forward(x); negation::inverse(x); };
+constexpr bool negates = requires(T x) {
+  negation::forward(x);
+  negation::inverse(x);
+};
 template<typename T>
-constexpr bool passes =
-    requires(T x) { identity::forward(x); identity::inverse(x); };
+constexpr bool passes = requires(T x) {
+  identity::forward(x);
+  identity::inverse(x);
+};
 
 static_assert(negates<amp_f32>);
 static_assert(negates<std::int32_t>);

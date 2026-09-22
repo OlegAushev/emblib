@@ -102,8 +102,7 @@ public:
 
   constexpr auto mask(apply_policy apply) const -> std::uint32_t
   {
-    return masks_[detail::policy_index(apply)].load(
-        std::memory_order_acquire);
+    return masks_[detail::policy_index(apply)].load(std::memory_order_acquire);
   }
 
   // Set when a parameter that cannot be applied without a restart has been

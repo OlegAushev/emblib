@@ -18,13 +18,12 @@ concept some_converter = requires(C c, Input in) {
 };
 
 template<typename F>
-concept some_filter = requires(F f,
-                               F const cf,
-                               typename F::value_type const v) {
-  typename F::value_type;
-  { cf.output() } -> std::convertible_to<typename F::value_type>;
-  f.push(v);
-};
+concept some_filter =
+    requires(F f, F const cf, typename F::value_type const v) {
+      typename F::value_type;
+      { cf.output() } -> std::convertible_to<typename F::value_type>;
+      f.push(v);
+    };
 
 // Sensor categories, on one axis: when conversion completes. An immediate
 // sensor converts and filters inside submit(), in the caller's context; a
@@ -56,11 +55,11 @@ concept some_deferred_sensor =
     some_sensor<S> && std::same_as<typename S::sensor_category, deferred_tag>;
 
 template<typename S>
-concept some_singlechannel_sensor = some_sensor<S>
-                                 && requires(S const& s) { s.value(); };
+concept some_singlechannel_sensor =
+    some_sensor<S> && requires(S const& s) { s.value(); };
 
 template<typename S>
-concept some_multichannel_sensor = some_sensor<S>
-                                && requires(S const& s) { s.values(); };
+concept some_multichannel_sensor =
+    some_sensor<S> && requires(S const& s) { s.values(); };
 
 } // namespace emb::sensor

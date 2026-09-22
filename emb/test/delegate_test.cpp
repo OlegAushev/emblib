@@ -55,13 +55,13 @@ static_assert(test_delegate());
 constexpr bool test_bind_from_reference()
 {
   foo f(-1, 5);
-  [[maybe_unused]] auto add_delegate = emb::delegate<int(int)>::bind<&foo::add>(
-      f);
+  [[maybe_unused]] auto add_delegate =
+      emb::delegate<int(int)>::bind<&foo::add>(f);
   assert(add_delegate(6) == 10);
 
   foo const cf(1, 3);
-  [[maybe_unused]] auto sum_delegate = emb::delegate<int()>::bind<&foo::sum>(
-      cf);
+  [[maybe_unused]] auto sum_delegate =
+      emb::delegate<int()>::bind<&foo::sum>(cf);
   assert(sum_delegate() == 4);
 
   return true;
@@ -159,9 +159,8 @@ concept bind_accepts = requires(T&& obj) {
 };
 
 template<typename T>
-concept make_delegate_accepts = requires(T&& obj) {
-  emb::make_delegate<&foo::add>(static_cast<T&&>(obj));
-};
+concept make_delegate_accepts =
+    requires(T&& obj) { emb::make_delegate<&foo::add>(static_cast<T&&>(obj)); };
 
 static_assert(bind_accepts<foo&>);
 static_assert(!bind_accepts<foo>);

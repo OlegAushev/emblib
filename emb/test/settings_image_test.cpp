@@ -55,9 +55,9 @@ consteval bool test_defaults()
 }
 
 // The static type survives the round trip through a cell.
-static_assert(
-    std::same_as<decltype(std::declval<img const&>().get<"drive.runout_speed">()),
-                 rpm>);
+static_assert(std::same_as<
+              decltype(std::declval<img const&>().get<"drive.runout_speed">()),
+              rpm>);
 static_assert(
     std::same_as<decltype(std::declval<img const&>().get<"motor.p">()),
                  std::int32_t>);

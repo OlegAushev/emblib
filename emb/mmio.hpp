@@ -42,10 +42,10 @@ template<auto Mask>
 concept valid_mask = std::integral<decltype(Mask)> && (Mask > 0);
 
 template<auto Mask>
-concept field_mask = valid_mask<Mask>
-                  && detail::is_contiguous_mask(
-                         static_cast<std::make_unsigned_t<decltype(Mask)>>(
-                             Mask));
+concept field_mask =
+    valid_mask<Mask>
+    && detail::is_contiguous_mask(
+        static_cast<std::make_unsigned_t<decltype(Mask)>>(Mask));
 
 template<auto Mask, typename Reg>
 concept mask_for = some_register<Reg>
@@ -56,9 +56,9 @@ template<auto Mask, typename Reg>
 concept field_mask_for = mask_for<Mask, Reg> && field_mask<Mask>;
 
 template<auto Mask, typename Reg>
-concept flag_mask_for = mask_for<Mask, Reg>
-                     && std::has_single_bit(
-                            static_cast<std::remove_cv_t<Reg>>(Mask));
+concept flag_mask_for =
+    mask_for<Mask, Reg>
+    && std::has_single_bit(static_cast<std::remove_cv_t<Reg>>(Mask));
 
 namespace runtime {
 

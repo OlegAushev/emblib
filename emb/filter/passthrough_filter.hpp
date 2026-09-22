@@ -13,9 +13,7 @@ private:
 public:
   constexpr passthrough_filter() = default;
 
-  constexpr explicit passthrough_filter(value_type init) : value_(init)
-  {
-  }
+  constexpr explicit passthrough_filter(value_type init) : value_(init) {}
 
   constexpr void push(value_type input)
   {
