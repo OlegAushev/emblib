@@ -29,13 +29,13 @@ concept declares_command = requires { typename Channel::command; };
 // it, and is the key both ends are overloaded on:
 //
 //   struct run_channel {
-//     using command = run_cmd;
+//     using command = run_command;
 //     template<typename S>
 //     using control = typename S::run_control;
 //   };
 //
-//   static run_cmd value(run_channel, motor_drive const&); // a control
-//   void accept(run_channel, run_cmd const&);              // the sink
+//   static run_command value(run_channel, motor_drive const&); // a control
+//   void accept(run_channel, run_command const&);              // the sink
 //
 // An alias template cannot be put into a typelist, so the channel is a struct
 // that carries one. It is the key rather than its command type: a control may
