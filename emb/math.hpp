@@ -2,6 +2,7 @@
 
 #include <emb/math/clamped.hpp>
 #include <emb/math/saturation.hpp>
+#include <emb/math/scaled.hpp>
 #include <emb/math/trigonometric.hpp>
 
 #include <algorithm>
@@ -11,10 +12,8 @@
 #include <cmath>
 #include <concepts>
 #include <cstdint>
-#include <limits>
 #include <numbers>
 #include <numeric>
-#include <ratio>
 
 #ifdef __arm__
 extern "C" {
@@ -203,61 +202,6 @@ template<typename T>
 constexpr bool approx(T a, T b, T eps)
 {
   return (a < b ? b - a : a - b) < eps;
-}
-
-// ---- saturate_round ----
-template<std::integral Int, std::floating_point Float>
-constexpr Int saturate_round(Float x)
-{
-  static_assert(sizeof(Int) < sizeof(long long) || std::is_signed_v<Int>,
-                "u64 upper range is unreachable via llround");
-  constexpr bool fits_long =
-      sizeof(Int) < sizeof(long)
-      || (sizeof(Int) == sizeof(long) && std::is_signed_v<Int>);
-  using Wide = std::conditional_t<fits_long, long, long long>;
-
-  assert(!std::isnan(x));
-  if (x >= static_cast<Float>(std::numeric_limits<Wide>::max())) {
-    return std::numeric_limits<Int>::max();
-  }
-  if (x <= static_cast<Float>(std::numeric_limits<Wide>::min())) {
-    return std::numeric_limits<Int>::min();
-  }
-
-  if constexpr (fits_long) {
-    return emb::saturating_cast<Int>(std::lround(x));
-  }
-  else {
-    return emb::saturating_cast<Int>(std::llround(x));
-  }
-}
-
-// ---- quantize ----
-template<std::integral Int, typename Step, std::floating_point Float>
-  requires requires {
-    Step::num;
-    Step::den;
-  }
-constexpr Int quantize(Float x)
-{
-  static_assert(Step::num > 0, "Step must be a positive ratio");
-  constexpr Float scale =
-      static_cast<Float>(Step::den) / static_cast<Float>(Step::num);
-  return saturate_round<Int>(x * scale);
-}
-
-// ---- dequantize ----
-template<typename Step, std::floating_point Float = float, std::integral Int>
-  requires requires {
-    Step::num;
-    Step::den;
-  }
-constexpr Float dequantize(Int n)
-{
-  static_assert(Step::num > 0, "Step must be a positive ratio");
-  constexpr Float step =
-      static_cast<Float>(Step::num) / static_cast<Float>(Step::den);
-  return static_cast<Float>(n) * step;
 }
 
 // -----------------------------------------------------------------------------
