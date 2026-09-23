@@ -4,19 +4,24 @@
 
 #include <concepts>
 #include <type_traits>
+#include <utility>
+#include <variant>
 
 namespace emb::fsm::command {
 
-// A command goes from a control to a sink. Which control drives it is declared
-// by the sink's current state, not assigned from outside: there is no owner to
+// A command goes from a control either to the state machine, as an event, or to
+// whoever reads it, as data. Which control drives it is declared by the
+// machine's current state, not assigned from outside: there is no owner to
 // store, save or restore, and a state that names no control does not compile.
 //
 //   struct stopping {
-//     using run_control = stopping_control;
+//     using start_control = vcu_control;    // an event: start or stop
+//     using run_control = stopping_control; // data: what the model runs on
 //     ...
 //   };
 //
 //   emb::fsm::command::deliver_all<channels>(drive);
+//   auto const run = emb::fsm::command::read<run_channel>(drive);
 
 namespace detail {
 
@@ -26,24 +31,29 @@ concept declares_command = requires { typename Channel::command; };
 } // namespace detail
 
 // A channel ties a command to the name a state gives the control that drives
-// it, and is the key both ends are overloaded on:
+// it, and is the key the controls are overloaded on:
 //
-//   struct run_channel {
-//     using command = run_command;
+//   using power_command = std::variant<power_down, power_up>;
+//
+//   struct power_channel {
+//     using command = power_command;
 //     template<typename S>
-//     using control = typename S::run_control;
+//     using control = typename S::power_control;
 //   };
 //
-//   static run_command value(run_channel, motor_drive const&); // a control
-//   void accept(run_channel, run_command const&);              // the sink
+//   static power_command value(power_channel, motor_drive const&); // a control
+//
+// The command is an event, or a std::variant of events of which the control
+// picks one, and delivery dispatches it to the machine. A command that is data
+// instead goes through read() and is never delivered.
 //
 // An alias template cannot be put into a typelist, so the channel is a struct
 // that carries one. It is the key rather than its command type: a control may
 // drive several channels, all through value(), and a function cannot be
-// overloaded by its return type alone; two channels may carry one command type
-// and still reach different controls and different accept() overloads; and a
-// control or a sink serves a channel only by naming it, never because a command
-// type happens to match.
+// overloaded by its return type alone; and a control serves a channel only by
+// naming it, never because a command type happens to match. The machine is
+// keyed by the event instead: two channels that carry one event reach two
+// controls and one handler, since the event is what the machine reacts to.
 //
 // Passed by value, so a channel is empty. Channels do not derive from one
 // another: a derived one would convert to its base.
@@ -76,11 +86,34 @@ concept control_of = some_channel<Channel>
                   && std::is_empty_v<Control>
                   && detail::projects<Control, Channel, Context>;
 
-template<typename Sink, typename Channel>
-concept sink_of = some_channel<Channel>
-               && requires(Sink& sink, typename Channel::command const& cmd) {
-                    { sink.accept(Channel{}, cmd) } -> std::same_as<void>;
-                  };
+namespace detail {
+
+template<typename Command>
+inline constexpr bool is_variant = false;
+
+template<typename... Events>
+inline constexpr bool is_variant<std::variant<Events...>> = true;
+
+// Every state handles the event, or a common handler does for the states that
+// do not: dispatch() in emb::fsm::v3 is constrained on exactly that.
+template<typename Context, typename Event>
+concept dispatches =
+    requires(Context& ctx, Event event) { ctx.dispatch(std::move(event)); };
+
+template<typename Context, typename Command>
+inline constexpr bool dispatches_command = dispatches<Context, Command>;
+
+template<typename Context, typename... Events>
+inline constexpr bool dispatches_command<Context, std::variant<Events...>> =
+    (dispatches<Context, Events> && ...);
+
+} // namespace detail
+
+// The context dispatches every event the channel's command can hold.
+template<typename Context, typename Channel>
+concept dispatcher_of =
+    some_channel<Channel>
+    && detail::dispatches_command<Context, typename Channel::command>;
 
 // The state names a control for the channel.
 template<typename Channel, typename State, typename Context>
@@ -104,148 +137,58 @@ inline constexpr bool
 
 } // namespace detail
 
-// Every state of the context names a control for the channel, and the context
-// accepts the channel. The context is the state machine, what the controls read
-// and the sink, all at once: on a drive it is one object.
+// Every state of the context names a control for the channel. The context is
+// the state machine and what the controls read, both at once: on a drive it is
+// one object.
+template<typename Channel, typename Context>
+concept readable = some_channel<Channel>
+                && detail::publishes_states<Context>
+                && detail::controls_every_state<Channel,
+                                                typename Context::state_list,
+                                                Context>;
+
+// The channel is readable, and the context dispatches every event its command
+// can hold.
+template<typename Channel, typename Context>
+concept deliverable =
+    readable<Channel, Context> && dispatcher_of<Context, Channel>;
+
+// -------------------------------------------------------------------- reading
+
+// Returns the command the control named by the current state gives `Channel`.
 //
-// This is the testable form of what deliver() insists on with sentences.
+// `deliver()` is this and a dispatch. A channel that carries data rather than
+// an event is read here and never delivered, and the caller decides what
+// becomes of the command.
 template<typename Channel, typename Context>
-concept deliverable = some_channel<Channel>
-                   && detail::publishes_states<Context>
-                   && sink_of<Context, Channel>
-                   && detail::controls_every_state<Channel,
-                                                   typename Context::state_list,
-                                                   Context>;
-
-// ---------------------------------------------------------------- diagnostics
-
-namespace detail {
-
-template<typename...>
-inline constexpr bool always_false = false;
-
-template<typename Channel, typename State>
-concept names_control = requires { typename Channel::template control<State>; };
-
-template<typename Channel, typename State, typename Context, bool Proceed>
-struct diagnose_control {
-  static constexpr bool ok = true; // an earlier requirement failed; stop here
-};
-
-template<typename Channel, typename State, typename Context>
-struct diagnose_control<Channel, State, Context, true> {
-  using control_type = typename Channel::template control<State>;
-
-  static_assert(
-      std::is_empty_v<control_type>,
-      "emb::fsm::command: a control must be empty: it projects the context "
-      "onto a command and keeps nothing, and what it reads belongs to the "
-      "context");
-  static_assert(
-      projects<control_type, Channel, Context>,
-      "emb::fsm::command: a control must define `static C value(Channel, "
-      "context const&)` for the channel, returning exactly its command type");
-  static constexpr bool ok = true;
-};
-
-template<typename Channel, typename State, typename Context>
-struct diagnose_state {
-  static_assert(
-      names_control<Channel, State>,
-      "emb::fsm::command: every state must name the control that drives this "
-      "channel; a state in which nobody drives it names an idle control");
-  static constexpr bool ok =
-      diagnose_control<Channel,
-                       State,
-                       Context,
-                       names_control<Channel, State>>::ok;
-};
-
-template<typename Channel, typename StateList, typename Context>
-struct diagnose_states;
-
-template<typename Channel, typename... States, typename Context>
-struct diagnose_states<Channel, typelist<States...>, Context> {
-  static constexpr bool ok =
-      (diagnose_state<Channel, States, Context>::ok && ...);
-};
-
-template<typename Channel, typename Context, bool Proceed>
-struct diagnose_delivery_details {
-  static constexpr bool ok = true; // an earlier requirement failed; stop here
-};
-
-template<typename Channel, typename Context>
-struct diagnose_delivery_details<Channel, Context, true> {
-  static_assert(
-      sink_of<Context, Channel>,
-      "emb::fsm::command: the context must accept every channel delivered to "
-      "it as `void accept(Channel, C const&)`");
-  static constexpr bool ok =
-      diagnose_states<Channel, typename Context::state_list, Context>::ok;
-};
-
-template<typename Channel, typename Context>
-struct diagnose_delivery {
-  static_assert(declares_command<Channel>,
-                "emb::fsm::command: a channel must declare the command it "
-                "carries as `using command = ...`");
-  static_assert(
-      std::is_empty_v<Channel> && std::default_initializable<Channel>,
-      "emb::fsm::command: a channel is the key value() and accept() are "
-      "overloaded on and is passed by value, so it must be empty and "
-      "default-constructible");
-  static_assert(
-      publishes_states<Context>,
-      "emb::fsm::command: the context must be a state machine that publishes "
-      "its states as `state_list`, an emb::typelist; "
-      "emb::fsm::v3::finite_state_machine does");
-  static constexpr bool ok = diagnose_delivery_details < Channel, Context,
-                        some_channel<Channel>&&publishes_states
-                            < Context
-                            >> ::ok;
-};
-
-template<typename ChannelList, typename Context>
-struct diagnose_channels {
-  static_assert(always_false<ChannelList>,
-                "emb::fsm::command::deliver_all: the channel list must be "
-                "emb::typelist<Channels...>");
-  static constexpr bool ok = true;
-};
-
-template<typename... Channels, typename Context>
-struct diagnose_channels<typelist<Channels...>, Context> {
-  static_assert(
-      sizeof...(Channels) > 0,
-      "emb::fsm::command::deliver_all: at least one channel is required");
-  static_assert(
-      typelist_unique<typelist<Channels...>>,
-      "emb::fsm::command::deliver_all: a channel is listed twice, and its "
-      "command would reach the sink twice per pass");
-  static_assert((diagnose_delivery<Channels, Context>::ok && ...));
-  static constexpr bool ok = true;
-};
-
-} // namespace detail
+  requires readable<Channel, Context>
+constexpr typename Channel::command read(Context const& ctx)
+{
+  using Command = typename Channel::command;
+  return ctx.visit([&ctx](auto const& state) -> Command {
+    using State = std::remove_cvref_t<decltype(state)>;
+    return Channel::template control<State>::value(Channel{}, ctx);
+  });
+}
 
 // ------------------------------------------------------------------- delivery
 
-// Reads which control the current state names for the channel, and hands that
-// control's value to the sink.
+// Reads which control the current state names for the channel, and dispatches
+// that control's command to the machine: the event, or the one a std::variant
+// holds.
 template<typename Channel, typename Context>
+  requires deliverable<Channel, Context>
 constexpr void deliver(Context& ctx)
 {
-  static_assert(detail::diagnose_delivery<Channel, Context>::ok);
-  if constexpr (deliverable<Channel, Context>) {
-    using Command = typename Channel::command;
-    // read inside the visit and accept outside it: accepting a command may
-    // move the state machine, and the state visit() looks at would be gone
-    Command const cmd = ctx.visit([&ctx](auto const& state) -> Command {
-      using State = std::remove_cvref_t<decltype(state)>;
-      return Channel::template control<State>::value(Channel{}, ctx);
-    });
-    ctx.accept(Channel{}, cmd);
+  using Command = typename Channel::command;
+  Command cmd = command::read<Channel>(ctx);
+  // dispatched only after read() returns: inside its visit, a transition
+  // would replace the state the visitor still holds a reference to
+  if constexpr (detail::is_variant<Command>) {
+    std::visit([&ctx](auto& event) { ctx.dispatch(std::move(event)); }, cmd);
+  }
+  else {
+    ctx.dispatch(std::move(cmd));
   }
 }
 
@@ -262,17 +205,20 @@ constexpr void deliver_each(typelist<Channels...>, Context& ctx)
 // Every channel in one call, in list order: a fourth channel is a fourth entry
 // in the list, not a fourth line somebody has to remember in an interrupt
 // handler. The order is observable -- delivering a command may move the state
-// machine, and the channels after it read the state it moved to.
+// machine, and the channels after it read the state it moved to. A channel is
+// listed once; listed twice, it would be dispatched twice per pass.
 //
-// Delivered on every call, not on change: a sink that turns a held level into
-// an event relies on seeing it again.
+// Delivered on every call, not on change: a command is a request the control
+// holds, and a state that could not act on it yet relies on seeing it again. A
+// channel's events must therefore bear repeating; a one-shot event is
+// dispatched by whoever raises it, not carried by a channel.
 template<typename ChannelList, typename Context>
+  requires some_typelist<ChannelList>
+        && (ChannelList::size > 0)
+        && typelist_unique<ChannelList>
 constexpr void deliver_all(Context& ctx)
 {
-  static_assert(detail::diagnose_channels<ChannelList, Context>::ok);
-  if constexpr (some_typelist<ChannelList>) {
-    detail::deliver_each(ChannelList{}, ctx);
-  }
+  detail::deliver_each(ChannelList{}, ctx);
 }
 
 } // namespace emb::fsm::command
