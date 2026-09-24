@@ -519,12 +519,15 @@ emb::local_spmc_buffer<command, 1> command_;
 | `local_spmc_buffer<T, 2>`    | 22, два цикла ldrex/strex                       | 46, два цикла      |
 | `local_spmc_buffer<T, 1>`    | 23                                              | 49                 |
 | `spmc_buffer<T, 2>`          | 25, 2 `dmb`                                     | 51, 2 `dmb`        |
-| два `triple_buffer<T>`       | 11 без новых данных; 21 с обменом и 2 `dmb`     | 44 на оба, 4 `dmb` |
+| `local_triple_buffer<T>`     | 12 без новых данных; 21 с обменом               | 21                 |
+| `triple_buffer<T>`           | 11 без новых данных; 21 с обменом и 2 `dmb`     | 23, 2 `dmb`        |
 | `local_latched_seqlock<T>`   | 15                                              | 23                 |
 | `latched_seqlock<T>`         | 18, 2 `dmb`                                     | 28, 4 `dmb`        |
 
 Для `triple_buffer` у `load()` указано число выполняемых инструкций на
-каждом пути. `spmc_buffer` платит за чтение два RMW всегда,
+каждом пути. Быстрый путь `local_triple_buffer` в обёртке на инструкцию
+длиннее (`push`/`pop` вместо `bx lr`); встроенный в обработчик, он той же
+длины, что у `triple_buffer`. `spmc_buffer` платит за чтение два RMW всегда,
 `triple_buffer` — обмен только тогда, когда есть новые данные.
 
 ## 12. Известные пробелы
