@@ -1,7 +1,6 @@
 #pragma once
 
 #include <atomic>
-#include <cstdint>
 #include <type_traits>
 
 namespace emb {
@@ -22,15 +21,12 @@ template<typename T>
            && std::is_default_constructible_v<T>)
 class double_buffer {
 private:
-  static_assert(std::atomic<std::uint8_t>::is_always_lock_free,
-                "double_buffer requires hardware atomics");
-
   T buf_[2]{};
-  std::atomic<std::uint8_t> front_{0};
+  std::atomic_unsigned_lock_free front_{0};
 public:
   void store(T const& value)
   {
-    std::uint8_t back = 1 - front_.load(std::memory_order_relaxed);
+    auto const back = 1 - front_.load(std::memory_order_relaxed);
     buf_[back] = value;
     std::atomic_signal_fence(std::memory_order_release);
     front_.store(back, std::memory_order_relaxed);
@@ -38,7 +34,7 @@ public:
 
   T load() const
   {
-    std::uint8_t front = front_.load(std::memory_order_relaxed);
+    auto const front = front_.load(std::memory_order_relaxed);
     std::atomic_signal_fence(std::memory_order_acquire);
     return buf_[front];
   }

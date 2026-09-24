@@ -509,7 +509,7 @@ emb::local_spmc_buffer<command, 1> command_;
 **ОЗУ:** `(Readers + 2) · sizeof(T) + 4 · (Readers + 3)` байт плюс
 выравнивание. Для `T` в 16 байт: 64 байта при `Readers = 1`, 84 при
 `Readers = 2`. Для сравнения: два `triple_buffer` (по одному на читателя) —
-104 байта, `latched_seqlock` — 36.
+120 байт, `latched_seqlock` — 36.
 
 **Время.** Размер кода в инструкциях для `T` в 16 байт; GCC 15.2, `-O3`,
 `-mcpu=cortex-m4`, в обёртке `extern "C"` вместе с прологом:
