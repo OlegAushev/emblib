@@ -18,9 +18,13 @@ namespace emb {
 // For the other direction, writer in an ISR and reader in main, use
 // triple_buffer or local_seqlock instead.
 template<typename T>
-  requires(std::is_trivially_copyable_v<T>)
+  requires(std::is_trivially_copyable_v<T>
+           && std::is_default_constructible_v<T>)
 class double_buffer {
 private:
+  static_assert(std::atomic<std::uint8_t>::is_always_lock_free,
+                "double_buffer requires hardware atomics");
+
   T buf_[2]{};
   std::atomic<std::uint8_t> front_{0};
 public:
