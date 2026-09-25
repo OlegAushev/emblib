@@ -5,17 +5,27 @@
 
 namespace emb {
 
-// Wait-free double buffer for single-writer / multi-reader.
-// Uses signal fences — not suitable for multi-core (SMP) systems.
+// The class template `double_buffer` is a wait-free buffer through which one
+// context, the writer, publishes values of type `T` to any number of readers
+// on the writer's core. `store()` commits a value, and `load()` returns a
+// copy of the latest committed value, or `T{}` before the first commit.
 //
-// The writer alternates slots, so the slot a reader is copying is the one
-// the writer fills next. A reader the writer can preempt gets a torn value
-// if the writer commits twice during one load(), and nothing detects it.
-// Hence the constraint: the writer must not commit more than once during
-// a single load(). It holds by construction when the writer cannot preempt
-// the reader: reader in an ISR, writer in main or in a lower-priority ISR.
-// For the other direction, writer in an ISR and reader in main, use
-// triple_buffer or local_seqlock instead.
+// The writer fills the two slots in turn, so the slot a reader copies from
+// survives the next commit and is overwritten by the `store()` after that. A
+// reader that the writer cannot preempt, e.g. one in an interrupt handler
+// that outranks the writer, therefore always gets the latest committed value,
+// never a torn one. A reader that the writer outranks can get a torn value,
+// and nothing detects it, if the writer commits more than once between the
+// reader's call to `load()` and the reader's last use of the result. The
+// window lasts past the return from `load()`: the compiler may assume that
+// the slot does not change, since a change would be a data race, and may
+// defer or repeat reads of the slot up to that last use. `local_triple_buffer`
+// and `local_seqlock` have no such limit and suit a writer in an interrupt
+// handler with a reader in the main loop.
+//
+// `double_buffer` uses signal fences, which restrain only the compiler.
+// Unlike `triple_buffer` and `seqlock`, it has no version for several cores,
+// where no priority keeps the writer from committing while a reader reads.
 template<typename T>
   requires(std::is_trivially_copyable_v<T>
            && std::is_default_constructible_v<T>)

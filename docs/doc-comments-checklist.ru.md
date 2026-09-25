@@ -14,6 +14,8 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `ASSUME`
   - [x] `emb::ensure_failed`
   - [x] `emb::ensure`
+- [x] `emb/concurrent/double_buffer.hpp`
+  - [x] `double_buffer`
 - [x] `emb/expected.hpp`
   - [x] `TRY`
 - [x] `emb/math.hpp`
@@ -77,7 +79,6 @@ emblib не попал. Такие файлы помечены «песочни�
 - [ ] `emb/can/canopen/types.hpp`
 - [ ] `emb/can/raw/node.hpp`
 - [ ] `emb/chrono.hpp`
-- [ ] `emb/concurrent/double_buffer.hpp`
 - [ ] `emb/concurrent/latched_seqlock.hpp`
 - [ ] `emb/concurrent/memory_scope.hpp`
 - [ ] `emb/concurrent/seqlock.hpp`
