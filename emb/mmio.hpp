@@ -340,9 +340,10 @@ struct bits {
 
 // Writes the values held by `first` and `rest`, which are `bits` objects or
 // have the same members `mask` and `encoded`, to the fields of `reg` selected
-// by their masks. The masks must fit in `reg` and not overlap. Reads `reg` once
-// and writes it once, not atomically: a change made in between is overwritten.
-// A flag outside the masks that reads as 1 is cleared if writing 1 clears it.
+// by their masks. Reads `reg` once and writes it once, not atomically: a change
+// made in between is overwritten. A flag outside the masks that reads as 1 is
+// cleared if writing 1 clears it. The program is ill-formed if a mask does not
+// fit in `reg` or two masks overlap.
 template<some_writable_register Reg, typename First, typename... Rest>
 void modify(Reg& reg, First first, Rest... rest)
 {
@@ -351,10 +352,11 @@ void modify(Reg& reg, First first, Rest... rest)
                     && (field_mask_for<Rest::mask, Reg> && ...),
                 "field mask incompatible with this register");
   constexpr auto mask_or = static_cast<U>((First::mask | ... | Rest::mask));
-  constexpr auto mask_sum = static_cast<U>(
-      (static_cast<U>(First::mask) + ... + static_cast<U>(Rest::mask)));
+  constexpr int bit_count = (std::popcount(static_cast<U>(First::mask))
+                             + ...
+                             + std::popcount(static_cast<U>(Rest::mask)));
 
-  static_assert(mask_or == mask_sum, "overlapping field masks");
+  static_assert(std::popcount(mask_or) == bit_count, "overlapping field masks");
 
   reg = static_cast<U>((reg & ~mask_or) | (first.encoded | ... | rest.encoded));
 }
