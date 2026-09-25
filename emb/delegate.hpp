@@ -96,18 +96,18 @@ namespace detail {
 template<typename T>
 struct delegate_signature;
 
-template<typename R, typename... Args>
-struct delegate_signature<R (*)(Args...)> {
+template<typename R, typename... Args, bool Noexcept>
+struct delegate_signature<R (*)(Args...) noexcept(Noexcept)> {
   using type = R(Args...);
 };
 
-template<typename R, typename T, typename... Args>
-struct delegate_signature<R (T::*)(Args...)> {
+template<typename R, typename T, typename... Args, bool Noexcept>
+struct delegate_signature<R (T::*)(Args...) noexcept(Noexcept)> {
   using type = R(Args...);
 };
 
-template<typename R, typename T, typename... Args>
-struct delegate_signature<R (T::*)(Args...) const> {
+template<typename R, typename T, typename... Args, bool Noexcept>
+struct delegate_signature<R (T::*)(Args...) const noexcept(Noexcept)> {
   using type = R(Args...);
 };
 

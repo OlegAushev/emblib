@@ -10,6 +10,11 @@ constexpr int add(int a, int b)
   return a + b;
 }
 
+constexpr int mul(int a, int b) noexcept
+{
+  return a * b;
+}
+
 class foo {
   int a_;
   int b_;
@@ -26,9 +31,19 @@ public:
     return a_ + b_ - c;
   }
 
+  constexpr int mul(int c) noexcept
+  {
+    return (a_ + b_) * c;
+  }
+
   constexpr int sum() const
   {
     return a_ + b_;
+  }
+
+  constexpr int product() const noexcept
+  {
+    return a_ * b_;
   }
 };
 
@@ -88,6 +103,21 @@ constexpr bool test_make_delegate()
   auto sum_delegate = emb::make_delegate<&foo::sum>(cf);
   static_assert(std::is_same_v<decltype(sum_delegate), emb::delegate<int()>>);
   assert(sum_delegate() == 4);
+
+  // noexcept is part of the function type but not of the deduced signature
+  auto mul_delegate = emb::make_delegate<&mul>();
+  static_assert(
+      std::is_same_v<decltype(mul_delegate), emb::delegate<int(int, int)>>);
+  assert(mul_delegate(2, 3) == 6);
+
+  auto mul_via_ref = emb::make_delegate<&foo::mul>(f);
+  static_assert(std::is_same_v<decltype(mul_via_ref), emb::delegate<int(int)>>);
+  assert(mul_via_ref(2) == 8);
+
+  auto product_delegate = emb::make_delegate<&foo::product>(cf);
+  static_assert(
+      std::is_same_v<decltype(product_delegate), emb::delegate<int()>>);
+  assert(product_delegate() == 3);
 
   return true;
 }
