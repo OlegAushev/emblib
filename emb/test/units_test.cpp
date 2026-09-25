@@ -35,7 +35,7 @@ constexpr bool test_units_conversion()
     return (a - b) < 1e-4f && (b - a) < 1e-4f;
   };
 
-  // rem360_fast
+  // norm360_fast
   assert(near(emb::norm360_fast(deg_f32{380.0f}).value(), 20.0f));
   assert(near(emb::norm360_fast(deg_f32{-30.0f}).value(), 330.0f));
   assert(near(emb::norm360_fast(deg_f32{360.0f}).value(), 0.0f));
@@ -43,7 +43,7 @@ constexpr bool test_units_conversion()
   // a large negative input must not land on the upper bound
   assert(emb::norm360_fast(deg_f32{-7000000512.0f}).value() < 360.0f);
 
-  // rem180_fast
+  // norm180_fast
   assert(near(emb::norm180_fast(deg_f32{200.0f}).value(), -160.0f));
   assert(near(emb::norm180_fast(deg_f32{-10.0f}).value(), -10.0f));
   assert(emb::norm180_fast(deg_f32{-7000000512.0f}).value() < 180.0f);

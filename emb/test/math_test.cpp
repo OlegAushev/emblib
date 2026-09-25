@@ -31,7 +31,7 @@ constexpr bool test_math()
   assert(near(emb::to_eradps(60.0f, 1), 2 * std::numbers::pi_v<float>));
   assert(near(emb::to_rpm(2 * std::numbers::pi_v<float>, 1), 60.0f));
 
-  // rem2pi
+  // norm2pi
   [[maybe_unused]] constexpr float pi = std::numbers::pi_v<float>;
   [[maybe_unused]] constexpr float two_pi = 2 * pi;
   assert(near(emb::norm2pi(0.0f), 0.0f));
@@ -45,13 +45,13 @@ constexpr bool test_math()
   assert(emb::norm2pi(2224.24756f) < two_pi);
   assert(emb::norm2pi(-2224.24756f) >= 0.0f);
 
-  // rempi
+  // normpi
   assert(near(emb::normpi(0.0f), 0.0f));
   assert(near(emb::normpi(pi + 0.5f), -pi + 0.5f));
   assert(near(emb::normpi(-pi + 0.5f), -pi + 0.5f));
   assert(emb::normpi(2221.10596f) < pi);
 
-  // rem2pi_fast
+  // norm2pi_fast
   assert(near(emb::norm2pi_fast(0.0f), 0.0f));
   assert(near(emb::norm2pi_fast(two_pi), 0.0f));
   assert(near(emb::norm2pi_fast(-two_pi), 0.0f));
@@ -61,7 +61,7 @@ constexpr bool test_math()
   // a large negative input must not land on the upper bound
   assert(emb::norm2pi_fast(-110000016.0f) < two_pi);
 
-  // rempi_fast
+  // normpi_fast
   assert(near(emb::normpi_fast(0.0f), 0.0f));
   assert(near(emb::normpi_fast(pi + 0.5f), -pi + 0.5f));
   assert(near(emb::normpi_fast(-pi + 0.5f), -pi + 0.5f));
