@@ -50,23 +50,26 @@ constexpr bool is_contiguous_mask(M mask)
 } // namespace detail
 
 // The concept `valid_mask<Mask>` is satisfied if and only if `Mask` is a
-// positive value of an integral type.
+// positive value of type `unsigned char`, `unsigned short`, `unsigned int`,
+// `unsigned long` or `unsigned long long`.
 template<auto Mask>
-concept valid_mask = std::integral<decltype(Mask)> && (Mask > 0);
+concept valid_mask = emb::same_as_any<decltype(Mask),
+                                      unsigned char,
+                                      unsigned short,
+                                      unsigned int,
+                                      unsigned long,
+                                      unsigned long long>
+                  && (Mask > 0);
 
 // The concept `field_mask<Mask>` is satisfied if and only if `Mask` satisfies
-// `valid_mask` and its set bits are contiguous. `Mask` must not be a `bool`.
-// Such a mask selects a field, whose value is its bits shifted down to bit 0.
+// `valid_mask` and its set bits are contiguous. Such a mask selects a field,
+// whose value is its bits shifted down to bit 0.
 template<auto Mask>
-concept field_mask =
-    valid_mask<Mask>
-    && detail::is_contiguous_mask(
-        static_cast<std::make_unsigned_t<decltype(Mask)>>(Mask));
+concept field_mask = valid_mask<Mask> && detail::is_contiguous_mask(Mask);
 
 // The concept `mask_for<Mask, Reg>` is satisfied if and only if `Reg`
 // satisfies `some_register`, `Mask` satisfies `valid_mask`, and the value of
-// `Mask` fits in `Reg`, even if the type of `Mask` is wider than `Reg`. `Mask`
-// must not be of type `bool` or of a character type.
+// `Mask` fits in `Reg`, even if the type of `Mask` is wider than `Reg`.
 template<auto Mask, typename Reg>
 concept mask_for = some_register<Reg>
                 && valid_mask<Mask>
@@ -314,8 +317,7 @@ void clear_w0(Reg& reg)
 // The class template `bits` holds a value for the field selected by `Mask`,
 // shifted into the field's position, for `modify` to write to a register. A
 // value that does not fit in the field is truncated to the width of the field;
-// a scoped enumeration value is converted to its underlying value first. `Mask`
-// must be of an unsigned integer type.
+// a scoped enumeration value is converted to its underlying value first.
 template<auto Mask>
   requires field_mask<Mask>
 struct bits {
