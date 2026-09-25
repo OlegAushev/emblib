@@ -20,9 +20,16 @@ constexpr bool test_units_conversion()
 
   assert(emb::norm360(deg_f32{380.0f}) == deg_f32(20.0f));
   assert(emb::norm360(deg_f32{-30.0f}) == deg_f32(330.0f));
+  // a tiny negative input must not round onto the upper bound
+  assert(emb::norm360(deg_f32{-1e-6f}) == deg_f32(0.0f));
+  assert(emb::norm360(deg_f32{-1.5e-5f}).value() < 360.0f);
+  // a negative multiple of 360 must give +0, not -0
+  assert(std::bit_cast<std::uint32_t>(emb::norm360(deg_f32{-360.0f}).value())
+         == 0u);
 
   assert(emb::norm180(deg_f32{200.0f}) == deg_f32(-160.0f));
   assert(emb::norm180(deg_f32{-10.0f}) == deg_f32(-10.0f));
+  assert(emb::norm180(deg_f32{-180.00002f}) == deg_f32(-180.0f));
 
   [[maybe_unused]] constexpr auto near = [](float a, float b) {
     return (a - b) < 1e-4f && (b - a) < 1e-4f;

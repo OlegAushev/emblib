@@ -116,8 +116,12 @@ constexpr Unit norm360(Unit v)
 {
   using T = Unit::value_type;
   T val = emb::fmod(v.value(), T{360});
-  if (val < 0) {
+  if (val <= 0) { // `fmod` returns -0 for the negative multiples of 360
     val += T{360};
+    if (val >= T{360}) {
+      // |val| was below half an ulp of 360, so the sum rounded onto the bound.
+      val = T{0};
+    }
   }
   return Unit{val};
 }
