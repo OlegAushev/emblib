@@ -40,10 +40,13 @@ constexpr bool test_units_conversion()
   assert(near(emb::norm360_fast(deg_f32{-30.0f}).value(), 330.0f));
   assert(near(emb::norm360_fast(deg_f32{360.0f}).value(), 0.0f));
   assert(near(emb::norm360_fast(deg_f32{720.0f}).value(), 0.0f));
+  // a large negative input must not land on the upper bound
+  assert(emb::norm360_fast(deg_f32{-7000000512.0f}).value() < 360.0f);
 
   // rem180_fast
   assert(near(emb::norm180_fast(deg_f32{200.0f}).value(), -160.0f));
   assert(near(emb::norm180_fast(deg_f32{-10.0f}).value(), -10.0f));
+  assert(emb::norm180_fast(deg_f32{-7000000512.0f}).value() < 180.0f);
 
   float v2{3000.0f};
   [[maybe_unused]] std::int32_t p{4};

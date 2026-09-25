@@ -278,7 +278,7 @@ constexpr T norm2pi_fast(T x)
 
   T norm = x * inv_two_pi;
   norm -= static_cast<T>(static_cast<std::int32_t>(norm) - (norm < T{0}));
-  if (norm >= T{1}) norm -= T{1};
+  if (norm >= T{1}) norm = T{0};
   return norm * two_pi;
 }
 

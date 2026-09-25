@@ -141,7 +141,7 @@ constexpr Unit norm360_fast(Unit v)
   constexpr T inv_360 = T{1} / T{360};
   T norm = v.value() * inv_360;
   norm -= static_cast<T>(static_cast<std::int32_t>(norm) - (norm < T{0}));
-  if (norm >= T{1}) norm -= T{1};
+  if (norm >= T{1}) norm = T{0};
   return Unit{norm * T{360}};
 }
 

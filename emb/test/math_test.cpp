@@ -58,11 +58,14 @@ constexpr bool test_math()
   assert(near(emb::norm2pi_fast(4 * pi), 0.0f));
   assert(near(emb::norm2pi_fast(two_pi + 1.0f), 1.0f));
   assert(near(emb::norm2pi_fast(-1.0f), two_pi - 1.0f));
+  // a large negative input must not land on the upper bound
+  assert(emb::norm2pi_fast(-110000016.0f) < two_pi);
 
   // rempi_fast
   assert(near(emb::normpi_fast(0.0f), 0.0f));
   assert(near(emb::normpi_fast(pi + 0.5f), -pi + 0.5f));
   assert(near(emb::normpi_fast(-pi + 0.5f), -pi + 0.5f));
+  assert(emb::normpi_fast(-110000016.0f) < pi);
 
   return true;
 }
