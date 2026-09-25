@@ -1,0 +1,183 @@
+# Документирующие комментарии: чеклист
+
+Какие файлы emblib прошёл агент `cpp-doc-commenter` (`.claude/agents/cpp-doc-commenter.md`
+в репозитории adpt-etk-inverter). Отмечен файл, в котором задокументированы все
+сущности; у начатых файлов под ним — список сущностей.
+
+Тестовые прогоны 2026-09-24 шли в копиях дерева в песочнице, и их результат в
+emblib не попал. Такие файлы помечены «песочница»: сущности там уже разобраны, но
+комментарии нужно писать заново.
+
+## Начатые
+
+- [x] `emb/assert.hpp`
+  - [x] `ASSUME`
+  - [x] `emb::ensure_failed`
+  - [x] `emb::ensure`
+- [x] `emb/expected.hpp`
+  - [x] `TRY`
+- [x] `emb/math.hpp`
+  - [x] `builtin_sin`, `sin`
+  - [x] `builtin_cos`, `cos`
+  - [x] `builtin_atan2`, `atan2`
+  - [x] `fast_rsqrt`
+  - [x] `builtin_rsqrt`, `rsqrt`
+  - [x] `fast_sqrt`
+  - [x] `builtin_sqrt`, `sqrt`
+  - [x] `fmod_trivial`, `fmod`
+  - [x] `sgn`, `iseven`, `isodd`, `approx`
+  - [x] `to_rad`, `to_deg`, `to_eradps`, `to_rpm`
+  - [x] `norm2pi`, `normpi`, `norm2pi_fast`, `normpi_fast`
+- [x] `emb/math/clamped.hpp`
+  - [x] `clamped`
+  - [x] `signed_pu`, `unsigned_pu`, `signed_pu_f32`, `unsigned_pu_f32`
+- [x] `emb/math/scaled.hpp`
+  - [x] `saturate_round`
+  - [x] `quantize`, `dequantize`
+  - [x] `some_quantity`, `some_ratio`
+  - [x] `detail::scaled`
+  - [x] `scaled` (псевдоним)
+- [x] `emb/mmio.hpp`
+  - [x] `some_register`, `some_writable_register`, `mask_type`, `value_type`
+  - [x] `detail::is_contiguous_mask`, `valid_mask`, `field_mask`, `mask_for`,
+    `field_mask_for`, `flag_mask_for`
+  - [x] `read`, `write` (`runtime::` и шаблонные)
+  - [x] `set`, `clear`, `toggle`, `set_or_clear` (`runtime::` и шаблонные)
+  - [x] `test_any`, `test_all`, `test` (`runtime::` и шаблонные)
+  - [x] `clear_w1`, `clear_w0` (`runtime::` и шаблонные)
+  - [x] `bits`, `modify`
+- [x] `emb/singleton.hpp`
+  - [x] `singleton`
+  - [x] `singleton_array`
+
+## Остальные
+
+- [ ] `emb/actuator.hpp`
+- [ ] `emb/actuator/concepts.hpp`
+- [ ] `emb/actuator/discrete.hpp`
+- [ ] `emb/actuator/feedback.hpp`
+- [ ] `emb/actuator/monitored.hpp`
+- [ ] `emb/actuator/unmonitored.hpp`
+- [ ] `emb/algorithm.hpp` — песочница: `median3`
+- [ ] `emb/can.hpp`
+- [ ] `emb/can/bus.hpp`
+- [ ] `emb/can/canopen/detail/emcy_producer.hpp`
+- [ ] `emb/can/canopen/detail/hb_consumer.cpp`
+- [ ] `emb/can/canopen/detail/hb_consumer.hpp`
+- [ ] `emb/can/canopen/detail/hb_producer.hpp`
+- [ ] `emb/can/canopen/detail/nmt_slave.hpp`
+- [ ] `emb/can/canopen/detail/rpdo_consumer.hpp`
+- [ ] `emb/can/canopen/detail/sdo_server.hpp`
+- [ ] `emb/can/canopen/detail/sync_producer.hpp`
+- [ ] `emb/can/canopen/detail/tpdo_producer.hpp`
+- [ ] `emb/can/canopen/od.hpp` — песочница: `od_access`, `od_scalar`
+- [ ] `emb/can/canopen/od_value_cast.hpp`
+- [ ] `emb/can/canopen/sdo.hpp`
+- [ ] `emb/can/canopen/server.hpp`
+- [ ] `emb/can/canopen/types.hpp`
+- [ ] `emb/can/raw/node.hpp`
+- [ ] `emb/chrono.hpp`
+- [ ] `emb/concurrent/double_buffer.hpp`
+- [ ] `emb/concurrent/latched_seqlock.hpp`
+- [ ] `emb/concurrent/memory_scope.hpp`
+- [ ] `emb/concurrent/seqlock.hpp`
+- [ ] `emb/concurrent/spmc_buffer.hpp`
+- [ ] `emb/concurrent/spsc_queue.hpp`
+- [ ] `emb/concurrent/triple_buffer.hpp`
+- [ ] `emb/concurrent/wide_counter.hpp`
+- [ ] `emb/container/circular_buffer.hpp`
+- [ ] `emb/container/inplace_queue.hpp`
+- [ ] `emb/container/inplace_stack.hpp`
+- [ ] `emb/container/inplace_vector.hpp`
+- [ ] `emb/controller.hpp`
+- [ ] `emb/delegate.hpp`
+- [ ] `emb/filter/exponential_filter.hpp`
+- [ ] `emb/filter/exponential_median_filter.hpp`
+- [ ] `emb/filter/median_filter.hpp`
+- [ ] `emb/filter/moving_average_filter.hpp`
+- [ ] `emb/filter/passthrough_filter.hpp`
+- [ ] `emb/foc.hpp`
+- [ ] `emb/foc/clarke.hpp`
+- [ ] `emb/foc/deadtime_compensation.hpp`
+- [ ] `emb/foc/dq_controller.hpp`
+- [ ] `emb/foc/park.hpp`
+- [ ] `emb/foc/pwm.hpp`
+- [ ] `emb/foc/sinpwm.hpp`
+- [ ] `emb/foc/svpwm.hpp`
+- [ ] `emb/foc/to_polar.hpp`
+- [ ] `emb/foc/types.hpp`
+- [ ] `emb/foc/utility.hpp`
+- [ ] `emb/fsm/command.hpp`
+- [ ] `emb/fsm/fsm_sp_cpp23.hpp`
+- [ ] `emb/fsm/fsm_v2.hpp`
+- [ ] `emb/fsm/fsm_v3.hpp`
+- [ ] `emb/functional.hpp`
+- [ ] `emb/generator/ramp_generator.hpp`
+- [ ] `emb/generator/sine_generator.hpp`
+- [ ] `emb/gpio.hpp`
+- [ ] `emb/hall.hpp`
+- [ ] `emb/hall/angle_sensor.hpp`
+- [ ] `emb/hall/calibration.cpp`
+- [ ] `emb/hall/calibration.hpp`
+- [ ] `emb/hall/emulator.cpp`
+- [ ] `emb/hall/emulator.hpp`
+- [ ] `emb/hall/error.hpp`
+- [ ] `emb/hall/sector.hpp`
+- [ ] `emb/integrator.hpp` — песочница: `integrator`
+- [ ] `emb/math/saturation.hpp`
+- [ ] `emb/math/trigonometric.hpp` — песочница: `lookup_sin`, `fast_atan2`, таблица sin/cos
+- [ ] `emb/memory/eeprom/eeprom.cpp`
+- [ ] `emb/memory/eeprom/eeprom.hpp`
+- [ ] `emb/memory/memory_def.hpp`
+- [ ] `emb/meta.hpp`
+- [ ] `emb/meta/all_same.hpp`
+- [ ] `emb/meta/alternative_of.hpp`
+- [ ] `emb/meta/fixed_string.hpp`
+- [ ] `emb/meta/nth_type.hpp`
+- [ ] `emb/meta/overload.hpp`
+- [ ] `emb/meta/replicate.hpp`
+- [ ] `emb/meta/same_as_any.hpp`
+- [ ] `emb/meta/type_index.hpp`
+- [ ] `emb/meta/typelist.hpp`
+- [ ] `emb/meta/unroll.hpp`
+- [ ] `emb/meta/visit_at.hpp`
+- [ ] `emb/noncopyable.hpp`
+- [ ] `emb/nvm/storage.hpp`
+- [ ] `emb/nvm_obsolete.hpp`
+- [ ] `emb/pipe.hpp`
+- [ ] `emb/scheduler/basic_scheduler.hpp`
+- [ ] `emb/scope.hpp`
+- [ ] `emb/sensor.hpp`
+- [ ] `emb/sensor/buffered.hpp`
+- [ ] `emb/sensor/concepts.hpp`
+- [ ] `emb/sensor/multichannel.hpp`
+- [ ] `emb/sensor/multiplexed.hpp`
+- [ ] `emb/sensor/signalpath.hpp`
+- [ ] `emb/sensor/singlechannel.hpp`
+- [ ] `emb/settings/image.hpp`
+- [ ] `emb/settings/param.hpp`
+- [ ] `emb/settings/pending.hpp`
+- [ ] `emb/settings/record.hpp`
+- [ ] `emb/settings/schema.hpp`
+- [ ] `emb/settings/store.hpp`
+- [ ] `emb/settings/value.hpp`
+- [ ] `emb/signal.hpp`
+- [ ] `emb/signal/affine.hpp`
+- [ ] `emb/signal/bind.hpp`
+- [ ] `emb/signal/path.hpp`
+- [ ] `emb/signal/proportional.hpp`
+- [ ] `emb/signal/sign.hpp`
+- [ ] `emb/spi.hpp`
+- [ ] `emb/three_phase.hpp`
+- [ ] `emb/trouble.hpp`
+- [ ] `emb/units.hpp`
+- [ ] `emb/units/angle.hpp`
+- [ ] `emb/units/chrono.hpp`
+- [ ] `emb/units/conductivity.hpp`
+- [ ] `emb/units/electrical.hpp`
+- [ ] `emb/units/flow.hpp`
+- [ ] `emb/units/named_unit.hpp`
+- [ ] `emb/units/pressure.hpp`
+- [ ] `emb/units/relations.hpp`
+- [ ] `emb/units/speed.hpp`
+- [ ] `emb/units/temperature.hpp`
