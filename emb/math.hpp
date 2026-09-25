@@ -12,6 +12,7 @@
 #include <cmath>
 #include <concepts>
 #include <cstdint>
+#include <limits>
 #include <numbers>
 #include <numeric>
 
@@ -160,7 +161,25 @@ constexpr float sqrt(float x)
 template<std::floating_point T>
 consteval T fmod_trivial(T x, T y)
 {
-  return x - static_cast<T>(static_cast<long long>(x / y)) * y;
+  T const ax = x < 0 ? -x : x;
+  T const ay = y < 0 ? -y : y;
+  if (!(ax <= std::numeric_limits<T>::max()) || !(ay > 0)) {
+    return std::numeric_limits<T>::quiet_NaN();
+  }
+  if (ax < ay) {
+    return x;
+  }
+  T d = ay;
+  while (d <= ax - d) {
+    d *= 2;
+  }
+  T r = ax;
+  for (; d >= ay; d /= 2) {
+    if (r >= d) {
+      r -= d;
+    }
+  }
+  return x < 0 ? -r : r;
 }
 
 template<std::floating_point T>

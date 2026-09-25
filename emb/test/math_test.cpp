@@ -41,11 +41,15 @@ constexpr bool test_math()
   assert(emb::norm2pi(-1e-8f) == 0.0f);
   assert(emb::norm2pi(-2e-7f) < two_pi);
   assert(emb::norm2pi(-two_pi) == 0.0f);
+  // large inputs must stay in range: the reduction has to be exact
+  assert(emb::norm2pi(2224.24756f) < two_pi);
+  assert(emb::norm2pi(-2224.24756f) >= 0.0f);
 
   // rempi
   assert(near(emb::normpi(0.0f), 0.0f));
   assert(near(emb::normpi(pi + 0.5f), -pi + 0.5f));
   assert(near(emb::normpi(-pi + 0.5f), -pi + 0.5f));
+  assert(emb::normpi(2221.10596f) < pi);
 
   // rem2pi_fast
   assert(near(emb::norm2pi_fast(0.0f), 0.0f));
