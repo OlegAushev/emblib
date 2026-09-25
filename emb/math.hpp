@@ -29,8 +29,7 @@ inline float builtin_sin(float x)
 {
 #ifdef __arm__
   return arm_sin_f32(x);
-#endif
-#ifdef __x86_64__
+#else
   return std::sin(x);
 #endif
 }
@@ -50,8 +49,7 @@ inline float builtin_cos(float x)
 {
 #ifdef __arm__
   return arm_cos_f32(x);
-#endif
-#ifdef __x86_64__
+#else
   return std::cos(x);
 #endif
 }
@@ -70,11 +68,10 @@ constexpr float cos(float x)
 inline float builtin_atan2(float y, float x)
 {
 #ifdef __arm__
-  float ret;
+  float ret = 0.0f;
   arm_atan2_f32(y, x, &ret);
   return ret;
-#endif
-#ifdef __x86_64__
+#else
   return std::atan2(y, x);
 #endif
 }
@@ -112,8 +109,7 @@ inline float builtin_rsqrt(float x)
   float ret;
   arm_sqrt_f32(x, &ret);
   return 1.0f / ret;
-#endif
-#ifdef __x86_64__
+#else
   return 1.0f / std::sqrtf(x);
 #endif
 }
@@ -141,8 +137,7 @@ inline float builtin_sqrt(float x)
   float ret;
   arm_sqrt_f32(x, &ret);
   return ret;
-#endif
-#ifdef __x86_64__
+#else
   return std::sqrtf(x);
 #endif
 }
