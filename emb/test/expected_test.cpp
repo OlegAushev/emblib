@@ -20,7 +20,8 @@ constexpr auto make(std::expected<int, error> e)
 constexpr auto sum(std::expected<int, error> a, std::expected<int, error> b)
     -> std::expected<int, error>
 {
-  return TRY(a) + TRY(b);
+  auto const x = TRY(a);
+  return x + TRY(b);
 }
 
 constexpr bool test_value()
@@ -41,7 +42,7 @@ constexpr bool test_value()
   return true;
 }
 
-[[maybe_unused]] constexpr bool test_lvalue_not_consumed()
+constexpr bool test_lvalue_not_consumed()
 {
   auto e = make(42);
   auto f = [](std::expected<int, error>& x) -> std::expected<int, error> {
@@ -108,13 +109,13 @@ constexpr bool test_rvalue_moved()
 
 static_assert(test_value());
 static_assert(test_rvalue_moved());
+static_assert(test_lvalue_not_consumed());
 // The error path is not constant-evaluatable everywhere (see
 // emb/expected.hpp); these cover it where possible.
 #ifndef __clang__
 static_assert(test_void());
 #if __GNUC__ >= 16
 static_assert(test_error_propagation());
-static_assert(test_lvalue_not_consumed());
 static_assert(test_error_conversion());
 #endif
 #endif
