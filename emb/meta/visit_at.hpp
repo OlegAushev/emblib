@@ -25,6 +25,9 @@ constexpr decltype(auto) visit_at(Tuple& t, std::size_t i, F&& f)
   if constexpr (requires { t[i]; }) {
     return f(t[i]);
   }
+  else if constexpr (I >= std::tuple_size_v<Tuple>) {
+    static_assert(false, "tuple must not be empty");
+  }
   else if constexpr (I + 1 == std::tuple_size_v<Tuple>) {
     return f(std::get<I>(t));
   }
