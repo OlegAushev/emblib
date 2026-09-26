@@ -59,6 +59,7 @@ static_assert(typelist_contains_v<typelist<A, B, C>, B>);
 static_assert(typelist_contains_v<typelist<A, B, C>, C>);
 static_assert(!typelist_contains_v<typelist<A, B>, C>);
 static_assert(!typelist_contains_v<typelist<>, A>);
+static_assert(!typelist_contains_v<A, A>);
 
 // contains concept
 static_assert(typelist_contains<typelist<A, B>, A>);
@@ -82,10 +83,12 @@ static_assert(typelist_unique_v<typelist<A>>);
 static_assert(typelist_unique_v<typelist<>>);
 static_assert(!typelist_unique_v<typelist<A, B, A>>);
 static_assert(!typelist_unique_v<typelist<A, A>>);
+static_assert(!typelist_unique_v<A>);
 
 // unique concept
 static_assert(typelist_unique<typelist<A, B, C>>);
 static_assert(!typelist_unique<typelist<A, A>>);
+static_assert(!typelist_unique<A>);
 
 // append
 static_assert(std::is_same_v<typelist_append_t<typelist<>, A>, typelist<A>>);

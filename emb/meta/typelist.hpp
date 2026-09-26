@@ -99,10 +99,10 @@ inline constexpr std::size_t typelist_count_v =
     typelist_count_t<List, T>::value;
 
 // Checks whether no two elements of the typelist `List` are the same type,
-// which holds for an empty typelist. The program is ill-formed if `List` is not
-// a typelist.
+// which holds for an empty typelist. If `List` is not a typelist, `value` is
+// `false`.
 template<typename List>
-struct typelist_unique_t;
+struct typelist_unique_t : std::false_type {};
 
 template<typename... Ts>
 struct typelist_unique_t<typelist<Ts...>>
@@ -115,7 +115,7 @@ inline constexpr bool typelist_unique_v = typelist_unique_t<List>::value;
 
 // The concept `typelist_unique<List>` is satisfied if and only if no two
 // elements of the typelist `List` are the same type, which holds for an empty
-// typelist. The program is ill-formed if `List` is not a typelist.
+// typelist. If `List` is not a typelist, it is not satisfied.
 template<typename List>
 concept typelist_unique = typelist_unique_v<List>;
 
