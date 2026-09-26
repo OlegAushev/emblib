@@ -5,6 +5,9 @@
 
 namespace emb {
 
+// Calls `f.template operator()<I>()` for each `I` in [0, `N`), in increasing
+// order of `I`, and discards the values the calls return. `f` can be a lambda
+// `[&]<std::size_t I>() { ... }`. If `N` is zero, there are no effects.
 template<std::size_t N, typename F>
 constexpr void unroll(F&& f)
 {

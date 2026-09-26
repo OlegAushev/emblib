@@ -39,6 +39,40 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `some_quantity`, `some_ratio`
   - [x] `detail::scaled`
   - [x] `scaled` (псевдоним)
+- [x] `emb/meta.hpp` — только подключает заголовки `emb/meta/`, сущностей нет
+- [x] `emb/meta/all_same.hpp`
+  - [x] `all_same` (`detail::all_same_v` без комментария: его покрывает
+    концепт)
+- [x] `emb/meta/alternative_of.hpp`
+  - [x] `is_alternative_of`, `is_alternative_of_v`, `alternative_of`
+- [x] `emb/meta/fixed_string.hpp`
+  - [x] `fixed_string` (правило вывода и `detail::concat_chars` без
+    комментариев)
+  - [x] `operator+` (три перегрузки, у каждой свой комментарий)
+- [x] `emb/meta/nth_type.hpp`
+  - [x] `nth_type`, `nth_type_t`
+- [x] `emb/meta/overload.hpp`
+  - [x] `overload`
+- [x] `emb/meta/replicate.hpp`
+  - [x] `detail::replicated`, `replicate`, `replicate_t`
+- [x] `emb/meta/same_as_any.hpp`
+  - [x] `same_as_any`
+- [x] `emb/meta/type_index.hpp`
+  - [x] `type_index`, `type_index_v`
+- [x] `emb/meta/typelist.hpp`
+  - [x] `typelist`
+  - [x] `is_typelist`, `is_typelist_v`, `some_typelist`
+  - [x] `typelist_size`, `typelist_size_v`
+  - [x] `typelist_contains_t`, `typelist_contains_v`, `typelist_contains`
+  - [x] `typelist_at`, `typelist_at_t`
+  - [x] `typelist_count_t`, `typelist_count_v`
+  - [x] `typelist_unique_t`, `typelist_unique_v`, `typelist_unique`
+  - [x] `typelist_append`, `typelist_append_t`
+  - [x] `typelist_concat`, `typelist_concat_t`
+- [x] `emb/meta/unroll.hpp`
+  - [x] `unroll`
+- [x] `emb/meta/visit_at.hpp`
+  - [x] `visit_at`
 - [x] `emb/mmio.hpp`
   - [x] `some_register`, `some_writable_register`, `mask_type`, `value_type`
   - [x] `detail::is_contiguous_mask`, `valid_mask`, `field_mask`, `mask_for`,
@@ -130,18 +164,6 @@ emblib не попал. Такие файлы помечены «песочни�
 - [ ] `emb/memory/eeprom/eeprom.cpp`
 - [ ] `emb/memory/eeprom/eeprom.hpp`
 - [ ] `emb/memory/memory_def.hpp`
-- [ ] `emb/meta.hpp`
-- [ ] `emb/meta/all_same.hpp`
-- [ ] `emb/meta/alternative_of.hpp`
-- [ ] `emb/meta/fixed_string.hpp`
-- [ ] `emb/meta/nth_type.hpp`
-- [ ] `emb/meta/overload.hpp`
-- [ ] `emb/meta/replicate.hpp`
-- [ ] `emb/meta/same_as_any.hpp`
-- [ ] `emb/meta/type_index.hpp`
-- [ ] `emb/meta/typelist.hpp`
-- [ ] `emb/meta/unroll.hpp`
-- [ ] `emb/meta/visit_at.hpp`
 - [ ] `emb/noncopyable.hpp`
 - [ ] `emb/nvm/storage.hpp`
 - [ ] `emb/nvm_obsolete.hpp`

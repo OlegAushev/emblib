@@ -7,13 +7,19 @@
 
 namespace emb {
 
-// A structural string: a string literal usable as a non-type template
-// argument — template<fixed_string Name>, instantiated as f<"motor.p">().
-// N counts the terminating NUL, as in the literal it is built from.
+// The class template `fixed_string` holds a string of `N - 1` characters and
+// a terminating NUL in the array `chars`, as in the string literal the string
+// is built from. It is a structural type, so a string literal can be the
+// argument of a template parameter of type `fixed_string`, as in
+// `template<fixed_string Name>`. `size()` is `N - 1` and `view()` covers the
+// first `N - 1` characters even if a NUL is among them, e.g. in a
+// default-constructed `fixed_string`, which holds `N` NULs. If the array
+// passed to the constructor does not end with a NUL, `data()` is not
+// NUL-terminated. The program is ill-formed if `N` is zero.
 //
-// The character array is named `chars`, not `data`, so that `data()` and
-// `size()` can be member functions: with those two, a fixed_string is also a
-// valid static_assert message.
+// The array is named `chars`, not `data`, so that `data()` and `size()` can
+// be member functions: with those two, a `fixed_string` is also a valid
+// `static_assert` message.
 template<std::size_t N>
 struct fixed_string {
   char chars[N]{};
@@ -67,21 +73,23 @@ consteval auto concat_chars(char const (&lhs)[N], char const (&rhs)[M])
 
 } // namespace detail
 
-// Concatenation is consteval: it exists to build diagnostic messages and
-// compound names at compile time, and nothing else should be tempted to
-// build strings with it at run time.
+// Returns the concatenation of `lhs` and `rhs`, a `fixed_string<N + M - 1>`.
+// Concatenation is `consteval`, for building diagnostic messages and compound
+// names at compile time; it cannot build strings at run time.
 template<std::size_t N, std::size_t M>
 consteval auto operator+(fixed_string<N> const& lhs, fixed_string<M> const& rhs)
 {
   return detail::concat_chars(lhs.chars, rhs.chars);
 }
 
+// Equivalent to `fixed_string(lhs) + rhs`.
 template<std::size_t N, std::size_t M>
 consteval auto operator+(char const (&lhs)[N], fixed_string<M> const& rhs)
 {
   return detail::concat_chars(lhs, rhs.chars);
 }
 
+// Equivalent to `lhs + fixed_string(rhs)`.
 template<std::size_t N, std::size_t M>
 consteval auto operator+(fixed_string<N> const& lhs, char const (&rhs)[M])
 {
