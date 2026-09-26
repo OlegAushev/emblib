@@ -37,6 +37,13 @@ static_assert(std::is_same_v<nth_type_t<1, A, B, C>, B>);
 static_assert(std::is_same_v<nth_type_t<2, A, B, C>, C>);
 static_assert(std::is_same_v<nth_type<1, A, B, C>::type, B>);
 
+// -- type_index tests --
+
+static_assert(type_index_v<A, A, B, C> == 0);
+static_assert(type_index_v<C, A, B, C> == 2);
+static_assert(type_index_v<B, A, B, B> == 1);
+static_assert(type_index<B, A, B>::value == 1);
+
 // -- alternative_of tests --
 
 static_assert(is_alternative_of_v<A, std::variant<A, B>>);
@@ -96,5 +103,15 @@ static_assert(
     std::is_same_v<typelist_append_t<typelist<A>, B>, typelist<A, B>>);
 static_assert(
     std::is_same_v<typelist_append_t<typelist<A, B>, C>, typelist<A, B, C>>);
+
+// concat
+static_assert(
+    std::is_same_v<typelist_concat_t<typelist<>, typelist<>>, typelist<>>);
+static_assert(
+    std::is_same_v<typelist_concat_t<typelist<A>, typelist<>>, typelist<A>>);
+static_assert(
+    std::is_same_v<typelist_concat_t<typelist<>, typelist<B>>, typelist<B>>);
+static_assert(std::is_same_v<typelist_concat_t<typelist<A, B>, typelist<C, A>>,
+                             typelist<A, B, C, A>>);
 
 } // namespace
