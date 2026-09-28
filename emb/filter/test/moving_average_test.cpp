@@ -1,6 +1,8 @@
 #include <emb/filter/moving_average_filter.hpp>
 #include <emb/units.hpp>
 
+#include <cstddef>
+
 namespace {
 
 template<typename Filter>
@@ -76,5 +78,29 @@ static_assert(
 static_assert(test_moving_average_filter(
     emb::moving_average_filter<emb::units::erad_f32, 4>{},
     emb::units::erad_f32{0}));
+
+// A value much larger than the rest no longer affects the output
+// `WindowSize - 1` pushes after it has left the window, wherever it falls
+// among the pushes. An infinity or a NaN can't be tested here: constant
+// evaluation rejects arithmetic that produces a NaN.
+template<std::size_t WindowSize>
+constexpr bool test_moving_average_outlier(float outlier)
+{
+  for (auto offset = 0uz; offset < WindowSize; ++offset) {
+    emb::moving_average_filter<float, WindowSize> filter;
+    for (auto i = 0uz; i < WindowSize + offset; ++i) {
+      filter.push(1.0f);
+    }
+    filter.push(outlier);
+    for (auto i = 0uz; i < 2 * WindowSize - 1; ++i) {
+      filter.push(1.0f);
+    }
+    assert(filter.output() == 1.0f);
+  }
+  return true;
+}
+
+static_assert(test_moving_average_outlier<4>(1e8f));
+static_assert(test_moving_average_outlier<16>(1e8f));
 
 } // namespace
