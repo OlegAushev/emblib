@@ -1,10 +1,9 @@
 #pragma once
 
-#include <algorithm>
-#include <emb/algorithm.hpp>
 #include <emb/container/circular_buffer.hpp>
-#include <emb/math.hpp>
-#include <emb/units.hpp>
+
+#include <cstddef>
+#include <utility>
 
 namespace emb {
 
