@@ -1,6 +1,9 @@
 #pragma once
 
+#include <emb/units.hpp>
+
 #include <algorithm>
+#include <concepts>
 #include <utility>
 
 namespace emb {
@@ -9,8 +12,7 @@ namespace emb {
 // exponential moving average of the values pushed: `push(input)` moves the
 // output toward `input` by the smoothing factor times their difference.
 // Construction and `reset()` set the output to the initial output, and
-// `set_output(value)` to `value`. `T` must be a floating-point type or a
-// `units::named_unit`.
+// `set_output(value)` to `value`.
 //
 // The smoothing factor is the sampling period divided by the time constant,
 // clamped to [0, 1]; `set_smoothing` sets both durations and `set_timestep`
@@ -18,9 +20,12 @@ namespace emb {
 // constant, the filter approximates a first-order low-pass filter with a time
 // constant about half a sampling period shorter; if the sampling period is at
 // least the time constant, `push(input)` sets the output to `input`, up to
-// rounding. The time constant must be positive and `factor_type` a
-// floating-point type; the behavior is undefined if the quotient is NaN.
+// rounding. The time constant must be positive; the behavior is undefined if
+// the quotient is NaN.
 template<typename T, typename Duration>
+  requires(std::floating_point<T> || emb::units::some_unit<T>)
+       && std::floating_point<decltype(std::declval<Duration>()
+                                       / std::declval<Duration>())>
 class exponential_filter {
 public:
   using value_type = T;
