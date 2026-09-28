@@ -29,7 +29,7 @@ private:
   value_type init_output_;
   value_type output_;
 public:
-  constexpr median_filter(value_type init_output = value_type())
+  constexpr explicit median_filter(value_type init_output = value_type())
       : init_output_(init_output)
   {
     reset();
