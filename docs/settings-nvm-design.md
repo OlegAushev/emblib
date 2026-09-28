@@ -6,6 +6,13 @@ records that commit or do not; they are reached by name from the
 application and by index from a protocol; and a change takes effect without
 a restart wherever the schema says it may. The stack it replaced is gone.
 
+Three parts of the design never became steps and are not built: the
+object dictionary section generated from the schema (§7), the trigger that
+applies a batch whole and the debounced save (§4, §10a), and the sections
+beyond `config` (§5). Checked against the code on 2026-09-28. The store's
+algorithms, invariants and failure scenarios are described in detail, in
+Russian, in `settings-store-algorithms.ru.md`.
+
 ## 1. Scope
 
 A replacement for the current NVM parameter stack (`emb/nvm.hpp` +
@@ -83,14 +90,15 @@ per-entry size.
 `writable` is not `od_access`: "immutable after production" (factory
 calibration) is a fact about the parameter, while "read-only over SDO" is a
 fact about the protocol and may be strictly narrower. The adapter may
-narrow, never widen; checked with `static_assert`.
+narrow, never widen; checked with `static_assert` once there is an adapter
+(§7).
 
 Type-erased interface offered to transports:
 
 ```cpp
 namespace settings {
 using value = std::variant<bool, std::int32_t, std::uint32_t, float>;
-enum class error { unknown_name, read_only, out_of_range, type_mismatch, storage };
+enum class error { unknown_parameter, read_only, type_mismatch, out_of_range };
 
 auto descriptors() -> std::span<descriptor const>;
 auto find(std::string_view name) -> std::optional<index>;
@@ -104,10 +112,13 @@ auto set_at(index, value) -> std::expected<change, error>;
 Parameters split into three classes, declared in the schema:
 
 1. `live` — feed derived state only (PI gains, limits, slopes, angle
-   correction, protection thresholds). Applied by recomputation.
+   correction, protection thresholds). Applied by recomputation. The PWM
+   frequency is live as well: the ADC interrupt switches the timer and the
+   timesteps between two control steps, and the preloaded period and
+   duties start together at the next update event.
 2. `on_safe_state` — applicable, but not in every drive state (motor
-   electrical parameters that rebuild the observer, PWM frequency). The FSM
-   decides; until then the change stays pending.
+   electrical parameters that rebuild the observer, the hall sensor's
+   sector angles). The FSM decides; until then the change stays pending.
 3. `on_restart` — change the *set* of objects that exist or the peripheral
    setup (`hall.enabled`, `motor.p`, pin routing). Not applied live; the
    system reports `restart_required` instead of pretending.
@@ -145,8 +156,8 @@ where they are safe; nothing takes `on_restart`, which is what keeps
 Pull, not registration: no lifetimes, no reverse dependency, no hidden
 observers, and the safe point sits literally in the code that knows it is
 safe. The cost is one atomic load per control cycle. `md::motor_drive`
-already hand-rolls this pattern in `pending_pwm_freq_` /
-`pending_calibration_`; the mechanism generalizes that single instance.
+hand-rolled this pattern in `pending_pwm_freq_` / `pending_calibration_`;
+the mechanism generalizes that single instance.
 
 `configure()` decides explicitly what survives a reconfiguration: changing
 `Kp/Ki` keeps the integrator (they are tuned while running, and a reset
@@ -163,6 +174,13 @@ Batches (the twelve hall calibration angles) must not be applied halfway:
 application is triggered by an explicit command (`1010h` save+apply) or by a
 quiet-period debounce, and group validation runs before the swap, keeping
 the old config on failure.
+
+Not built. A calibration result reaches the image in one call, which
+nothing can split; twelve writes over SDO are twelve changes, and standing
+still, each is applied at the next task tick, so the sensor is rebuilt from
+a mix of old and new angles until the last one lands — harmless, since no
+current flows. The validation has nothing to check with yet:
+`emb::hall::validate(calibration_result)` accepts any angles.
 
 ## 5. NVM record format
 
@@ -211,7 +229,7 @@ Placement is declared once, as a value the store is instantiated with:
 inline constexpr section config_section{.magic = ..., .base = 0,
                                         .slot_capacity = 1024,
                                         .slot_count = 2};
-// flash: .slot_count = 32, .slots_per_block = 16  // two 16 KB sectors
+// flash: .slot_count = 256, .slots_per_block = 128  // two 128 KiB sectors
 ```
 
 Slots hold successive records; a save writes the next one and leaves the
@@ -226,46 +244,62 @@ current parameter count** — otherwise adding a parameter would shift the
 slot stride and invalidate everything already stored.
 `static_assert(record_size <= slot_capacity)`.
 
-For the 57 parameters of the current product: record = 480 B,
-`slot_capacity` = 1024 B (room for about 125).
+For the 58 parameters of the current product: record = 488 B,
+`slot_capacity` = 1024 B (room for 125).
 
 - FRAM (FM25W256, 32 KB): two slots, 2 KB of 32; endurance is a non-issue.
 - EEPROM: identical; page splitting is the driver's business.
-- Internal flash (APM32F405/F407, 16 KB sectors at the bottom of the
-  bank): two sectors, records appended at `slot_capacity` stride — 16
-  slots per sector; on overflow switch to the other sector (erased
-  before its first write), erase the old one lazily at the next
-  rollover. 32 saves per erase cycle; at 10k cycles, hundreds of
-  thousands of saves. Atomicity and wear levelling from one mechanism.
+- Internal flash (APM32F405/F407): the top two sectors of the bank, 10 and
+  11, 128 KiB each, which both linker scripts hold back from the code.
+  Records are appended at `slot_capacity` stride — 128 slots per sector;
+  on overflow switch to the other sector, erasing it on entry, and leave
+  the old one holding the newest record until the next rollover erases
+  it. One erase of each sector per 256 saves; at 10k cycles, on the order
+  of a million saves. Atomicity and wear levelling from one mechanism.
+  The price is a stalled CPU: programming halts instruction fetch, and
+  erasing a sector halts it for the better part of a second.
+
+The build picks the medium: `SETTINGS_STORAGE` selects the internal flash,
+the default since it costs no board area, or the FRAM, where a save must
+not stall the CPU. Both layouts live in the application's `hw/hw_nvm.hpp`,
+since how big a slot is worth making and how many share an erase block are
+facts about the memory.
 
 ### Commit protocol (identical on all three media)
 
-1. Build the record in a RAM buffer — one burst instead of 57 small writes,
+1. Build the record in a RAM buffer — one burst instead of 58 small writes,
    and mandatory anyway for flash granularity.
-2. Pick the next slot; erase it if the medium needs it.
+2. Pick the next slot; erase it if the medium needs it. Where it does,
+   a slot inside a block is read first, and one holding debris sends the
+   save to the next block (see "Every save asks which slot it takes" in
+   §10).
 3. Write header and cells.
 4. **Write the footer last.** A record interrupted by power loss has no
    valid CRC and is invisible to the loader; the previous record is
    untouched.
-5. Read back and verify the CRC; only then update the in-RAM notion of the
-   active slot. This catches a dead FRAM or a failed program — the current
-   stack has no such check.
+5. Read back and verify the CRC. This catches a dead FRAM or a failed
+   program — the stack it replaced had no such check. The in-RAM position
+   does not wait for it: the slot and the sequence number are spent before
+   the first write, whatever the outcome (see §10).
 
 ### Load
 
-1. Read the 12-byte header of every slot.
+1. Read the 16-byte header of every slot, once per load.
 2. Candidates: valid magic, known format, sane count, record fits the slot.
-3. Read candidates fully, check CRC, take the highest `seq`. None valid →
-   all defaults + a reported fault.
+3. Try candidates from the highest `seq` down: read fully, check CRC; the
+   first whole record wins. None valid → all defaults + a reported fault.
 4. Per cell: binary search `id` in the constexpr descriptor table sorted by
    id. Unknown id → ignored (removed parameter). Found → **validated against
-   min/max/predicate before entering the image**; out of range → default,
+   its bounds before entering the image**; out of range → default,
    counted. Corrupt storage must not inject a bad value into the loops.
 5. Parameters absent from the record keep their defaults (new in this
    firmware).
-6. Produce a load report (`slot`, `seq`, `loaded`, `defaulted_missing`,
-   `defaulted_invalid`) and expose it for diagnostics. Today "the parameter
-   did not read" is indistinguishable from "the parameter is like that".
+6. Produce a load report — which slot and generation, whether the record
+   was whole and written by this schema, whether a read failed, and how
+   many values were stored, loaded, unknown, rejected and missing — and
+   expose it for diagnostics (object `3000h` in the inverter). Before,
+   "the parameter did not read" was indistinguishable from "the parameter
+   is like that".
 
 ### Region layout
 
@@ -284,9 +318,13 @@ A `factory` section on FRAM can additionally be hardware-protected: the
 FM25W256 status register has `bp0/bp1/wpen`, so placing it in the top block
 locks it with one SR write.
 
+Only `config` is built, at the start of whichever medium the build picks;
+`calibration` and `factory` are still a plan, and the hall calibration
+lives in `config` meanwhile.
+
 ### Rejected alternatives
 
-- **Fixed-offset cells (the current scheme).** Same overhead (8 B per
+- **Fixed-offset cells (the scheme it replaced).** Same overhead (8 B per
   parameter), but no group atomicity, no migration, no flash compatibility.
 - **Append log of single-parameter entries.** Minimal write amplification,
   but with deferred explicit `store()` writes are rare, so that buys
@@ -324,8 +362,9 @@ concept some_block_storage = requires {
   wipe honest on FRAM. `needs_erase` separately says whether `write`
   *requires* an erased target.
 - The error type belongs to the backend. Drivers already have a vocabulary
-  (`emb::nvm::error` for the FRAM driver, an HAL status for flash); a common
-  enum here would only add a mapping layer at the wrong end.
+  (the FRAM driver's own reasons, with the bus's error as a cause; the
+  flash driver's status flags); a common enum here would only add a
+  mapping layer at the wrong end.
 - Erase geometry is deliberately absent: F4 sectors are non-uniform
   (16K/64K/128K in one bank), so no constant describes them. Alignment is a
   property of the declared layout; the backend rejects a range that does not
@@ -363,6 +402,20 @@ Completeness is still checked at compile time, without coupling:
 - `od_value_type` compatible with the parameter type, including
   `named_unit` types through `.value()`.
 
+Not built. The application's table is still written by hand: each row
+names its parameter three times and states the type and the default
+itself, and nothing checks the list above — 58 parameters in 58 rows is
+care, not a compile-time fact. `expose` is declared and read by nothing.
+What the section promised for the accessors is there without the adapter:
+`read_param<Name>` and `write_param<Name>` are thunks into two shared
+out-of-line bodies. They are not two instructions, though. The result is
+returned through a hidden pointer, and GCC keeps it across the call
+instead of tailing into the body — `musttail` is refused, since the callee
+returns a structure: 18 and 26 bytes, 2.8 KB for the 58 in release with
+alignment. A row that carried the parameter's index — a context field in
+`od_object` — would let the dictionary call the shared bodies directly and
+drop the thunks, so generating the table is worth more than its looks.
+
 ## 8. File layout
 
 ```
@@ -379,21 +432,32 @@ external/emblib/emb/
   settings/record.hpp          [done] record layout, encode and decode
   settings/store.hpp           [done] slots, active record, commit, load
                                       report
-  can/canopen/od_settings.hpp         OD section generated from the schema
+  can/canopen/od_settings.hpp  [not built] OD section generated from the
+                                      schema, see §7
   test/mock/block_storage.hpp  [done] constexpr RAM backend for tests
   test/*_test.cpp                     in-tree convention: anonymous namespace,
                                       static_assert only
 
-src/common/nvm/
-  fm25w256_fram.hpp            [done] the driver itself models the concept:
-                                      traits, erase(), default timeout
+external/embdev/emb/dev/
+  fm25w256.hpp                 [done] the driver itself models the concept:
+                                      traits, erase(), default timeout; in
+                                      src/common/nvm/ until 2026-09-09
+
+external/mcudrv-apm32/apm32/f4/flash/
+  flash.hpp                    [done] flash::region models it too: a run of
+                                      whole sectors
+
+src/app/inverter/hw/
+  hw_nvm.hpp                   [done] both media and the section's layout
+                                      on each; SETTINGS_STORAGE picks one
 
 src/app/inverter/settings/
   schema.hpp                   [done] the product's parameter list, with
                                       bounds, groups and apply policies
   params.hpp / params.cpp      [done] the facade: load/save/wipe, access by
-                                      name and by index, pending changes,
-                                      the section's place on the medium
+                                      name and by index, pending changes
+  settings.hpp / settings.cpp  [done] the config readers and the saving of
+                                      a hall calibration
 ```
 
 ## 9. Implementation plan
@@ -420,7 +484,8 @@ firmware behaviourally unchanged.
 **Phase 1 — the application, alongside the old stack, nothing switched.**
 
 9. `src/common/nvm/fm25w256_fram.hpp` — **done**: the driver models
-   `some_block_storage` directly, no adapter
+   `some_block_storage` directly, no adapter; it has since moved to embdev
+   as `emb/dev/fm25w256.hpp`
 10. `src/app/inverter/settings/schema.hpp` — **done**: same parameters,
     plus bounds, groups and apply policies; checked against the old layout
     mechanically, same names in the same order with the same defaults
@@ -436,6 +501,8 @@ Two names had to differ from the plan while both stacks coexist: the
 facade's entry point is `load(memory)`, which pairs with `save()`, and the
 whole-image reset is `restore_all_defaults()`, which pairs with
 `restore_default_at(index)`. Both read better than the names they avoid.
+The first has since lost its argument: the build picks the medium, and
+`load()` binds the section to it.
 
 **Phase 2 — consumers, one at a time.**
 
@@ -446,17 +513,17 @@ whole-image reset is `restore_all_defaults()`, which pairs with
     accessors and the save commands switched together. The OD accessors are
     per-row thunks into one shared by-index body, which needs no change to
     emblib's `od.hpp`; generating the table from the schema (dropping the
-    hand-written type and default columns) is still worth doing and is now
-    a purely cosmetic step.
+    hand-written type and default columns) is still worth doing, and not
+    only for its looks — see the end of §7.
 15. `configure()` entry points and dirty groups — **done**. The seam is
     the drive's periodic task tick, which already runs in task context with
     the control timebase masked: `motor_drive::apply_pending_settings()`
     decides from its own state what it can promise (`on_safe_state` when
     standing still, `live` otherwise) and applies the groups it can reach —
-    drive, motor, model and hall. `pmsm::model`, `pmsm::mras_observer` and
-    `hall::angle_sensor` grew a `configure()`; each keeps what it has
-    learned, since gains are tuned while running. Latency is one task tick,
-    33 ms.
+    drive, motor, model and hall, and pwm since the PWM frequency is
+    stored. `pmsm::model`, `pmsm::mras_observer` and `hall::angle_sensor`
+    grew a `configure()`; each keeps what it has learned, since gains are
+    tuned while running. Latency is one task tick, 33 ms.
 16. Cleanup — **done**: `parameters.hpp`, `emb/nvm.hpp`, `od_nvm.hpp` and
     the registry's test are deleted rather than parked; git keeps the
     history. The one thing the FRAM driver still needed from the old header
@@ -471,6 +538,12 @@ Verification after each step of phases 1-2: both presets
 
 Stored data is not migrated: the format is new and the first boot after
 phase 2 comes up with defaults. Decided deliberately — no converter.
+
+Since then the application has chosen its medium at build time (the
+internal flash by default, §5), published the storage's layout, its
+sequence number and the last load report under `3000h`, restricted a
+restore of defaults to the parameters a protocol may write, and stored the
+PWM frequency as `drive.pwm_freq` — live, in a group of its own.
 
 ## 10. Decision log
 
@@ -500,7 +573,7 @@ phase 2 comes up with defaults. Decided deliberately — no converter.
   `emb::clamped`. `settings/value.hpp` therefore depends on neither header,
   and `emb::clamped` parameters come for free — which lets the application
   schema declare `unsigned_pu_f32` directly and drop the wrapping that
-  `read_*_config()` does by hand today.
+  `read_*_config()` did by hand.
 - **`from_raw` is total, `from_value` is not.** A cell read back from
   storage may hold any bit pattern and must yield a value rather than a
   trap: a bool is any-non-zero rather than a `bit_cast`, and a float may
@@ -545,26 +618,42 @@ phase 2 comes up with defaults. Decided deliberately — no converter.
   hides that at every call site.
 - **`writable` gates the erased path only.** A parameter closed to a
   protocol — a factory calibration — must still be writable by the code
-  that owns it, and that code goes through the typed path.
+  that owns it, and that code goes through the typed path. The erased path
+  includes `restore_default_at`: what a protocol may not write, it may not
+  reset either.
 - **A decode either loads everything or touches nothing.** An invalid
   record leaves the image exactly as it was, so a store can try the other
   slot and only then fall back to defaults. A valid one starts from the
   defaults, so a parameter the record does not carry comes up defined
   rather than keeping whatever the image held.
 - **The load report counts what happened** — stored, loaded, unknown,
-  rejected, missing, plus whether the schema matched. Today "the parameter
-  did not read" and "the parameter is like that" are indistinguishable.
+  rejected, missing, plus whether the schema matched. The old stack could
+  not tell "the parameter did not read" from "the parameter is like that".
+  A refused cell counts as rejected and not also as missing: a value
+  carried and refused points at a range that moved under an old record, a
+  value never carried at a schema that grew.
 - **CRC-32 is computed a bit at a time.** A table would cost a kilobyte of
   flash to save microseconds on an operation that runs twice a boot.
-- **The slot ahead is only known to be erased while the store runs.** It
-  advances one slot at a time and erases each block on entering it, so
-  nothing needs checking — until the chain breaks. A restart resumes from
-  what the medium says; a failed save leaves the position past whatever it
-  managed to write. In both cases the next save looks at the slot first and,
-  if it is neither a record nor erased, steps to the next block — the block
-  it is standing in cannot be erased, since the record just restored may
-  live there. Erasing on every restart instead would cost a block per boot,
-  which on a section of 128 slots to a block is 128 times the wear.
+- **Every save asks which slot it takes.** On a medium that must be
+  erased, a save reads the slot the position names before writing to it,
+  unless the slot starts a block — entering a block erases it. A slot that
+  is neither a record nor erased holds the debris of a save that never
+  committed, and the save steps to the next block: the block it is standing
+  in cannot be erased, since the record just restored may live there. The
+  first version kept a flag instead, raised by a restart or a failed save
+  and cleared by the first look that found the slot erased, which assumed
+  the debris sits right behind the newest record. It need not: a save the
+  medium refuses before its first byte still spends its slot, so the debris
+  of the next attempt lies a slot further on. After a restart the look
+  found that hole erased, and the save after it wrote into the debris —
+  which on NOR fails the read-back with no cause, the signature reserved
+  for a memory that no longer holds data. Whether a slot is erased is a
+  fact about the medium, and caching it meant proving that every path to a
+  position marks it right; that proof was wrong once. The look costs a
+  slot read per save, a kilobyte against the milliseconds of programming,
+  and compiles away where the medium needs no erase. Erasing on every
+  restart instead would cost a block per boot, which on a section of 128
+  slots to a block is 128 times the wear.
 - **A restart takes its sequence number from the newest header and its
   position from the newest whole record.** Where the medium stopped and
   what it holds are different questions. A save interrupted before it
@@ -579,6 +668,16 @@ phase 2 comes up with defaults. Decided deliberately — no converter.
   record restored and erases it. Following the record instead costs, after
   a torn save whose header landed, the rest of that block: one erase per
   such incident, not per boot.
+- **A load reads every header once.** One pass maps the sequence number of
+  every candidate, and trying the next one reads only its record.
+  Rereading the headers per candidate cost a pass for every header above
+  the newest whole record — one per torn save, until the ring erases its
+  block — and a pass is 256 slots in the product's flash geometry; on an
+  external SPI NOR it would be half a second of loading. The map costs four
+  bytes a slot of stack while `load()` or `survey()` runs. Of what a
+  candidate can turn out to be, only a read the medium refused is carried
+  out of the load: debris is ordinary, and outliving it is what the search
+  is for.
 - **The store's buffer is a slot, not a record.** A firmware that declared
   more parameters wrote a longer record, and refusing to read it would
   silently discard the settings of anyone downgrading. The RAM cost is
@@ -622,7 +721,8 @@ tool:
   object is for. Saving on every write was considered and rejected: it
   writes a whole record per parameter, which is harmless on FRAM and not on
   flash. A debounced save (a quiet period after the last write) belongs
-  with the reconfiguration points in step 15.
+  with the reconfiguration points in step 15, which did not bring one: a
+  save still takes `1010h`.
 - **A value outside a parameter's bounds is refused**, with
   `value_range_exceeded`, where before it was silently clamped by the
   wrapper the config reader applied. The operator now learns.
@@ -662,12 +762,15 @@ tool:
   concept directly. It needed the trait constants, a default timeout and
   `erase`, which on ferroelectric memory is an overwrite with
   `erased_value` — no adapter, no second layer to keep in step.
-- **`settings::value` variant vs raw bytes + type tag** at the transport
-  boundary. The variant is friendlier to future consumers; raw bytes would
-  feed `make_od_value(raw, type)` directly and avoid a variant-to-variant
-  conversion.
+- ~~**`settings::value` variant vs raw bytes + type tag**~~ at the
+  transport boundary. Settled by phase 2, which built the variant: the OD
+  accessors convert `od_value` to `settings::value` on the way in and visit
+  it on the way out. Raw bytes would feed `make_od_value(raw, type)`
+  directly and avoid that variant-to-variant conversion, which nothing has
+  asked for since.
 - **Exposing stored vs active value** for `on_restart` parameters over the
-  OD, beyond a `restart_required` flag and a `pending_changes` mask.
+  OD, beyond the `restart_required` and `changes_pending` flags
+  (`3000h`, sub-indices `11h` and `12h`).
 - **Counters** (hour meter, energy, fault counts) need their own append-log
   region; out of scope here, but the region layout should leave room.
 - **`survey()` trusts headers.** A save before the first load, after a
