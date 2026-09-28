@@ -42,7 +42,7 @@ constexpr std::expected<void, error> validate(angle_sensor_config const& conf)
   if (auto const calibration = validate(conf.cal_result); !calibration) {
     return calibration;
   }
-  if (conf.speed_timeconstant.value() <= 0) {
+  if (!(conf.speed_timeconstant.value() > 0)) {
     return std::unexpected(error::invalid_config);
   }
   return {};
@@ -167,10 +167,13 @@ public:
   [[nodiscard]] std::expected<void, error>
   configure(angle_sensor_config const& conf)
   {
+    if (auto const checked = validate(conf); !checked) {
+      return checked;
+    }
     conf_ = conf;
     speedfilter_.set_smoothing(timestep_, conf.speed_timeconstant);
     geometry_ = make_geometry(conf.cal_result);
-    return validate(conf);
+    return {};
   }
 
   [[nodiscard]] std::expected<void, error>
