@@ -28,6 +28,10 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `moving_average_filter`
 - [x] `emb/filter/passthrough_filter.hpp`
   - [x] `passthrough_filter`
+- [x] `emb/foc/clarke.hpp`
+  - [x] `clarke_inputs`
+  - [x] `clarke_transform`
+  - [x] `invclarke_transform`
 - [x] `emb/math.hpp`
   - [x] `builtin_sin`, `sin`
   - [x] `builtin_cos`, `cos`
@@ -137,7 +141,6 @@ emblib не попал. Такие файлы помечены «песочни�
 - [ ] `emb/controller.hpp`
 - [ ] `emb/delegate.hpp`
 - [ ] `emb/foc.hpp`
-- [ ] `emb/foc/clarke.hpp`
 - [ ] `emb/foc/deadtime_compensation.hpp`
 - [ ] `emb/foc/dq_controller.hpp`
 - [ ] `emb/foc/park.hpp`
