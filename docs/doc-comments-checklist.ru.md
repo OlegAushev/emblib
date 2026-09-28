@@ -18,6 +18,16 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `double_buffer`
 - [x] `emb/expected.hpp`
   - [x] `TRY`
+- [x] `emb/filter/exponential_filter.hpp`
+  - [x] `exponential_filter`
+- [x] `emb/filter/exponential_median_filter.hpp`
+  - [x] `exponential_median_filter`
+- [x] `emb/filter/median_filter.hpp`
+  - [x] `median_filter`
+- [x] `emb/filter/moving_average_filter.hpp`
+  - [x] `moving_average_filter`
+- [x] `emb/filter/passthrough_filter.hpp`
+  - [x] `passthrough_filter`
 - [x] `emb/math.hpp`
   - [x] `builtin_sin`, `sin`
   - [x] `builtin_cos`, `cos`
@@ -126,11 +136,6 @@ emblib не попал. Такие файлы помечены «песочни�
 - [ ] `emb/container/inplace_vector.hpp`
 - [ ] `emb/controller.hpp`
 - [ ] `emb/delegate.hpp`
-- [ ] `emb/filter/exponential_filter.hpp`
-- [ ] `emb/filter/exponential_median_filter.hpp`
-- [ ] `emb/filter/median_filter.hpp`
-- [ ] `emb/filter/moving_average_filter.hpp`
-- [ ] `emb/filter/passthrough_filter.hpp`
 - [ ] `emb/foc.hpp`
 - [ ] `emb/foc/clarke.hpp`
 - [ ] `emb/foc/deadtime_compensation.hpp`

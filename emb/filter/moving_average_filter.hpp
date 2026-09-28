@@ -8,6 +8,18 @@
 
 namespace emb {
 
+// The class template `moving_average_filter` is a filter whose output is the
+// arithmetic mean of the last `WindowSize` values pushed. Construction,
+// `reset()` and `set_output(value)` leave the window empty: the output is the
+// initial output or `value` until the next `push`, then the mean of the values
+// pushed since. `data()` returns the window, oldest value first.
+//
+// For an integer `T`, the output is rounded toward zero, and `WindowSize` times
+// the largest magnitude of a value pushed must be representable in `T`. For a
+// floating-point `T` or a `units::named_unit`, rounding errors, e.g. from a
+// value much larger than the rest, can outlast their values in the window and
+// grow over many pushes, and an infinity or NaN pushed keeps the output
+// infinite or NaN, until `reset()` or `set_output(value)`.
 template<typename T, std::size_t WindowSize>
 class moving_average_filter {
 public:

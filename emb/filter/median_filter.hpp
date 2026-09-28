@@ -8,6 +8,16 @@
 
 namespace emb {
 
+// The class template `median_filter` is a filter whose output is the median of
+// the last `WindowSize` values pushed. Construction and `reset()` fill the
+// window with copies of the initial output, and `set_output(value)` with copies
+// of `value`. The copies count as values pushed, so the output is their value
+// and keeps it for the next `WindowSize / 2` pushes.
+//
+// The values in the window must not be NaN: with a NaN and two unequal numbers
+// in it, `<` is not the strict weak ordering that `std::sort` requires, and the
+// behavior is undefined. Each `push` sorts a local copy of the window, which
+// takes O(N log N) comparisons, where N is `WindowSize`.
 template<typename T, std::size_t WindowSize>
   requires(emb::isodd(WindowSize))
 class median_filter {

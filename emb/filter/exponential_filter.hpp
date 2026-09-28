@@ -5,6 +5,21 @@
 
 namespace emb {
 
+// The class template `exponential_filter` is a filter whose output is an
+// exponential moving average of the values pushed: `push(input)` moves the
+// output toward `input` by the smoothing factor times their difference.
+// Construction and `reset()` set the output to the initial output, and
+// `set_output(value)` to `value`. `T` must be a floating-point type or a
+// `units::named_unit`.
+//
+// The smoothing factor is the sampling period divided by the time constant,
+// clamped to [0, 1]; `set_smoothing` sets both durations and `set_timestep`
+// only the sampling period. For a sampling period much shorter than the time
+// constant, the filter approximates a first-order low-pass filter with a time
+// constant about half a sampling period shorter; if the sampling period is at
+// least the time constant, `push(input)` sets the output to `input`, up to
+// rounding. The time constant must be positive and `factor_type` a
+// floating-point type; the behavior is undefined if the quotient is NaN.
 template<typename T, typename Duration>
 class exponential_filter {
 public:

@@ -2,8 +2,10 @@
 
 namespace emb {
 
-// Identity filter: holds the most recent value without smoothing. Useful where
-// a filtering stage is required by interface but no actual filtering is wanted.
+// The class template `passthrough_filter` is a filter whose output is the last
+// value pushed. Before the first `push`, the output is the value passed to the
+// constructor, or `T{}` if none was passed. Where no filtering is wanted, it
+// serves as the filter that `sensor::singlechannel` requires.
 template<typename T>
 class passthrough_filter {
 public:

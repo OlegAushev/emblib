@@ -27,7 +27,7 @@ constexpr bool test_median_filter(Filter filter,
                                   value_type{70},
                                   value_type{40}};
 
-  // Fill window with first value
+  // Replace the window contents with the first value
   for (auto i = 0uz; i < window_size; ++i) {
     filter.push(input[0]);
   }
