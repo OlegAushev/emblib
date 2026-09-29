@@ -4,7 +4,6 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
-#include <span>
 
 #include <emb/can.hpp>
 #include <emb/can/bus.hpp>
@@ -20,6 +19,7 @@
 #include "detail/sync_producer.hpp"
 #include "detail/tpdo_producer.hpp"
 #include "od.hpp"
+#include "od_dictionary.hpp"
 #include "types.hpp"
 
 namespace emb {
@@ -33,21 +33,22 @@ struct server_options {
   std::size_t rx_queue_capacity = 32;
 };
 
-template<server_options Opt>
+template<server_options Opt, typename Ctx>
 class server {
   static_assert(valid_node_id<Opt.node_id>, "node id must be in [1, 127]");
 
 public:
   server(emb::delegate<std::chrono::milliseconds()> clock,
          transport& bus,
-         std::span<od_entry> dictionary)
+         od_view<Ctx> dictionary,
+         Ctx& ctx)
       : clock_(clock),
         bus_(bus),
         hb_producer_(bus),
         sync_producer_(bus),
         hb_consumer_(bus),
         emcy_(bus),
-        sdo_(bus, dictionary),
+        sdo_(bus, dictionary, ctx),
         tpdo_(bus),
         rpdo_(bus)
   {
@@ -56,6 +57,11 @@ public:
     bus_.add_filter(format_t::standard, nmt_.cob_id(), 0x7FF);
     apply_nmt_state(nmt_state::pre_operational);
   }
+
+  server(emb::delegate<std::chrono::milliseconds()> clock,
+         transport& bus,
+         od_view<Ctx> dictionary,
+         Ctx&& ctx) = delete;
 
   server(server const&) = delete;
   server& operator=(server const&) = delete;
@@ -235,7 +241,7 @@ private:
   detail::sync_producer sync_producer_;
   detail::hb_consumer hb_consumer_;
   detail::emcy_producer<Opt.node_id> emcy_;
-  detail::sdo_server<Opt.node_id> sdo_;
+  detail::sdo_server<Opt.node_id, Ctx> sdo_;
   detail::tpdo_producer<Opt.node_id, Opt.tpdo_count> tpdo_;
   detail::rpdo_consumer<Opt.node_id, Opt.rpdo_count> rpdo_;
 
