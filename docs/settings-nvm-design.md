@@ -6,10 +6,11 @@ records that commit or do not; they are reached by name from the
 application and by index from a protocol; and a change takes effect without
 a restart wherever the schema says it may. The stack it replaced is gone.
 
-Three parts of the design never became steps and are not built: the
-object dictionary section generated from the schema (§7), the trigger that
-applies a batch whole and the debounced save (§4, §10a), and the sections
-beyond `config` (§5). Checked against the code on 2026-09-28. The store's
+Two parts of the design never became steps and are not built: the trigger
+that applies a batch whole and the debounced save (§4, §10a), and the
+sections beyond `config` (§5). Checked against the code on 2026-09-28. The
+CANopen binding (§7) was built on 2026-09-29, as a binding per row of the
+dictionary rather than a generated section. The store's
 algorithms, invariants and failure scenarios are described in detail, in
 Russian, in `settings-store-algorithms.ru.md`.
 
@@ -90,8 +91,8 @@ per-entry size.
 `writable` is not `od_access`: "immutable after production" (factory
 calibration) is a fact about the parameter, while "read-only over SDO" is a
 fact about the protocol and may be strictly narrower. The adapter may
-narrow, never widen; checked with `static_assert` once there is an adapter
-(§7).
+narrow, never widen: binding a parameter that is not `writable` with `rw`
+fails the build at the row (§7).
 
 Type-erased interface offered to transports:
 
@@ -373,48 +374,51 @@ concept some_block_storage = requires {
 ## 7. CANopen binding
 
 The OD table keeps what genuinely belongs to CANopen — index/subindex,
-display name, categories, unit, access — and pulls type, default and
-validation from the schema by name:
+display name, categories, unit — and pulls type, access and validation from
+the schema by name. Built on 2026-09-29 as a binding per row of the
+application's constexpr table (`can/canopen/od_settings.hpp`; the dictionary
+around it is described in `canopen-od-plan.ru.md`):
 
 ```cpp
-inline constexpr auto config_section = od::settings_section({
-  {{0x3002, 0x01}, "drive.phase_swap",   "config", "drive", "",     od_access::rw},
-  {{0x3002, 0x02}, "model.torque_slope", "config", "drive", "pu/s", od_access::rw},
-});
+using param = emb::can::canopen::od_settings<settings::schema,
+                                             settings::get_at,
+                                             settings::set_at,
+                                             settings::restore_default_at>;
+
+inline constexpr emb::can::canopen::od_row<context> rows[] = {
+  {{0x3002, 0x01}, "config", "drive", "phase_swap",   "",     param::rw<"drive.phase_swap">},
+  {{0x3002, 0x02}, "config", "drive", "torque_slope", "pu/s", param::rw<"model.torque_slope">},
+  // ...
+};
 ```
 
-The name is written once instead of three times, `od_value_type` is derived
-from the parameter type (they can no longer disagree), and the accessors
-become two shared non-template functions plus a two-instruction thunk per
-row instead of 2N instantiated bodies.
+The name is written once instead of three times and the object's type is
+the parameter's, so the two can no longer disagree. A row carries the
+parameter's index as its argument, and one shared function reads, one
+writes and one restores every parameter: the 116 per-parameter thunks are
+gone.
 
 The `od_key <-> name` mapping stays hand-maintained on purpose: OD indices
 are an external contract frozen for tools and EDS. Moving them into the
 schema would not reduce maintenance, only put a protocol fact in the wrong
 file.
 
-Completeness is still checked at compile time, without coupling:
+Completeness is checked at compile time, without coupling:
 
-- no duplicate `od_key` and no duplicate name within a section;
-- every schema parameter with `expose` appears exactly once — "forgot to
-  publish the new parameter" fails the build;
-- `od_access` no wider than `writable`;
-- `od_value_type` compatible with the parameter type, including
-  `named_unit` types through `.value()`.
+- no duplicate `od_key` and no duplicate name in the dictionary, for every
+  row, settings or not;
+- every schema parameter with `expose` has exactly one row and a hidden one
+  has none — "forgot to publish the new parameter" fails the build. Every
+  row of the bridge carries the schema's list of names, so the check runs as
+  soon as the dictionary binds one parameter;
+- `rw` on a parameter that is not `writable` fails at the row; `ro` may
+  narrow;
+- the type follows from the parameter's, `named_unit` and `emb::clamped`
+  included, so there is nothing left to compare.
 
-Not built. The application's table is still written by hand: each row
-names its parameter three times and states the type and the default
-itself, and nothing checks the list above — 58 parameters in 58 rows is
-care, not a compile-time fact. `expose` is declared and read by nothing.
-What the section promised for the accessors is there without the adapter:
-`read_param<Name>` and `write_param<Name>` are thunks into two shared
-out-of-line bodies. They are not two instructions, though. The result is
-returned through a hidden pointer, and GCC keeps it across the call
-instead of tailing into the body — `musttail` is refused, since the callee
-returns a structure: 18 and 26 bytes, 2.8 KB for the 58 in release with
-alignment. A row that carried the parameter's index — a context field in
-`od_object` — would let the dictionary call the shared bodies directly and
-drop the thunks, so generating the table is worth more than its looks.
+Restoring one default over 1011h:04 goes through the by-index restore, which
+refuses what the protocol may not write, the same rule as for restoring
+all defaults. The dictionary no longer holds defaults.
 
 ## 8. File layout
 
@@ -432,8 +436,8 @@ external/emblib/emb/
   settings/record.hpp          [done] record layout, encode and decode
   settings/store.hpp           [done] slots, active record, commit, load
                                       report
-  can/canopen/od_settings.hpp  [not built] OD section generated from the
-                                      schema, see §7
+  can/canopen/od_settings.hpp  [done] per-row bindings of the schema's
+                                      parameters, see §7
   test/mock/block_storage.hpp  [done] constexpr RAM backend for tests
   test/*_test.cpp                     in-tree convention: anonymous namespace,
                                       static_assert only
@@ -512,9 +516,9 @@ The first has since lost its argument: the build picks the medium, and
     registry — had to go at the same time. So the config readers, the OD
     accessors and the save commands switched together. The OD accessors are
     per-row thunks into one shared by-index body, which needs no change to
-    emblib's `od.hpp`; generating the table from the schema (dropping the
-    hand-written type and default columns) is still worth doing, and not
-    only for its looks — see the end of §7.
+    emblib's `od.hpp`. Binding the rows to the schema (dropping the
+    hand-written type and default columns, and the thunks with them)
+    followed on 2026-09-29, see §7.
 15. `configure()` entry points and dirty groups — **done**. The seam is
     the drive's periodic task tick, which already runs in task context with
     the control timebase masked: `motor_drive::apply_pending_settings()`
@@ -709,6 +713,16 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
 - **Tests follow the in-tree convention** (`emb/test/*_test.cpp`, anonymous
   namespace, `static_assert` only): they cost compile time and contribute no
   symbols to the image.
+- **Settings objects are rows with a binding, not a generated section.** A
+  row names its parameter with `od_settings<...>::rw<"name">` inside the
+  ordinary table, so settings objects and the others share one table, one
+  sort and one set of checks. A separate section would have needed a merge
+  step and a second place where keys live.
+- **Coverage through a catalog each row carries.** The bridge cannot see the
+  dictionary it ends up in, so its rows point at the schema's names and
+  `expose` flags, and the dictionary checks every catalog it finds. The
+  price is a blind spot: a dictionary without a single settings row is not
+  checked, since there is nothing to find the catalog through.
 
 ## 10a. What the switch-over changed for an operator
 
