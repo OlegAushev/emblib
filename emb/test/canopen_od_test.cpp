@@ -11,6 +11,7 @@
 namespace {
 
 using namespace emb::can::canopen;
+using enum od_value_type;
 
 struct ctx {
   float value = 0.f;
@@ -389,13 +390,13 @@ consteval bool test_dictionary()
                                               .restore = &restore_value};
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x5000, 0x02}, "watch",  "b", "value",   "",   od_ro<read_value>},
-      {{0x2000, 0x01}, "ctl",    "a", "command", "",   od_exec<command>},
-      {{0x5000, 0x01}, "watch",  "b", "checked", "",   od_ro<read_checked>},
-      {{0x1008, 0x00}, "info",   "a", "text",    "",   od_text<text>},
-      {{0x3000, 0x01}, "config", "a", "freq",    "Hz", od_rw<read_freq, write_value>},
-      {{0x3000, 0x02}, "config", "a", "raw",     "",   restorable},
-      {{0x1011, 0x04}, "ctl",    "a", "restore", "",   od_restore_default},
+      {{0x5000, 0x02}, "watch",  "b", "value",   "",   float32, od_ro<read_value>},
+      {{0x2000, 0x01}, "ctl",    "a", "command", "",   exec,    od_exec<command>},
+      {{0x5000, 0x01}, "watch",  "b", "checked", "",   float32, od_ro<read_checked>},
+      {{0x1008, 0x00}, "info",   "a", "text",    "",   string,  od_text<text>},
+      {{0x3000, 0x01}, "config", "a", "freq",    "Hz", float32, od_rw<read_freq, write_value>},
+      {{0x3000, 0x02}, "config", "a", "raw",     "",   float32, restorable},
+      {{0x1011, 0x04}, "ctl",    "a", "restore", "",   exec,    od_restore_default},
   };
   // clang-format on
 
@@ -453,9 +454,9 @@ consteval std::string check_valid()
 {
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x1011, 0x04}, "ctl",   "a", "restore", "", od_restore_default},
-      {{0x2000, 0x01}, "ctl",   "a", "command", "", od_exec<command>},
-      {{0x5000, 0x01}, "watch", "a", "value",   "", od_ro<read_value>},
+      {{0x1011, 0x04}, "ctl",   "a", "restore", "", exec,    od_restore_default},
+      {{0x2000, 0x01}, "ctl",   "a", "command", "", exec,    od_exec<command>},
+      {{0x5000, 0x01}, "watch", "a", "value",   "", float32, od_ro<read_value>},
   };
   // clang-format on
   return detail::od_check(rows);
@@ -467,7 +468,7 @@ consteval std::string check_reserved_index()
 {
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x0FFF, 0x01}, "a", "b", "c", "", od_ro<read_value>},
+      {{0x0FFF, 0x01}, "a", "b", "c", "", float32, od_ro<read_value>},
   };
   // clang-format on
   return detail::od_check(rows);
@@ -480,7 +481,7 @@ consteval std::string check_empty_name()
 {
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x2000, 0x01}, "a", "", "c", "", od_ro<read_value>},
+      {{0x2000, 0x01}, "a", "", "c", "", float32, od_ro<read_value>},
   };
   // clang-format on
   return detail::od_check(rows);
@@ -492,7 +493,8 @@ static_assert(check_empty_name()
 
 consteval std::string check_one(od_binding<ctx> binding)
 {
-  od_row<ctx> const rows[] = {{{0x2000, 0x01}, "a", "b", "c", "", binding}};
+  od_row<ctx> const rows[] = {
+      {{0x2000, 0x01}, "a", "b", "c", "", binding.type, binding}};
   return detail::od_check(rows);
 }
 
@@ -519,7 +521,7 @@ consteval std::string check_restore_key()
 {
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x1011, 0x04}, "a", "b", "c", "", od_exec<command>},
+      {{0x1011, 0x04}, "a", "b", "c", "", exec, od_exec<command>},
   };
   // clang-format on
   return detail::od_check(rows);
@@ -528,6 +530,21 @@ consteval std::string check_restore_key()
 static_assert(check_restore_key()
               == "od: 1011h:04 a/b/c: the server serves this key; bind it "
                  "with od_restore_default");
+
+// The type a row states must be the type its binding serves.
+consteval std::string check_declared(od_value_type declared,
+                                     od_binding<ctx> binding)
+{
+  od_row<ctx> const rows[] = {
+      {{0x2000, 0x01}, "a", "b", "c", "", declared, binding}};
+  return detail::od_check(rows);
+}
+
+static_assert(check_declared(float32, od_ro<read_freq>).empty());
+static_assert(check_declared(float32, od_ro<read_u8>)
+              == "od: 2000h:01 a/b/c: declared float32, bound as uint8");
+static_assert(check_declared(exec, od_text<text>)
+              == "od: 2000h:01 a/b/c: declared exec, bound as string");
 
 inline constexpr std::string_view items[] = {"x", "y"};
 inline constexpr bool all_exposed[] = {true, true};
@@ -553,18 +570,20 @@ consteval std::string check_two(od_row<ctx> first, od_row<ctx> second)
   return detail::od_check(rows);
 }
 
-static_assert(check_two({{0x2000, 0x01}, "a", "b", "c", "", od_ro<read_value>},
-                        {{0x2000, 0x01}, "a", "b", "d", "", od_ro<read_u8>})
-              == "od: 2000h:01 a/b/c and 2000h:01 a/b/d have the same key");
-static_assert(check_two({{0x2000, 0x01}, "a", "b", "c", "", od_ro<read_value>},
-                        {{0x2000, 0x02}, "a", "b", "c", "", od_ro<read_u8>})
-              == "od: 2000h:01 a/b/c and 2000h:02 a/b/c have the same name");
+static_assert(
+    check_two({{0x2000, 0x01}, "a", "b", "c", "", float32, od_ro<read_value>},
+              {{0x2000, 0x01}, "a", "b", "d", "", uint8, od_ro<read_u8>})
+    == "od: 2000h:01 a/b/c and 2000h:01 a/b/d have the same key");
+static_assert(
+    check_two({{0x2000, 0x01}, "a", "b", "c", "", float32, od_ro<read_value>},
+              {{0x2000, 0x02}, "a", "b", "c", "", uint8, od_ro<read_u8>})
+    == "od: 2000h:01 a/b/c and 2000h:02 a/b/c have the same name");
 // Checks two objects that differ in key and name, 2000h:01 a/b/c and
 // 2000h:02 a/b/d.
 consteval std::string check_pair(od_binding<ctx> first, od_binding<ctx> second)
 {
-  return check_two({{0x2000, 0x01}, "a", "b", "c", "", first},
-                   {{0x2000, 0x02}, "a", "b", "d", "", second});
+  return check_two({{0x2000, 0x01}, "a", "b", "c", "", first.type, first},
+                   {{0x2000, 0x02}, "a", "b", "d", "", second.type, second});
 }
 
 consteval od_binding<ctx> restoring(od_restore_fn<ctx> restore,
@@ -616,8 +635,9 @@ consteval od_binding<ctx> diagnosed()
           .diagnosed = true};
 }
 
-static_assert(check_two({{0x0FFF, 0x01}, "a", "b", "c", "", od_ro<read_value>},
-                        {{0x2000, 0x02}, "a", "b", "d", "", diagnosed()})
-                  .empty());
+static_assert(
+    check_two({{0x0FFF, 0x01}, "a", "b", "c", "", float32, od_ro<read_value>},
+              {{0x2000, 0x02}, "a", "b", "d", "", uint32, diagnosed()})
+        .empty());
 
 } // namespace

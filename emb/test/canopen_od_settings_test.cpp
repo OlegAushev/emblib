@@ -12,6 +12,7 @@
 namespace {
 
 using namespace emb::can::canopen;
+using enum od_value_type;
 namespace settings = emb::settings;
 
 struct ctx {};
@@ -157,13 +158,13 @@ consteval bool test_dictionary()
 {
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x3002, 0x01}, "config", "drive", "phase_swap", "",   bridge::rw<"drive.phase_swap">},
-      {{0x3004, 0x01}, "config", "motor", "pole_pairs", "",   bridge::rw<"motor.p">},
-      {{0x3003, 0x0B}, "config", "prot",  "timeout",    "ms", bridge::rw<"prot.timeout">},
-      {{0x3003, 0x01}, "config", "prot",  "uvp",        "V",  bridge::rw<"prot.uvp">},
-      {{0x3002, 0x08}, "config", "drive", "freq",       "Hz", bridge::rw<"drive.freq">},
-      {{0x3000, 0x01}, "config", "prod",  "serial",     "",   bridge::ro<"prod.serial">},
-      {{0x1011, 0x04}, "ctl",    "sys",   "restore",    "",   od_restore_default},
+      {{0x3002, 0x01}, "config", "drive", "phase_swap", "",   boolean, bridge::rw<"drive.phase_swap">},
+      {{0x3004, 0x01}, "config", "motor", "pole_pairs", "",   int32,   bridge::rw<"motor.p">},
+      {{0x3003, 0x0B}, "config", "prot",  "timeout",    "ms", uint32,  bridge::rw<"prot.timeout">},
+      {{0x3003, 0x01}, "config", "prot",  "uvp",        "V",  float32, bridge::rw<"prot.uvp">},
+      {{0x3002, 0x08}, "config", "drive", "freq",       "Hz", float32, bridge::rw<"drive.freq">},
+      {{0x3000, 0x01}, "config", "prod",  "serial",     "",   uint32,  bridge::ro<"prod.serial">},
+      {{0x1011, 0x04}, "ctl",    "sys",   "restore",    "",   exec,    od_restore_default},
   };
   // clang-format on
 
@@ -198,7 +199,7 @@ consteval std::string check_missing()
 {
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x3002, 0x01}, "config", "drive", "phase_swap", "", bridge::rw<"drive.phase_swap">},
+      {{0x3002, 0x01}, "config", "drive", "phase_swap", "", boolean, bridge::rw<"drive.phase_swap">},
   };
   // clang-format on
   return detail::od_check(rows);
@@ -210,13 +211,13 @@ consteval std::string check_twice()
 {
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x3002, 0x01}, "config", "drive", "phase_swap", "",   bridge::rw<"drive.phase_swap">},
-      {{0x3004, 0x01}, "config", "motor", "pole_pairs", "",   bridge::rw<"motor.p">},
-      {{0x3003, 0x0B}, "config", "prot",  "timeout",    "ms", bridge::rw<"prot.timeout">},
-      {{0x3003, 0x01}, "config", "prot",  "uvp",        "V",  bridge::rw<"prot.uvp">},
-      {{0x3002, 0x08}, "config", "drive", "freq",       "Hz", bridge::rw<"drive.freq">},
-      {{0x3000, 0x01}, "config", "prod",  "serial",     "",   bridge::ro<"prod.serial">},
-      {{0x3002, 0x09}, "config", "drive", "swap",       "",   bridge::ro<"drive.phase_swap">},
+      {{0x3002, 0x01}, "config", "drive", "phase_swap", "",   boolean, bridge::rw<"drive.phase_swap">},
+      {{0x3004, 0x01}, "config", "motor", "pole_pairs", "",   int32,   bridge::rw<"motor.p">},
+      {{0x3003, 0x0B}, "config", "prot",  "timeout",    "ms", uint32,  bridge::rw<"prot.timeout">},
+      {{0x3003, 0x01}, "config", "prot",  "uvp",        "V",  float32, bridge::rw<"prot.uvp">},
+      {{0x3002, 0x08}, "config", "drive", "freq",       "Hz", float32, bridge::rw<"drive.freq">},
+      {{0x3000, 0x01}, "config", "prod",  "serial",     "",   uint32,  bridge::ro<"prod.serial">},
+      {{0x3002, 0x09}, "config", "drive", "swap",       "",   boolean, bridge::ro<"drive.phase_swap">},
   };
   // clang-format on
   return detail::od_check(rows);
@@ -237,13 +238,13 @@ consteval std::string check_hidden()
                                           .catalog = &bridge::catalog};
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x3002, 0x01}, "config", "drive", "phase_swap", "",   bridge::rw<"drive.phase_swap">},
-      {{0x3004, 0x01}, "config", "motor", "pole_pairs", "",   bridge::rw<"motor.p">},
-      {{0x3003, 0x0B}, "config", "prot",  "timeout",    "ms", bridge::rw<"prot.timeout">},
-      {{0x3003, 0x01}, "config", "prot",  "uvp",        "V",  bridge::rw<"prot.uvp">},
-      {{0x3002, 0x08}, "config", "drive", "freq",       "Hz", bridge::rw<"drive.freq">},
-      {{0x3000, 0x01}, "config", "prod",  "serial",     "",   bridge::ro<"prod.serial">},
-      {{0x3000, 0x02}, "config", "prod",  "secret",     "",   secret},
+      {{0x3002, 0x01}, "config", "drive", "phase_swap", "",   boolean, bridge::rw<"drive.phase_swap">},
+      {{0x3004, 0x01}, "config", "motor", "pole_pairs", "",   int32,   bridge::rw<"motor.p">},
+      {{0x3003, 0x0B}, "config", "prot",  "timeout",    "ms", uint32,  bridge::rw<"prot.timeout">},
+      {{0x3003, 0x01}, "config", "prot",  "uvp",        "V",  float32, bridge::rw<"prot.uvp">},
+      {{0x3002, 0x08}, "config", "drive", "freq",       "Hz", float32, bridge::rw<"drive.freq">},
+      {{0x3000, 0x01}, "config", "prod",  "serial",     "",   uint32,  bridge::ro<"prod.serial">},
+      {{0x3000, 0x02}, "config", "prod",  "secret",     "",   uint32,  secret},
   };
   // clang-format on
   return detail::od_check(rows);
@@ -252,5 +253,20 @@ consteval std::string check_hidden()
 static_assert(check_hidden()
               == "od: settings parameter 'prod.secret' is not exposed but has "
                  "a row: 3000h:02 config/prod/secret");
+
+// A row states the parameter's type; a wrong one is reported at the row.
+consteval std::string check_declared()
+{
+  // clang-format off
+  static constexpr od_row<ctx> rows[] = {
+      {{0x3004, 0x01}, "config", "motor", "pole_pairs", "", float32, bridge::rw<"motor.p">},
+  };
+  // clang-format on
+  return detail::od_check(rows);
+}
+
+static_assert(check_declared()
+              == "od: 3004h:01 config/motor/pole_pairs: declared float32, "
+                 "bound as int32");
 
 } // namespace

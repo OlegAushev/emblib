@@ -33,6 +33,13 @@ g++ 16.2; большинство — также на clang 22 через `clang-
 - 2026-09-28. У строковых объектов один курсор на сервер (§2.6).
 - 2026-09-29. Построитель `od_rw<G, S>` входит в набор, хотя в etk ему пока
   нечего обслуживать.
+- 2026-09-29. В строке таблицы записан тип объекта (`od_value_type`), чтобы
+  таблицу для клиента на ПК мог строить текстовый парсер; `make_dictionary`
+  сверяет его с типом привязки (T15). Тип — колонкой строки, а не
+  аргументом построителя: так он стоит на одном месте в каждой строке, а
+  проверка одна на все привязки. Доступ по-прежнему называет построитель.
+  Пределы и умолчания в строку не пишутся: в схеме это выражения, которые
+  текстовый парсер не вычислит.
 - Контекст etk минимальный: привод, датчик Холла и `dc_test` (§2.8).
   Сервисы уровня модуля — telemetry, settings, trouble, sysinfo,
   планировщик, dbg probe — остаются вне его.
@@ -120,6 +127,7 @@ template<typename Ctx>
 struct od_row {
   od_key key;
   std::string_view category, subcategory, name, unit;
+  od_value_type type;                   // для текстового парсера; T15
   od_binding<Ctx> binding;
 };
 
@@ -214,6 +222,7 @@ consteval-функции `static_assert` не написать. Массив с�
 |---|---|---|
 | T1 | index ≥ 1000h | `od: <row>: indices below 1000h are reserved` |
 | T2 | категория, подкатегория и имя не пусты | `od: <row>: category, subcategory and name must not be empty` |
+| T15 | тип в строке равен типу привязки | `od: <row>: declared <type>, bound as <type>` |
 | T3 | readable(access) ⇔ есть reader | `od: <row>: readable but has no reader` / `od: <row>: write-only but has a reader` |
 | T4 | writable(access) ⇔ есть writer; 1011h:04 — исключение | `od: <row>: writable but has no writer` / `od: <row>: read-only but has a writer` |
 | T5 | exec ⇒ wo | `od: <row>: an exec object must be wo` |
@@ -409,15 +418,15 @@ using param = emb::can::canopen::od_settings<settings::schema,
 
 // clang-format off
 inline constexpr emb::can::canopen::od_row<context> rows[] = {
-{{0x1008, 0x00}, "info",   "sys",    "device_name",               "",   od_text<device_name>},
-{{0x1010, 0x01}, "ctl",    "sys",    "save_all_parameters",       "",   od_exec<save_all_parameters>},
-{{0x1011, 0x04}, "ctl",    "sys",    "restore_default_parameter", "",   od_restore_default},
-{{0x1018, 0x04}, "info",   "sys",    "serial_number",             "",   od_const<apm32::f4::core::serial_number>},
-{{0x2001, 0x03}, "ctl",    "drive",  "set_angle_correction",      "°",  od_wo<set_angle_correction>},
-{{0x5000, 0x11}, "watch",  "elec",   "Vdc",                       "V",  od_ro<Vdc>},
-{{0x5000, 0x24}, "watch",  "temp",   "Tpwr_a",                    "°C", od_ro<Tpwr<0>>},
-{{0x5000, 0xF1}, "watch",  "logger", "ch0",                       "",   od_ro<logger<probe_channel::ch0>>},
-{{0x3002, 0x01}, "config", "drive",  "phase_swap",                "",   param::rw<"drive.phase_swap">},
+{{0x1008, 0x00}, "info",   "sys",    "device_name",               "",   string,  od_text<device_name>},
+{{0x1010, 0x01}, "ctl",    "sys",    "save_all_parameters",       "",   exec,    od_exec<save_all_parameters>},
+{{0x1011, 0x04}, "ctl",    "sys",    "restore_default_parameter", "",   exec,    od_restore_default},
+{{0x1018, 0x04}, "info",   "sys",    "serial_number",             "",   uint32,  od_const<apm32::f4::core::serial_number>},
+{{0x2001, 0x03}, "ctl",    "drive",  "set_angle_correction",      "°",  float32, od_wo<set_angle_correction>},
+{{0x5000, 0x11}, "watch",  "elec",   "Vdc",                       "V",  float32, od_ro<Vdc>},
+{{0x5000, 0x24}, "watch",  "temp",   "Tpwr_a",                    "°C", float32, od_ro<Tpwr<0>>},
+{{0x5000, 0xF1}, "watch",  "logger", "ch0",                       "",   float32, od_ro<logger<probe_channel::ch0>>},
+{{0x3002, 0x01}, "config", "drive",  "phase_swap",                "",   boolean, param::rw<"drive.phase_swap">},
 // ...
 };
 // clang-format on
@@ -694,3 +703,8 @@ access и типом; что `restorable` стоит ровно там, где �
   возврат, контекст вместо синглтона, `void` у команд).
 - В тестах emblib массивы строк таблиц огорожены `// clang-format off`, как
   таблица etk.
+- Уже после реализации, 29 сентября, в строку добавлена колонка типа с
+  проверкой T15 (см. «Решения»). В таблице etk её заполнил скрипт из старой
+  таблицы (ad60ca8), где типы были записаны и сверены с выведенными; T15
+  подтвердил все 165. Размеры секций образа не изменились ни в одном
+  пресете. Типы в etk пишутся коротко после `using enum od_value_type;`.

@@ -221,9 +221,11 @@ struct od_binding {
 };
 
 // The class template `od_row` is one object as an application writes it: its
-// key, the names a host finds it by, its unit, and its binding. Rows exist
-// only at compile time: `make_dictionary` keeps the key and the binding and
-// drops the rest.
+// key, the names a host finds it by, its unit, its type and its binding. The
+// type is stated in the row, although the binding determines it, so that a
+// text parser can generate a host's table from the application's source;
+// `make_dictionary` checks that the two agree. Rows exist only at compile
+// time: `make_dictionary` keeps the key and the binding and drops the rest.
 template<typename Ctx>
 struct od_row {
   od_key key;
@@ -231,6 +233,7 @@ struct od_row {
   std::string_view subcategory;
   std::string_view name;
   std::string_view unit;
+  od_value_type type;
   od_binding<Ctx> binding;
 };
 

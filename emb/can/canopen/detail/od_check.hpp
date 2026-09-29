@@ -72,6 +72,23 @@ constexpr std::string item_error(od_catalog const& catalog,
   return out;
 }
 
+constexpr std::string_view type_name(od_value_type type)
+{
+  switch (type) {
+  case od_value_type::boolean: return "boolean";
+  case od_value_type::int8: return "int8";
+  case od_value_type::int16: return "int16";
+  case od_value_type::int32: return "int32";
+  case od_value_type::uint8: return "uint8";
+  case od_value_type::uint16: return "uint16";
+  case od_value_type::uint32: return "uint32";
+  case od_value_type::float32: return "float32";
+  case od_value_type::exec: return "exec";
+  case od_value_type::string: return "string";
+  }
+  return "?";
+}
+
 template<typename Ctx>
 constexpr bool serves_restore_default(od_binding<Ctx> const& binding)
 {
@@ -93,6 +110,13 @@ constexpr std::string check_row(od_row<Ctx> const& row)
   }
   if (row.category.empty() || row.subcategory.empty() || row.name.empty()) {
     return row_error(row, "category, subcategory and name must not be empty");
+  }
+  if (row.type != binding.type) {
+    std::string what = "declared ";
+    what += type_name(row.type);
+    what += ", bound as ";
+    what += type_name(binding.type);
+    return row_error(row, what);
   }
 
   if (row.key == od_restore_default_key) {
