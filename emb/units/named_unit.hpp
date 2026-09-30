@@ -134,7 +134,7 @@ concept some_unit =
 
 template<typename To, typename From, typename... Args>
   requires std::same_as<To, From>
-constexpr To convert_to(From v, Args... args)
+constexpr To convert_to(From v, Args...)
 {
   return v;
 }
