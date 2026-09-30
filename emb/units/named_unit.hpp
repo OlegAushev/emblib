@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include <compare>
 #include <concepts>
 #include <type_traits>
 
@@ -41,107 +42,64 @@ struct named_unit {
     value -= rhs.value;
     return *this;
   }
+
+  // Returns the numerical value of `v`, i.e. `v.value`. Generic code that
+  // handles any type wrapping a single number, e.g. `emb::settings`, calls
+  // `value_of` unqualified: as a friend defined in the class, it is found
+  // only by argument-dependent lookup.
+  friend constexpr value_type value_of(named_unit v)
+  {
+    return v.value;
+  }
+
+  friend constexpr auto operator<=>(named_unit, named_unit) = default;
+
+  friend constexpr named_unit operator+(named_unit lhs, named_unit rhs)
+  {
+    return lhs += rhs;
+  }
+
+  friend constexpr named_unit operator-(named_unit lhs, named_unit rhs)
+  {
+    return lhs -= rhs;
+  }
+
+  template<typename V>
+    requires std::is_arithmetic_v<V>
+  friend constexpr named_unit operator*(named_unit lhs, V rhs)
+  {
+    return named_unit{lhs.value * static_cast<value_type>(rhs)};
+  }
+
+  template<typename V>
+    requires std::is_arithmetic_v<V>
+  friend constexpr named_unit operator*(V lhs, named_unit rhs)
+  {
+    return rhs * lhs;
+  }
+
+  template<typename V>
+    requires std::is_arithmetic_v<V>
+  friend constexpr named_unit operator/(named_unit lhs, V rhs)
+  {
+    return named_unit{lhs.value / static_cast<value_type>(rhs)};
+  }
+
+  friend constexpr value_type operator/(named_unit lhs, named_unit rhs)
+  {
+    return lhs.value / rhs.value;
+  }
+
+  friend constexpr named_unit operator-(named_unit v)
+  {
+    return named_unit{-v.value};
+  }
+
+  friend constexpr named_unit abs(named_unit v)
+  {
+    return named_unit{std::abs(v.value)};
+  }
 };
-
-template<std::floating_point T, typename Unit>
-constexpr bool operator==(named_unit<T, Unit> lhs, named_unit<T, Unit> rhs)
-{
-  return lhs.value == rhs.value;
-}
-
-template<std::floating_point T, typename Unit>
-constexpr bool operator!=(named_unit<T, Unit> lhs, named_unit<T, Unit> rhs)
-{
-  return lhs.value != rhs.value;
-}
-
-template<std::floating_point T, typename Unit>
-constexpr bool operator<(named_unit<T, Unit> lhs, named_unit<T, Unit> rhs)
-{
-  return lhs.value < rhs.value;
-}
-
-template<std::floating_point T, typename Unit>
-constexpr bool operator>(named_unit<T, Unit> lhs, named_unit<T, Unit> rhs)
-{
-  return lhs.value > rhs.value;
-}
-
-template<std::floating_point T, typename Unit>
-constexpr bool operator<=(named_unit<T, Unit> lhs, named_unit<T, Unit> rhs)
-{
-  return lhs.value <= rhs.value;
-}
-
-template<std::floating_point T, typename Unit>
-constexpr bool operator>=(named_unit<T, Unit> lhs, named_unit<T, Unit> rhs)
-{
-  return lhs.value >= rhs.value;
-}
-
-template<std::floating_point T, typename Unit>
-constexpr named_unit<T, Unit> operator+(named_unit<T, Unit> lhs,
-                                        named_unit<T, Unit> rhs)
-{
-  return lhs += rhs;
-}
-
-template<std::floating_point T, typename Unit>
-constexpr named_unit<T, Unit> operator-(named_unit<T, Unit> lhs,
-                                        named_unit<T, Unit> rhs)
-{
-  return lhs -= rhs;
-}
-
-template<std::floating_point T, typename Unit, typename V>
-  requires std::is_arithmetic_v<V>
-constexpr named_unit<T, Unit> operator*(named_unit<T, Unit> lhs, V rhs)
-{
-  return named_unit<T, Unit>(
-      lhs.value * static_cast<typename named_unit<T, Unit>::value_type>(rhs));
-}
-
-template<std::floating_point T, typename Unit, typename V>
-  requires std::is_arithmetic_v<V>
-constexpr named_unit<T, Unit> operator*(V lhs, named_unit<T, Unit> rhs)
-{
-  return rhs * lhs;
-}
-
-template<std::floating_point T, typename Unit, typename V>
-  requires std::is_arithmetic_v<V>
-constexpr named_unit<T, Unit> operator/(named_unit<T, Unit> lhs, V rhs)
-{
-  return named_unit<T, Unit>(
-      lhs.value / static_cast<typename named_unit<T, Unit>::value_type>(rhs));
-}
-
-template<std::floating_point T, typename Unit>
-constexpr T operator/(named_unit<T, Unit> lhs, named_unit<T, Unit> rhs)
-{
-  return lhs.value / rhs.value;
-}
-
-template<std::floating_point T, typename Unit>
-constexpr named_unit<T, Unit> operator-(named_unit<T, Unit> v)
-{
-  return named_unit<T, Unit>(-v.value);
-}
-
-template<std::floating_point T, typename Unit>
-constexpr named_unit<T, Unit> abs(named_unit<T, Unit> v)
-{
-  return named_unit<T, Unit>(std::abs(v.value));
-}
-
-// Returns the numerical value of `v`, i.e. `v.value`. Generic code that
-// handles any type wrapping a single number, e.g. `emb::settings`, calls
-// `value_of` unqualified and finds this overload by argument-dependent lookup.
-template<std::floating_point T, typename Unit>
-constexpr T value_of(named_unit<T, Unit> v)
-{
-  return v.value;
-}
 
 // The concept `some_unit<T>` is satisfied if and only if `T` is a
 // specialization of `named_unit`. A cv-qualified or reference type does not
