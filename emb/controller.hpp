@@ -140,14 +140,14 @@ namespace antiwindup {
 // while the output is clamped to the limits.
 //
 // `S` models `some_scheme<S, T>` only if, given the error `e` and the
-// parameters `p` such that `p.u_min <= p.u_max`, `s.push(p, e)` updates the
+// parameters `p` such that `p.u_min <= p.u_max`, `s.step(p, e)` updates the
 // integral term for one timestep and returns the output, clamped to
 // [`p.u_min`, `p.u_max`]; `cs.integral()` returns the integral term; and
 // `s.reset()` sets it to zero.
 template<typename S, typename T>
 concept some_scheme =
     requires(S& s, S const& cs, pi_controller_params<T> const& p, T e) {
-      { s.push(p, e) } -> std::same_as<T>;
+      { s.step(p, e) } -> std::same_as<T>;
       { cs.integral() } -> std::same_as<T>;
       s.reset();
     };
@@ -181,7 +181,7 @@ public:
   // times the change that clamping makes to the output, i.e. the output minus
   // the unclamped output. The behavior is undefined if `p.u_min` is greater
   // than `p.u_max`, or if either limit or the unclamped output is NaN.
-  constexpr value_type push(pi_controller_params<value_type> const& p,
+  constexpr value_type step(pi_controller_params<value_type> const& p,
                             value_type e)
   {
     value_type const u_unsat = p.Kp * e + I_;
@@ -214,7 +214,7 @@ public:
 // The class template `clamping` is an anti-windup scheme that, while the output
 // is clamped, stops the integration if it would drive the unclamped output
 // further past the limit (conditional integration), and that clamps the
-// integral term to the limits at every `push`. The integral term is initially
+// integral term to the limits at every `step`. The integral term is initially
 // zero.
 //
 // Whether the integration would drive the unclamped output further past the
@@ -239,7 +239,7 @@ public:
   // term is then clamped to [`p.u_min`, `p.u_max`]. The behavior is undefined
   // if `p.u_min` is greater than `p.u_max`, or if either limit, the unclamped
   // output or the incremented integral term is NaN.
-  constexpr value_type push(pi_controller_params<value_type> const& p,
+  constexpr value_type step(pi_controller_params<value_type> const& p,
                             value_type e)
   {
     value_type const u_unsat = p.Kp * e + I_;
@@ -313,10 +313,10 @@ public:
   // [`lower_limit()`, `upper_limit()`], and has the scheme update the integral
   // term for one timestep. The behavior is undefined if `lower_limit()` is
   // greater than `upper_limit()`, or in any other case in which the scheme's
-  // `push` has undefined behavior.
+  // `step` has undefined behavior.
   constexpr void push(value_type ref, value_type meas)
   {
-    u_ = aw_.push(params_, detail::error<Action>(ref, meas));
+    u_ = aw_.step(params_, detail::error<Action>(ref, meas));
   }
 
   // Sets the output to zero and resets the anti-windup scheme as if by
