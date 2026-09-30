@@ -4,282 +4,291 @@
 
 #include <algorithm>
 #include <concepts>
-#include <limits>
 
 namespace emb {
 
-namespace controller_policy {
+enum class controller_action {
+  reverse,
+  direct
+};
 
-struct non_inverting {
-  template<std::floating_point T>
-  static constexpr T error(T ref, T meas)
-  {
+namespace detail {
+
+template<controller_action Action, std::floating_point T>
+constexpr T error(T ref, T meas)
+{
+  if constexpr (Action == controller_action::reverse) {
     return ref - meas;
   }
-};
-
-struct inverting {
-  template<std::floating_point T>
-  static constexpr T error(T ref, T meas)
-  {
+  else {
     return meas - ref;
   }
-};
+}
 
-} // namespace controller_policy
+} // namespace detail
 
-template<std::floating_point T, typename Policy>
+template<std::floating_point T, controller_action Action>
 class p_controller {
 public:
   using value_type = T;
 protected:
-  value_type kp_;
-  value_type lower_limit_;
-  value_type upper_limit_;
-  value_type out_;
+  value_type Kp_;
+  value_type u_min_;
+  value_type u_max_;
+  value_type u_;
 public:
   constexpr p_controller(value_type kp,
                          value_type lower_limit,
                          value_type upper_limit)
-      : kp_(kp), lower_limit_(lower_limit), upper_limit_(upper_limit), out_(0)
+      : Kp_(kp), u_min_(lower_limit), u_max_(upper_limit), u_(0)
   {
   }
 
   constexpr void push(value_type ref, value_type meas)
   {
-    value_type out = kp_ * Policy::template error<value_type>(ref, meas);
-    out_ = std::clamp(out, lower_limit_, upper_limit_);
+    value_type const e = detail::error<Action>(ref, meas);
+    value_type const u_unsat = Kp_ * e;
+    u_ = std::clamp(u_unsat, u_min_, u_max_);
   }
 
   constexpr void reset()
   {
-    out_ = 0;
+    u_ = 0;
   }
 
   constexpr value_type output() const
   {
-    return out_;
+    return u_;
   }
 
   constexpr void set_lower_limit(value_type value)
   {
-    lower_limit_ = value;
+    u_min_ = value;
   }
 
   constexpr void set_upper_limit(value_type value)
   {
-    upper_limit_ = value;
+    u_max_ = value;
   }
 
   constexpr value_type lower_limit() const
   {
-    return lower_limit_;
+    return u_min_;
   }
 
   constexpr value_type upper_limit() const
   {
-    return upper_limit_;
+    return u_max_;
   }
 
   constexpr void set_kp(value_type value)
   {
-    kp_ = value;
+    Kp_ = value;
   }
 
   constexpr value_type kp() const
   {
-    return kp_;
+    return Kp_;
   }
 };
 
 template<std::floating_point T>
-class pi_controller_base {
+struct pi_controller_params {
+  T Kp;
+  T Ki;
+  T dt;
+  T u_min;
+  T u_max;
+};
+
+namespace antiwindup {
+
+template<typename S, typename T>
+concept some_scheme =
+    requires(S& s, S const& cs, pi_controller_params<T> const& p, T e) {
+      { s.push(p, e) } -> std::same_as<T>;
+      { cs.integral() } -> std::same_as<T>;
+      s.reset();
+    };
+
+template<std::floating_point T>
+class backcalculation {
 public:
   using value_type = T;
-protected:
-  value_type kp_;
-  value_type ki_;
-  units::sec<value_type> ts_;
-  value_type out_i_;
-  value_type lower_limit_;
-  value_type upper_limit_;
-  value_type out_;
+private:
+  value_type Kb_;
+  value_type I_{0};
 public:
-  constexpr pi_controller_base(value_type kp,
-                               value_type ki,
-                               units::sec<value_type> timestep,
-                               value_type lower_limit,
-                               value_type upper_limit)
-      : kp_(kp),
-        ki_(ki),
-        ts_(timestep),
-        out_i_(0),
-        lower_limit_(lower_limit),
-        upper_limit_(upper_limit),
-        out_(0)
-  {
-  }
+  constexpr explicit backcalculation(value_type kb) : Kb_(kb) {}
 
-  constexpr value_type output() const
+  constexpr value_type push(pi_controller_params<value_type> const& p,
+                            value_type e)
   {
-    return out_;
-  }
-
-  constexpr void set_lower_limit(value_type value)
-  {
-    lower_limit_ = value;
-  }
-
-  constexpr void set_upper_limit(value_type value)
-  {
-    upper_limit_ = value;
-  }
-
-  constexpr value_type lower_limit() const
-  {
-    return lower_limit_;
-  }
-
-  constexpr value_type upper_limit() const
-  {
-    return upper_limit_;
-  }
-
-  constexpr void set_kp(value_type value)
-  {
-    kp_ = value;
-  }
-
-  constexpr void set_ki(value_type value)
-  {
-    ki_ = value;
-  }
-
-  constexpr value_type kp() const
-  {
-    return kp_;
-  }
-
-  constexpr value_type ki() const
-  {
-    return ki_;
+    value_type const u_unsat = p.Kp * e + I_;
+    value_type const u = std::clamp(u_unsat, p.u_min, p.u_max);
+    I_ += p.Ki * e * p.dt + Kb_ * (u - u_unsat) * p.dt;
+    return u;
   }
 
   constexpr value_type integral() const
   {
-    return out_i_;
+    return I_;
+  }
+
+  constexpr void reset()
+  {
+    I_ = 0;
+  }
+
+  constexpr value_type kb() const
+  {
+    return Kb_;
+  }
+
+  constexpr void set_kb(value_type value)
+  {
+    Kb_ = value;
+  }
+};
+
+template<std::floating_point T>
+class clamping {
+public:
+  using value_type = T;
+private:
+  value_type I_{0};
+public:
+  constexpr value_type push(pi_controller_params<value_type> const& p,
+                            value_type e)
+  {
+    value_type const u_unsat = p.Kp * e + I_;
+    value_type const u = std::clamp(u_unsat, p.u_min, p.u_max);
+    bool const winding_up = (e * (u_unsat - u)) > 0;
+    if (!winding_up) {
+      I_ += p.Ki * e * p.dt;
+    }
+    I_ = std::clamp(I_, p.u_min, p.u_max);
+    return u;
+  }
+
+  constexpr value_type integral() const
+  {
+    return I_;
+  }
+
+  constexpr void reset()
+  {
+    I_ = 0;
+  }
+};
+
+} // namespace antiwindup
+
+template<std::floating_point T,
+         controller_action Action,
+         antiwindup::some_scheme<T> AntiWindup>
+class pi_controller {
+public:
+  using value_type = T;
+  using antiwindup_type = AntiWindup;
+private:
+  pi_controller_params<value_type> params_;
+  antiwindup_type aw_;
+  value_type u_{0};
+public:
+  constexpr pi_controller(value_type kp,
+                          value_type ki,
+                          units::sec<value_type> timestep,
+                          value_type lower_limit,
+                          value_type upper_limit,
+                          antiwindup_type aw = {})
+      : params_{kp, ki, timestep.value(), lower_limit, upper_limit}, aw_{aw}
+  {
+  }
+
+  constexpr void push(value_type ref, value_type meas)
+  {
+    u_ = aw_.push(params_, detail::error<Action>(ref, meas));
+  }
+
+  constexpr void reset()
+  {
+    aw_.reset();
+    u_ = 0;
+  }
+
+  constexpr value_type output() const
+  {
+    return u_;
+  }
+
+  constexpr value_type integral() const
+  {
+    return aw_.integral();
+  }
+
+  constexpr antiwindup_type& antiwindup()
+  {
+    return aw_;
+  }
+
+  constexpr antiwindup_type const& antiwindup() const
+  {
+    return aw_;
+  }
+
+  constexpr void set_lower_limit(value_type value)
+  {
+    params_.u_min = value;
+  }
+
+  constexpr void set_upper_limit(value_type value)
+  {
+    params_.u_max = value;
+  }
+
+  constexpr value_type lower_limit() const
+  {
+    return params_.u_min;
+  }
+
+  constexpr value_type upper_limit() const
+  {
+    return params_.u_max;
+  }
+
+  constexpr void set_kp(value_type value)
+  {
+    params_.Kp = value;
+  }
+
+  constexpr void set_ki(value_type value)
+  {
+    params_.Ki = value;
+  }
+
+  constexpr value_type kp() const
+  {
+    return params_.Kp;
+  }
+
+  constexpr value_type ki() const
+  {
+    return params_.Ki;
   }
 
   constexpr void set_timestep(units::sec<value_type> value)
   {
-    ts_ = value;
+    params_.dt = value.value();
   }
 };
 
-template<std::floating_point T, typename Policy>
-class backcalc_pi_controller : public pi_controller_base<T> {
-public:
-  using value_type = T;
-  using base_type = pi_controller_base<T>;
-protected:
-  using base_type::kp_;
-  using base_type::ki_;
-  using base_type::ts_;
-  using base_type::out_i_;
-  using base_type::lower_limit_;
-  using base_type::upper_limit_;
-  using base_type::out_;
+template<std::floating_point T, controller_action Action>
+using backcalculation_pi_controller =
+    pi_controller<T, Action, antiwindup::backcalculation<T>>;
 
-  value_type kc_; // anti-windup gain
-public:
-  constexpr backcalc_pi_controller(value_type kp,
-                                   value_type ki,
-                                   units::sec<value_type> timestep,
-                                   value_type kc,
-                                   value_type lower_limit,
-                                   value_type upper_limit)
-      : base_type(kp, ki, timestep, lower_limit, upper_limit), kc_(kc)
-  {
-  }
-
-  constexpr void push(value_type ref, value_type meas)
-  {
-    value_type error = Policy::template error<value_type>(ref, meas);
-    value_type out = std::clamp(error * kp_ + out_i_,
-                                -std::numeric_limits<value_type>::max(),
-                                std::numeric_limits<value_type>::max());
-    out_ = std::clamp(out, lower_limit_, upper_limit_);
-    value_type out_i = out_i_ + ki_ * ts_.value() * error - kc_ * (out - out_);
-    out_i_ = std::clamp(out_i,
-                        -std::numeric_limits<value_type>::max(),
-                        std::numeric_limits<value_type>::max());
-  }
-
-  constexpr void reset()
-  {
-    out_i_ = 0;
-    out_ = 0;
-  }
-};
-
-template<std::floating_point T, typename Policy>
-class clamping_pi_controller : public pi_controller_base<T> {
-public:
-  using value_type = T;
-  using base_type = pi_controller_base<T>;
-protected:
-  using base_type::kp_;
-  using base_type::ki_;
-  using base_type::ts_;
-  using base_type::out_i_;
-  using base_type::lower_limit_;
-  using base_type::upper_limit_;
-  using base_type::out_;
-
-  value_type error_;
-public:
-  constexpr clamping_pi_controller(value_type kp,
-                                   value_type ki,
-                                   units::sec<value_type> timestep,
-                                   value_type lower_limit,
-                                   value_type upper_limit)
-      : base_type(kp, ki, timestep, lower_limit, upper_limit), error_(0)
-  {
-  }
-
-  constexpr void push(value_type ref, value_type meas)
-  {
-    value_type error = Policy::template error<value_type>(ref, meas);
-    value_type out_p = error * kp_;
-    value_type out_i =
-        (error + error_) * value_type(0.5) * ki_ * ts_.value() + out_i_;
-    error_ = error;
-    value_type out = out_p + out_i;
-
-    if (out > upper_limit_) {
-      out_ = upper_limit_;
-      if (out_p < upper_limit_) {
-        out_i_ = upper_limit_ - out_p;
-      }
-    }
-    else if (out < lower_limit_) {
-      out_ = lower_limit_;
-      if (out_p > lower_limit_) {
-        out_i_ = lower_limit_ - out_p;
-      }
-    }
-    else {
-      out_ = out;
-      out_i_ = out_i;
-    }
-  }
-
-  constexpr void reset()
-  {
-    out_i_ = 0;
-    error_ = 0;
-    out_ = 0;
-  }
-};
+template<std::floating_point T, controller_action Action>
+using clamping_pi_controller =
+    pi_controller<T, Action, antiwindup::clamping<T>>;
 
 } // namespace emb

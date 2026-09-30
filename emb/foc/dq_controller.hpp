@@ -30,8 +30,7 @@ constexpr voltage_dq dq_compensation(current_dq const& Imeas,
 // circle. The gains start at zero and are set through d() and q().
 class dq_controller {
 public:
-  using axis_type =
-      clamping_pi_controller<float, controller_policy::non_inverting>;
+  using axis_type = clamping_pi_controller<float, controller_action::reverse>;
 private:
   axis_type d_;
   axis_type q_;
