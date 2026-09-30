@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <concepts>
+#include <utility>
 
 namespace emb {
 
@@ -202,7 +203,8 @@ public:
                           value_type lower_limit,
                           value_type upper_limit,
                           antiwindup_type aw = {})
-      : params_{kp, ki, timestep.value(), lower_limit, upper_limit}, aw_{aw}
+      : params_{kp, ki, timestep.value(), lower_limit, upper_limit},
+        aw_{std::move(aw)}
   {
   }
 
