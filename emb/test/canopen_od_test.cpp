@@ -29,6 +29,22 @@ constexpr emb::units::hz_f32 read_freq(ctx const& c)
   return emb::units::hz_f32{c.value};
 }
 
+// A wrapper with no value() member: value_of alone makes it one.
+struct public_field {
+  using value_type = float;
+  float v;
+  constexpr explicit public_field(float x) : v(x) {}
+  friend constexpr float value_of(public_field w)
+  {
+    return w.v;
+  }
+};
+
+constexpr public_field read_public_field(ctx const& c)
+{
+  return public_field{c.value};
+}
+
 constexpr std::expected<float, sdo_abort_code> read_checked(ctx const& c)
 {
   if (c.fail) return std::unexpected(sdo_abort_code::object_not_found);
@@ -187,6 +203,7 @@ static_assert(sizeof(od_entry<ctx>) == 8 + 2 * sizeof(void*));
 
 static_assert(od_reader<read_value, ctx>);
 static_assert(od_reader<read_freq, ctx>);
+static_assert(od_reader<read_public_field, ctx>);
 static_assert(od_reader<read_checked, ctx>);
 static_assert(od_reader<read_u8, ctx>);
 static_assert(od_reader<zero<bool>, ctx>);
@@ -299,6 +316,9 @@ consteval bool test_reads()
   }
   // A wrapped value travels as its scalar.
   if (bind<od_ro<read_freq>>().read(c, 0) != od_read_result{1.5f}) {
+    return false;
+  }
+  if (bind<od_ro<read_public_field>>().read(c, 0) != od_read_result{1.5f}) {
     return false;
   }
   if (bind<od_ro<read_checked>>().read(c, 0) != od_read_result{1.5f}) {

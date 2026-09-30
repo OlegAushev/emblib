@@ -83,6 +83,9 @@ constexpr bool test_units_conversion()
   assert(abs(rpm_f32{0.0f}) == rpm_f32{0.0f});
   assert(abs(deg_f32{-90.0f}) > deg_f32{45.0f});
 
+  // value_of
+  assert(value_of(rpm_f32{-100.0f}) == -100.0f);
+
   return true;
 }
 

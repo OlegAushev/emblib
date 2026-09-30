@@ -90,9 +90,10 @@ adpt-etk-inverter. Почему устроено именно так и каки
 байтов в ответе.
 
 Обёртки — `units::named_unit`, `emb::clamped` и всё, у чего есть
-`value_type`, конструктор из него и `value()`, — опознаёт концепт
-`wraps_od_scalar` из `od_value_cast.hpp`. `to_od_value` и `from_od_value`
-переводят их в `od_value` и обратно через скаляр.
+`value_type`, конструктор из него и перегрузка `value_of`, которую находит
+поиск, зависящий от аргументов (ADL), — опознаёт концепт `wraps_od_scalar`
+из `od_value_cast.hpp`. `to_od_value` и `from_od_value` переводят их в
+`od_value` и обратно через скаляр.
 
 ### 1.2. Ключ и доступ
 

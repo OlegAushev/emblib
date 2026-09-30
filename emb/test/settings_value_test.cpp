@@ -21,8 +21,8 @@ static_assert(some_parameter_type<std::int32_t>);
 static_assert(some_parameter_type<std::uint32_t>);
 static_assert(some_parameter_type<float>);
 
-// Recognised structurally, not by name: a named_unit and a clamped go
-// through the same path.
+// Recognised by a value_of overload that argument-dependent lookup finds,
+// not by name: a named_unit and a clamped go through the same path.
 static_assert(some_parameter_type<rpm>);
 static_assert(some_parameter_type<pu>);
 static_assert(some_wrapped_value<rpm>);
@@ -40,7 +40,7 @@ static_assert(!some_parameter_type<value>);
 struct wraps_a_double {
   using value_type = double;
   constexpr explicit wraps_a_double(double) {}
-  constexpr double value() const
+  friend constexpr double value_of(wraps_a_double)
   {
     return 0.0;
   }
@@ -48,7 +48,7 @@ struct wraps_a_double {
 
 struct not_reconstructible {
   using value_type = float;
-  constexpr float value() const
+  friend constexpr float value_of(not_reconstructible)
   {
     return 0.0f;
   }
@@ -57,15 +57,40 @@ struct not_reconstructible {
 struct value_type_disagrees {
   using value_type = float;
   constexpr explicit value_type_disagrees(float) {}
-  constexpr double value() const
+  friend constexpr double value_of(value_type_disagrees)
   {
     return 0.0;
+  }
+};
+
+// A value() member without value_of does not make a wrapper.
+struct value_member_only {
+  using value_type = float;
+  constexpr explicit value_member_only(float) {}
+  constexpr float value() const
+  {
+    return 0.0f;
   }
 };
 
 static_assert(!some_parameter_type<wraps_a_double>);
 static_assert(!some_parameter_type<not_reconstructible>);
 static_assert(!some_parameter_type<value_type_disagrees>);
+static_assert(!some_parameter_type<value_member_only>);
+
+// Nor does a wrapper need a value() member: value_of may read a public
+// field, which is where a structural type keeps its number.
+struct public_field {
+  using value_type = float;
+  float v;
+  constexpr explicit public_field(float x) : v(x) {}
+  friend constexpr float value_of(public_field w)
+  {
+    return w.v;
+  }
+};
+
+static_assert(some_parameter_type<public_field>);
 
 // -- Type mapping --
 
@@ -98,6 +123,7 @@ consteval bool test_value_round_trip()
   if (to_value(rpm{100.0f}) != value{100.0f}) return false;
   if (from_value<rpm>(value{100.0f}) != rpm{100.0f}) return false;
   if (from_value<pu>(value{0.5f}) != pu{0.5f}) return false;
+  if (to_value(public_field{2.5f}) != value{2.5f}) return false;
 
   return true;
 }
@@ -124,6 +150,7 @@ consteval bool test_raw_round_trip()
   if (from_raw<float>(to_raw(-2.5f)) != -2.5f) return false;
   if (from_raw<rpm>(to_raw(rpm{1500.0f})) != rpm{1500.0f}) return false;
   if (from_raw<pu>(to_raw(pu{0.25f})) != pu{0.25f}) return false;
+  if (to_raw(public_field{-2.5f}) != to_raw(-2.5f)) return false;
   return true;
 }
 

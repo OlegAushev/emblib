@@ -137,6 +137,15 @@ constexpr named_unit<T, Unit> abs(named_unit<T, Unit> v)
   return named_unit<T, Unit>(std::abs(v.value()));
 }
 
+// Returns the numerical value of `v`, i.e. `v.value()`. Generic code that
+// handles any type wrapping a single number, e.g. `emb::settings`, calls
+// `value_of` unqualified and finds this overload by argument-dependent lookup.
+template<std::floating_point T, typename Unit>
+constexpr T value_of(named_unit<T, Unit> v)
+{
+  return v.value();
+}
+
 // The concept `some_unit<T>` is satisfied if and only if `T` is a
 // specialization of `named_unit`. A cv-qualified or reference type does not
 // satisfy it.

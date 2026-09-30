@@ -46,21 +46,26 @@ static_assert(
     std::same_as<std::variant_alternative_t<2, value>, std::uint32_t>);
 static_assert(std::same_as<std::variant_alternative_t<3, value>, float>);
 
-// A type that wraps one scalar and can be rebuilt from it: emb::units::
-// named_unit, emb::clamped, and anything else shaped like them. Recognised
-// structurally rather than by name, so this header sits at the bottom of
-// the dependency graph and knows about neither.
+// The concept `some_wrapped_value<T>` is satisfied if and only if `T` wraps
+// one scalar that satisfies `some_value` and can be rebuilt from it:
+// `T::value_type` names the scalar type, `T` is constructible from
+// `T::value_type`, and `value_of` called with a `T const` lvalue returns
+// `T::value_type` by value.
 //
-// Only the wrapper's scalar is ever stored, so its layout is nobody's
-// business here: conversion goes through value() and the constructor, never
-// through the object's bytes.
+// A wrapper, e.g. `emb::units::named_unit` or `emb::clamped`, opts in by
+// declaring a `value_of` overload that argument-dependent lookup finds: in
+// its own namespace or as a friend defined in the class. This header thus
+// sits at the bottom of the dependency graph and knows about no wrapper. Only
+// the scalar of a wrapper is stored: conversions in this header go through
+// `value_of` and the constructor, never through the bytes of an object, so
+// the layout of a wrapper does not matter.
 template<typename T>
 concept some_wrapped_value = requires { typename T::value_type; }
                           && some_value<typename T::value_type>
                           && std::constructible_from<T, typename T::value_type>
                           && requires(T const& v) {
                                {
-                                 v.value()
+                                 value_of(v)
                                } -> std::same_as<typename T::value_type>;
                              };
 
@@ -120,7 +125,7 @@ constexpr auto to_value(T const& v) -> value
     return value{v};
   }
   else {
-    return value{v.value()};
+    return value{value_of(v)};
   }
 }
 
@@ -146,7 +151,7 @@ constexpr auto to_raw(T const& v) -> raw_value
       return v;
     }
     else {
-      return v.value();
+      return value_of(v);
     }
   }();
 
