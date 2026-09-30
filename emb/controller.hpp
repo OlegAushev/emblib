@@ -32,7 +32,7 @@ template<std::floating_point T, controller_action Action>
 class p_controller {
 public:
   using value_type = T;
-protected:
+private:
   value_type Kp_;
   value_type u_min_;
   value_type u_max_;
