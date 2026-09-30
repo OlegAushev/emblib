@@ -43,7 +43,7 @@ public:
     return v_;
   }
 
-  constexpr clamped& operator+=(clamped const& rhs)
+  constexpr clamped& operator+=(clamped rhs)
   {
     if constexpr (std::integral<value_type>) {
       v_ = std::clamp(saturating_add(v_, rhs.v_), lo, hi);
@@ -54,7 +54,7 @@ public:
     return *this;
   }
 
-  constexpr clamped& operator-=(clamped const& rhs)
+  constexpr clamped& operator-=(clamped rhs)
   {
     if constexpr (std::integral<value_type>) {
       v_ = std::clamp(saturating_sub(v_, rhs.v_), lo, hi);
@@ -69,43 +69,41 @@ public:
   // handles any type wrapping a single number, e.g. `emb::settings`, calls
   // `value_of` unqualified: as a friend defined in the class, it is found
   // only by argument-dependent lookup.
-  friend constexpr value_type value_of(clamped const& v)
+  friend constexpr value_type value_of(clamped v)
   {
     return v.value();
   }
 
-  friend constexpr auto operator<=>(clamped const&, clamped const&) = default;
+  friend constexpr auto operator<=>(clamped, clamped) = default;
 
-  friend constexpr clamped operator+(clamped const& lhs, clamped const& rhs)
+  friend constexpr clamped operator+(clamped lhs, clamped rhs)
   {
-    clamped tmp = lhs;
-    return tmp += rhs;
+    return lhs += rhs;
   }
 
-  friend constexpr clamped operator-(clamped const& lhs, clamped const& rhs)
+  friend constexpr clamped operator-(clamped lhs, clamped rhs)
   {
-    clamped tmp = lhs;
-    return tmp -= rhs;
+    return lhs -= rhs;
   }
 
   // scaling by a scalar requires a rounding policy for integral types,
   // which this class does not impose; floating-point only
-  friend constexpr clamped operator*(clamped const& lhs, value_type rhs)
+  friend constexpr clamped operator*(clamped lhs, value_type rhs)
     requires std::floating_point<value_type>
   {
-    return clamped(lhs.value() * rhs);
+    return clamped{lhs.value() * rhs};
   }
 
-  friend constexpr clamped operator*(value_type lhs, clamped const& rhs)
+  friend constexpr clamped operator*(value_type lhs, clamped rhs)
     requires std::floating_point<value_type>
   {
     return rhs * lhs;
   }
 
-  friend constexpr clamped operator/(clamped const& lhs, value_type rhs)
+  friend constexpr clamped operator/(clamped lhs, value_type rhs)
     requires std::floating_point<value_type>
   {
-    return clamped(lhs.value() / rhs);
+    return clamped{lhs.value() / rhs};
   }
 };
 
