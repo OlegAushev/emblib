@@ -4,7 +4,7 @@
 #include <emb/foc/types.hpp>
 #include <emb/math.hpp>
 
-#include <cmath>
+#include <algorithm>
 #include <numbers>
 
 namespace emb {
@@ -50,6 +50,7 @@ public:
                       voltage_dq const& Vcomp,
                       float Vdc)
   {
+    Vdc = std::max(Vdc, 0.0f);
     float const Vdc_over_sqrt3 = Vdc * std::numbers::inv_sqrt3_v<float>;
 
     // D-axis controller
@@ -60,16 +61,10 @@ public:
     float const Vd = d_.output() + Vcomp.d;
 
     // Q-axis controller
-    if (std::fabs(Vd) < Vdc_over_sqrt3) {
-      float const Vq_avail =
-          emb::sqrt(Vdc_over_sqrt3 * Vdc_over_sqrt3 - Vd * Vd);
-      q_.set_lower_limit(-Vq_avail - Vcomp.q);
-      q_.set_upper_limit(Vq_avail - Vcomp.q);
-    }
-    else {
-      q_.set_lower_limit(0.0f);
-      q_.set_upper_limit(0.0f);
-    }
+    float const Vq_avail =
+        emb::sqrt(std::max(Vdc_over_sqrt3 * Vdc_over_sqrt3 - Vd * Vd, 0.0f));
+    q_.set_lower_limit(-Vq_avail - Vcomp.q);
+    q_.set_upper_limit(Vq_avail - Vcomp.q);
     q_.push(Iref.q, Imeas.q);
     float const Vq = q_.output() + Vcomp.q;
 
