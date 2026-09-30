@@ -22,7 +22,7 @@ constexpr bool test_ramp_generator(Ramp ramp,
   assert(ramp.target() == target);
   assert(ramp.at_target() == (init_output == target));
 
-  value_type const step = slope * timestep.value();
+  value_type const step = slope * timestep.value;
   value_type const dir = target > init_output ? value_type{1} : value_type{-1};
 
   constexpr std::size_t max_iterations = 200;

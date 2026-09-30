@@ -29,11 +29,11 @@ public:
       value_type bias = value_type())
       : update_period_(update_period),
         ampl_(ampl),
-        wfreq_(2 * std::numbers::pi_v<float> * freq.value()),
+        wfreq_(2 * std::numbers::pi_v<float> * freq.value),
         init_phase_(init_phase),
         bias_(bias)
   {
-    assert(update_period.value() > 0);
+    assert(update_period.value > 0);
     reset();
   }
 
@@ -45,14 +45,14 @@ public:
   constexpr void reset()
   {
     phase_ = init_phase_;
-    output_ = ampl_ * emb::sin(phase_.value()) + bias_;
+    output_ = ampl_ * emb::sin(phase_.value) + bias_;
   }
 
   constexpr void update()
   {
     phase_ = emb::units::rad_f32(
-        emb::norm2pi(phase_.value() + wfreq_ * update_period_.value()));
-    output_ = ampl_ * emb::sin(phase_.value()) + bias_;
+        emb::norm2pi(phase_.value + wfreq_ * update_period_.value));
+    output_ = ampl_ * emb::sin(phase_.value) + bias_;
   }
 
   constexpr units::sec_f32 update_period() const

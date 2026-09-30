@@ -41,7 +41,7 @@ template<std::floating_point T, typename V>
   requires std::is_arithmetic_v<V>
 constexpr sec<T> operator/(V lhs, hz<T> rhs)
 {
-  return sec<T>(static_cast<T>(lhs) / rhs.value());
+  return sec<T>(static_cast<T>(lhs) / rhs.value);
 }
 
 // Returns `lhs`, which is converted to `T` first, divided by the time interval
@@ -51,12 +51,12 @@ template<std::floating_point T, typename V>
   requires std::is_arithmetic_v<V>
 constexpr hz<T> operator/(V lhs, sec<T> rhs)
 {
-  return hz<T>(static_cast<T>(lhs) / rhs.value());
+  return hz<T>(static_cast<T>(lhs) / rhs.value);
 }
 
 // Converts the time interval `t` to `Duration`, a specialization of
 // `std::chrono::duration`, as if by `std::chrono::duration_cast` from a
-// duration of `t.value()` seconds with representation `T`. If `Duration::rep`
+// duration of `t.value` seconds with representation `T`. If `Duration::rep`
 // is an integer type, the number of ticks is computed in `T` and truncated
 // toward zero, and the behavior is undefined if `t` is NaN or infinite or the
 // number of ticks is not representable by `Duration::rep`.
@@ -64,12 +64,12 @@ template<emb::chrono::some_duration Duration, std::floating_point T>
 constexpr Duration to_duration(sec<T> t)
 {
   return std::chrono::duration_cast<Duration>(
-      std::chrono::duration<T>{t.value()});
+      std::chrono::duration<T>{t.value});
 }
 
 // Converts the time interval `t` to milliseconds, i.e.
 // `to_duration<std::chrono::milliseconds>(t)`. The number of milliseconds,
-// `t.value() * 1000` computed in `T`, is truncated toward zero, e.g. 1.5 ms
+// `t.value * 1000` computed in `T`, is truncated toward zero, e.g. 1.5 ms
 // becomes 1 ms and -1.5 ms becomes -1 ms. The behavior is undefined if `t` is
 // NaN or infinite or the number of milliseconds is not representable by
 // `std::chrono::milliseconds::rep`.

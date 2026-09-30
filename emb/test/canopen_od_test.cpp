@@ -63,7 +63,7 @@ constexpr void write_value(ctx& c, float v)
 
 constexpr void write_freq(ctx& c, emb::units::hz_f32 const& v)
 {
-  c.value = v.value();
+  c.value = v.value;
 }
 
 constexpr od_write_result write_checked(ctx& c, std::int16_t v)

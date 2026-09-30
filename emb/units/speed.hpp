@@ -51,7 +51,7 @@ template<typename To, std::floating_point T, std::integral P>
   requires std::same_as<To, eradps<T>>
 constexpr eradps<T> convert_to(rpm<T> v, P p)
 {
-  return units::eradps<T>(emb::to_eradps(v.value(), p));
+  return units::eradps<T>(emb::to_eradps(v.value, p));
 }
 
 // Converts `v` from electrical radians per second to revolutions per minute.
@@ -62,7 +62,7 @@ template<typename To, std::floating_point T, std::integral P>
   requires std::same_as<To, rpm<T>>
 constexpr rpm<T> convert_to(eradps<T> v, P p)
 {
-  return units::rpm<T>(emb::to_rpm(v.value(), p));
+  return units::rpm<T>(emb::to_rpm(v.value, p));
 }
 
 } // namespace units

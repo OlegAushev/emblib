@@ -21,7 +21,7 @@ inline constexpr emb::signal::proportional transducer{amp_f32{600.f},
 struct adc {
   static constexpr std::uint16_t forward(volt_f32 v)
   {
-    return static_cast<std::uint16_t>(v.value() / 3.3f * 4095.f);
+    return static_cast<std::uint16_t>(v.value / 3.3f * 4095.f);
   }
 
   static constexpr volt_f32 inverse(std::uint16_t code)

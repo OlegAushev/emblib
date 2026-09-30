@@ -67,7 +67,7 @@ constexpr bool test_scaled()
   volt_ds v{};
   v = emb::units::volt_f32{24.1f};
   assert(v.raw() == 241);
-  assert(near(v.value().value(), 24.1f));
+  assert(near(v.value().value, 24.1f));
 
   // beyond the raw range saturates rather than wraps
   v = emb::units::volt_f32{5000.0f};

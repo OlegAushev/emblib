@@ -58,11 +58,11 @@ public:
 
   constexpr void set_slope(units::sec_f32 timestep, value_type slope)
   {
-    assert(timestep.value() > 0);
+    assert(timestep.value > 0);
     assert(slope > T(0));
     ts_ = timestep;
     slope_ = slope;
-    step_ = timestep.value() * slope;
+    step_ = timestep.value * slope;
   }
 
   constexpr void set_timestep(units::sec_f32 ts)

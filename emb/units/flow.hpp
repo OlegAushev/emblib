@@ -41,7 +41,7 @@ template<typename To, std::floating_point T>
   requires std::same_as<To, liter_per_minute<T>>
 constexpr liter_per_minute<T> convert_to(cubic_meter_per_hour<T> v)
 {
-  return units::liter_per_minute<T>(v.value() * T{1000} / T{60});
+  return units::liter_per_minute<T>(v.value * T{1000} / T{60});
 }
 
 // Converts `v` from liters per minute to cubic meters per hour. One liter per
@@ -50,7 +50,7 @@ template<typename To, std::floating_point T>
   requires std::same_as<To, cubic_meter_per_hour<T>>
 constexpr cubic_meter_per_hour<T> convert_to(liter_per_minute<T> v)
 {
-  return units::cubic_meter_per_hour<T>(v.value() * T{60} / T{1000});
+  return units::cubic_meter_per_hour<T>(v.value * T{60} / T{1000});
 }
 
 } // namespace units

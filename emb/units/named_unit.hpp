@@ -7,41 +7,38 @@
 namespace emb {
 namespace units {
 
-// The class template `named_unit` holds a quantity as its numerical value, a
-// number of type `T`, in the unit identified by `Unit`, e.g.
+// The class template `named_unit` holds a quantity as its numerical value
+// `value`, a number of type `T`, in the unit identified by `Unit`, e.g.
 // `named_unit<float, tags::volt>` holds a voltage as a number of volts. `Unit`
-// is the unit tag: a type that serves only to tell units apart.
+// is the unit tag: a type that serves only to tell units apart. `named_unit`
+// is a structural type, so a `named_unit`, or an object whose members are
+// `named_unit`s, can be the argument of a non-type template parameter, as in
+// `template<auto stage>`.
 //
 // Specializations with different unit tags are distinct types, and there are
 // no implicit conversions between a `named_unit` and `T`: an expression that
 // mixes units, or passes a bare number where a `named_unit` is expected, does
 // not compile. `convert_to` converts a `named_unit` to another unit.
 template<std::floating_point T, typename Unit>
-class named_unit {
-public:
+struct named_unit {
   using value_type = T;
   using unit_type = Unit;
-public:
-  value_type v_;
-public:
-  constexpr named_unit() : v_(value_type{0}) {}
 
-  constexpr explicit named_unit(value_type v) : v_(v) {}
+  value_type value;
 
-  constexpr value_type value() const
-  {
-    return v_;
-  }
+  constexpr named_unit() : value(value_type{0}) {}
+
+  constexpr explicit named_unit(value_type v) : value(v) {}
 
   constexpr named_unit& operator+=(named_unit rhs)
   {
-    v_ += rhs.v_;
+    value += rhs.value;
     return *this;
   }
 
   constexpr named_unit& operator-=(named_unit rhs)
   {
-    v_ -= rhs.v_;
+    value -= rhs.value;
     return *this;
   }
 };
@@ -49,37 +46,37 @@ public:
 template<std::floating_point T, typename Unit>
 constexpr bool operator==(named_unit<T, Unit> lhs, named_unit<T, Unit> rhs)
 {
-  return lhs.value() == rhs.value();
+  return lhs.value == rhs.value;
 }
 
 template<std::floating_point T, typename Unit>
 constexpr bool operator!=(named_unit<T, Unit> lhs, named_unit<T, Unit> rhs)
 {
-  return lhs.value() != rhs.value();
+  return lhs.value != rhs.value;
 }
 
 template<std::floating_point T, typename Unit>
 constexpr bool operator<(named_unit<T, Unit> lhs, named_unit<T, Unit> rhs)
 {
-  return lhs.value() < rhs.value();
+  return lhs.value < rhs.value;
 }
 
 template<std::floating_point T, typename Unit>
 constexpr bool operator>(named_unit<T, Unit> lhs, named_unit<T, Unit> rhs)
 {
-  return lhs.value() > rhs.value();
+  return lhs.value > rhs.value;
 }
 
 template<std::floating_point T, typename Unit>
 constexpr bool operator<=(named_unit<T, Unit> lhs, named_unit<T, Unit> rhs)
 {
-  return lhs.value() <= rhs.value();
+  return lhs.value <= rhs.value;
 }
 
 template<std::floating_point T, typename Unit>
 constexpr bool operator>=(named_unit<T, Unit> lhs, named_unit<T, Unit> rhs)
 {
-  return lhs.value() >= rhs.value();
+  return lhs.value >= rhs.value;
 }
 
 template<std::floating_point T, typename Unit>
@@ -101,7 +98,7 @@ template<std::floating_point T, typename Unit, typename V>
 constexpr named_unit<T, Unit> operator*(named_unit<T, Unit> lhs, V rhs)
 {
   return named_unit<T, Unit>(
-      lhs.value() * static_cast<typename named_unit<T, Unit>::value_type>(rhs));
+      lhs.value * static_cast<typename named_unit<T, Unit>::value_type>(rhs));
 }
 
 template<std::floating_point T, typename Unit, typename V>
@@ -116,34 +113,34 @@ template<std::floating_point T, typename Unit, typename V>
 constexpr named_unit<T, Unit> operator/(named_unit<T, Unit> lhs, V rhs)
 {
   return named_unit<T, Unit>(
-      lhs.value() / static_cast<typename named_unit<T, Unit>::value_type>(rhs));
+      lhs.value / static_cast<typename named_unit<T, Unit>::value_type>(rhs));
 }
 
 template<std::floating_point T, typename Unit>
 constexpr T operator/(named_unit<T, Unit> lhs, named_unit<T, Unit> rhs)
 {
-  return lhs.value() / rhs.value();
+  return lhs.value / rhs.value;
 }
 
 template<std::floating_point T, typename Unit>
 constexpr named_unit<T, Unit> operator-(named_unit<T, Unit> v)
 {
-  return named_unit<T, Unit>(-v.value());
+  return named_unit<T, Unit>(-v.value);
 }
 
 template<std::floating_point T, typename Unit>
 constexpr named_unit<T, Unit> abs(named_unit<T, Unit> v)
 {
-  return named_unit<T, Unit>(std::abs(v.value()));
+  return named_unit<T, Unit>(std::abs(v.value));
 }
 
-// Returns the numerical value of `v`, i.e. `v.value()`. Generic code that
+// Returns the numerical value of `v`, i.e. `v.value`. Generic code that
 // handles any type wrapping a single number, e.g. `emb::settings`, calls
 // `value_of` unqualified and finds this overload by argument-dependent lookup.
 template<std::floating_point T, typename Unit>
 constexpr T value_of(named_unit<T, Unit> v)
 {
-  return v.value();
+  return v.value;
 }
 
 // The concept `some_unit<T>` is satisfied if and only if `T` is a

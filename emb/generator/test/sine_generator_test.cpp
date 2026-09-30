@@ -25,7 +25,7 @@ constexpr bool test_sine_generator(Sine sine, emb::units::rad_f32 init_phase)
                  sine_ref.begin(),
                  [&](emb::units::sec_f32 t) -> output_type {
                    float const w = 2 * std::numbers::pi_v<float> * sine.freq();
-                   float const phase = w * t.value() + init_phase.value();
+                   float const phase = w * t.value + init_phase.value;
                    return sine.ampl() * emb::sin(phase) + sine.bias();
                  });
 

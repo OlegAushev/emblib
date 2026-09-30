@@ -26,17 +26,17 @@ struct affine {
   constexpr Out forward(In in) const
   {
     auto const out_per_in =
-        (output_max - output_min).value() / (input_max - input_min).value();
-    auto const offset = output_min.value() - out_per_in * input_min.value();
-    return Out{out_per_in * in.value() + offset};
+        (output_max - output_min).value / (input_max - input_min).value;
+    auto const offset = output_min.value - out_per_in * input_min.value;
+    return Out{out_per_in * in.value + offset};
   }
 
   constexpr In inverse(Out out) const
   {
     auto const in_per_out =
-        (input_max - input_min).value() / (output_max - output_min).value();
-    auto const offset = input_min.value() - in_per_out * output_min.value();
-    return In{in_per_out * out.value() + offset};
+        (input_max - input_min).value / (output_max - output_min).value;
+    auto const offset = input_min.value - in_per_out * output_min.value;
+    return In{in_per_out * out.value + offset};
   }
 };
 

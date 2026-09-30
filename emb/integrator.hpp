@@ -34,7 +34,7 @@ public:
 
   constexpr void push(value_type rate)
   {
-    set_output(output_ + rate * ts_.value());
+    set_output(output_ + rate * ts_.value);
   }
 
   constexpr void add(value_type increment)

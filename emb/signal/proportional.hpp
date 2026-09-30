@@ -20,14 +20,14 @@ struct proportional {
 
   constexpr Out forward(In in) const
   {
-    auto const out_per_in = rated_output.value() / rated_input.value();
-    return Out{out_per_in * in.value()};
+    auto const out_per_in = rated_output.value / rated_input.value;
+    return Out{out_per_in * in.value};
   }
 
   constexpr In inverse(Out out) const
   {
-    auto const in_per_out = rated_input.value() / rated_output.value();
-    return In{in_per_out * out.value()};
+    auto const in_per_out = rated_input.value / rated_output.value;
+    return In{in_per_out * out.value};
   }
 };
 

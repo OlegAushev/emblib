@@ -120,9 +120,9 @@ constexpr Float dequantize(Int n)
 // The concept `some_quantity<T>` specifies that `T` is a class that wraps a
 // physical value of floating-point type. It is satisfied if and only if
 // `T::value_type` is a floating-point type, `T(v)` constructs a `T` from a `v`
-// of that type, and `q.value()` returns a `T::value_type`, not a reference to
-// one, for a `q` of type `T`. It is modeled only if `T(q.value())` wraps the
-// same physical value as `q`.
+// of that type, and `value_of(q)`, called unqualified, returns a
+// `T::value_type`, not a reference to one, for a `q` of type `T`. It is
+// modeled only if `T(value_of(q))` wraps the same physical value as `q`.
 //
 // `units::named_unit` satisfies it, and so does `clamped` with floating-point
 // bounds, e.g. `signed_pu_f32`; arithmetic types such as `float` do not.
@@ -130,7 +130,7 @@ template<typename T>
 concept some_quantity = requires(T q, typename T::value_type v) {
   requires std::floating_point<typename T::value_type>;
   { T(v) } -> std::same_as<T>;
-  { q.value() } -> std::same_as<typename T::value_type>;
+  { value_of(q) } -> std::same_as<typename T::value_type>;
 };
 
 // The concept `some_ratio<R>` is satisfied if and only if `R::type` denotes
@@ -209,7 +209,7 @@ public:
 private:
   static constexpr raw_type encode(quantity_type q)
   {
-    return quantize<raw_type, step_type>(q.value());
+    return quantize<raw_type, step_type>(value_of(q));
   }
 };
 

@@ -103,8 +103,8 @@ compute_sector_widths(sector_map<emb::units::edeg_f32> const& entries,
     T gap = (dir == direction::fwd)
               ? sorted[(i + 1) % 6].first - sorted[i].first
               : sorted[i].first - sorted[(i + 6 - 1) % 6].first;
-    if (gap.value() <= 0) {
-      gap = T{gap.value() + 360.0f};
+    if (gap.value <= 0) {
+      gap = T{gap.value + 360.0f};
     }
     widths[sorted[i].second] = gap;
   }

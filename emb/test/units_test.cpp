@@ -22,9 +22,9 @@ constexpr bool test_units_conversion()
   assert(emb::norm360(deg_f32{-30.0f}) == deg_f32(330.0f));
   // a tiny negative input must not round onto the upper bound
   assert(emb::norm360(deg_f32{-1e-6f}) == deg_f32(0.0f));
-  assert(emb::norm360(deg_f32{-1.5e-5f}).value() < 360.0f);
+  assert(emb::norm360(deg_f32{-1.5e-5f}).value < 360.0f);
   // a negative multiple of 360 must give +0, not -0
-  assert(std::bit_cast<std::uint32_t>(emb::norm360(deg_f32{-360.0f}).value())
+  assert(std::bit_cast<std::uint32_t>(emb::norm360(deg_f32{-360.0f}).value)
          == 0u);
 
   assert(emb::norm180(deg_f32{200.0f}) == deg_f32(-160.0f));
@@ -36,17 +36,17 @@ constexpr bool test_units_conversion()
   };
 
   // norm360_fast
-  assert(near(emb::norm360_fast(deg_f32{380.0f}).value(), 20.0f));
-  assert(near(emb::norm360_fast(deg_f32{-30.0f}).value(), 330.0f));
-  assert(near(emb::norm360_fast(deg_f32{360.0f}).value(), 0.0f));
-  assert(near(emb::norm360_fast(deg_f32{720.0f}).value(), 0.0f));
+  assert(near(emb::norm360_fast(deg_f32{380.0f}).value, 20.0f));
+  assert(near(emb::norm360_fast(deg_f32{-30.0f}).value, 330.0f));
+  assert(near(emb::norm360_fast(deg_f32{360.0f}).value, 0.0f));
+  assert(near(emb::norm360_fast(deg_f32{720.0f}).value, 0.0f));
   // a large negative input must not land on the upper bound
-  assert(emb::norm360_fast(deg_f32{-7000000512.0f}).value() < 360.0f);
+  assert(emb::norm360_fast(deg_f32{-7000000512.0f}).value < 360.0f);
 
   // norm180_fast
-  assert(near(emb::norm180_fast(deg_f32{200.0f}).value(), -160.0f));
-  assert(near(emb::norm180_fast(deg_f32{-10.0f}).value(), -10.0f));
-  assert(emb::norm180_fast(deg_f32{-7000000512.0f}).value() < 180.0f);
+  assert(near(emb::norm180_fast(deg_f32{200.0f}).value, -160.0f));
+  assert(near(emb::norm180_fast(deg_f32{-10.0f}).value, -10.0f));
+  assert(emb::norm180_fast(deg_f32{-7000000512.0f}).value < 180.0f);
 
   float v2{3000.0f};
   [[maybe_unused]] std::int32_t p{4};
@@ -90,5 +90,12 @@ constexpr bool test_units_conversion()
 }
 
 static_assert(test_units_conversion());
+
+// A named_unit is a structural type, so it can be a template argument.
+template<auto v>
+constexpr auto template_argument = v;
+
+static_assert(template_argument<emb::units::volt_f32{1.5f}>
+              == emb::units::volt_f32{1.5f});
 
 } // namespace

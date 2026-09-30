@@ -18,7 +18,7 @@ namespace units {
 template<std::floating_point T>
 constexpr eradps<T> operator/(erad<T> lhs, sec<T> rhs)
 {
-  return eradps<T>(lhs.value() / rhs.value());
+  return eradps<T>(lhs.value / rhs.value);
 }
 
 // Returns the electrical angular speed `lhs` multiplied by the time interval
@@ -26,7 +26,7 @@ constexpr eradps<T> operator/(erad<T> lhs, sec<T> rhs)
 template<std::floating_point T>
 constexpr erad<T> operator*(eradps<T> lhs, sec<T> rhs)
 {
-  return erad<T>(lhs.value() * rhs.value());
+  return erad<T>(lhs.value * rhs.value);
 }
 
 // Returns the electrical angular speed `rhs` multiplied by the time interval

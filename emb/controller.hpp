@@ -303,7 +303,7 @@ public:
                           value_type lower_limit,
                           value_type upper_limit,
                           antiwindup_type aw = {})
-      : params_{kp, ki, timestep.value(), lower_limit, upper_limit},
+      : params_{kp, ki, timestep.value, lower_limit, upper_limit},
         aw_{std::move(aw)}
   {
   }
@@ -396,7 +396,7 @@ public:
 
   constexpr void set_timestep(units::sec<value_type> value)
   {
-    params_.dt = value.value();
+    params_.dt = value.value;
   }
 };
 

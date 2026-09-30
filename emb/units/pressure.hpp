@@ -51,7 +51,7 @@ template<typename To, std::floating_point T>
   requires std::same_as<To, megapascal<T>>
 constexpr megapascal<T> convert_to(pascal<T> v)
 {
-  return units::megapascal<T>(v.value() / T{1000000});
+  return units::megapascal<T>(v.value / T{1000000});
 }
 
 // Converts `v` from megapascals to pascals.
@@ -59,7 +59,7 @@ template<typename To, std::floating_point T>
   requires std::same_as<To, pascal<T>>
 constexpr pascal<T> convert_to(megapascal<T> v)
 {
-  return units::pascal<T>(v.value() * T{1000000});
+  return units::pascal<T>(v.value * T{1000000});
 }
 
 // Converts `v` from pascals to standard atmospheres. One standard atmosphere
@@ -68,7 +68,7 @@ template<typename To, std::floating_point T>
   requires std::same_as<To, atmosphere<T>>
 constexpr atmosphere<T> convert_to(pascal<T> v)
 {
-  return units::atmosphere<T>(v.value() / T{101325});
+  return units::atmosphere<T>(v.value / T{101325});
 }
 
 // Converts `v` from standard atmospheres to pascals. One standard atmosphere
@@ -77,7 +77,7 @@ template<typename To, std::floating_point T>
   requires std::same_as<To, pascal<T>>
 constexpr pascal<T> convert_to(atmosphere<T> v)
 {
-  return units::pascal<T>(v.value() * T{101325});
+  return units::pascal<T>(v.value * T{101325});
 }
 
 // Converts `v` from megapascals to standard atmospheres. One standard
@@ -86,7 +86,7 @@ template<typename To, std::floating_point T>
   requires std::same_as<To, atmosphere<T>>
 constexpr atmosphere<T> convert_to(megapascal<T> v)
 {
-  return units::atmosphere<T>(v.value() * T{1000000} / T{101325});
+  return units::atmosphere<T>(v.value * T{1000000} / T{101325});
 }
 
 // Converts `v` from standard atmospheres to megapascals. One standard
@@ -95,7 +95,7 @@ template<typename To, std::floating_point T>
   requires std::same_as<To, megapascal<T>>
 constexpr megapascal<T> convert_to(atmosphere<T> v)
 {
-  return units::megapascal<T>(v.value() * T{101325} / T{1000000});
+  return units::megapascal<T>(v.value * T{101325} / T{1000000});
 }
 
 } // namespace units

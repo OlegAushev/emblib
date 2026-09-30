@@ -42,7 +42,7 @@ constexpr std::expected<void, error> validate(angle_sensor_config const& conf)
   if (auto const calibration = validate(conf.cal_result); !calibration) {
     return calibration;
   }
-  if (!(conf.speed_timeconstant.value() > 0)) {
+  if (!(conf.speed_timeconstant.value > 0)) {
     return std::unexpected(error::invalid_config);
   }
   return {};
@@ -107,7 +107,7 @@ public:
     }
 
     offset_ += speedfilter_.output() * timestep_;
-    if (offset_.value() >= 0) {
+    if (offset_.value >= 0) {
       offset_ = std::min(offset_, sector_span_.width);
     }
     else {

@@ -41,7 +41,7 @@ template<typename To, std::floating_point T>
   requires std::same_as<To, kelvin<T>>
 constexpr kelvin<T> convert_to(degree_celsius<T> v)
 {
-  return units::kelvin<T>(v.value() + T{273.15});
+  return units::kelvin<T>(v.value + T{273.15});
 }
 
 // Converts `v` from kelvins to degrees Celsius. Subtracts 273.15 from the
@@ -51,7 +51,7 @@ template<typename To, std::floating_point T>
   requires std::same_as<To, degree_celsius<T>>
 constexpr degree_celsius<T> convert_to(kelvin<T> v)
 {
-  return units::degree_celsius<T>(v.value() - T{273.15});
+  return units::degree_celsius<T>(v.value - T{273.15});
 }
 
 } // namespace units

@@ -17,7 +17,7 @@ constexpr voltage_dq dq_compensation(current_dq const& Imeas,
   float const Ld = motor.Ld;
   float const Lq = motor.Lq;
   float const Psi = motor.Psi;
-  float const omega = speed.value();
+  float const omega = speed.value;
   return {
       .d = -omega * Lq * Imeas.q,
       .q = omega * (Ld * Imeas.d + Psi),
