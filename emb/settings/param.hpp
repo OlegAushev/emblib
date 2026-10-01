@@ -14,7 +14,8 @@ namespace settings {
 
 // When a changed parameter may take effect. Declared per parameter, because
 // only the schema knows which of them merely feed a computation and which
-// decide what objects exist at all.
+// decide what objects exist at all or are handed to an object only when it
+// is built.
 //
 // The default is on_restart: opting into live application is a claim about
 // the consuming code, and a parameter whose policy was never considered

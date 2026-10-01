@@ -121,8 +121,9 @@ Parameters split into three classes, declared in the schema:
    electrical parameters that rebuild the observer, the hall sensor's
    sector angles). The FSM decides; until then the change stays pending.
 3. `on_restart` — change the *set* of objects that exist or the peripheral
-   setup (`hall.enabled`, `motor.p`, pin routing). Not applied live; the
-   system reports `restart_required` instead of pretending.
+   setup (`hall.enabled`, pin routing), or are handed to an object only
+   when it is built (`motor.p`, `isense.zero_drift_th`). Not applied live;
+   the system reports `restart_required` instead of pretending.
 
 Mechanism: **the owner pulls at a safe point**, nothing is pushed from the
 communication task.
