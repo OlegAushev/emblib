@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <expected>
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -37,14 +38,14 @@ constexpr auto get_at(std::size_t index)
 }
 
 constexpr auto set_at(std::size_t index, settings::value const& value)
-    -> std::expected<settings::change, settings::error>
+    -> std::expected<std::optional<settings::change>, settings::error>
 {
   settings::image<schema> values;
   return values.set_at(index, value);
 }
 
 constexpr auto restore_at(std::size_t index)
-    -> std::expected<settings::change, settings::error>
+    -> std::expected<std::optional<settings::change>, settings::error>
 {
   settings::image<schema> values;
   return values.restore_default_at(index);

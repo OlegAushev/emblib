@@ -5,6 +5,7 @@
 
 #include <array>
 #include <expected>
+#include <optional>
 
 #include <cstddef>
 #include <cstdint>
@@ -25,6 +26,10 @@ enum class error : std::uint8_t {
 // The working copy of every parameter: one four-byte cell per declaration,
 // in declaration order, so an index addresses the same value here, in the
 // schema and in a stored record.
+//
+// A write that is accepted reports the `change` it made, or `std::nullopt`
+// if the cell already held the value: writing what is already there leaves
+// nothing to apply.
 //
 // Plain data on purpose. It is not a synchronization primitive and holds no
 // atomics — that is what keeps it usable in constant expressions, and the
@@ -59,14 +64,15 @@ public:
 
   template<fixed_string Name>
   constexpr auto set(typename parameter<Schema, Name>::type const& v)
-      -> std::expected<change, error>
+      -> std::expected<std::optional<change>, error>
   {
     using param_type = parameter<Schema, Name>;
     return write(param_type::index, to_raw(v));
   }
 
   template<fixed_string Name>
-  constexpr auto restore_default() -> std::expected<change, error>
+  constexpr auto restore_default()
+      -> std::expected<std::optional<change>, error>
   {
     using param_type = parameter<Schema, Name>;
     return write(param_type::index, param_type::desc.def);
@@ -88,7 +94,7 @@ public:
   }
 
   constexpr auto set_at(std::size_t index, value const& v)
-      -> std::expected<change, error>
+      -> std::expected<std::optional<change>, error>
   {
     if (index >= count) {
       return std::unexpected(error::unknown_parameter);
@@ -106,7 +112,7 @@ public:
   }
 
   constexpr auto restore_default_at(std::size_t index)
-      -> std::expected<change, error>
+      -> std::expected<std::optional<change>, error>
   {
     if (index >= count) {
       return std::unexpected(error::unknown_parameter);
@@ -148,11 +154,14 @@ public:
 
 private:
   constexpr auto write(std::size_t index, raw_value cell)
-      -> std::expected<change, error>
+      -> std::expected<std::optional<change>, error>
   {
     auto const& desc = Schema.parameters[index];
     if (!in_range(desc.type, cell, desc.min, desc.max)) {
       return std::unexpected(error::out_of_range);
+    }
+    if (cells_[index] == cell) {
+      return std::nullopt;
     }
 
     cells_[index] = cell;

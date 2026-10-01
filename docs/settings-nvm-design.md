@@ -104,7 +104,7 @@ enum class error { unknown_parameter, read_only, type_mismatch, out_of_range };
 auto descriptors() -> std::span<descriptor const>;
 auto find(std::string_view name) -> std::optional<index>;
 auto get_at(index) -> std::expected<value, error>;
-auto set_at(index, value) -> std::expected<change, error>;
+auto set_at(index, value) -> std::expected<std::optional<change>, error>;
 }
 ```
 
@@ -617,6 +617,13 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   write changed, and `pending_changes` records it.
 - **`take()` instead of `changed()` + `acknowledge()`.** Test-and-clear in
   one operation cannot drop a change that arrives between the two calls.
+- **A write that leaves a cell as it was reports no change**
+  (`std::nullopt`). Otherwise a profile written whole, or a restore of
+  defaults that were already there, marks every group it touches: live
+  tuning of a group freezes behind a restart nothing needs, and
+  `restart_required()` stands for nothing. A value changed and changed back
+  stays marked: the masks record changes, not a difference from what was
+  applied.
 - **`pending_changes` is templated on its word type**, so the bit
   arithmetic is checked in constant expressions with a plain word while
   production uses `std::atomic<std::uint32_t>`; the test also instantiates

@@ -5,6 +5,7 @@
 
 #include <array>
 #include <atomic>
+#include <optional>
 
 #include <cstddef>
 #include <cstdint>
@@ -60,6 +61,13 @@ public:
     mark(c.group, c.apply);
   }
 
+  // Marks the group of `c` under its policy if `c` holds a change, i.e. what
+  // a write to the image reports; otherwise there are no effects.
+  constexpr void mark(std::optional<change> c)
+  {
+    if (c) mark(*c);
+  }
+
   // Whether the group has changes this caller may apply, clearing exactly
   // those. `up_to` is what the caller can honour: a running drive takes
   // apply_policy::live, one in a state where reconfiguration is safe takes
@@ -106,7 +114,7 @@ public:
   }
 
   // Set when a parameter that cannot be applied without a restart has been
-  // written, and never cleared: the condition ends with the restart.
+  // changed, and never cleared: the condition ends with the restart.
   constexpr bool restart_required() const
   {
     return mask(apply_policy::on_restart) != 0;

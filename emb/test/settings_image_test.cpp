@@ -133,6 +133,44 @@ consteval bool test_erased_access()
   return true;
 }
 
+// -- Unchanged writes --
+
+consteval bool test_unchanged_write()
+{
+  img values;
+  constexpr auto speed = *schema.index_of("drive.runout_speed");
+
+  // Writing what a cell already holds is accepted and changes nothing,
+  // whichever path the write takes.
+  auto const same = values.set<"drive.runout_speed">(rpm{100.0f});
+  if (!same || same->has_value()) return false;
+
+  auto const same_at = values.set_at(speed, value{100.0f});
+  if (!same_at || same_at->has_value()) return false;
+
+  auto const restored = values.restore_default<"drive.runout_speed">();
+  if (!restored || restored->has_value()) return false;
+
+  auto const restored_at = values.restore_default_at(speed);
+  if (!restored_at || restored_at->has_value()) return false;
+
+  // A value that differs is still a change; the same value again is not.
+  auto const changed = values.set<"motor.p">(std::int32_t{4});
+  if (!changed) return false;
+  if (*changed != change{group_id{group::model}, apply_policy::on_restart}) {
+    return false;
+  }
+  auto const again = values.set<"motor.p">(std::int32_t{4});
+  if (!again || again->has_value()) return false;
+
+  // Bounds are checked first: an out-of-range value is refused, not
+  // compared.
+  auto const out = values.set<"motor.p">(std::int32_t{65});
+  if (out || out.error() != error::out_of_range) return false;
+
+  return true;
+}
+
 // -- Cells --
 
 consteval bool test_cells()
@@ -285,6 +323,28 @@ consteval bool test_restart_required()
   return true;
 }
 
+consteval bool test_unchanged_write_owes_nothing()
+{
+  test_pending pending;
+  img values;
+
+  // What the image reports is marked as it stands: a write that left the
+  // value as it was leaves nothing pending, not even a restart.
+  pending.mark(std::optional<change>{});
+  pending.mark(*values.set<"motor.p">(std::int32_t{11}));
+  pending.mark(*values.restore_default<"model.torque_slope">());
+  for (auto const p : {apply_policy::live,
+                       apply_policy::on_safe_state,
+                       apply_policy::on_restart}) {
+    if (pending.mask(p) != 0) return false;
+  }
+
+  pending.mark(*values.set<"motor.p">(std::int32_t{12}));
+  if (!pending.restart_required()) return false;
+
+  return true;
+}
+
 // The production instantiation must compile for the target too, not only
 // the test double it is checked through.
 [[maybe_unused]] void instantiate_atomic_pending()
@@ -292,6 +352,7 @@ consteval bool test_restart_required()
   constexpr group_id drive{group::drive};
   pending_changes pending;
   pending.mark(change{drive, apply_policy::live});
+  pending.mark(std::optional<change>{});
   [[maybe_unused]] auto const taken = pending.take(drive, apply_policy::live);
   [[maybe_unused]] auto const waiting =
       pending.changed(drive, apply_policy::live);
@@ -303,11 +364,13 @@ consteval bool test_restart_required()
 static_assert(test_defaults());
 static_assert(test_typed_access());
 static_assert(test_erased_access());
+static_assert(test_unchanged_write());
 static_assert(test_cells());
 static_assert(test_pending_is_taken_once());
 static_assert(test_pending_respects_the_policy());
 static_assert(test_a_group_waiting_on_more_is_refused());
 static_assert(test_pending_groups_are_independent());
 static_assert(test_restart_required());
+static_assert(test_unchanged_write_owes_nothing());
 
 } // namespace
