@@ -16,6 +16,15 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `emb::ensure`
 - [x] `emb/concurrent/double_buffer.hpp`
   - [x] `double_buffer`
+- [x] `emb/controller.hpp`
+  - [x] `controller_action`
+  - [x] `detail::error`
+  - [x] `p_controller`
+  - [x] `pi_controller_params`
+  - [x] `antiwindup::some_scheme`, `antiwindup::backcalculation`,
+    `antiwindup::clamping`
+  - [x] `pi_controller`
+  - [x] `backcalculation_pi_controller`, `clamping_pi_controller`
 - [x] `emb/expected.hpp`
   - [x] `TRY`
 - [x] `emb/filter/exponential_filter.hpp`
@@ -99,6 +108,51 @@ emblib не попал. Такие файлы помечены «песочни�
 - [x] `emb/singleton.hpp`
   - [x] `singleton`
   - [x] `singleton_array`
+- [x] `emb/units.hpp` — только подключает заголовки `emb/units/`, сущностей нет
+- [x] `emb/units/angle.hpp`
+  - [x] `tags::erad`, `tags::edeg`, `tags::rad`, `tags::deg`
+  - [x] `erad`, `edeg`, `rad`, `deg`, `erad_f32`, `edeg_f32`, `rad_f32`,
+    `deg_f32`
+  - [x] `unit_of_electrical_angle`, `unit_of_angle`, `unit_of_radians`,
+    `unit_of_degrees`
+  - [x] `convert_to` (четыре перегрузки)
+  - [x] `norm2pi`, `normpi`, `norm2pi_fast`, `normpi_fast`
+  - [x] `norm360`, `norm180`, `norm360_fast`, `norm180_fast`
+- [x] `emb/units/chrono.hpp`
+  - [x] `tags::hz`, `tags::sec`
+  - [x] `hz`, `sec`, `hz_f32`, `sec_f32`
+  - [x] `operator/` (две перегрузки)
+  - [x] `to_duration`, `to_milliseconds`
+- [x] `emb/units/conductivity.hpp`
+  - [x] `tags::microsiemens_per_cm`, `microsiemens_per_cm`,
+    `microsiemens_per_cm_f32`
+- [x] `emb/units/electrical.hpp`
+  - [x] `tags::amp`, `tags::volt`, `tags::ohm`
+  - [x] `amp`, `volt`, `ohm`, `amp_f32`, `volt_f32`, `ohm_f32`
+- [x] `emb/units/flow.hpp`
+  - [x] `tags::cubic_meter_per_hour`, `tags::liter_per_minute`
+  - [x] `cubic_meter_per_hour`, `liter_per_minute`, `cubic_meter_per_hour_f32`,
+    `liter_per_minute_f32`
+  - [x] `convert_to` (две перегрузки)
+- [x] `emb/units/named_unit.hpp`
+  - [x] `named_unit`, `some_unit`, `convert_to`
+- [x] `emb/units/pressure.hpp`
+  - [x] `tags::pascal`, `tags::megapascal`, `tags::atmosphere`
+  - [x] `pascal`, `megapascal`, `atmosphere`, `pascal_f32`, `megapascal_f32`,
+    `atmosphere_f32`
+  - [x] `convert_to` (шесть перегрузок)
+- [x] `emb/units/relations.hpp`
+  - [x] `operator/`
+  - [x] `operator*` (две перегрузки)
+- [x] `emb/units/speed.hpp`
+  - [x] `tags::rpm`, `tags::eradps`
+  - [x] `rpm`, `eradps`, `rpm_f32`, `eradps_f32`
+  - [x] `unit_of_rotational_speed`
+  - [x] `convert_to` (две перегрузки)
+- [x] `emb/units/temperature.hpp`
+  - [x] `tags::degree_celsius`, `tags::kelvin`
+  - [x] `degree_celsius`, `kelvin`, `degree_celsius_f32`, `kelvin_f32`
+  - [x] `convert_to` (две перегрузки)
 
 ## Остальные
 
@@ -142,7 +196,6 @@ emblib не попал. Такие файлы помечены «песочни�
 - [ ] `emb/container/inplace_queue.hpp`
 - [ ] `emb/container/inplace_stack.hpp`
 - [ ] `emb/container/inplace_vector.hpp`
-- [ ] `emb/controller.hpp`
 - [ ] `emb/delegate.hpp`
 - [ ] `emb/foc.hpp`
 - [ ] `emb/foc/deadtime_compensation.hpp`
@@ -205,14 +258,3 @@ emblib не попал. Такие файлы помечены «песочни�
 - [ ] `emb/spi.hpp`
 - [ ] `emb/three_phase.hpp`
 - [ ] `emb/trouble.hpp`
-- [ ] `emb/units.hpp`
-- [ ] `emb/units/angle.hpp`
-- [ ] `emb/units/chrono.hpp`
-- [ ] `emb/units/conductivity.hpp`
-- [ ] `emb/units/electrical.hpp`
-- [ ] `emb/units/flow.hpp`
-- [ ] `emb/units/named_unit.hpp`
-- [ ] `emb/units/pressure.hpp`
-- [ ] `emb/units/relations.hpp`
-- [ ] `emb/units/speed.hpp`
-- [ ] `emb/units/temperature.hpp`
