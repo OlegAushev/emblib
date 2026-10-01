@@ -4,10 +4,20 @@
 
 namespace emb::signal {
 
-// A line through the origin, given one rated point:
-//   y = rated_output * x / rated_input
-// Only the linear characteristic is modelled: saturation beyond the rated
-// range, offset and its drift are not.
+// The class template `proportional` is a stage whose characteristic is a line
+// through the origin, given by one rated point: the output `rated_output` at
+// the input `rated_input`. Up to rounding, `forward(in)` returns
+// `rated_output * (in / rated_input)`, and `inverse(out)` returns
+// `rated_input * (out / rated_output)`. `In` and `Out` may be the same unit,
+// e.g. for a current transducer with a current output.
+//
+// `proportional` models only the linear characteristic, with no saturation
+// beyond the rated range and no offset or drift. The behavior of `forward` is
+// undefined if `rated_input` is zero, and that of `inverse` if `rated_output`
+// is zero.
+//
+// `proportional` is a structural type, so a `proportional` can be the template
+// argument of `bind`.
 template<emb::units::some_unit In, emb::units::some_unit Out>
 struct proportional {
   In rated_input;

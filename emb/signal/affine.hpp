@@ -4,10 +4,20 @@
 
 namespace emb::signal {
 
-// A line through the ends of two ranges: (in_min, in_max) maps onto
-// (out_min, out_max).
+// The class template `affine` is a stage that maps an input range onto an
+// output range along a straight line. `forward` maps `input_min` to
+// `output_min` and `input_max` to `output_max`, up to floating-point rounding,
+// and `inverse` converts the output back to the input. Outside the ranges, both
+// extrapolate along the same line; neither clamps its result.
 //
-// Values outside the input range extrapolate; nothing here clamps them.
+// `input_min` need not be less than `input_max`, nor `output_min` less than
+// `output_max`: e.g. with an `output_min` of 20 mA and an `output_max` of 4 mA,
+// the output falls as the input rises. The behavior of `forward` is undefined
+// if `input_min` equals `input_max`, and that of `inverse` if `output_min`
+// equals `output_max`.
+//
+// `affine` is a structural type, so an `affine` can be the template argument of
+// `bind`.
 template<emb::units::some_unit In, emb::units::some_unit Out>
 struct affine {
   In input_min;

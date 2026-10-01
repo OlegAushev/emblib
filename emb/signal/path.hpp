@@ -4,19 +4,10 @@
 
 namespace emb::signal {
 
-// A path is a composition of invertible stages describing a physical signal
-// path in the *forward* direction (physical quantity -> raw code).
-// Each stage exposes forward()/inverse(); the path then provides:
-//   forward(value) -> raw code  -- the driving direction, and code synthesis
-//                                  (test vectors, thresholds)
-//   inverse(code)  -> value     -- the measuring direction
-// A path is not itself callable. Which of the two directions a bare call
-// means is the caller's convention, not the model's: a sensor calls the
-// measuring direction, a continuous actuator the driving one. Whoever adapts
-// a path to a plain callable states which, and does it in its own namespace.
-
 namespace detail {
 
+// Returns the result of applying the `forward` of each given stage to `x` in
+// turn, first to last, or `x` if no stage is given.
 template<typename X>
 constexpr X path_forward(X x)
 {
@@ -29,6 +20,8 @@ constexpr auto path_forward(X x, Stage const& s, Rest const&... rest)
   return path_forward(s.forward(x), rest...);
 }
 
+// Returns the result of applying the `inverse` of each given stage to `y` in
+// turn, last to first, or `y` if no stage is given.
 template<typename Y>
 constexpr Y path_inverse(Y y)
 {
@@ -43,6 +36,22 @@ constexpr auto path_inverse(Y y, Stage const& s, Rest const&... rest)
 
 } // namespace detail
 
+// The class template `path` models a physical signal path as a composition of
+// the invertible stages `Stages`, listed in the forward direction, i.e. from a
+// physical quantity to a raw code such as an ADC code. A stage is a class with
+// `const` or static member functions `forward` and `inverse` that undo each
+// other: `forward` converts the input of the stage to its output, and
+// `inverse` converts the output back to the input.
+//
+// `forward` converts a physical quantity to a raw code by applying the
+// `forward` of each stage, first to last; this is the driving direction, also
+// used to synthesize codes such as test vectors and thresholds. `inverse`
+// converts a raw code to a physical quantity by applying the `inverse` of each
+// stage, last to first, and so undoes `forward`; this is the measuring
+// direction. Neither direction is the default, so a `path` is not callable.
+//
+// The stage objects are kept in the public tuple `stages`, so that a stage
+// that carries run-time state, such as a zero trim, can be read and changed.
 template<typename... Stages>
 class path {
 public:
@@ -52,8 +61,6 @@ public:
 
   constexpr explicit path(Stages... s) : stages{s...} {}
 
-  // measured quantity -> raw code
-  // composes stages front to back
   constexpr auto forward(auto in) const
   {
     return std::apply(
@@ -61,8 +68,6 @@ public:
         stages);
   }
 
-  // raw code -> measured quantity
-  // inverts stages back to front
   constexpr auto inverse(auto out) const
   {
     return std::apply(

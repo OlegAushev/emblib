@@ -105,6 +105,19 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `test_any`, `test_all`, `test` (`runtime::` и шаблонные)
   - [x] `clear_w1`, `clear_w0` (`runtime::` и шаблонные)
   - [x] `bits`, `modify`
+- [x] `emb/signal.hpp` — только подключает заголовки `emb/signal/`, сущностей нет
+- [x] `emb/signal/affine.hpp`
+  - [x] `affine`
+- [x] `emb/signal/bind.hpp`
+  - [x] `bind`
+- [x] `emb/signal/path.hpp`
+  - [x] `detail::path_forward`, `detail::path_inverse`
+  - [x] `path`
+- [x] `emb/signal/proportional.hpp`
+  - [x] `proportional`
+- [x] `emb/signal/sign.hpp`
+  - [x] `sign_reversible`
+  - [x] `identity`, `negation`
 - [x] `emb/singleton.hpp`
   - [x] `singleton`
   - [x] `singleton_array`
@@ -249,12 +262,6 @@ emblib не попал. Такие файлы помечены «песочни�
 - [ ] `emb/settings/schema.hpp`
 - [ ] `emb/settings/store.hpp`
 - [ ] `emb/settings/value.hpp`
-- [ ] `emb/signal.hpp`
-- [ ] `emb/signal/affine.hpp`
-- [ ] `emb/signal/bind.hpp`
-- [ ] `emb/signal/path.hpp`
-- [ ] `emb/signal/proportional.hpp`
-- [ ] `emb/signal/sign.hpp`
 - [ ] `emb/spi.hpp`
 - [ ] `emb/three_phase.hpp`
 - [ ] `emb/trouble.hpp`
