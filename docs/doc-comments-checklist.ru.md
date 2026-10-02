@@ -191,6 +191,7 @@ emblib не попал. Такие файлы помечены «песочни�
 - [ ] `emb/can/canopen/od.hpp` — песочница: `od_access`, `od_scalar`
 - [ ] `emb/can/canopen/od_dictionary.hpp`
 - [ ] `emb/can/canopen/od_handlers.hpp`
+- [ ] `emb/can/canopen/od_section.hpp`
 - [ ] `emb/can/canopen/od_settings.hpp`
 - [ ] `emb/can/canopen/od_value_cast.hpp`
 - [ ] `emb/can/canopen/sdo.hpp`
@@ -260,6 +261,7 @@ emblib не попал. Такие файлы помечены «песочни�
 - [ ] `emb/settings/pending.hpp`
 - [ ] `emb/settings/record.hpp`
 - [ ] `emb/settings/schema.hpp`
+- [ ] `emb/settings/section.hpp`
 - [ ] `emb/settings/store.hpp`
 - [ ] `emb/settings/value.hpp`
 - [ ] `emb/spi.hpp`

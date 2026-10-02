@@ -10,7 +10,10 @@ Two parts of the design never became steps and are not built: the trigger
 that applies a batch whole and the debounced save (§4, §10a), and the
 sections beyond `config` (§5). Checked against the code on 2026-09-28. The
 CANopen binding (§7) was built on 2026-09-29, as a binding per row of the
-dictionary rather than a generated section. The store's
+dictionary rather than a generated section. On 2026-10-02 the facade the
+application kept in `params.hpp/.cpp` moved into emblib as
+`settings::section`, and what had been `section`, the place on a medium,
+became `placement`. The store's
 algorithms, invariants and failure scenarios are described in detail, in
 Russian, in `settings-store-algorithms.ru.md`.
 
@@ -33,7 +36,8 @@ A replacement for the current NVM parameter stack (`emb/nvm.hpp` +
     emb::nvm          block storage concept, record format, slot store
         ^
         |
-    emb::settings     schema, descriptors, RAM image, typed access, groups
+    emb::settings     schema, descriptors, RAM image, typed access, groups,
+                      section
         ^                          ^
         |                          |
     app schema                 emb::can::canopen::od_settings
@@ -138,7 +142,7 @@ communication task.
 - The owner checks the mask where it knows the state is consistent:
 
 ```cpp
-if (settings::pending().take(group::model, apply_policy::live)) {
+if (settings::config.pending().take(group::model, apply_policy::live)) {
   if (!model_.configure(settings::read_model_config(),
                         settings::read_mras_config()))
     trouble::set(trouble::invalid_config{});
@@ -228,9 +232,9 @@ or another one.
 Placement is declared once, as a value the store is instantiated with:
 
 ```cpp
-inline constexpr section config_section{.magic = ..., .base = 0,
-                                        .slot_capacity = 1024,
-                                        .slot_count = 2};
+inline constexpr placement config_placement{.magic = ..., .base = 0,
+                                            .slot_capacity = 1024,
+                                            .slot_count = 2};
 // flash: .slot_count = 256, .slots_per_block = 128  // two 128 KiB sectors
 ```
 
@@ -380,14 +384,12 @@ schema by name. The type is pulled from the schema as well, and written in
 the row besides, so that a text parser can build a host's table from the
 source; the dictionary checks that the two agree. Built on 2026-09-29 as a
 binding per row of the application's constexpr table
-(`can/canopen/od_settings.hpp`; the dictionary around it is described in
+(`can/canopen/od_settings.hpp`, bound to a section by `od_settings_for` in
+`can/canopen/od_section.hpp`; the dictionary around it is described in
 `canopen-od-plan.ru.md`):
 
 ```cpp
-using param = emb::can::canopen::od_settings<settings::schema,
-                                             settings::get_at,
-                                             settings::set_at,
-                                             settings::restore_default_at>;
+using param = emb::can::canopen::od_settings_for<settings::config>;
 
 inline constexpr emb::can::canopen::od_row<context> rows[] = {
   {{0x3002, 0x01}, "config", "drive", "phase_swap",   "",     boolean, param::rw<"drive.phase_swap">},
@@ -440,9 +442,15 @@ external/emblib/emb/
   settings/record.hpp          [done] record layout, encode and decode
   settings/store.hpp           [done] slots, active record, commit, load
                                       report
+  settings/section.hpp         [done] one section: the image, its record,
+                                      pending changes; load/save/wipe
   can/canopen/od_settings.hpp  [done] per-row bindings of the schema's
                                       parameters, see §7
+  can/canopen/od_section.hpp   [done] od_settings_for a section, and the
+                                      readers of its state under 3000h
   test/mock/block_storage.hpp  [done] constexpr RAM backend for tests
+  test/mock/plain_word.hpp     [done] a std::atomic stand-in for pending
+                                      changes in constant expressions
   test/*_test.cpp                     in-tree convention: anonymous namespace,
                                       static_assert only
 
@@ -462,8 +470,8 @@ src/app/inverter/hw/
 src/app/inverter/settings/
   schema.hpp                   [done] the product's parameter list, with
                                       bounds, groups and apply policies
-  params.hpp / params.cpp      [done] the facade: load/save/wipe, access by
-                                      name and by index, pending changes
+  params.hpp / params.cpp      [done] the config section; load/save/wipe
+                                      and the service warnings as trouble
   settings.hpp / settings.cpp  [done] the config readers and the saving of
                                       a hall calibration
 ```
