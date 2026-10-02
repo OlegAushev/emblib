@@ -316,7 +316,7 @@ public:
   };
 
   template<parameter_name Name>
-  static consteval auto ref() -> parameter_ref<value_type<Name>>
+  static consteval parameter_ref<value_type<Name>> ref()
   {
     constexpr auto hash_loc = Layout.offset_of(index<Name>);
     constexpr auto val_loc = hash_loc + sizeof(hash_type);
@@ -325,28 +325,26 @@ public:
   }
 
   template<typename T>
-  constexpr auto get(parameter_ref<T> p) -> std::expected<T, error>
+  constexpr std::expected<T, error> get(parameter_ref<T> p)
   {
     return get_impl<T>(p.hash_loc_, p.val_loc_, p.crc_loc_, p.hash_);
   }
 
   template<typename T>
-  constexpr auto set(parameter_ref<T> p, T const& val)
-      -> std::expected<void, error>
+  constexpr std::expected<void, error> set(parameter_ref<T> p, T const& val)
   {
     return set_impl<T>(p.hash_loc_, p.val_loc_, p.crc_loc_, p.hash_, val);
   }
 
   template<parameter_name Name>
-  constexpr auto get()
-      -> std::expected<typename traits<Name>::value_type, error>
+  constexpr std::expected<typename traits<Name>::value_type, error> get()
   {
     return get(ref<Name>());
   }
 
   template<parameter_name Name>
-  constexpr auto set(typename traits<Name>::value_type const& val)
-      -> std::expected<void, error>
+  constexpr std::expected<void, error>
+  set(typename traits<Name>::value_type const& val)
   {
     return set(ref<Name>(), val);
   }
@@ -359,7 +357,7 @@ public:
 
   // Iterates by index instead of expanding the parameter pack in a lambda:
   // a lambda specialized on Params... would emit one more pack-sized symbol.
-  constexpr auto reset_all() -> std::expected<void, error>
+  constexpr std::expected<void, error> reset_all()
   {
     std::expected<void, error> r{};
     unroll<layout_type::count>([&]<std::size_t I>() {
@@ -369,7 +367,7 @@ public:
     return r;
   }
 
-  auto erase() -> std::expected<void, error>
+  std::expected<void, error> erase()
   {
     for (std::size_t off = Layout.base; off < Layout.base + size; ++off) {
       auto r =
@@ -382,11 +380,11 @@ public:
 
 private:
   template<typename T>
-  [[gnu::noinline]] constexpr auto get_impl(addr_type hash_loc,
-                                            addr_type val_loc,
-                                            addr_type crc_loc,
-                                            hash_type hash)
-      -> std::expected<T, error>
+  [[gnu::noinline]] constexpr std::expected<T, error>
+  get_impl(addr_type hash_loc,
+           addr_type val_loc,
+           addr_type crc_loc,
+           hash_type hash)
   {
     auto h = storage_.template read<hash_type>(hash_loc);
     if (!h) return std::unexpected(h.error());
@@ -405,12 +403,12 @@ private:
   }
 
   template<typename T>
-  [[gnu::noinline]] constexpr auto set_impl(addr_type hash_loc,
-                                            addr_type val_loc,
-                                            addr_type crc_loc,
-                                            hash_type hash,
-                                            T const& val)
-      -> std::expected<void, error>
+  [[gnu::noinline]] constexpr std::expected<void, error>
+  set_impl(addr_type hash_loc,
+           addr_type val_loc,
+           addr_type crc_loc,
+           hash_type hash,
+           T const& val)
   {
     auto r1 = storage_.template write<hash_type>(hash_loc, hash);
     if (!r1) return r1;

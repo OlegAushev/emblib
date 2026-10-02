@@ -31,21 +31,21 @@ inline constexpr auto schema = settings::make_schema(
 
 // The accessors of a fresh image: every call starts from the defaults, which
 // is enough to see what the bridge makes of their answers.
-constexpr auto get_at(std::size_t index)
-    -> std::expected<settings::value, settings::error>
+constexpr std::expected<settings::value, settings::error>
+get_at(std::size_t index)
 {
   return settings::image<schema>{}.get_at(index);
 }
 
-constexpr auto set_at(std::size_t index, settings::value const& value)
-    -> std::expected<std::optional<settings::change>, settings::error>
+constexpr std::expected<std::optional<settings::change>, settings::error>
+set_at(std::size_t index, settings::value const& value)
 {
   settings::image<schema> values;
   return values.set_at(index, value);
 }
 
-constexpr auto restore_at(std::size_t index)
-    -> std::expected<std::optional<settings::change>, settings::error>
+constexpr std::expected<std::optional<settings::change>, settings::error>
+restore_at(std::size_t index)
 {
   settings::image<schema> values;
   return values.restore_default_at(index);

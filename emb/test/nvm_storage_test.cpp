@@ -30,8 +30,8 @@ struct no_erase {
   static constexpr bool needs_erase = false;
   static constexpr std::byte erased_value{0xFF};
 
-  auto read(addr_type, std::span<std::byte>) -> std::expected<void, int>;
-  auto write(addr_type, std::span<std::byte const>) -> std::expected<void, int>;
+  std::expected<void, int> read(addr_type, std::span<std::byte>);
+  std::expected<void, int> write(addr_type, std::span<std::byte const>);
 };
 
 struct no_error_type {
@@ -41,9 +41,9 @@ struct no_error_type {
   static constexpr bool needs_erase = false;
   static constexpr std::byte erased_value{0xFF};
 
-  auto read(addr_type, std::span<std::byte>) -> std::expected<void, int>;
-  auto write(addr_type, std::span<std::byte const>) -> std::expected<void, int>;
-  auto erase(addr_type, std::size_t) -> std::expected<void, int>;
+  std::expected<void, int> read(addr_type, std::span<std::byte>);
+  std::expected<void, int> write(addr_type, std::span<std::byte const>);
+  std::expected<void, int> erase(addr_type, std::size_t);
 };
 
 // Reports success as a bool: silently loses the reason a write failed,
@@ -56,9 +56,9 @@ struct bool_returning {
   static constexpr bool needs_erase = false;
   static constexpr std::byte erased_value{0xFF};
 
-  auto read(addr_type, std::span<std::byte>) -> std::expected<void, int>;
+  std::expected<void, int> read(addr_type, std::span<std::byte>);
   bool write(addr_type, std::span<std::byte const>);
-  auto erase(addr_type, std::size_t) -> std::expected<void, int>;
+  std::expected<void, int> erase(addr_type, std::size_t);
 };
 
 struct untyped_erased_value {
@@ -69,9 +69,9 @@ struct untyped_erased_value {
   static constexpr bool needs_erase = false;
   static constexpr int erased_value = 0xFF;
 
-  auto read(addr_type, std::span<std::byte>) -> std::expected<void, int>;
-  auto write(addr_type, std::span<std::byte const>) -> std::expected<void, int>;
-  auto erase(addr_type, std::size_t) -> std::expected<void, int>;
+  std::expected<void, int> read(addr_type, std::span<std::byte>);
+  std::expected<void, int> write(addr_type, std::span<std::byte const>);
+  std::expected<void, int> erase(addr_type, std::size_t);
 };
 
 static_assert(!nvm::some_block_storage<no_erase>);

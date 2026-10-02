@@ -54,7 +54,7 @@ public:
   // whole record there, or from the defaults if there is none, as
   // `store::load` does. Returns what the load found, which `last_load()`
   // keeps.
-  constexpr auto load(Storage& medium) -> load_result
+  constexpr load_result load(Storage& medium)
   {
     store_.emplace(medium);
     last_load_ = store_->load(values_);
@@ -62,7 +62,7 @@ public:
     return last_load_;
   }
 
-  constexpr auto last_load() const -> load_result const&
+  constexpr load_result const& last_load() const
   {
     return last_load_;
   }
@@ -70,7 +70,7 @@ public:
   // Writes the image to the medium as the next record, as `store::save`
   // does. After a successful write, `unsaved()` is `false` until a value
   // changes.
-  constexpr auto save() -> std::expected<void, save_failure<error_type>>
+  constexpr std::expected<void, save_failure<error_type>> save()
   {
     ASSUME(store_.has_value());
     auto const result = store_->save(values_);
@@ -81,7 +81,7 @@ public:
   // Brings the section on the medium to the erased state, as `store::wipe`
   // does. The image is left as it is; after a successful wipe, `unsaved()`
   // compares it with the defaults, which the next startup would load.
-  constexpr auto wipe() -> std::expected<void, error_type>
+  constexpr std::expected<void, error_type> wipe()
   {
     ASSUME(store_.has_value());
     auto const result = store_->wipe();
@@ -89,18 +89,18 @@ public:
     return result;
   }
 
-  constexpr auto sequence() const -> std::uint32_t
+  constexpr std::uint32_t sequence() const
   {
     ASSUME(store_.has_value());
     return store_->sequence();
   }
 
-  constexpr auto pending() -> basic_pending_changes<Word>&
+  constexpr basic_pending_changes<Word>& pending()
   {
     return pending_;
   }
 
-  constexpr auto pending() const -> basic_pending_changes<Word> const&
+  constexpr basic_pending_changes<Word> const& pending() const
   {
     return pending_;
   }
@@ -116,7 +116,7 @@ public:
   // -- Access by name --
 
   template<fixed_string Name>
-  constexpr auto get() const -> typename parameter<Schema, Name>::type
+  constexpr typename parameter<Schema, Name>::type get() const
   {
     return values_.template get<Name>();
   }
@@ -124,8 +124,8 @@ public:
   // Writes `v` to the parameter `Name` whether or not it is `writable`, as
   // `image::set` does.
   template<fixed_string Name>
-  constexpr auto set(typename parameter<Schema, Name>::type const& v)
-      -> std::expected<void, error>
+  constexpr std::expected<void, error>
+  set(typename parameter<Schema, Name>::type const& v)
   {
     return values_.template set<Name>(v).transform(
         [this](std::optional<change> c) { pending_.mark(c); });
@@ -133,20 +133,18 @@ public:
 
   // -- Access by index --
 
-  constexpr auto get_at(std::size_t index) const -> std::expected<value, error>
+  constexpr std::expected<value, error> get_at(std::size_t index) const
   {
     return values_.get_at(index);
   }
 
-  constexpr auto set_at(std::size_t index, value const& v)
-      -> std::expected<void, error>
+  constexpr std::expected<void, error> set_at(std::size_t index, value const& v)
   {
     return values_.set_at(index, v).transform(
         [this](std::optional<change> c) { pending_.mark(c); });
   }
 
-  constexpr auto restore_default_at(std::size_t index)
-      -> std::expected<void, error>
+  constexpr std::expected<void, error> restore_default_at(std::size_t index)
   {
     return values_.restore_default_at(index).transform(
         [this](std::optional<change> c) { pending_.mark(c); });

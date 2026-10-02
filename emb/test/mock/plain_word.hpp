@@ -13,21 +13,19 @@ namespace test {
 struct plain_word {
   std::uint32_t value = 0;
 
-  constexpr auto load(std::memory_order) const -> std::uint32_t
+  constexpr std::uint32_t load(std::memory_order) const
   {
     return value;
   }
 
-  constexpr auto fetch_or(std::uint32_t bits, std::memory_order)
-      -> std::uint32_t
+  constexpr std::uint32_t fetch_or(std::uint32_t bits, std::memory_order)
   {
     auto const before = value;
     value |= bits;
     return before;
   }
 
-  constexpr auto fetch_and(std::uint32_t bits, std::memory_order)
-      -> std::uint32_t
+  constexpr std::uint32_t fetch_and(std::uint32_t bits, std::memory_order)
   {
     auto const before = value;
     value &= bits;

@@ -17,8 +17,8 @@ constexpr auto make(std::expected<int, error> e)
   return e;
 }
 
-constexpr auto sum(std::expected<int, error> a, std::expected<int, error> b)
-    -> std::expected<int, error>
+constexpr std::expected<int, error> sum(std::expected<int, error> a,
+                                        std::expected<int, error> b)
 {
   auto const x = TRY(a);
   return x + TRY(b);
@@ -54,8 +54,8 @@ constexpr bool test_lvalue_not_consumed()
   return true;
 }
 
-constexpr auto run(std::expected<void, error> step, int& counter)
-    -> std::expected<void, error>
+constexpr std::expected<void, error> run(std::expected<void, error> step,
+                                         int& counter)
 {
   TRY(step);
   ++counter;
@@ -74,8 +74,7 @@ constexpr auto run(std::expected<void, error> step, int& counter)
   return true;
 }
 
-constexpr auto widen(std::expected<int, error> e)
-    -> std::expected<int, wide_error>
+constexpr std::expected<int, wide_error> widen(std::expected<int, error> e)
 {
   return TRY(e);
 }
@@ -94,7 +93,7 @@ struct move_only {
   constexpr move_only(move_only&&) = default;
 };
 
-constexpr auto forward_move_only(int v) -> std::expected<move_only, error>
+constexpr std::expected<move_only, error> forward_move_only(int v)
 {
   return TRY(
       [](int x) -> std::expected<move_only, error> { return move_only{x}; }(v));

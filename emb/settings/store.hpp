@@ -112,7 +112,7 @@ public:
   // Restores the image from the newest record that is whole. Tries the next
   // newest if one fails its checks, and falls back to defaults if none is
   // usable, so the image is defined whatever the medium holds.
-  constexpr auto load(image<Schema>& values) -> load_result
+  constexpr load_result load(image<Schema>& values)
   {
     load_result result;
 
@@ -167,8 +167,8 @@ public:
   // reads it back. Both the slot and the sequence number advance before the
   // first write, so a retry never lands on the debris of the attempt before
   // it, and never claims a generation that another record already claims.
-  constexpr auto save(image<Schema> const& values)
-      -> std::expected<void, save_failure<error_type>>
+  constexpr std::expected<void, save_failure<error_type>>
+  save(image<Schema> const& values)
   {
     // A save before the first load would otherwise start counting from one
     // and write a record that looks older than what is already stored —
@@ -231,7 +231,7 @@ public:
   // Brings the whole section to the erased state — what an explicit "forget
   // the settings" command means. Honest on a medium with no erased state
   // too: erase() there overwrites.
-  constexpr auto wipe() -> std::expected<void, error_type>
+  constexpr std::expected<void, error_type> wipe()
   {
     for (auto block = 0uz; block < block_count; ++block) {
       auto const at = address_of(block * Placement.slots_per_block);
@@ -245,19 +245,19 @@ public:
     return {};
   }
 
-  constexpr auto sequence() const -> std::uint32_t
+  constexpr std::uint32_t sequence() const
   {
     return last_seq_;
   }
 
-  constexpr auto next_slot() const -> std::size_t
+  constexpr std::size_t next_slot() const
   {
     return next_slot_;
   }
 
 private:
-  static constexpr auto address_of(std::size_t slot, std::size_t offset = 0)
-      -> addr_type
+  static constexpr addr_type address_of(std::size_t slot,
+                                        std::size_t offset = 0)
   {
     return static_cast<addr_type>(
         Placement.base + (slot * Placement.slot_capacity) + offset);
@@ -267,9 +267,8 @@ private:
   // the medium — an erase that did not happen, a record half written, a
   // slot spent without a byte in it — is no concern of its own: the next
   // save looks at the slot it is about to take, whatever brought it there.
-  static constexpr auto fail(save_stage stage,
-                             std::optional<error_type> cause = std::nullopt)
-      -> std::unexpected<save_failure<error_type>>
+  static constexpr std::unexpected<save_failure<error_type>>
+  fail(save_stage stage, std::optional<error_type> cause = std::nullopt)
   {
     return std::unexpected(save_failure<error_type>{stage, cause});
   }
@@ -311,7 +310,7 @@ private:
   // format landed while its count stayed erased. A slot that will not read
   // is not a candidate either: the map carries the fact out, and there is
   // nothing to be had from asking it again.
-  constexpr auto map_slots() -> slot_map
+  constexpr slot_map map_slots()
   {
     slot_map map;
 
@@ -339,8 +338,7 @@ private:
   // across the whole circle — three numbers spaced by a third of it are
   // each newer than the next. Equal numbers leave the lower slot, the one
   // the scan reached first.
-  static constexpr auto newest_untried(slot_map const& map)
-      -> std::optional<candidate>
+  static constexpr std::optional<candidate> newest_untried(slot_map const& map)
   {
     std::optional<candidate> best;
 
@@ -385,7 +383,7 @@ private:
   //
   // Reads into buffer_, so the answer has to be had before the record is
   // encoded there.
-  constexpr auto slot_to_write() -> std::size_t
+  constexpr std::size_t slot_to_write()
   {
     if constexpr (!Storage::needs_erase) {
       return next_slot_;
@@ -425,8 +423,8 @@ private:
     adopt(best->slot, best->seq);
   }
 
-  constexpr auto read_record(std::size_t slot)
-      -> std::expected<std::span<std::byte const>, no_record>
+  constexpr std::expected<std::span<std::byte const>, no_record>
+  read_record(std::size_t slot)
   {
     auto const head = std::span{buffer_}.first(record_header_size);
     if (!storage_.read(address_of(slot), head)) {

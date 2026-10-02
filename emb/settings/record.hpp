@@ -48,12 +48,12 @@ inline constexpr std::size_t record_cell_size = 8;
 inline constexpr std::size_t record_footer_size = 8;
 
 // Header and cells: what a store writes first.
-constexpr auto record_body_size(std::size_t count) -> std::size_t
+constexpr std::size_t record_body_size(std::size_t count)
 {
   return record_header_size + count * record_cell_size;
 }
 
-constexpr auto record_size(std::size_t count) -> std::size_t
+constexpr std::size_t record_size(std::size_t count)
 {
   return record_body_size(count) + record_footer_size;
 }
@@ -77,7 +77,7 @@ constexpr bool seq_newer(std::uint32_t a, std::uint32_t b)
 // gate — the directory handles that — but it tells an operator whether a
 // record was written by this build of the schema or another one.
 template<auto& Schema>
-consteval auto schema_id() -> std::uint32_t
+consteval std::uint32_t schema_id()
 {
   std::uint32_t h = 0x811C9DC5u;
   for (auto const& p : Schema.parameters)
@@ -120,16 +120,14 @@ constexpr void put_u32(std::span<std::byte> out,
     out[at + i] = static_cast<std::byte>((v >> (8 * i)) & 0xFFu);
 }
 
-constexpr auto get_u16(std::span<std::byte const> in, std::size_t at)
-    -> std::uint16_t
+constexpr std::uint16_t get_u16(std::span<std::byte const> in, std::size_t at)
 {
   return static_cast<std::uint16_t>(
       std::to_integer<std::uint16_t>(in[at])
       | (std::to_integer<std::uint16_t>(in[at + 1]) << 8));
 }
 
-constexpr auto get_u32(std::span<std::byte const> in, std::size_t at)
-    -> std::uint32_t
+constexpr std::uint32_t get_u32(std::span<std::byte const> in, std::size_t at)
 {
   std::uint32_t v = 0;
   for (auto i = 0uz; i < 4; ++i)
@@ -140,7 +138,7 @@ constexpr auto get_u32(std::span<std::byte const> in, std::size_t at)
 // The ordinary reflected CRC-32, computed a bit at a time: a table would
 // cost a kilobyte of flash to save microseconds on an operation that
 // happens twice a boot.
-constexpr auto crc32(std::span<std::byte const> data) -> std::uint32_t
+constexpr std::uint32_t crc32(std::span<std::byte const> data)
 {
   std::uint32_t crc = 0xFFFFFFFFu;
   for (auto byte : data) {
@@ -157,10 +155,10 @@ constexpr auto crc32(std::span<std::byte const> data) -> std::uint32_t
 // the buffer is too small. A store writes the first record_body_size()
 // bytes, then the rest — never the other way round.
 template<auto& Schema>
-constexpr auto encode_record(std::span<std::byte> dest,
-                             image<Schema> const& values,
-                             std::uint32_t magic,
-                             std::uint32_t seq) -> std::size_t
+constexpr std::size_t encode_record(std::span<std::byte> dest,
+                                    image<Schema> const& values,
+                                    std::uint32_t magic,
+                                    std::uint32_t seq)
 {
   constexpr auto count = schema_t<Schema>::count;
   static_assert(count <= UINT16_MAX, "too many parameters for one record");
@@ -188,9 +186,8 @@ constexpr auto encode_record(std::span<std::byte> dest,
 // What a slot scan reads: enough to tell whether a slot holds a record of
 // this section at all, and how recent it is. Says nothing about integrity —
 // only a full decode does.
-constexpr auto decode_header(std::span<std::byte const> src,
-                             std::uint32_t magic)
-    -> std::optional<record_header>
+constexpr std::optional<record_header>
+decode_header(std::span<std::byte const> src, std::uint32_t magic)
 {
   if (src.size() < record_header_size) return std::nullopt;
 
@@ -213,9 +210,9 @@ constexpr auto decode_header(std::span<std::byte const> src,
 // not carry — one this firmware added — comes up defined rather than
 // keeping whatever the image held.
 template<auto& Schema>
-constexpr auto decode_record(std::span<std::byte const> src,
-                             std::uint32_t magic,
-                             image<Schema>& values) -> load_report
+constexpr load_report decode_record(std::span<std::byte const> src,
+                                    std::uint32_t magic,
+                                    image<Schema>& values)
 {
   load_report report;
 

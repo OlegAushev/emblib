@@ -111,7 +111,7 @@ using scalar_t = typename detail::scalar_of<T>::type;
 template<some_parameter_type T>
 inline constexpr value_type type_of = detail::tag_of<scalar_t<T>>();
 
-constexpr auto held_type(value const& v) -> value_type
+constexpr value_type held_type(value const& v)
 {
   return static_cast<value_type>(v.index());
 }
@@ -119,7 +119,7 @@ constexpr auto held_type(value const& v) -> value_type
 // -- Typed value <-> type-erased value --
 
 template<some_parameter_type T>
-constexpr auto to_value(T const& v) -> value
+constexpr value to_value(T const& v)
 {
   if constexpr (some_value<T>) {
     return value{v};
@@ -132,7 +132,7 @@ constexpr auto to_value(T const& v) -> value
 // Returns nullopt when the value holds a different alternative: a protocol
 // write that carries the wrong type must be rejected, not reinterpreted.
 template<some_parameter_type T>
-constexpr auto from_value(value const& v) -> std::optional<T>
+constexpr std::optional<T> from_value(value const& v)
 {
   if (auto const* p = std::get_if<scalar_t<T>>(&v)) {
     return T(*p);
@@ -143,7 +143,7 @@ constexpr auto from_value(value const& v) -> std::optional<T>
 // -- Typed value <-> storage cell --
 
 template<some_parameter_type T>
-constexpr auto to_raw(T const& v) -> raw_value
+constexpr raw_value to_raw(T const& v)
 {
   using scalar = scalar_t<T>;
   scalar const s = [&] {
@@ -172,7 +172,7 @@ constexpr auto to_raw(T const& v) -> raw_value
 // bool that is neither true nor false; a float may come back NaN, which the
 // range check then rejects.
 template<some_parameter_type T>
-constexpr auto from_raw(raw_value r) -> T
+constexpr T from_raw(raw_value r)
 {
   using scalar = scalar_t<T>;
   scalar const s = [r] {
@@ -191,12 +191,12 @@ constexpr auto from_raw(raw_value r) -> T
 
 // -- Type-erased value <-> storage cell --
 
-constexpr auto to_raw(value const& v) -> raw_value
+constexpr raw_value to_raw(value const& v)
 {
   return v.visit([](auto const& x) { return to_raw(x); });
 }
 
-constexpr auto to_value(value_type type, raw_value r) -> value
+constexpr value to_value(value_type type, raw_value r)
 {
   switch (type) {
   case value_type::boolean: return from_raw<bool>(r);

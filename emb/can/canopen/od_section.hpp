@@ -21,22 +21,22 @@ template<auto& Section>
 using section_t = std::remove_cvref_t<decltype(Section)>;
 
 template<auto& Section>
-auto section_get_at(std::size_t index)
-    -> std::expected<settings::value, settings::error>
+std::expected<settings::value, settings::error>
+section_get_at(std::size_t index)
 {
   return Section.get_at(index);
 }
 
 template<auto& Section>
-auto section_set_at(std::size_t index, settings::value const& value)
-    -> std::expected<void, settings::error>
+std::expected<void, settings::error>
+section_set_at(std::size_t index, settings::value const& value)
 {
   return Section.set_at(index, value);
 }
 
 template<auto& Section>
-auto section_restore_default_at(std::size_t index)
-    -> std::expected<void, settings::error>
+std::expected<void, settings::error>
+section_restore_default_at(std::size_t index)
 {
   return Section.restore_default_at(index);
 }

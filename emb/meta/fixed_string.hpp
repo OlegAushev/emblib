@@ -62,8 +62,8 @@ fixed_string(char const (&)[N]) -> fixed_string<N>;
 namespace detail {
 
 template<std::size_t N, std::size_t M>
-consteval auto concat_chars(char const (&lhs)[N], char const (&rhs)[M])
-    -> fixed_string<N + M - 1>
+consteval fixed_string<N + M - 1> concat_chars(char const (&lhs)[N],
+                                               char const (&rhs)[M])
 {
   fixed_string<N + M - 1> result;
   auto it = std::copy_n(lhs, N - 1, result.chars);

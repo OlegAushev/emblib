@@ -56,23 +56,22 @@ public:
   // recorded in production.
 
   template<fixed_string Name>
-  constexpr auto get() const -> typename parameter<Schema, Name>::type
+  constexpr typename parameter<Schema, Name>::type get() const
   {
     using param_type = parameter<Schema, Name>;
     return from_raw<typename param_type::type>(cells_[param_type::index]);
   }
 
   template<fixed_string Name>
-  constexpr auto set(typename parameter<Schema, Name>::type const& v)
-      -> std::expected<std::optional<change>, error>
+  constexpr std::expected<std::optional<change>, error>
+  set(typename parameter<Schema, Name>::type const& v)
   {
     using param_type = parameter<Schema, Name>;
     return write(param_type::index, to_raw(v));
   }
 
   template<fixed_string Name>
-  constexpr auto restore_default()
-      -> std::expected<std::optional<change>, error>
+  constexpr std::expected<std::optional<change>, error> restore_default()
   {
     using param_type = parameter<Schema, Name>;
     return write(param_type::index, param_type::desc.def);
@@ -85,7 +84,7 @@ public:
   // path above deliberately ignores. Spelled apart from get/set for that
   // reason: same operation, different promise.
 
-  constexpr auto get_at(std::size_t index) const -> std::expected<value, error>
+  constexpr std::expected<value, error> get_at(std::size_t index) const
   {
     if (index >= count) {
       return std::unexpected(error::unknown_parameter);
@@ -93,8 +92,8 @@ public:
     return to_value(Schema.parameters[index].type, cells_[index]);
   }
 
-  constexpr auto set_at(std::size_t index, value const& v)
-      -> std::expected<std::optional<change>, error>
+  constexpr std::expected<std::optional<change>, error>
+  set_at(std::size_t index, value const& v)
   {
     if (index >= count) {
       return std::unexpected(error::unknown_parameter);
@@ -111,8 +110,8 @@ public:
     return write(index, to_raw(v));
   }
 
-  constexpr auto restore_default_at(std::size_t index)
-      -> std::expected<std::optional<change>, error>
+  constexpr std::expected<std::optional<change>, error>
+  restore_default_at(std::size_t index)
   {
     if (index >= count) {
       return std::unexpected(error::unknown_parameter);
@@ -138,7 +137,7 @@ public:
   // already checked; a record loader looks it up in the schema, and a
   // record writer walks the whole image.
 
-  constexpr auto cell(std::size_t index) const -> raw_value
+  constexpr raw_value cell(std::size_t index) const
   {
     return cells_[index];
   }
@@ -153,8 +152,8 @@ public:
   }
 
 private:
-  constexpr auto write(std::size_t index, raw_value cell)
-      -> std::expected<std::optional<change>, error>
+  constexpr std::expected<std::optional<change>, error> write(std::size_t index,
+                                                              raw_value cell)
   {
     auto const& desc = Schema.parameters[index];
     if (!in_range(desc.type, cell, desc.min, desc.max)) {

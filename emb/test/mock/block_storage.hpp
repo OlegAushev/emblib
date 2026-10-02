@@ -61,7 +61,7 @@ public:
     cells_.fill(ErasedValue);
   }
 
-  constexpr auto read(addr_type addr, std::span<std::byte> dest) -> result
+  constexpr result read(addr_type addr, std::span<std::byte> dest)
   {
     ++read_calls;
     if (read_fault_) return std::unexpected(storage_fault::unreadable);
@@ -72,7 +72,7 @@ public:
     return {};
   }
 
-  constexpr auto write(addr_type addr, std::span<std::byte const> src) -> result
+  constexpr result write(addr_type addr, std::span<std::byte const> src)
   {
     ++write_calls;
     if (!in_range(addr, src.size())) {
@@ -100,7 +100,7 @@ public:
     return {};
   }
 
-  constexpr auto erase(addr_type addr, std::size_t len) -> result
+  constexpr result erase(addr_type addr, std::size_t len)
   {
     ++erase_calls;
     if (!in_range(addr, len)) {
@@ -142,12 +142,12 @@ public:
     read_fault_ = on;
   }
 
-  constexpr auto bytes() -> std::span<std::byte>
+  constexpr std::span<std::byte> bytes()
   {
     return cells_;
   }
 
-  constexpr auto bytes() const -> std::span<std::byte const>
+  constexpr std::span<std::byte const> bytes() const
   {
     return cells_;
   }

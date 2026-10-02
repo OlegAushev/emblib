@@ -89,13 +89,13 @@ void parameter_default_outside_range();
 void parameter_min_above_max();
 
 template<some_parameter_type T>
-constexpr auto lowest() -> T
+constexpr T lowest()
 {
   return T(std::numeric_limits<scalar_t<T>>::lowest());
 }
 
 template<some_parameter_type T>
-constexpr auto highest() -> T
+constexpr T highest()
 {
   return T(std::numeric_limits<scalar_t<T>>::max());
 }
@@ -105,7 +105,7 @@ constexpr auto highest() -> T
 // identifier, garbage restored into a live value — while mixing the type in
 // makes the stored cell simply not match, and the parameter comes up with
 // its default.
-constexpr auto identify(std::string_view name, value_type type) -> std::uint32_t
+constexpr std::uint32_t identify(std::string_view name, value_type type)
 {
   std::uint32_t h = 0x811C9DC5u;
   auto const mix = [&h](std::uint8_t byte) {
@@ -149,8 +149,9 @@ struct declaration {
 // not 0.05, and std::int32_t{1}, not 1. Bounds are checked here rather than
 // in make_schema so that a bad declaration is reported on its own line.
 template<some_parameter_type T>
-consteval auto param(std::string_view name, T def, options<T> opts = {})
-    -> declaration<T>
+consteval declaration<T> param(std::string_view name,
+                               T def,
+                               options<T> opts = {})
 {
   constexpr value_type type = type_of<T>;
   auto const min = to_raw(opts.min);

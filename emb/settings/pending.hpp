@@ -15,7 +15,7 @@ namespace settings {
 
 namespace detail {
 
-constexpr auto group_bit(group_id g) -> std::uint32_t
+constexpr std::uint32_t group_bit(group_id g)
 {
   return std::uint32_t{1} << g.value;
 }
@@ -23,7 +23,7 @@ constexpr auto group_bit(group_id g) -> std::uint32_t
 // Policies are ordered by how much a caller must be able to promise before
 // a change may take effect, so "everything up to this policy" is a prefix
 // of the masks.
-constexpr auto policy_index(apply_policy p) -> std::size_t
+constexpr std::size_t policy_index(apply_policy p)
 {
   return static_cast<std::size_t>(p);
 }
@@ -108,7 +108,7 @@ public:
     return false;
   }
 
-  constexpr auto mask(apply_policy apply) const -> std::uint32_t
+  constexpr std::uint32_t mask(apply_policy apply) const
   {
     return masks_[detail::policy_index(apply)].load(std::memory_order_acquire);
   }

@@ -46,15 +46,14 @@ struct basic_schema {
   std::array<descriptor, N> parameters;
   std::array<std::uint16_t, N> by_id;
 
-  consteval auto index_of(std::string_view name) const
-      -> std::optional<std::size_t>
+  consteval std::optional<std::size_t> index_of(std::string_view name) const
   {
     for (auto i = 0uz; i < N; ++i)
       if (parameters[i].name == name) return i;
     return std::nullopt;
   }
 
-  constexpr auto find(std::uint32_t id) const -> std::optional<std::size_t>
+  constexpr std::optional<std::size_t> find(std::uint32_t id) const
   {
     auto const id_at = [this](std::uint16_t i) { return parameters[i].id; };
     auto const it = std::ranges::lower_bound(by_id, id, {}, id_at);
@@ -68,8 +67,8 @@ struct basic_schema {
 // Cross-parameter checks live here; per-parameter ones stay in param() so
 // that they point at the offending line.
 template<some_parameter_type... Ts>
-consteval auto make_schema(declaration<Ts> const&... params)
-    -> basic_schema<typelist<Ts...>, sizeof...(Ts)>
+consteval basic_schema<typelist<Ts...>, sizeof...(Ts)>
+make_schema(declaration<Ts> const&... params)
 {
   constexpr auto n = sizeof...(Ts);
   basic_schema<typelist<Ts...>, n> schema{{params.desc...}, {}};

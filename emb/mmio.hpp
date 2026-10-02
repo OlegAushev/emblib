@@ -97,7 +97,7 @@ namespace runtime {
 // the gaps. If `mask` is zero, the behavior is undefined for a 32- or 64-bit
 // register, and the result is zero for an 8- or 16-bit one.
 template<some_register Reg>
-[[nodiscard]] auto read(Reg const& reg, mask_type<Reg> mask) -> value_type<Reg>
+[[nodiscard]] value_type<Reg> read(Reg const& reg, mask_type<Reg> mask)
 {
   using U = std::remove_cv_t<Reg>;
   return static_cast<U>((reg & mask) >> std::countr_zero(mask));
@@ -152,7 +152,7 @@ void toggle(Reg& reg, mask_type<Reg> mask)
 // Checks whether any of the bits of `reg` selected by `mask` are set. Reads
 // `reg` once. Returns `false` if `mask` is zero.
 template<some_register Reg>
-[[nodiscard]] auto test_any(Reg const& reg, mask_type<Reg> mask) -> bool
+[[nodiscard]] bool test_any(Reg const& reg, mask_type<Reg> mask)
 {
   return (reg & mask) != 0;
 }
@@ -160,7 +160,7 @@ template<some_register Reg>
 // Checks whether all of the bits of `reg` selected by `mask` are set. Reads
 // `reg` once. Returns `true` if `mask` is zero.
 template<some_register Reg>
-[[nodiscard]] auto test_all(Reg const& reg, mask_type<Reg> mask) -> bool
+[[nodiscard]] bool test_all(Reg const& reg, mask_type<Reg> mask)
 {
   return (reg & mask) == mask;
 }
@@ -203,7 +203,7 @@ void set_or_clear(Reg& reg, mask_type<Reg> mask, bool cond)
 // Returns the value of the field of `reg` selected by `Mask`. Reads `reg` once.
 template<auto Mask, some_register Reg>
   requires field_mask_for<Mask, Reg>
-[[nodiscard]] auto read(Reg const& reg) -> value_type<Reg>
+[[nodiscard]] value_type<Reg> read(Reg const& reg)
 {
   using U = std::remove_cv_t<Reg>;
   return runtime::read(reg, static_cast<U>(Mask));
@@ -269,7 +269,7 @@ void toggle(Reg& reg)
 // `reg` once.
 template<auto Mask, some_register Reg>
   requires mask_for<Mask, Reg>
-[[nodiscard]] auto test_any(Reg const& reg) -> bool
+[[nodiscard]] bool test_any(Reg const& reg)
 {
   using U = std::remove_cv_t<Reg>;
   return runtime::test_any(reg, static_cast<U>(Mask));
@@ -279,7 +279,7 @@ template<auto Mask, some_register Reg>
 // `reg` once.
 template<auto Mask, some_register Reg>
   requires mask_for<Mask, Reg>
-[[nodiscard]] auto test_all(Reg const& reg) -> bool
+[[nodiscard]] bool test_all(Reg const& reg)
 {
   using U = std::remove_cv_t<Reg>;
   return runtime::test_all(reg, static_cast<U>(Mask));
@@ -288,7 +288,7 @@ template<auto Mask, some_register Reg>
 // Checks whether the flag of `reg` selected by `Mask` is set. Reads `reg` once.
 template<auto Mask, some_register Reg>
   requires flag_mask_for<Mask, Reg>
-[[nodiscard]] auto test(Reg const& reg) -> bool
+[[nodiscard]] bool test(Reg const& reg)
 {
   using U = std::remove_cv_t<Reg>;
   return runtime::test_any(reg, static_cast<U>(Mask));

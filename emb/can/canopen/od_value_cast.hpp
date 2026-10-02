@@ -36,7 +36,7 @@ concept wraps_od_scalar = requires { typename T::value_type; }
 // `value_of(v)` returns. The program is ill-formed if `T` satisfies neither
 // concept or if `sizeof(T)` is greater than 4.
 template<typename T>
-constexpr auto to_od_value(T const& v) -> od_value
+constexpr od_value to_od_value(T const& v)
 {
   static_assert(sizeof(T) <= 4, "od_value holds only types of sizeof <= 4");
   if constexpr (od_scalar<T>) {
@@ -54,7 +54,7 @@ constexpr auto to_od_value(T const& v) -> od_value
 // alternative does not match. A wrapped type is built from the alternative
 // its scalar occupies.
 template<typename T>
-constexpr auto from_od_value(od_value const& val) -> std::optional<T>
+constexpr std::optional<T> from_od_value(od_value const& val)
 {
   static_assert(sizeof(T) <= 4, "od_value holds only types of sizeof <= 4");
   if constexpr (od_scalar<T>) {

@@ -105,10 +105,10 @@ namespace settings {
 using value = std::variant<bool, std::int32_t, std::uint32_t, float>;
 enum class error { unknown_parameter, read_only, type_mismatch, out_of_range };
 
-auto descriptors() -> std::span<descriptor const>;
-auto find(std::string_view name) -> std::optional<index>;
-auto get_at(index) -> std::expected<value, error>;
-auto set_at(index, value) -> std::expected<std::optional<change>, error>;
+std::span<descriptor const> descriptors();
+std::optional<index> find(std::string_view name);
+std::expected<value, error> get_at(index);
+std::expected<std::optional<change>, error> set_at(index, value);
 }
 ```
 

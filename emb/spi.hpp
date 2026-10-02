@@ -95,7 +95,7 @@ private:
 // peripheral shifts unsigned words.
 template<some_device Dev>
   requires std::same_as<typename Dev::frame_type, std::uint8_t>
-auto write_bytes(Dev& dev, std::span<std::byte const> src) -> result<Dev>
+result<Dev> write_bytes(Dev& dev, std::span<std::byte const> src)
 {
   return dev.write(
       std::span{reinterpret_cast<std::uint8_t const*>(src.data()), src.size()});
@@ -103,7 +103,7 @@ auto write_bytes(Dev& dev, std::span<std::byte const> src) -> result<Dev>
 
 template<some_device Dev>
   requires std::same_as<typename Dev::frame_type, std::uint8_t>
-auto read_bytes(Dev& dev, std::span<std::byte> dest) -> result<Dev>
+result<Dev> read_bytes(Dev& dev, std::span<std::byte> dest)
 {
   return dev.read(
       std::span{reinterpret_cast<std::uint8_t*>(dest.data()), dest.size()});
@@ -111,9 +111,9 @@ auto read_bytes(Dev& dev, std::span<std::byte> dest) -> result<Dev>
 
 template<some_device Dev>
   requires std::same_as<typename Dev::frame_type, std::uint8_t>
-auto transfer_bytes(Dev& dev,
-                    std::span<std::byte const> src,
-                    std::span<std::byte> dest) -> result<Dev>
+result<Dev> transfer_bytes(Dev& dev,
+                           std::span<std::byte const> src,
+                           std::span<std::byte> dest)
 {
   return dev.transfer(
       std::span{reinterpret_cast<std::uint8_t const*>(src.data()), src.size()},
