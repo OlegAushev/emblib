@@ -4,6 +4,7 @@
 #include <emb/math/clamped.hpp>
 #include <emb/settings/image.hpp>
 #include <emb/settings/pending.hpp>
+#include <emb/test/mock/plain_word.hpp>
 #include <emb/units.hpp>
 
 namespace {
@@ -196,32 +197,7 @@ consteval bool test_cells()
 // The word type is swapped for a plain one so the bit arithmetic runs in a
 // constant expression; std::atomic cannot.
 
-struct plain_word {
-  std::uint32_t value = 0;
-
-  constexpr auto load(std::memory_order) const -> std::uint32_t
-  {
-    return value;
-  }
-
-  constexpr auto fetch_or(std::uint32_t bits, std::memory_order)
-      -> std::uint32_t
-  {
-    auto const before = value;
-    value |= bits;
-    return before;
-  }
-
-  constexpr auto fetch_and(std::uint32_t bits, std::memory_order)
-      -> std::uint32_t
-  {
-    auto const before = value;
-    value &= bits;
-    return before;
-  }
-};
-
-using test_pending = basic_pending_changes<plain_word>;
+using test_pending = basic_pending_changes<test::plain_word>;
 
 consteval bool test_pending_is_taken_once()
 {
@@ -345,6 +321,29 @@ consteval bool test_unchanged_write_owes_nothing()
   return true;
 }
 
+consteval bool test_any_change_is_pending()
+{
+  test_pending pending;
+  constexpr group_id drive{group::drive};
+  constexpr group_id model{group::model};
+
+  if (pending.any()) return false;
+
+  pending.mark(drive, apply_policy::live);
+  if (!pending.any()) return false;
+  if (!pending.take(drive, apply_policy::live)) return false;
+  if (pending.any()) return false;
+
+  pending.mark(model, apply_policy::on_restart);
+  if (pending.take(model, apply_policy::on_safe_state)) return false;
+  if (!pending.any()) return false;
+
+  pending.clear();
+  if (pending.any()) return false;
+
+  return true;
+}
+
 // The production instantiation must compile for the target too, not only
 // the test double it is checked through.
 [[maybe_unused]] void instantiate_atomic_pending()
@@ -358,6 +357,7 @@ consteval bool test_unchanged_write_owes_nothing()
       pending.changed(drive, apply_policy::live);
   [[maybe_unused]] auto const bits = pending.mask(apply_policy::live);
   [[maybe_unused]] auto const restart = pending.restart_required();
+  [[maybe_unused]] auto const anything = pending.any();
   pending.clear();
 }
 
@@ -372,5 +372,6 @@ static_assert(test_a_group_waiting_on_more_is_refused());
 static_assert(test_pending_groups_are_independent());
 static_assert(test_restart_required());
 static_assert(test_unchanged_write_owes_nothing());
+static_assert(test_any_change_is_pending());
 
 } // namespace

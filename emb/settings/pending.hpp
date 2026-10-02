@@ -120,6 +120,14 @@ public:
     return mask(apply_policy::on_restart) != 0;
   }
 
+  // Checks whether a change is waiting in any group, whatever its policy.
+  constexpr bool any() const
+  {
+    for (auto const& m : masks_)
+      if (m.load(std::memory_order_acquire) != 0) return true;
+    return false;
+  }
+
   constexpr void clear()
   {
     for (auto& m : masks_)
@@ -143,8 +151,8 @@ static_assert(std::atomic<std::uint32_t>::is_always_lock_free,
               "pending_changes is shared between an interrupt and a task");
 
 // Every group must fit the masks. The schema cannot check this itself — it
-// knows nothing of how changes are tracked — so the application asserts it
-// where the two meet.
+// knows nothing of how changes are tracked — so `section` asserts it, where
+// the two meet.
 template<auto& Schema>
 consteval bool groups_fit()
 {
