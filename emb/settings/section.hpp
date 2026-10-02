@@ -18,15 +18,24 @@
 namespace emb {
 namespace settings {
 
-// The class template `section` holds the settings of one section: the image
-// of the parameters `Schema` declares, their record on a medium of type
-// `Storage` at `Placement`, and the changes not applied yet. A write through
-// `set`, `set_at`, `restore_default_at` or `restore_all_defaults` that changes
-// a value marks its group in `pending()`.
+// The class template `section` binds the schema `Schema` to the place
+// `Placement` on a medium of type `Storage`. It holds the image of the
+// parameters, loads it from the medium and saves it there, and tracks in
+// `pending()` which groups have changes not applied yet: a write through
+// `set`, `set_at`, `restore_default_at` or `restore_all_defaults` that
+// changes a value marks the group of the parameter under its apply policy.
+// No other member function marks or clears `pending()`; in particular,
+// `load` replaces the image without marking anything.
 //
-// `load` binds the section to its medium; the behavior is undefined if
-// `save`, `wipe` or `sequence` is called before it. Only the operations of
-// `pending()` are atomic.
+// A section can be constant-initialized and then holds the defaults in its
+// image. The behavior is undefined if `save`, `wipe` or `sequence` is called
+// before `load` has bound the section to a medium; the other member
+// functions may be called before it.
+//
+// `Word` is the word type of `pending()`, as in `basic_pending_changes`.
+// Apart from `pending()`, the section is not synchronized: a call to a
+// non-const member function must not run concurrently with any other call
+// on the section, except, with the default `Word`, a call on `pending()`.
 template<auto& Schema,
          nvm::some_block_storage Storage,
          placement Placement,
@@ -53,7 +62,8 @@ public:
   // Binds the section to `medium` and restores the image from the newest
   // whole record there, or from the defaults if there is none, as
   // `store::load` does. Returns what the load found, which `last_load()`
-  // keeps.
+  // keeps. The section keeps a reference to `medium` for `save` and `wipe`
+  // until a later call to `load` replaces it.
   constexpr load_result load(Storage& medium)
   {
     store_.emplace(medium);
@@ -78,9 +88,10 @@ public:
     return result;
   }
 
-  // Brings the section on the medium to the erased state, as `store::wipe`
-  // does. The image is left as it is; after a successful wipe, `unsaved()`
-  // compares it with the defaults, which the next startup would load.
+  // Brings every slot of the section on the medium to the erased state, as
+  // `store::wipe` does. The image is left as it is; after a successful wipe,
+  // `unsaved()` compares it with the defaults, which the next startup would
+  // load.
   constexpr std::expected<void, error_type> wipe()
   {
     ASSUME(store_.has_value());
@@ -89,6 +100,13 @@ public:
     return result;
   }
 
+  // Returns the sequence number of the last record that the section numbered
+  // or found on the medium. `load` sets it to the number in the newest record
+  // header, or to zero if there is none or if the medium refused a read and
+  // no record was restored; a successful `wipe` sets it to zero. Every `save`
+  // increments it and numbers its record with the result, whether or not the
+  // write succeeds; after a load that refused a read and restored nothing,
+  // the save first takes it from the headers.
   constexpr std::uint32_t sequence() const
   {
     ASSUME(store_.has_value());
@@ -105,7 +123,10 @@ public:
     return pending_;
   }
 
-  // Checks whether the image differs from what the next startup would load.
+  // Checks whether the image differs from what the next startup would load,
+  // which before `load` is taken to be the defaults. A failed `save` or
+  // `wipe` does not change what the image is compared with, even if it
+  // changed the medium.
   constexpr bool unsaved() const
   {
     for (auto i = 0uz; i < image<Schema>::count; ++i)
@@ -138,12 +159,17 @@ public:
     return values_.get_at(index);
   }
 
+  // Writes `v` to the parameter at `index`, as `image::set_at` does; unlike
+  // `set`, refuses a parameter that is not `writable`.
   constexpr std::expected<void, error> set_at(std::size_t index, value const& v)
   {
     return values_.set_at(index, v).transform(
         [this](std::optional<change> c) { pending_.mark(c); });
   }
 
+  // Restores the default of the parameter at `index`, as
+  // `image::restore_default_at` does, which refuses a parameter that is not
+  // `writable`.
   constexpr std::expected<void, error> restore_default_at(std::size_t index)
   {
     return values_.restore_default_at(index).transform(

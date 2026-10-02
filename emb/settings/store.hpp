@@ -16,51 +16,90 @@
 namespace emb {
 namespace settings {
 
-// Where a section lives on a medium, and how much room it was given.
+// Structure describing the place of a section on a medium: `slot_count`
+// slots of `slot_capacity` bytes each, slot `i` beginning at address
+// `base + i * slot_capacity`.
 //
-// Slots hold successive records; a save writes the next one and leaves the
-// previous one intact, which is what makes an interrupted save harmless.
-// Where erasing is required, slots are grouped into blocks the size of the
-// medium's erase unit, and only the first slot of a block pays for an
-// erase — by which time the newest record lives in another block.
-//
-//   FRAM:  {.magic = ..., .base = 0, .slot_capacity = 1024, .slot_count = 2}
-//   flash: {..., .slot_capacity = 1024, .slot_count = 32,
-//           .slots_per_block = 16}   // two 16 KB sectors
+// Each save writes its record into the next slot, wrapping around after the
+// last, and leaves the previous record intact. On a medium that needs
+// erasing, the slots form blocks of `slots_per_block` slots, and a save that
+// enters a block erases the whole block first. `store` checks the
+// constraints given for the fields at compile time, unless stated otherwise.
 struct placement {
+  // Identifier of the section, written into the header and the footer of
+  // each of its records. `load` considers only the records that carry it.
   std::uint32_t magic;
+  // Address of the first slot, in bytes; a multiple of the medium's
+  // `write_granularity`.
   std::size_t base;
+  // Size of a slot, in bytes: at least the size of a record of the schema,
+  // and a multiple of the medium's `write_granularity`. It is a constant of
+  // the layout rather than the size of the record: changing it moves every
+  // slot except the first away from the record stored there.
   std::size_t slot_capacity;
+  // Number of slots, at least 2; all of them must lie within the medium's
+  // `capacity`.
   std::size_t slot_count;
+  // Number of slots in a block, the range a save erases at once on a medium
+  // that needs erasing. `slot_count` must be a multiple of it. On a medium
+  // that needs erasing, `slot_count` must be at least twice it, and every
+  // block must cover whole erase blocks of the medium, which `store` does
+  // not check.
   std::size_t slots_per_block = 1;
 };
 
-// Which step of a save failed, and what the medium said about it. A cause
-// is absent when the medium reported success but the record did not read
-// back — the signature of a memory that is no longer holding data.
+// The scoped enumeration `save_stage` defines the steps of `store::save`, in
+// order, to name the one that failed in a `save_failure`.
 enum class save_stage : std::uint8_t {
+  // Erasing the block that the slot starts, on a medium that needs erasing.
   erase,
+  // Writing the header and the cells of the record.
   body,
+  // Writing the footer, which commits the record.
   commit,
+  // Reading the record back and checking it.
   verify,
 };
 
+// Structure describing a failed `store::save`: the step that failed and, if
+// the medium reported one, its error of type `Error`.
 template<typename Error>
 struct save_failure {
   save_stage stage;
+  // Error the medium reported, or empty if the medium reported none but the
+  // record read back fails its checks, i.e. the medium did not keep what it
+  // accepted. Empty only if `stage` is `save_stage::verify`.
   std::optional<Error> cause;
 };
 
-// What a load found, on top of what the record itself said.
+// Structure describing the outcome of `store::load`: the report on the record
+// restored, its slot, and whether the medium refused a read.
 struct load_result {
+  // Report on the record restored; a default `load_report`, whose `valid` is
+  // `false`, if none was.
   load_report record;
+  // Slot of the record restored, or empty if none was and the image holds
+  // the defaults.
   std::optional<std::size_t> slot;
+  // Whether the medium refused a read of a header or of a record during the
+  // load, whether or not a record was restored. A slot that holds no record,
+  // or one that fails its checks, does not set it.
   bool read_failed = false;
 };
 
-// Binds a schema to a place on a medium: finds the newest record that is
-// whole, writes the next one, and never lets a failure destroy the last
-// good copy.
+// The class template `store` keeps images of `Schema` as records on a medium
+// of type `Storage`, in the slots that `Placement` defines. `load` restores
+// an image from the newest whole record, and `save` writes an image as a new
+// record into the next slot, leaving the previous record intact.
+//
+// A save never writes into the slot of the newest record the store knows
+// of, i.e. the one the last successful save wrote or `load` restored, or,
+// if there is none, the one behind the newest header, nor, on a medium that
+// needs erasing, erases the block of that slot. A save that fails or is
+// interrupted, or a run of them, thus leaves that record intact.
+//
+// `Storage::write_granularity` must divide 8. The store refers to the medium
+// passed to its constructor, which must outlive it.
 template<auto& Schema, nvm::some_block_storage Storage, placement Placement>
 class store {
   using addr_type = typename Storage::addr_type;
@@ -97,21 +136,45 @@ class store {
 
   Storage& storage_;
 
-  // A slot, not a record: a firmware that declared more parameters may have
-  // written a longer record, and refusing to read it would silently discard
-  // the settings of anyone downgrading.
+  // Buffer the size of a slot rather than of a record, so that `load` reads a
+  // record written by a schema with more parameters. Every read and the
+  // encoding in `save` share it: `map_slots`, `read_record` and
+  // `slot_is_erased` overwrite it.
   std::array<std::byte, Placement.slot_capacity> buffer_{};
 
   std::size_t next_slot_ = 0;
   std::uint32_t last_seq_ = 0;
+  // Slot of the newest record known to `*this`, or empty if there is none: the
+  // slot of the record that `load` restored or that a successful `save` wrote
+  // or, after a `survey`, the slot of the newest header, which may have no
+  // whole record behind it. It is emptied by a successful `wipe`, by a
+  // `survey` that finds no header, and by a `load` that restores no record
+  // and during which the medium refuses a read. `next_slot_` never names it
+  // nor, on a medium that needs erasing, the first slot of its block.
+  std::optional<std::size_t> kept_slot_;
+  // Whether `next_slot_`, `last_seq_` and `kept_slot_` have been taken from
+  // the medium, by `load`, `wipe` or `survey`; otherwise `save` calls
+  // `survey` first.
   bool surveyed_ = false;
 
 public:
   constexpr explicit store(Storage& storage) : storage_(storage) {}
 
-  // Restores the image from the newest record that is whole. Tries the next
-  // newest if one fails its checks, and falls back to defaults if none is
-  // usable, so the image is defined whatever the medium holds.
+  // Restores `values` from the newest whole record of the section, as
+  // `decode_record` does, or fills it with the defaults if there is none.
+  // Reads the header of every slot once, then the records behind the headers
+  // of this section, newest first, until one passes its checks.
+  //
+  // Afterwards the next save continues the sequence above the newest header
+  // found, even if the record behind it is not whole, and `next_slot()` is
+  // the slot after the record restored, not after that header. If no record
+  // is restored, `next_slot()` is the slot after that header, and the store
+  // keeps it as it would keep a record; if there is no header, `sequence()`
+  // and `next_slot()` return zero. If no record is restored and the medium
+  // refused a read, `sequence()` and `next_slot()` return zero and the next
+  // save reads the headers again, as a save before any `load` does. Returns
+  // the report on the record restored, its slot, and whether the medium
+  // refused a read.
   constexpr load_result load(image<Schema>& values)
   {
     load_result result;
@@ -157,23 +220,45 @@ public:
     }
 
     values.restore_defaults();
-    next_slot_ = 0;
-    last_seq_ = 0;
-    surveyed_ = true;
+    if (result.read_failed) {
+      next_slot_ = 0;
+      last_seq_ = 0;
+      kept_slot_.reset();
+      surveyed_ = false;
+    }
+    else {
+      survey(newest);
+    }
     return result;
   }
 
-  // Writes the image as the next record: body first, footer last, then
-  // reads it back. Both the slot and the sequence number advance before the
-  // first write, so a retry never lands on the debris of the attempt before
-  // it, and never claims a generation that another record already claims.
+  // Writes `values` as a new record into the next slot: on a medium that
+  // needs erasing, erases the block first if the slot starts one; then
+  // writes the header and the cells, then the footer, which commits the
+  // record, and reads the record back to verify it. On such a medium, a slot
+  // inside a block is read first, and if it is not erased, the record goes
+  // to the first slot of the next block instead. If no `load`, `save` or
+  // successful `wipe` came before, or the last of them was a `load` that
+  // restored no record and during which the medium refused a read, the save
+  // reads the header of every slot first, to continue the sequence above the
+  // newest one and take the slot after it, without checking the records behind
+  // them.
+  //
+  // The slot and the sequence number advance before the first write, whether
+  // or not the save succeeds, except after an erase the medium refuses, when
+  // the next save takes the same slot again. The slot skips the newest
+  // record the store knows of: on two slots without erasing, a failed save
+  // is retried in its own slot. A failed save may still have written a whole
+  // record, which a later `load` can restore, so its sequence number is not
+  // reused. If the save fails, returns a `save_failure` naming the step that
+  // failed and the medium's error, if it reported one.
   constexpr std::expected<void, save_failure<error_type>>
   save(image<Schema> const& values)
   {
     // A save before the first load would otherwise start counting from one
     // and write a record that looks older than what is already stored —
     // invisible to the next load, which takes the highest sequence number.
-    if (!surveyed_) survey();
+    if (!surveyed_) survey(newest_untried(map_slots()));
 
     auto const slot = slot_to_write();
     auto const seq = last_seq_ + 1;
@@ -186,7 +271,7 @@ public:
     // reusing the number would leave two records claiming one generation,
     // where a load picks by slot order rather than by age. The one
     // exception is an erase that was refused, below.
-    next_slot_ = (slot + 1) % Placement.slot_count;
+    next_slot_ = skip_kept((slot + 1) % Placement.slot_count);
     last_seq_ = seq;
 
     if constexpr (Storage::needs_erase) {
@@ -196,8 +281,7 @@ public:
           // Nothing was written, so there is no debris to move past, and
           // the block still has to be erased: the slot is not spent. Moving
           // on would put the position inside a block that was never
-          // cleared, and the step over the debris would then take the next
-          // block — the one holding the newest record.
+          // cleared.
           next_slot_ = slot;
           return fail(save_stage::erase, erased.error());
         }
@@ -225,12 +309,16 @@ public:
       return fail(save_stage::verify);
     }
 
+    adopt(slot, seq);
     return {};
   }
 
-  // Brings the whole section to the erased state — what an explicit "forget
-  // the settings" command means. Honest on a medium with no erased state
-  // too: erase() there overwrites.
+  // Erases every slot of the section, so that the next `load` finds no record
+  // and restores the defaults. After a successful call, `sequence()` and
+  // `next_slot()` return zero. If the medium refuses to erase a block, returns
+  // its error and leaves `*this` unchanged; the blocks before that one stay
+  // erased, and a later `load` restores the newest whole record left in the
+  // others.
   constexpr std::expected<void, error_type> wipe()
   {
     for (auto block = 0uz; block < block_count; ++block) {
@@ -241,15 +329,32 @@ public:
     }
     next_slot_ = 0;
     last_seq_ = 0;
+    kept_slot_.reset();
     surveyed_ = true;
     return {};
   }
 
+  // Returns the sequence number that the next save continues from, i.e. the
+  // next record is numbered `sequence() + 1`. Before the first `load`, `save`
+  // or successful `wipe`, and after a `load` that restored no record and during
+  // which the medium refused a read, that number is not known yet: returns zero
+  // whatever the medium holds, and the next save first reads the header of
+  // every slot and continues the sequence above the newest one, or from zero if
+  // there is none.
   constexpr std::uint32_t sequence() const
   {
     return last_seq_;
   }
 
+  // Returns the slot that the next save takes. Before the first `load`, `save`
+  // or successful `wipe`, and after a `load` that restored no record and during
+  // which the medium refused a read, that slot is not known yet: returns zero
+  // whatever the medium holds, and the next save first reads the header of
+  // every slot and takes the slot after the newest one, or slot zero if there
+  // is none. On a medium that needs erasing, the save takes the first slot of
+  // the next block instead if the slot it would take is neither erased nor the
+  // first of its block, or of the block after it if the next block holds the
+  // newest record the store knows of.
   constexpr std::size_t next_slot() const
   {
     return next_slot_;
@@ -263,10 +368,6 @@ private:
         Placement.base + (slot * Placement.slot_capacity) + offset);
   }
 
-  // Every way out of a save that is not success. What the failure left on
-  // the medium — an erase that did not happen, a record half written, a
-  // slot spent without a byte in it — is no concern of its own: the next
-  // save looks at the slot it is about to take, whatever brought it there.
   static constexpr std::unexpected<save_failure<error_type>>
   fail(save_stage stage, std::optional<error_type> cause = std::nullopt)
   {
@@ -278,38 +379,32 @@ private:
     std::uint32_t seq;
   };
 
-  // Why a candidate came to nothing. Only a medium that refused is worth
-  // carrying out of a load: whatever else a slot holds — the debris of a
-  // save that never committed, the noise of a section never written — is
-  // ordinary, and outliving it is what the search is for.
+  // The scoped enumeration `no_record` defines why `read_record` found no
+  // record in a slot.
   enum class no_record : std::uint8_t {
     unreadable,
+    // The header does not name a record of this section that fits a slot.
     debris,
   };
 
-  // Which slots have been looked at. Sized by the section rather than by a
-  // machine word, so how many slots a section may have is the medium's
-  // business and not this loop's.
   using slot_set = std::bitset<Placement.slot_count>;
 
-  // What one pass over the section found: the sequence number of every
-  // slot that holds a candidate, and whether the medium refused a read on
-  // the way. A slot that holds none is tried from the start — there is
-  // nothing in it to try — which is what leaves the search below a single
-  // predicate.
+  // Structure holding what one pass over the slot headers found: `seq` holds
+  // the sequence number of every slot that holds a candidate, and
+  // `read_failed` whether the medium refused a read. Every slot that holds no
+  // candidate is in `tried` from the start, so `newest_untried` sees only
+  // candidates.
   struct slot_map {
     std::array<std::uint32_t, Placement.slot_count> seq{};
     slot_set tried;
     bool read_failed = false;
   };
 
-  // The header of every slot, sixteen bytes each and once per load. A
-  // header that does not name this section is not a candidate, nor is one
-  // claiming a record too large for a slot: that is not a record but
-  // debris or noise, and it is what rules out a header whose magic and
-  // format landed while its count stayed erased. A slot that will not read
-  // is not a candidate either: the map carries the fact out, and there is
-  // nothing to be had from asking it again.
+  // Reads the header of every slot into `buffer_` and returns the map of the
+  // candidates. A slot holds a candidate if `decode_header` accepts its
+  // header for `Placement.magic` and the record the header declares fits a
+  // slot. A slot whose header the medium refuses to read holds none, and
+  // sets `read_failed`.
   constexpr slot_map map_slots()
   {
     slot_map map;
@@ -333,11 +428,11 @@ private:
     return map;
   }
 
-  // The newest candidate among those not tried yet. A scan for the maximum
-  // and not a sort: seq_newer compares modulo 2^32, which is no ordering
-  // across the whole circle — three numbers spaced by a third of it are
-  // each newer than the next. Equal numbers leave the lower slot, the one
-  // the scan reached first.
+  // Returns the candidate with the newest sequence number, as `seq_newer`
+  // compares them, among the slots not in `map.tried`, or `std::nullopt` if
+  // every slot has been tried. Equal numbers go to the lower slot. Scans for
+  // the newest rather than sorting: `seq_newer` compares modulo 2^32 and is
+  // not transitive over the whole range of sequence numbers.
   static constexpr std::optional<candidate> newest_untried(slot_map const& map)
   {
     std::optional<candidate> best;
@@ -352,37 +447,54 @@ private:
     return best;
   }
 
-  // Resumes from what the medium says, after a restart or a save before
-  // the first load: the sequence continues above the number given, the
-  // next record goes to the slot after the one given. The two need not
-  // come from one slot — a load passes the record it restored and the
-  // newest header there is, which differ after a torn save; a survey has
-  // only headers to go by.
+  // Continues the sequence above `seq`, keeps the record in `slot` and
+  // positions the next save at the slot after it, and sets `surveyed_`. The
+  // two need not come from the same slot: `load` passes the slot of the
+  // record it restored and the newest sequence number among the headers.
   constexpr void adopt(std::size_t slot, std::uint32_t seq)
   {
     last_seq_ = seq;
+    kept_slot_ = slot;
     next_slot_ = (slot + 1) % Placement.slot_count;
     surveyed_ = true;
   }
 
-  // Which slot this save takes: the one the position names, unless a
-  // medium that must be erased finds the debris of a save interrupted
-  // before it committed there — neither a record nor an erased state, and
-  // writing into it would corrupt the new record rather than the old one.
+  // Returns `slot`, unless it is `*kept_slot_` on a medium that needs no
+  // erasing, or the first slot of the block of `*kept_slot_` on a medium that
+  // needs erasing, whose save erases that block. Then returns the slot after
+  // `slot` or, on a medium that needs erasing, the first slot of the block
+  // after that block, wrapping around. On such a medium, `slot` is returned
+  // unchanged if it is `*kept_slot_` but does not start its block: a save
+  // reads such a slot first and writes into it only if it is erased. If
+  // `kept_slot_` is empty, returns `slot`.
+  constexpr std::size_t skip_kept(std::size_t slot) const
+  {
+    if (!kept_slot_) return slot;
+
+    if constexpr (!Storage::needs_erase) {
+      if (slot != *kept_slot_) return slot;
+      return (slot + 1) % Placement.slot_count;
+    }
+    else {
+      auto const block = slot / Placement.slots_per_block;
+      if ((slot % Placement.slots_per_block != 0)
+          || (block != *kept_slot_ / Placement.slots_per_block)) {
+        return slot;
+      }
+      return ((block + 1) % block_count) * Placement.slots_per_block;
+    }
+  }
+
+  // Returns the slot that the current save takes: `next_slot_`, unless the
+  // medium needs erasing, `next_slot_` does not start a block, and the slot
+  // does not read as erased, e.g. because it holds the debris of a save that
+  // never committed. Then returns the first slot of the next block, wrapping
+  // around, which the save erases on entry, or, if that block holds
+  // `kept_slot_`, of the block after it. The block that holds the debris is
+  // not erased instead: it can hold the record that `load` restored.
   //
-  // Every save asks. A position is reached by a restart or by a failure as
-  // readily as by a record, and a failure spends its slot whether or not
-  // the medium took a byte of it — so the debris need not sit right behind
-  // the newest record, and no slot is erased on anyone's word.
-  //
-  // The block the debris belongs to cannot be erased to clean it: the
-  // position follows the record restored, so a slot that is not the first
-  // of its block shares the block with that record. The next block is
-  // taken instead, which the rollover erases anyway. A slot that already
-  // starts a block needs nothing: entering it erases it.
-  //
-  // Reads into buffer_, so the answer has to be had before the record is
-  // encoded there.
+  // Reads the slot into `buffer_` on every call, so it has to be called
+  // before the record is encoded there.
   constexpr std::size_t slot_to_write()
   {
     if constexpr (!Storage::needs_erase) {
@@ -393,12 +505,14 @@ private:
       if (slot_is_erased(next_slot_)) return next_slot_;
 
       auto const block = next_slot_ / Placement.slots_per_block;
-      return ((block + 1) * Placement.slots_per_block) % Placement.slot_count;
+      return skip_kept(((block + 1) * Placement.slots_per_block)
+                       % Placement.slot_count);
     }
   }
 
-  // A slot that cannot be read counts as written: stepping past it costs a
-  // block, reading over it would cost the record.
+  // Checks whether the whole of slot `slot` reads as erased, reading it into
+  // `buffer_`. A slot that the medium refuses to read counts as not erased,
+  // so a save steps past it rather than writing into it.
   constexpr bool slot_is_erased(std::size_t slot)
   {
     if (!storage_.read(address_of(slot), std::span{buffer_})) {
@@ -407,22 +521,30 @@ private:
     return nvm::is_erased<Storage>(buffer_);
   }
 
-  // Headers only: enough to continue the sequence and pick the next slot,
-  // without reading or trusting any record.
-  constexpr void survey()
+  // Positions `*this` from the newest candidate among the slot headers,
+  // `newest`, alone: continues the sequence above it, keeps its slot and
+  // positions the next save at the slot after it, or at slot zero with the
+  // sequence at zero and no slot kept if there is no candidate. Does not
+  // check the record behind the header.
+  constexpr void survey(std::optional<candidate> const& newest)
   {
-    auto const map = map_slots();
-
-    auto const best = newest_untried(map);
-    if (!best) {
+    if (!newest) {
       next_slot_ = 0;
       last_seq_ = 0;
+      kept_slot_.reset();
       surveyed_ = true;
       return;
     }
-    adopt(best->slot, best->seq);
+    adopt(newest->slot, newest->seq);
   }
 
+  // Reads the header of slot `slot`, then the record of the size the header
+  // declares, into `buffer_`, and returns a view of that record. Returns
+  // `no_record::unreadable` if the medium refuses a read, and
+  // `no_record::debris` if `decode_header` rejects the header for
+  // `Placement.magic` or the record it declares does not fit a slot. Does
+  // not check the footer, which `decode_record` does. The view refers to
+  // `buffer_` and is valid until the next read into it.
   constexpr std::expected<std::span<std::byte const>, no_record>
   read_record(std::size_t slot)
   {

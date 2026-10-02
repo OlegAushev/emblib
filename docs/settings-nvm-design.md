@@ -13,7 +13,9 @@ CANopen binding (§7) was built on 2026-09-29, as a binding per row of the
 dictionary rather than a generated section. On 2026-10-02 the facade the
 application kept in `params.hpp/.cpp` moved into emblib as
 `settings::section`, and what had been `section`, the place on a medium,
-became `placement`. The store's
+became `placement`. The same day the store stopped letting a run of failed
+saves reach the newest record, and a load that restores nothing stopped
+resetting the sequence (§10). The store's
 algorithms, invariants and failure scenarios are described in detail, in
 Russian, in `settings-store-algorithms.ru.md`.
 
@@ -243,7 +245,8 @@ previous intact. Where erasing is required, slots are grouped into blocks
 the size of the medium's erase unit, and only the first slot of a block
 pays for an erase — by which time the newest record lives in another block.
 That is asserted, not assumed: with `needs_erase`, the slots must span at
-least two blocks.
+least two blocks, and however many saves fail in a row, the position never
+enters the block of the newest record the store knows of (§10).
 
 Each section declares `slot_capacity` as a **constant, not derived from the
 current parameter count** — otherwise adding a parameter would shift the
@@ -286,7 +289,9 @@ facts about the memory.
 5. Read back and verify the CRC. This catches a dead FRAM or a failed
    program — the stack it replaced had no such check. The in-RAM position
    does not wait for it: the slot and the sequence number are spent before
-   the first write, whatever the outcome (see §10).
+   the first write, whatever the outcome — though the position never moves
+   onto the slot of the newest record the store knows of, nor, where erasing
+   is required, onto the first slot of its block (see §10).
 
 ### Load
 
@@ -715,18 +720,52 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   and the absence is the diagnosis.
 - **The slot and the sequence number are both spent before the first
   write**, whether or not the attempt succeeds — with one exception. The
-  slot, so a retry never lands on the debris of the attempt before it. The
+  slot, so a retry does not land on the debris of the attempt before it,
+  unless the only other slot holds the newest record (next item). The
   sequence number, because a failed save can still have landed — the record
   wrote and only the read-back failed — and reusing the number would leave
   two records claiming one generation, which a load orders by slot rather
   than by age, silently preferring the older one. The exception is an erase
   that was refused: nothing was written, so there is no debris to avoid,
-  and the block still has to be erased. Spending the slot would put the
-  position inside a block that was never cleared, and the step over the
-  debris would then take the next block — the one holding the newest
-  record. So the slot stays, and a sector that never erases makes every
-  save fail with `save_stage::erase` rather than quietly turning the store
-  into a single block that erases its own newest record on every lap.
+  and the block still has to be erased. So the slot stays, and a sector
+  that never erases makes every save fail with `save_stage::erase`.
+  Spending the slot would put the position inside the uncleared block, from
+  where the step over the previous lap's records would take the next block.
+  With two blocks that is the block of the newest record: before the
+  position skipped it (next item), the step erased it, and the store quietly
+  turned into a single block that erased its own newest record on every
+  lap. Now the skip brings the step back to the refused block, so with two
+  blocks the exception makes no difference; with more, a spent slot would
+  quietly carry the save past a sector that never erases, and the exception
+  is what reports it.
+- **A save never takes the slot of the newest record the store knows of**
+  — the one the last successful save wrote or the load restored — nor
+  enters its block on a medium that must be erased. Spending the slot on
+  every failure walks the position around the ring, and nothing used to
+  stop it short of that record. On two FRAM slots the second failure in a
+  row wrote over it, and a tear there left no whole record at all. On flash
+  the walk reached the block of the newest record and erased it: after 129
+  to 256 failures in a row in the product's geometry, and on the second one
+  where the medium will not read, since a slot that does not read counts as
+  written and sends each save to the next block. The store keeps that
+  record's slot, and the position skips it, or, on flash, the start of its
+  block, for the start of the block after it. On two FRAM slots a retry
+  therefore goes over its own debris, which is harmless there. Not spending
+  the slot on failure where nothing needs erasing would have closed FRAM
+  alone; one rule for both media holds as an invariant rather than as a
+  consequence of the order the ring is walked in. The sequence number is
+  still spent: on flash an unverified record can outlive the next one.
+- **A load that restores nothing positions itself from the headers.** It
+  used to reset the position and the sequence to zero. While the medium
+  reads, that only numbered the next record below the debris, which a load
+  rejects anyway. After a read failure at startup it lost a save: records
+  the load could not read may be whole, a record numbered one is older than
+  them, and once the medium read again the next load restored the old
+  settings; on flash, entering slot 0 also erased block 0, where the newest
+  record may have been. Now a load that read everything continues above
+  the newest header and takes the slot after it, as a survey does, and one
+  the medium refused leaves the position unset, so the next save surveys
+  the headers first.
 - **A save before the first load surveys the headers.** Otherwise it would
   start counting from one and write a record that looks older than what is
   stored — invisible to the next load, which takes the highest sequence
@@ -822,8 +861,12 @@ tool:
   is the slot past the debris, i.e. the last good record; if that save
   tears too, nothing is left. On flash a lap-old header that rotted newer
   puts the position in the old block the same way, from where the step
-  over the debris erases the block of the newest record. The application
-  loads before anything can save, so the gap is latent. Closing it means
+  over the debris erases the block of the newest record. The store keeps
+  the slot of that header, not of a whole record, so keeping it does not
+  help. The application loads before anything can save, but the first save
+  after a load that the medium refused and that restored nothing takes the
+  same path; the gap needs a read failure at startup, a torn save before
+  it, and a tear of this one. Closing it means
   the survey checking records as the load does: a `record_whole()` in
   `record.hpp`, shared by both, at the cost of a CRC per candidate on that
   path.

@@ -282,19 +282,18 @@ consteval bool test_a_write_that_does_not_stick_is_caught()
 
 consteval bool test_a_save_that_landed_but_could_not_be_read_back()
 {
-  fram memory;
+  flash memory;
   image<schema> values;
-  fram_store store{memory};
+  flash_store store{memory};
 
   if (!store.save(values)) return false; // slot 0, seq 1
-  if (!values.set<"motor.p">(std::int32_t{2})) return false;
-  if (!store.save(values)) return false; // slot 1, seq 2
 
   // The record lands, but the read-back cannot be performed: the medium
-  // holds a third generation the store does not know about.
-  if (!values.set<"motor.p">(std::int32_t{3})) return false;
+  // holds a second generation the store does not know about. The look at
+  // slot 1 cannot be performed either, so the save takes the next block.
+  if (!values.set<"motor.p">(std::int32_t{2})) return false;
   memory.set_read_fault(true);
-  auto const unverified = store.save(values); // slot 0, seq 3
+  auto const unverified = store.save(values); // slot 2, seq 2
   memory.set_read_fault(false);
 
   if (unverified) return false;
@@ -305,16 +304,47 @@ consteval bool test_a_save_that_landed_but_could_not_be_read_back()
 
   // The next save must not reuse that sequence number: two records claiming
   // one generation are ordered by slot, not by age, and this one would be
-  // shadowed by the record above it.
-  if (!values.set<"motor.p">(std::int32_t{4})) return false;
-  if (!store.save(values)) return false; // slot 1, seq 4
+  // shadowed by the record below it.
+  if (!values.set<"motor.p">(std::int32_t{3})) return false;
+  if (!store.save(values)) return false; // slot 3, seq 3
 
-  fram_store restarted{memory};
+  flash_store restarted{memory};
   image<schema> restored;
   auto const result = restarted.load(restored);
 
   if (!result.record.valid) return false;
-  if (result.slot != 1) return false;
+  if (result.slot != 3) return false;
+  if (restored.get<"motor.p">() != 3) return false;
+
+  return true;
+}
+
+// A failed save spends its slot, but never the slot of the newest record:
+// on two slots a retry goes over its own debris. Moving on would put the
+// second tear into the record, and two in a row would leave nothing.
+consteval bool test_failed_saves_in_a_row_on_two_slots()
+{
+  fram memory;
+  image<schema> values;
+  if (!values.set<"motor.p">(std::int32_t{4})) return false;
+
+  {
+    fram_store store{memory};
+    if (!store.save(values)) return false; // slot 0, seq 1
+
+    if (!values.set<"motor.p">(std::int32_t{5})) return false;
+    for (auto i = 0uz; i < 3; ++i) {
+      memory.set_power_budget(20);
+      if (store.save(values)) return false; // slot 1: torn
+      if (store.next_slot() != 1) return false;
+    }
+  }
+  memory.set_power_budget(fram::unlimited);
+
+  fram_store restarted{memory};
+  image<schema> restored;
+  auto const result = restarted.load(restored);
+  if (!result.record.valid || result.slot != 0) return false;
   if (restored.get<"motor.p">() != 4) return false;
 
   return true;
@@ -670,6 +700,73 @@ consteval bool test_a_torn_save_after_an_erase_that_failed()
   return true;
 }
 
+// A run of torn saves walks the ring, and the walk must stop short of the
+// block that holds the newest record. Entering that block would erase it:
+// past the third tear here lies slot 0, and the fourth save takes the other
+// block again instead.
+consteval bool test_a_run_of_torn_saves_spares_the_block_of_the_record()
+{
+  flash memory;
+  image<schema> values;
+  if (!values.set<"motor.p">(std::int32_t{4})) return false;
+
+  {
+    flash_store store{memory};
+    if (!store.save(values)) return false; // slot 0, seq 1
+
+    if (!values.set<"motor.p">(std::int32_t{5})) return false;
+    for (auto i = 0uz; i < 6; ++i) {
+      memory.set_power_budget(1);
+      if (store.save(values)) return false; // slots 1, 2, 3, 2, 3, 2
+      if (store.next_slot() == 0) return false;
+    }
+    // The first block once, the second on each of the three entries.
+    if (memory.erase_calls != 4) return false;
+  }
+  memory.set_power_budget(flash::unlimited);
+
+  flash_store restarted{memory};
+  image<schema> restored;
+  auto const result = restarted.load(restored);
+  if (!result.record.valid || result.slot != 0) return false;
+  if (restored.get<"motor.p">() != 4) return false;
+
+  return true;
+}
+
+// The same walk, short-cut. A slot that will not read counts as written, so
+// each save steps over it to the next block — and the second one would step
+// into the block of the newest record.
+consteval bool test_torn_saves_on_a_medium_that_will_not_read()
+{
+  flash memory;
+  image<schema> values;
+  if (!values.set<"motor.p">(std::int32_t{4})) return false;
+
+  {
+    flash_store store{memory};
+    if (!store.save(values)) return false; // slot 0, seq 1
+
+    if (!values.set<"motor.p">(std::int32_t{5})) return false;
+    memory.set_read_fault(true);
+    for (auto i = 0uz; i < 2; ++i) {
+      memory.set_power_budget(1);
+      if (store.save(values)) return false; // slot 2: torn
+    }
+    memory.set_read_fault(false);
+    if (memory.erase_calls != 3) return false;
+  }
+  memory.set_power_budget(flash::unlimited);
+
+  flash_store restarted{memory};
+  image<schema> restored;
+  auto const result = restarted.load(restored);
+  if (!result.record.valid || result.slot != 0) return false;
+  if (restored.get<"motor.p">() != 4) return false;
+
+  return true;
+}
+
 consteval bool test_flash_round_trip()
 {
   flash memory;
@@ -772,6 +869,85 @@ consteval bool test_a_run_of_corrupt_records_costs_one_pass()
   return true;
 }
 
+// A load that finds headers but no whole record behind any of them still
+// learns where the medium stopped: the sequence continues above the newest
+// header, as it does when a record is restored.
+consteval bool test_no_whole_record_behind_the_headers()
+{
+  fram memory;
+  image<schema> values;
+
+  {
+    fram_store store{memory};
+    if (!store.save(values)) return false; // slot 0, seq 1
+    if (!store.save(values)) return false; // slot 1, seq 2
+  }
+
+  // Both records lose their crc.
+  for (auto slot = 0uz; slot < fram_placement.slot_count; ++slot) {
+    auto const crc = (slot * fram_placement.slot_capacity)
+                   + record_size(schema_t<schema>::count)
+                   - 1;
+    memory.bytes()[crc] ^= std::byte{0xFF};
+  }
+
+  fram_store store{memory};
+  image<schema> restored;
+  auto const result = store.load(restored);
+  if (result.record.valid || result.read_failed) return false;
+  if (store.sequence() != 2) return false;
+  if (store.next_slot() != 0) return false;
+
+  if (!restored.set<"motor.p">(std::int32_t{7})) return false;
+  if (!store.save(restored)) return false; // slot 0, seq 3
+
+  fram_store restarted{memory};
+  image<schema> again;
+  auto const after = restarted.load(again);
+  if (!after.record.valid || after.record.seq != 3) return false;
+  if (again.get<"motor.p">() != 7) return false;
+
+  return true;
+}
+
+// A load the medium would not serve knows nothing of where it stopped.
+// Counting from one again would number the next record below the ones the
+// load could not read, and once the medium reads again, the next load would
+// restore the older record instead. The save reads the headers first.
+consteval bool test_a_load_that_could_not_read()
+{
+  fram memory;
+  image<schema> values;
+
+  {
+    fram_store store{memory};
+    if (!store.save(values)) return false; // slot 0, seq 1
+    if (!values.set<"motor.p">(std::int32_t{5})) return false;
+    if (!store.save(values)) return false; // slot 1, seq 2
+  }
+
+  fram_store store{memory};
+  image<schema> restored;
+  memory.set_read_fault(true);
+  auto const result = store.load(restored);
+  memory.set_read_fault(false);
+  if (result.record.valid || !result.read_failed) return false;
+  if (restored.get<"motor.p">() != 11) return false;
+  if (store.sequence() != 0) return false;
+
+  if (!restored.set<"motor.p">(std::int32_t{6})) return false;
+  if (!store.save(restored)) return false; // slot 0, seq 3
+  if (store.sequence() != 3) return false;
+
+  fram_store restarted{memory};
+  image<schema> again;
+  auto const after = restarted.load(again);
+  if (!after.record.valid || after.slot != 0) return false;
+  if (again.get<"motor.p">() != 6) return false;
+
+  return true;
+}
+
 // -- Wipe --
 
 consteval bool test_wipe()
@@ -861,6 +1037,7 @@ static_assert(test_a_second_tear_after_a_restart());
 static_assert(test_a_corrupted_record_falls_back_to_the_previous_one());
 static_assert(test_a_write_that_does_not_stick_is_caught());
 static_assert(test_a_save_that_landed_but_could_not_be_read_back());
+static_assert(test_failed_saves_in_a_row_on_two_slots());
 static_assert(test_flash_rolls_over_between_blocks());
 static_assert(test_flash_erase_never_takes_the_last_good_record());
 static_assert(test_a_restart_onto_the_debris_of_a_torn_save());
@@ -869,9 +1046,13 @@ static_assert(test_a_hole_between_the_record_and_the_debris());
 static_assert(test_a_lap_old_header_that_rotted_newer());
 static_assert(test_a_save_after_an_erase_that_failed());
 static_assert(test_a_torn_save_after_an_erase_that_failed());
+static_assert(test_a_run_of_torn_saves_spares_the_block_of_the_record());
+static_assert(test_torn_saves_on_a_medium_that_will_not_read());
 static_assert(test_flash_round_trip());
 static_assert(test_more_slots_than_a_word_has_bits());
 static_assert(test_a_run_of_corrupt_records_costs_one_pass());
+static_assert(test_no_whole_record_behind_the_headers());
+static_assert(test_a_load_that_could_not_read());
 static_assert(test_wipe());
 static_assert(test_saving_before_loading_keeps_the_sequence());
 static_assert(test_a_record_written_by_a_richer_firmware_still_loads());
