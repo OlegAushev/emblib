@@ -27,7 +27,7 @@ namespace settings {
 //   FRAM:  {.magic = ..., .base = 0, .slot_capacity = 1024, .slot_count = 2}
 //   flash: {..., .slot_capacity = 1024, .slot_count = 32,
 //           .slots_per_block = 16}   // two 16 KB sectors
-struct section {
+struct placement {
   std::uint32_t magic;
   std::size_t base;
   std::size_t slot_capacity;
@@ -61,7 +61,7 @@ struct load_result {
 // Binds a schema to a place on a medium: finds the newest record that is
 // whole, writes the next one, and never lets a failure destroy the last
 // good copy.
-template<auto& Schema, nvm::some_block_storage Storage, section Section>
+template<auto& Schema, nvm::some_block_storage Storage, placement Placement>
 class store {
   using addr_type = typename Storage::addr_type;
   using error_type = typename Storage::error_type;
@@ -70,25 +70,26 @@ class store {
   static constexpr std::size_t record_bytes = record_size(count);
   static constexpr std::size_t body_bytes = record_body_size(count);
   static constexpr std::size_t block_bytes =
-      Section.slots_per_block * Section.slot_capacity;
+      Placement.slots_per_block * Placement.slot_capacity;
   static constexpr std::size_t block_count =
-      Section.slot_count / Section.slots_per_block;
+      Placement.slot_count / Placement.slots_per_block;
 
-  static_assert(Section.slot_count >= 2,
+  static_assert(Placement.slot_count >= 2,
                 "a store needs a second slot: a save must never be the only "
                 "copy of the settings");
-  static_assert(Section.slots_per_block >= 1);
-  static_assert(Section.slot_count % Section.slots_per_block == 0);
+  static_assert(Placement.slots_per_block >= 1);
+  static_assert(Placement.slot_count % Placement.slots_per_block == 0);
   static_assert(!Storage::needs_erase || block_count >= 2,
                 "erasing a block must never destroy the last good record, so "
                 "the slots must span at least two erase blocks");
-  static_assert(record_bytes <= Section.slot_capacity,
+  static_assert(record_bytes <= Placement.slot_capacity,
                 "the record does not fit a slot");
-  static_assert(Section.base + (Section.slot_count * Section.slot_capacity)
+  static_assert(Placement.base
+                        + (Placement.slot_count * Placement.slot_capacity)
                     <= Storage::capacity,
                 "the section does not fit the medium");
-  static_assert(Section.base % Storage::write_granularity == 0);
-  static_assert(Section.slot_capacity % Storage::write_granularity == 0);
+  static_assert(Placement.base % Storage::write_granularity == 0);
+  static_assert(Placement.slot_capacity % Storage::write_granularity == 0);
   static_assert(body_bytes % Storage::write_granularity == 0
                     && record_footer_size % Storage::write_granularity == 0,
                 "the medium cannot write the body and the footer separately, "
@@ -99,7 +100,7 @@ class store {
   // A slot, not a record: a firmware that declared more parameters may have
   // written a longer record, and refusing to read it would silently discard
   // the settings of anyone downgrading.
-  std::array<std::byte, Section.slot_capacity> buffer_{};
+  std::array<std::byte, Placement.slot_capacity> buffer_{};
 
   std::size_t next_slot_ = 0;
   std::uint32_t last_seq_ = 0;
@@ -146,7 +147,7 @@ public:
         continue;
       }
 
-      auto const report = decode_record(*stored, Section.magic, values);
+      auto const report = decode_record(*stored, Placement.magic, values);
       if (!report.valid) continue;
 
       result.record = report;
@@ -178,18 +179,18 @@ public:
     auto const seq = last_seq_ + 1;
     auto const record = std::span{buffer_}.first(record_bytes);
 
-    encode_record(record, values, Section.magic, seq);
+    encode_record(record, values, Placement.magic, seq);
 
     // Spent whether or not the attempt succeeds. A failed save can still
     // have landed — the record wrote and only the read-back failed — and
     // reusing the number would leave two records claiming one generation,
     // where a load picks by slot order rather than by age. The one
     // exception is an erase that was refused, below.
-    next_slot_ = (slot + 1) % Section.slot_count;
+    next_slot_ = (slot + 1) % Placement.slot_count;
     last_seq_ = seq;
 
     if constexpr (Storage::needs_erase) {
-      if (slot % Section.slots_per_block == 0) {
+      if (slot % Placement.slots_per_block == 0) {
         auto const erased = storage_.erase(address_of(slot), block_bytes);
         if (!erased) {
           // Nothing was written, so there is no debris to move past, and
@@ -216,7 +217,7 @@ public:
       return fail(save_stage::verify, back.error());
     }
 
-    auto const header = decode_header(record, Section.magic);
+    auto const header = decode_header(record, Placement.magic);
     if (!header
         || header->seq != seq
         || detail::get_u32(record, record_bytes - 4)
@@ -233,7 +234,7 @@ public:
   constexpr auto wipe() -> std::expected<void, error_type>
   {
     for (auto block = 0uz; block < block_count; ++block) {
-      auto const at = address_of(block * Section.slots_per_block);
+      auto const at = address_of(block * Placement.slots_per_block);
       if (auto const erased = storage_.erase(at, block_bytes); !erased) {
         return erased;
       }
@@ -259,7 +260,7 @@ private:
       -> addr_type
   {
     return static_cast<addr_type>(
-        Section.base + (slot * Section.slot_capacity) + offset);
+        Placement.base + (slot * Placement.slot_capacity) + offset);
   }
 
   // Every way out of a save that is not success. What the failure left on
@@ -290,7 +291,7 @@ private:
   // Which slots have been looked at. Sized by the section rather than by a
   // machine word, so how many slots a section may have is the medium's
   // business and not this loop's.
-  using slot_set = std::bitset<Section.slot_count>;
+  using slot_set = std::bitset<Placement.slot_count>;
 
   // What one pass over the section found: the sequence number of every
   // slot that holds a candidate, and whether the medium refused a read on
@@ -298,7 +299,7 @@ private:
   // nothing in it to try — which is what leaves the search below a single
   // predicate.
   struct slot_map {
-    std::array<std::uint32_t, Section.slot_count> seq{};
+    std::array<std::uint32_t, Placement.slot_count> seq{};
     slot_set tried;
     bool read_failed = false;
   };
@@ -314,7 +315,7 @@ private:
   {
     slot_map map;
 
-    for (auto slot = 0uz; slot < Section.slot_count; ++slot) {
+    for (auto slot = 0uz; slot < Placement.slot_count; ++slot) {
       auto const head = std::span{buffer_}.first(record_header_size);
       if (!storage_.read(address_of(slot), head)) {
         map.read_failed = true;
@@ -322,8 +323,8 @@ private:
         continue;
       }
 
-      auto const header = decode_header(head, Section.magic);
-      if (!header || record_size(header->count) > Section.slot_capacity) {
+      auto const header = decode_header(head, Placement.magic);
+      if (!header || record_size(header->count) > Placement.slot_capacity) {
         map.tried.set(slot);
         continue;
       }
@@ -343,7 +344,7 @@ private:
   {
     std::optional<candidate> best;
 
-    for (auto slot = 0uz; slot < Section.slot_count; ++slot) {
+    for (auto slot = 0uz; slot < Placement.slot_count; ++slot) {
       if (map.tried.test(slot)) continue;
 
       if (!best || seq_newer(map.seq[slot], best->seq)) {
@@ -362,7 +363,7 @@ private:
   constexpr void adopt(std::size_t slot, std::uint32_t seq)
   {
     last_seq_ = seq;
-    next_slot_ = (slot + 1) % Section.slot_count;
+    next_slot_ = (slot + 1) % Placement.slot_count;
     surveyed_ = true;
   }
 
@@ -390,11 +391,11 @@ private:
       return next_slot_;
     }
     else {
-      if (next_slot_ % Section.slots_per_block == 0) return next_slot_;
+      if (next_slot_ % Placement.slots_per_block == 0) return next_slot_;
       if (slot_is_erased(next_slot_)) return next_slot_;
 
-      auto const block = next_slot_ / Section.slots_per_block;
-      return ((block + 1) * Section.slots_per_block) % Section.slot_count;
+      auto const block = next_slot_ / Placement.slots_per_block;
+      return ((block + 1) * Placement.slots_per_block) % Placement.slot_count;
     }
   }
 
@@ -432,11 +433,11 @@ private:
       return std::unexpected(no_record::unreadable);
     }
 
-    auto const header = decode_header(head, Section.magic);
+    auto const header = decode_header(head, Placement.magic);
     if (!header) return std::unexpected(no_record::debris);
 
     auto const stored = record_size(header->count);
-    if (stored > Section.slot_capacity) {
+    if (stored > Placement.slot_capacity) {
       return std::unexpected(no_record::debris);
     }
 

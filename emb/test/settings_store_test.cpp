@@ -40,21 +40,21 @@ inline constexpr auto next_schema =
 
 // FRAM: byte writes, no erase, two slots.
 using fram = test::block_storage<512>;
-inline constexpr section fram_section{.magic = magic,
-                                      .base = 0,
-                                      .slot_capacity = 128,
-                                      .slot_count = 2};
-using fram_store = store<schema, fram, fram_section>;
+inline constexpr placement fram_placement{.magic = magic,
+                                          .base = 0,
+                                          .slot_capacity = 128,
+                                          .slot_count = 2};
+using fram_store = store<schema, fram, fram_placement>;
 
 // Internal flash: four-byte writes, an erased target required, two erase
 // blocks of two slots each.
 using flash = test::block_storage<1024, 4, true, 128>;
-inline constexpr section flash_section{.magic = magic,
-                                       .base = 0,
-                                       .slot_capacity = 64,
-                                       .slot_count = 4,
-                                       .slots_per_block = 2};
-using flash_store = store<schema, flash, flash_section>;
+inline constexpr placement flash_placement{.magic = magic,
+                                           .base = 0,
+                                           .slot_capacity = 64,
+                                           .slot_count = 4,
+                                           .slots_per_block = 2};
+using flash_store = store<schema, flash, flash_placement>;
 
 // -- An untouched medium --
 
@@ -244,7 +244,7 @@ consteval bool test_a_corrupted_record_falls_back_to_the_previous_one()
   if (!store.save(values)) return false; // slot 1, seq 2
 
   // A bit rots in the newest record.
-  memory.bytes()[fram_section.slot_capacity + record_header_size + 2] ^=
+  memory.bytes()[fram_placement.slot_capacity + record_header_size + 2] ^=
       std::byte{0x08};
 
   fram_store restarted{memory};
@@ -470,12 +470,12 @@ consteval bool test_a_restart_onto_debris_with_no_header()
 // Blocks deep enough to hold a hole: a record, the slot a save spent
 // without writing to it, and the debris of the save after that.
 using deep = test::block_storage<2048, 4, true, 256>;
-inline constexpr section deep_section{.magic = magic,
-                                      .base = 0,
-                                      .slot_capacity = 64,
-                                      .slot_count = 8,
-                                      .slots_per_block = 4};
-using deep_store = store<schema, deep, deep_section>;
+inline constexpr placement deep_placement{.magic = magic,
+                                          .base = 0,
+                                          .slot_capacity = 64,
+                                          .slot_count = 8,
+                                          .slots_per_block = 4};
+using deep_store = store<schema, deep, deep_placement>;
 
 // A failed save spends its slot whether or not the medium took a byte of
 // it, so the debris of the next one need not sit right behind the record:
@@ -565,7 +565,7 @@ consteval bool test_a_lap_old_header_that_rotted_newer()
   }
 
   // Bit 15 of the sequence number in slot 2: seq 3 now reads as 32771.
-  memory.bytes()[2 * flash_section.slot_capacity + 9] |= std::byte{0x80};
+  memory.bytes()[2 * flash_placement.slot_capacity + 9] |= std::byte{0x80};
 
   flash_store store{memory};
   image<schema> restored;
@@ -691,12 +691,12 @@ consteval bool test_flash_round_trip()
 // A section with more slots than a word has bits: what a 128 KiB erase
 // block looks like when slots are a kilobyte.
 using wide = test::block_storage<4096, 4, true, 1024>;
-inline constexpr section wide_section{.magic = magic,
-                                      .base = 0,
-                                      .slot_capacity = 64,
-                                      .slot_count = 64,
-                                      .slots_per_block = 16};
-using wide_store = store<schema, wide, wide_section>;
+inline constexpr placement wide_placement{.magic = magic,
+                                          .base = 0,
+                                          .slot_capacity = 64,
+                                          .slot_count = 64,
+                                          .slots_per_block = 16};
+using wide_store = store<schema, wide, wide_placement>;
 
 consteval bool test_more_slots_than_a_word_has_bits()
 {
@@ -745,7 +745,7 @@ consteval bool test_a_run_of_corrupt_records_costs_one_pass()
   // The five newest records lose their crc. Their headers stay candidates,
   // so the search has to reach past all five.
   for (auto slot = 5uz; slot <= 9uz; ++slot) {
-    auto const crc = (slot * wide_section.slot_capacity)
+    auto const crc = (slot * wide_placement.slot_capacity)
                    + record_size(schema_t<schema>::count)
                    - 1;
     memory.bytes()[crc] ^= std::byte{0xFF};
@@ -767,7 +767,7 @@ consteval bool test_a_run_of_corrupt_records_costs_one_pass()
 
   // One header from every slot, then two reads for each of the six
   // candidates tried: the header again and the record behind it.
-  if (memory.read_calls != wide_section.slot_count + (2 * 6)) return false;
+  if (memory.read_calls != wide_placement.slot_count + (2 * 6)) return false;
 
   return true;
 }
@@ -832,7 +832,7 @@ consteval bool test_a_record_written_by_a_richer_firmware_still_loads()
     if (!values.set<"motor.p">(std::int32_t{6})) return false;
     if (!values.set<"hall.poll_num">(std::int32_t{2})) return false;
 
-    store<next_schema, fram, fram_section> newer{memory};
+    store<next_schema, fram, fram_placement> newer{memory};
     if (!newer.save(values)) return false;
   }
 
