@@ -15,14 +15,18 @@ namespace settings {
 
 namespace detail {
 
+// Returns the mask in which only the bit of `g` is set, i.e. bit `g.value`.
+// The behavior is undefined if `g.value >= 32`.
 constexpr std::uint32_t group_bit(group_id g)
 {
   return std::uint32_t{1} << g.value;
 }
 
-// Policies are ordered by how much a caller must be able to promise before
-// a change may take effect, so "everything up to this policy" is a prefix
-// of the masks.
+// Returns the index of the mask that holds the marks under `p`, i.e. the
+// value of `p`. `basic_pending_changes` relies on the enumerators of
+// `apply_policy` being ordered from the least to the most demanding, so that
+// the policies up to `p` index a prefix of the masks: reordering them breaks
+// it, and adding one needs another mask.
 constexpr std::size_t policy_index(apply_policy p)
 {
   return static_cast<std::size_t>(p);
@@ -30,24 +34,28 @@ constexpr std::size_t policy_index(apply_policy p)
 
 } // namespace detail
 
-// Which groups have changes waiting, split by the policy that governs when
-// they may be applied.
+// The class template `basic_pending_changes` records which groups have
+// changes not applied yet, in one mask of groups per apply policy. A group is
+// marked under the apply policy of a change after the change has been
+// written to the image; the owner of the state derived from the group calls
+// `take` and, if it returns `true`, rebuilds that state from the image.
 //
-// A writer — the task that services a protocol — marks a group after it has
-// updated the image. The owner of the derived state asks for what it can
-// honour right now, which clears those bits in the same operation: a change
-// that lands between the query and the reconfiguration sets the bit again
-// and is applied on the next round. Testing first and clearing afterwards
-// would drop exactly that change.
-//
-// The word type is a template parameter so the bit arithmetic can be tested
-// in constant expressions, where std::atomic cannot go. Production uses the
-// default; nothing else about the class changes.
+// `Word` must provide `load`, `fetch_or` and `fetch_and` as
+// `std::atomic<std::uint32_t>` does, and hold zero when value-initialized.
+// With the default `Word`, which is lock-free, every member function may be
+// called concurrently from interrupt handlers and tasks, and what precedes a
+// `mark` is visible to a caller that observes the mark. `take`, `changed`,
+// `any` and `clear` access the masks one at a time and are not atomic as a
+// whole. With a non-atomic `Word`, e.g. the plain word that lets tests run
+// in constant expressions, concurrent calls are data races.
 template<typename Word = std::atomic<std::uint32_t>>
 class basic_pending_changes {
   std::array<Word, 3> masks_{};
 
 public:
+  // Number of groups the masks can track. The behavior of `mark`, `take` and
+  // `changed` is undefined for a group whose `value` is not less than
+  // `group_limit`.
   static constexpr std::size_t group_limit = 32;
 
   constexpr void mark(group_id group, apply_policy apply)
@@ -61,31 +69,27 @@ public:
     mark(c.group, c.apply);
   }
 
-  // Marks the group of `c` under its policy if `c` holds a change, i.e. what
-  // a write to the image reports; otherwise there are no effects.
+  // Marks the group of `*c` under its apply policy if `c` contains a change,
+  // e.g. the result of a write to the image that changed a value; otherwise
+  // there are no effects.
   constexpr void mark(std::optional<change> c)
   {
     if (c) mark(*c);
   }
 
-  // Whether the group has changes this caller may apply, clearing exactly
-  // those. `up_to` is what the caller can honour: a running drive takes
-  // apply_policy::live, one in a state where reconfiguration is safe takes
-  // on_safe_state and gets both.
+  // Clears the marks of `group` under `up_to` and the less demanding apply
+  // policies, and returns whether any of them was set. `up_to` is the most
+  // demanding policy the caller can honour at the call. If `group` also has
+  // a mark under a more demanding policy, returns `false` and there are no
+  // effects.
   //
-  // All or nothing. A group is reconfigured from its whole configuration,
-  // so a group that is also waiting on something stricter is refused
-  // entirely — taking the live half would rebuild the group from values
-  // that include the half meant to wait. The refusal lives here rather than
-  // in the caller because a caller that forgets it gets no diagnostic, only
-  // a phase swap in a spinning machine.
-  //
-  // What this cannot promise: a stricter change marked after the refusal
-  // was decided is still in the image by the time the caller reads its
-  // configuration. Narrowing that window inside these masks does not close
-  // it — the take and the reading of the configuration would have to be one
-  // operation. Where it matters, keep the marking and the applying out of
-  // each other's way: in the inverter both run as tasks in the same loop.
+  // A change marked after `take` has cleared its mark stays marked for the
+  // next `take`, even if the caller has yet to read the image; testing the
+  // marks and clearing them in separate steps would lose it. A change under a
+  // more demanding policy that is not marked yet when `take` checks the marks
+  // can be in the image the caller reads, and its mark stays. To exclude
+  // that, writes to the parameters of `group` must not run between `take` and
+  // the caller's reading of the image.
   constexpr bool take(group_id group, apply_policy up_to)
   {
     if (blocked_above(group, up_to)) return false;
@@ -99,7 +103,10 @@ public:
     return taken;
   }
 
-  // Non-destructive, for reporting: what an operator is told is waiting.
+  // Checks whether `group` has a mark under `up_to` or a less demanding apply
+  // policy. Unlike `take`, clears nothing and ignores marks under more
+  // demanding policies, so it can return `true` for a group that `take`
+  // refuses.
   constexpr bool changed(group_id group, apply_policy up_to) const
   {
     auto const bit = detail::group_bit(group);
@@ -108,19 +115,22 @@ public:
     return false;
   }
 
+  // Returns the groups that have a mark under `apply`, as a mask in which bit
+  // n stands for the group whose `value` is n.
   constexpr std::uint32_t mask(apply_policy apply) const
   {
     return masks_[detail::policy_index(apply)].load(std::memory_order_acquire);
   }
 
-  // Set when a parameter that cannot be applied without a restart has been
-  // changed, and never cleared: the condition ends with the restart.
+  // Checks whether any group has a mark under `apply_policy::on_restart`.
+  // Such a mark stays until `clear()` or a `take` whose `up_to` is
+  // `apply_policy::on_restart` removes it.
   constexpr bool restart_required() const
   {
     return mask(apply_policy::on_restart) != 0;
   }
 
-  // Checks whether a change is waiting in any group, whatever its policy.
+  // Checks whether any group has a mark under any apply policy.
   constexpr bool any() const
   {
     for (auto const& m : masks_)
@@ -135,7 +145,8 @@ public:
   }
 
 private:
-  // Whether the group is waiting on something this caller may not apply.
+  // Checks whether `group` has a mark under an apply policy more demanding
+  // than `up_to`.
   constexpr bool blocked_above(group_id group, apply_policy up_to) const
   {
     auto const bit = detail::group_bit(group);
@@ -145,14 +156,16 @@ private:
   }
 };
 
+// `pending_changes` is `basic_pending_changes` with the default `Word`,
+// `std::atomic<std::uint32_t>`.
 using pending_changes = basic_pending_changes<>;
 
 static_assert(std::atomic<std::uint32_t>::is_always_lock_free,
               "pending_changes is shared between an interrupt and a task");
 
-// Every group must fit the masks. The schema cannot check this itself — it
-// knows nothing of how changes are tracked — so `section` asserts it, where
-// the two meet.
+// Checks whether `basic_pending_changes` can track the group of every
+// parameter of `Schema`, i.e. whether every group's `value` is less than
+// `pending_changes::group_limit`.
 template<auto& Schema>
 consteval bool groups_fit()
 {

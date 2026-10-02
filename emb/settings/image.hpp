@@ -13,27 +13,38 @@
 namespace emb {
 namespace settings {
 
-// Why a value could not be read or written through the erased interface.
-// Storage failures are not here: they belong to the store, which is the
-// only layer that talks to a medium.
+// The scoped enumeration `error` defines the reasons for which the members of
+// `image` refuse to read or write a parameter.
 enum class error : std::uint8_t {
+  // Index that names no parameter, returned by `image::get_at`,
+  // `image::set_at` and `image::restore_default_at`.
   unknown_parameter,
+  // Write by index to a parameter that is not `writable`, returned by
+  // `image::set_at` and `image::restore_default_at`.
   read_only,
+  // `value` holding another alternative than the scalar type of the
+  // parameter, returned by `image::set_at`.
   type_mismatch,
+  // Value outside the bounds of the parameter, or a NaN, returned by
+  // `image::set` and `image::set_at`.
   out_of_range,
 };
 
-// The working copy of every parameter: one four-byte cell per declaration,
-// in declaration order, so an index addresses the same value here, in the
-// schema and in a stored record.
+// The class template `image` holds the working copy of the values of the
+// parameters `Schema` declares: one cell per parameter, in declaration order,
+// so that the index of a parameter in `Schema.parameters` addresses its cell.
+// On construction, every cell holds the default of its parameter.
 //
-// A write that is accepted reports the `change` it made, or `std::nullopt`
-// if the cell already held the value: writing what is already there leaves
-// nothing to apply.
+// A write through `set`, `restore_default`, `set_at` or `restore_default_at`
+// that is accepted returns the `change` it made, i.e. the group and the apply
+// policy of the parameter, or `std::nullopt` if the cell already held the
+// same encoding. A write that is refused returns an `error` and leaves the
+// cell as it was.
 //
-// Plain data on purpose. It is not a synchronization primitive and holds no
-// atomics — that is what keeps it usable in constant expressions, and the
-// contexts that share one are the application's business, not the library's.
+// An `image` holds no atomics and takes no locks: contexts that share one,
+// e.g. a task and an interrupt handler, must keep a write from overlapping
+// any other access to it themselves. An `image` is usable in constant
+// expressions.
 template<auto& Schema>
 class image {
   using schema_type = schema_t<Schema>;
@@ -49,11 +60,6 @@ public:
   }
 
   // -- Access by name --
-  //
-  // The application's own path: the static type is preserved, and
-  // `writable` is not consulted. A parameter closed to a protocol may still
-  // be written by the code that owns it — a calibration result, a value
-  // recorded in production.
 
   template<fixed_string Name>
   constexpr typename parameter<Schema, Name>::type get() const
@@ -62,6 +68,10 @@ public:
     return from_raw<typename param_type::type>(cells_[param_type::index]);
   }
 
+  // Writes `v` to the parameter `Name` whether or not it is `writable`: the
+  // code that owns a parameter closed to protocols, e.g. a calibration result
+  // or a value recorded in production, writes it here. Returns
+  // `error::out_of_range` if `v` is outside the bounds of the parameter.
   template<fixed_string Name>
   constexpr std::expected<std::optional<change>, error>
   set(typename parameter<Schema, Name>::type const& v)
@@ -70,6 +80,7 @@ public:
     return write(param_type::index, to_raw(v));
   }
 
+  // Writes the default of the parameter `Name`, as `set` does.
   template<fixed_string Name>
   constexpr std::expected<std::optional<change>, error> restore_default()
   {
@@ -78,12 +89,9 @@ public:
   }
 
   // -- Access by index --
-  //
-  // The path a transport takes: nothing static is known, so every rule the
-  // schema states is enforced — including `writable`, which the by-name
-  // path above deliberately ignores. Spelled apart from get/set for that
-  // reason: same operation, different promise.
 
+  // Returns the value of the parameter at `index`, or
+  // `error::unknown_parameter` if `index >= count`.
   constexpr std::expected<value, error> get_at(std::size_t index) const
   {
     if (index >= count) {
@@ -92,6 +100,12 @@ public:
     return to_value(Schema.parameters[index].type, cells_[index]);
   }
 
+  // Writes `v` to the parameter at `index`. Returns
+  // `error::unknown_parameter` if `index >= count`, otherwise
+  // `error::read_only` if the parameter is not `writable`, otherwise
+  // `error::type_mismatch` if `v` holds another alternative than the scalar
+  // type of the parameter, otherwise `error::out_of_range` if `v` is outside
+  // the bounds of the parameter.
   constexpr std::expected<std::optional<change>, error>
   set_at(std::size_t index, value const& v)
   {
@@ -110,6 +124,10 @@ public:
     return write(index, to_raw(v));
   }
 
+  // Writes the default of the parameter at `index`. Returns
+  // `error::unknown_parameter` if `index >= count`, otherwise
+  // `error::read_only` if the parameter is not `writable`: what a protocol may
+  // not write, it may not reset either.
   constexpr std::expected<std::optional<change>, error>
   restore_default_at(std::size_t index)
   {
@@ -125,6 +143,8 @@ public:
     return write(index, desc.def);
   }
 
+  // Assigns every parameter its default, whether or not it is `writable`, and
+  // reports no change.
   constexpr void restore_defaults()
   {
     for (auto i = 0uz; i < count; ++i)
@@ -132,26 +152,26 @@ public:
   }
 
   // -- Cells --
-  //
-  // What the store reads and fills. Both take an index the caller has
-  // already checked; a record loader looks it up in the schema, and a
-  // record writer walks the whole image.
 
+  // Returns the cell of the parameter at `index`. The behavior is undefined
+  // if `index >= count`.
   constexpr raw_value cell(std::size_t index) const
   {
     return cells_[index];
   }
 
-  // Named apart from set_at, and with a verb of its own, because it
-  // promises less: no validation and no change reported. A loader checks a
-  // cell against its descriptor before accepting it, and a load is not a
-  // change to apply — it is where the values came from.
+  // Assigns `cell` to the parameter at `index` as it is, i.e. without
+  // checking it against the bounds of the parameter, and reports no change.
+  // The behavior is undefined if `index >= count`.
   constexpr void assign_cell(std::size_t index, raw_value cell)
   {
     cells_[index] = cell;
   }
 
 private:
+  // Returns `error::out_of_range` if `cell` is outside the bounds of the
+  // parameter at `index`; otherwise writes it there. The behavior is
+  // undefined if `index >= count`.
   constexpr std::expected<std::optional<change>, error> write(std::size_t index,
                                                               raw_value cell)
   {

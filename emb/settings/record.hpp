@@ -12,52 +12,61 @@
 namespace emb {
 namespace settings {
 
-// The stored form of a whole section: a self-describing record, laid out
-// so that it can be committed atomically on any medium.
+// Version of the record layout described below, stored in the `format`
+// field of every record. `decode_header`, and with it `decode_record`,
+// rejects a record of any other version.
 //
-//   0x00   4   magic       whose section this is
-//   0x04   2   format      layout version of the record itself
-//   0x06   2   count       cells that follow
-//   0x08   4   seq         write counter, compared modulo 2^32
-//   0x0C   4   schema_id   fingerprint of the identifiers that wrote it
-//   0x10  8N   cells       { u32 id; u32 value }
-//   ...    4   magic       repeated, so a torn record is visible at a glance
-//   ...    4   crc32       over everything before it
+// A record is the stored form of an image: a header, one cell for each
+// parameter of the schema it was written with, and a footer. All fields are
+// little-endian, whatever the byte order of the host:
 //
-// Cells carry identifiers, not positions, so adding, removing or reordering
-// parameters is not a breaking change and the record needs no schema
-// version: the directory is the migration mechanism. The identifier mixes
-// the parameter's type in, so retyping under the same name simply stops
-// matching and the parameter comes up with its default.
+//   0x00       4  magic      identifies the section
+//   0x04       2  format     version of the layout, `record_format`
+//   0x06       2  count      number of cells, N
+//   0x08       4  seq        sequence number, compared by `seq_newer`
+//   0x0C       4  schema_id  `schema_id` of the writer's schema
+//   0x10      8N  cells      N times { u32 id; u32 value }
+//   0x10+8N    4  magic      repeated
+//   0x14+8N    4  crc32      `detail::crc32` of all bytes before it
 //
-// Header and footer are sized so that both the body and the footer are
-// multiples of eight bytes: every medium's write granularity up to eight
-// divides them, and a store can therefore write the body first and the
-// footer last on all of them. That order is what makes a record atomic —
-// an interrupted write leaves no valid crc, and the previous record stands
-// untouched.
+// Each cell is stored with the identifier of its parameter, and cells are
+// matched to parameters by identifier, not by position: adding, removing or
+// reordering parameters leaves the format as it is, and a record written
+// with another schema still loads cell by cell. The identifier is derived
+// from the name and the `value_type` of the parameter, so a parameter that
+// is renamed or changes its `value_type` no longer matches its old cell and
+// loads with its default value.
 //
-// This header knows nothing about media or slots. It turns an image into
-// bytes and bytes back into an image; where those bytes live is the store's
-// business.
-
+// The body, i.e. the header and the cells (`record_body_size` bytes), and
+// the footer (`record_footer_size` bytes) are both multiples of eight bytes,
+// so a medium whose write granularity divides eight can write either one
+// alone. A store writes the body first and the footer last, never the other
+// way round: the footer commits the record, and until it is complete the
+// record fails the checks of `decode_record`.
 inline constexpr std::uint16_t record_format = 1;
 
+// Sizes, in bytes, of the header of a record, of one cell with its
+// identifier, and of the footer.
 inline constexpr std::size_t record_header_size = 16;
 inline constexpr std::size_t record_cell_size = 8;
 inline constexpr std::size_t record_footer_size = 8;
 
-// Header and cells: what a store writes first.
+// Returns the size, in bytes, of the body of a record of `count` cells,
+// i.e. of its header and cells: the part a store writes before the footer.
 constexpr std::size_t record_body_size(std::size_t count)
 {
   return record_header_size + count * record_cell_size;
 }
 
+// Returns the size, in bytes, of a whole record of `count` cells, i.e.
+// `record_body_size(count) + record_footer_size`.
 constexpr std::size_t record_size(std::size_t count)
 {
   return record_body_size(count) + record_footer_size;
 }
 
+// Structure holding the fields of the header of a record, as decoded by
+// `decode_header`.
 struct record_header {
   std::uint32_t magic;
   std::uint16_t format;
@@ -66,16 +75,23 @@ struct record_header {
   std::uint32_t schema_id;
 };
 
-// Which of two records is the later one. Modular, so the counter may wrap
-// without a rollover ever being mistaken for an ancient record.
+// Checks whether the sequence number `a` is newer than `b`, i.e. whether
+// `a - b`, taken modulo 2^32, lies in [1, 2^31). The comparison is modular,
+// so the counter may wrap: zero is newer than `0xFFFFFFFF`.
+//
+// The relation is not an ordering: it is not transitive, and of two numbers
+// 2^31 apart neither is newer than the other. It cannot serve as the
+// comparator of a sort or of a standard min/max algorithm.
 constexpr bool seq_newer(std::uint32_t a, std::uint32_t b)
 {
   return static_cast<std::int32_t>(a - b) > 0;
 }
 
-// A fingerprint of the declared identifiers, in order. Not a compatibility
-// gate — the directory handles that — but it tells an operator whether a
-// record was written by this build of the schema or another one.
+// Returns the fingerprint of `Schema` that a record stores in its
+// `schema_id` field: the 32-bit FNV-1a hash of the identifiers of the
+// parameters in declaration order, each taken as four little-endian bytes.
+// A record whose fingerprint differs still loads; `decode_record` reports
+// the difference in `load_report::schema_matched`.
 template<auto& Schema>
 consteval std::uint32_t schema_id()
 {
@@ -88,22 +104,30 @@ consteval std::uint32_t schema_id()
   return h;
 }
 
-// What a decode found. Every count is a fact an operator may need: "the
-// parameter did not read" and "the parameter is like that" are different
-// things, and today's stack cannot tell them apart.
+// Structure holding the outcome of `decode_record`. If `valid` is `false`,
+// every other member holds its default value.
+//
+// Each cell of the record counts in exactly one of `loaded`, `unknown` and
+// `rejected`. A parameter counts in `missing` only if the record has no cell
+// for it: one whose cell was rejected does not.
 struct load_report {
-  bool valid = false;          // a well-formed record was parsed
-  bool schema_matched = false; // written by this build of the schema
+  bool valid = false;          // whether a whole record was decoded
+  bool schema_matched = false; // stored `schema_id` is the schema's
   std::uint32_t seq = 0;
-  std::uint16_t stored = 0;   // cells the record carried
+  std::uint16_t stored = 0;   // cells the record carries
   std::uint16_t loaded = 0;   // cells accepted into the image
-  std::uint16_t unknown = 0;  // identifiers this firmware no longer has
-  std::uint16_t rejected = 0; // outside the range their descriptor allows
-  std::uint16_t missing = 0;  // parameters the record did not carry
+  std::uint16_t unknown = 0;  // cells whose identifier is not in the schema
+  std::uint16_t rejected = 0; // cells outside the range their descriptor allows
+  std::uint16_t missing = 0;  // parameters the record does not carry
 };
 
 namespace detail {
 
+// Writes `v` into, or reads a value from, the two (`put_u16`, `get_u16`) or
+// four (`put_u32`, `get_u32`) bytes of the span starting at index `at`,
+// least significant byte first, whatever the byte order of the host. The
+// bounds are not checked: the behavior is undefined if those bytes do not
+// all lie within the span.
 constexpr void put_u16(std::span<std::byte> out,
                        std::size_t at,
                        std::uint16_t v)
@@ -135,9 +159,11 @@ constexpr std::uint32_t get_u32(std::span<std::byte const> in, std::size_t at)
   return v;
 }
 
-// The ordinary reflected CRC-32, computed a bit at a time: a table would
-// cost a kilobyte of flash to save microseconds on an operation that
-// happens twice a boot.
+// Computes the CRC-32 of `data` in the variant of zlib and Ethernet
+// (CRC-32/ISO-HDLC): polynomial `0x04C11DB7`, input and output reflected
+// (the reflected polynomial is `0xEDB88320`), initial value `0xFFFFFFFF`,
+// final XOR with `0xFFFFFFFF`. The check value, i.e. the CRC of the ASCII
+// string `"123456789"`, is `0xCBF43926`.
 constexpr std::uint32_t crc32(std::span<std::byte const> data)
 {
   std::uint32_t crc = 0xFFFFFFFFu;
@@ -151,9 +177,14 @@ constexpr std::uint32_t crc32(std::span<std::byte const> data)
 
 } // namespace detail
 
-// Lays the whole record out, crc included, and returns its size; zero if
-// the buffer is too small. A store writes the first record_body_size()
-// bytes, then the rest — never the other way round.
+// Encodes `values` as a record at the beginning of `dest`, with `magic` in
+// both magic fields and `seq` as the sequence number, and returns the size
+// of the record, i.e. `record_size(image<Schema>::count)`. If `dest` is
+// shorter than that, returns zero and leaves `dest` unchanged. The bytes of
+// `dest` past the record are not written.
+//
+// A store writes the body of the record to the medium before its footer;
+// see `record_format`.
 template<auto& Schema>
 constexpr std::size_t encode_record(std::span<std::byte> dest,
                                     image<Schema> const& values,
@@ -183,9 +214,14 @@ constexpr std::size_t encode_record(std::span<std::byte> dest,
   return size;
 }
 
-// What a slot scan reads: enough to tell whether a slot holds a record of
-// this section at all, and how recent it is. Says nothing about integrity —
-// only a full decode does.
+// Decodes the header of a record from the first `record_header_size` bytes
+// of `src` and returns it, or returns `std::nullopt` if `src` is shorter
+// than that, if the stored magic differs from `magic`, or if the stored
+// format differs from `record_format`.
+//
+// Checks nothing else: neither `count` nor the footer nor the CRC. A header
+// it returns may belong to a torn or corrupted record, which only
+// `decode_record` detects.
 constexpr std::optional<record_header>
 decode_header(std::span<std::byte const> src, std::uint32_t magic)
 {
@@ -202,13 +238,18 @@ decode_header(std::span<std::byte const> src, std::uint32_t magic)
   return header;
 }
 
-// Parses a record into the image. Nothing is written unless the record is
-// whole: an invalid one leaves the image exactly as it was, so a store can
-// try the other slot and only then fall back to defaults.
+// Decodes the record at the beginning of `src` into `values` and returns a
+// `load_report` of the outcome. Bytes of `src` past the record are ignored.
 //
-// A valid record starts from the defaults, so a parameter the record does
-// not carry — one this firmware added — comes up defined rather than
-// keeping whatever the image held.
+// The record is whole if `decode_header` accepts it for `magic`, `src`
+// holds the `count` cells the header declares and the footer, the repeated
+// magic equals `magic`, and the CRC matches. If the record is not whole,
+// returns a report whose `valid` is `false` and leaves `values` unchanged.
+// Otherwise, sets every parameter in `values` to its default value, then
+// assigns each cell to the parameter of `Schema` with its identifier, if
+// there is one and the value lies in that parameter's range as checked by
+// `in_range`. A parameter whose cell is rejected or missing thus holds its
+// default value.
 template<auto& Schema>
 constexpr load_report decode_record(std::span<std::byte const> src,
                                     std::uint32_t magic,

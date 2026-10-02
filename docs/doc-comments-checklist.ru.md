@@ -105,6 +105,54 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `test_any`, `test_all`, `test` (`runtime::` и шаблонные)
   - [x] `clear_w1`, `clear_w0` (`runtime::` и шаблонные)
   - [x] `bits`, `modify`
+- [x] `emb/settings/image.hpp`
+  - [x] `error`
+  - [x] `image`
+- [x] `emb/settings/param.hpp`
+  - [x] `apply_policy`
+  - [x] `group_id`, `change`, `descriptor`
+  - [x] `detail::parameter_default_outside_range`,
+    `detail::parameter_min_above_max`
+  - [x] `detail::lowest`, `detail::highest`, `detail::identify`
+  - [x] `options`, `declaration`, `param`
+- [x] `emb/settings/pending.hpp`
+  - [x] `detail::group_bit`, `detail::policy_index`
+  - [x] `basic_pending_changes`, `pending_changes`
+  - [x] `groups_fit`
+- [x] `emb/settings/record.hpp`
+  - [x] `record_format` (с описанием формата записи)
+  - [x] `record_header_size`, `record_cell_size`, `record_footer_size`
+  - [x] `record_body_size`, `record_size`
+  - [x] `record_header`
+  - [x] `seq_newer`, `schema_id`
+  - [x] `load_report`
+  - [x] `detail::put_u16`, `detail::put_u32`, `detail::get_u16`,
+    `detail::get_u32`
+  - [x] `detail::crc32`
+  - [x] `encode_record`, `decode_header`, `decode_record`
+- [x] `emb/settings/schema.hpp`
+  - [x] `detail::duplicate_parameter_name`, `detail::parameter_id_collision`
+    (`detail::unknown_parameter_message` без комментария)
+  - [x] `basic_schema`
+  - [x] `make_schema`
+  - [x] `schema_t`, `type_at`
+  - [x] `parameter`
+- [x] `emb/settings/section.hpp`
+  - [x] `section`
+- [x] `emb/settings/store.hpp`
+  - [x] `placement`
+  - [x] `save_stage`, `save_failure`, `load_result`
+  - [x] `store`
+- [x] `emb/settings/value.hpp`
+  - [x] `value_type`
+  - [x] `value`, `raw_value`
+  - [x] `some_value`, `some_wrapped_value`, `some_parameter_type`
+  - [x] `scalar_t`, `type_of` (`detail::scalar_of` и `detail::tag_of` без
+    комментариев: их покрывают псевдоним и переменная)
+  - [x] `held_type`
+  - [x] `to_value`, `from_value`, `to_raw`, `from_raw` (у `to_value` и
+    `to_raw` по две перегрузки, у каждой свой комментарий)
+  - [x] `less_equal`, `in_range`
 - [x] `emb/signal.hpp` — только подключает заголовки `emb/signal/`, сущностей нет
 - [x] `emb/signal/affine.hpp`
   - [x] `affine`
@@ -256,14 +304,6 @@ emblib не попал. Такие файлы помечены «песочни�
 - [ ] `emb/sensor/multiplexed.hpp`
 - [ ] `emb/sensor/signalpath.hpp`
 - [ ] `emb/sensor/singlechannel.hpp`
-- [ ] `emb/settings/image.hpp`
-- [ ] `emb/settings/param.hpp`
-- [ ] `emb/settings/pending.hpp`
-- [ ] `emb/settings/record.hpp`
-- [ ] `emb/settings/schema.hpp`
-- [ ] `emb/settings/section.hpp`
-- [ ] `emb/settings/store.hpp`
-- [ ] `emb/settings/value.hpp`
 - [ ] `emb/spi.hpp`
 - [ ] `emb/three_phase.hpp`
 - [ ] `emb/trouble.hpp`

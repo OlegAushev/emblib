@@ -13,11 +13,12 @@
 namespace emb {
 namespace settings {
 
-// The closed set of scalars a parameter may hold, and the type-erased value
-// transports and diagnostics see. Narrow integers buy nothing in a four-byte
-// cell, and a parameter that needs one is better modelled as int32 than as
-// a fifth code path through every layer. Adding one later widens a concept
-// and breaks nothing.
+// The scoped enumeration `value_type` names the scalar types a parameter may
+// have: `bool`, `std::int32_t`, `std::uint32_t` and `float`. The value of
+// each enumerator is the index of its type among the alternatives of `value`.
+// Changing the value of an enumerator changes the identifier of every
+// parameter of its type, so the cells stored before no longer match and those
+// parameters load their defaults.
 enum class value_type : std::uint8_t {
   boolean,
   int32,
@@ -25,15 +26,17 @@ enum class value_type : std::uint8_t {
   float32,
 };
 
+// Type-erased value of a parameter: the form in which code that does not
+// know the type of the parameter, e.g. a transport, reads and writes it.
 using value = std::variant<bool, std::int32_t, std::uint32_t, float>;
 
-// One storage cell. Every value occupies four bytes whatever its type: the
-// largest scalar, the expedited-SDO payload, and the natural word of both
-// the RAM image and the NVM record. Uniformity is worth the padding — a
-// bool costs three bytes and buys an image that is a plain array and a
-// record whose cells need no per-entry size.
+// Type of a cell, i.e. the four-byte encoding of the value of one parameter,
+// whatever the type of the parameter. `to_raw` defines the encoding.
 using raw_value = std::uint32_t;
 
+// The concept `some_value<T>` is satisfied if and only if `T` is exactly one
+// of the alternatives of `value`: `bool`, `std::int32_t`, `std::uint32_t` or
+// `float`, not cv-qualified and not a reference.
 template<typename T>
 concept some_value = alternative_of<T, value>;
 
@@ -54,11 +57,10 @@ static_assert(std::same_as<std::variant_alternative_t<3, value>, float>);
 //
 // A wrapper, e.g. `emb::units::named_unit` or `emb::clamped`, opts in by
 // declaring a `value_of` overload that argument-dependent lookup finds: in
-// its own namespace or as a friend defined in the class. This header thus
-// sits at the bottom of the dependency graph and knows about no wrapper. Only
-// the scalar of a wrapper is stored: conversions in this header go through
-// `value_of` and the constructor, never through the bytes of an object, so
-// the layout of a wrapper does not matter.
+// its own namespace or as a friend defined in the class. Only the scalar of a
+// wrapper is stored: conversions in this header go through `value_of` and
+// the constructor, never through the bytes of an object, so the layout of a
+// wrapper does not matter.
 template<typename T>
 concept some_wrapped_value = requires { typename T::value_type; }
                           && some_value<typename T::value_type>
@@ -69,6 +71,9 @@ concept some_wrapped_value = requires { typename T::value_type; }
                                } -> std::same_as<typename T::value_type>;
                              };
 
+// The concept `some_parameter_type<T>` is satisfied if and only if `T`
+// satisfies `some_value` or `some_wrapped_value`, i.e. `T` is a type that a
+// parameter may have.
 template<typename T>
 concept some_parameter_type = some_value<T> || some_wrapped_value<T>;
 
@@ -103,14 +108,17 @@ consteval value_type tag_of()
 
 } // namespace detail
 
-// The scalar a parameter type is stored and transported as: itself, or the
-// thing its wrapper is made of.
+// Scalar type in which a parameter of type `T` is stored and transported:
+// `T` itself if `T` satisfies `some_value`, otherwise `T::value_type`.
 template<some_parameter_type T>
 using scalar_t = typename detail::scalar_of<T>::type;
 
+// The `value_type` of a parameter of type `T`, i.e. the enumerator that
+// names `scalar_t<T>`.
 template<some_parameter_type T>
 inline constexpr value_type type_of = detail::tag_of<scalar_t<T>>();
 
+// Returns the `value_type` of the alternative that `v` holds.
 constexpr value_type held_type(value const& v)
 {
   return static_cast<value_type>(v.index());
@@ -118,6 +126,8 @@ constexpr value_type held_type(value const& v)
 
 // -- Typed value <-> type-erased value --
 
+// Returns `v` in type-erased form: a `value` that holds `v` itself if `T`
+// satisfies `some_value`, otherwise `value_of(v)`.
 template<some_parameter_type T>
 constexpr value to_value(T const& v)
 {
@@ -129,8 +139,10 @@ constexpr value to_value(T const& v)
   }
 }
 
-// Returns nullopt when the value holds a different alternative: a protocol
-// write that carries the wrong type must be rejected, not reinterpreted.
+// Converts `v` back to the parameter type `T`. If `v` holds a value of type
+// `scalar_t<T>`, returns `T` constructed from it; otherwise returns
+// `std::nullopt`: a value of another scalar type is neither converted nor
+// reinterpreted.
 template<some_parameter_type T>
 constexpr std::optional<T> from_value(value const& v)
 {
@@ -142,6 +154,9 @@ constexpr std::optional<T> from_value(value const& v)
 
 // -- Typed value <-> storage cell --
 
+// Returns the cell that encodes `v`: `false` and `true` as 0 and 1, any other
+// scalar as its bit pattern, as if by `std::bit_cast<raw_value>`. A wrapper
+// is encoded as its scalar, `value_of(v)`.
 template<some_parameter_type T>
 constexpr raw_value to_raw(T const& v)
 {
@@ -166,11 +181,11 @@ constexpr raw_value to_raw(T const& v)
   }
 }
 
-// Total, unlike from_value: a cell read back from storage may hold anything,
-// and every bit pattern must yield a value rather than a trap. A bool is
-// any-non-zero rather than a bit_cast, so a corrupted cell cannot produce a
-// bool that is neither true nor false; a float may come back NaN, which the
-// range check then rejects.
+// Decodes the cell `r` as a value of the parameter type `T`, i.e. the inverse
+// of `to_raw`. Every bit pattern decodes to a scalar: for `bool`, any non-zero
+// `r` decodes as `true`; for any other scalar, `r` is its bit pattern, so a
+// `float` may decode as NaN. If `T` is a wrapper, returns `T` constructed
+// from that scalar.
 template<some_parameter_type T>
 constexpr T from_raw(raw_value r)
 {
@@ -191,11 +206,15 @@ constexpr T from_raw(raw_value r)
 
 // -- Type-erased value <-> storage cell --
 
+// Returns the cell that encodes `v`, i.e. `to_raw` applied to the scalar that
+// `v` holds.
 constexpr raw_value to_raw(value const& v)
 {
   return v.visit([](auto const& x) { return to_raw(x); });
 }
 
+// Decodes the cell `r` as a value of the scalar type that `type` names, as
+// `from_raw` does, and returns it in type-erased form.
 constexpr value to_value(value_type type, raw_value r)
 {
   switch (type) {
@@ -207,14 +226,16 @@ constexpr value to_value(value_type type, raw_value r)
   return from_raw<std::uint32_t>(r);
 }
 
-// Ordering of cells under their type tag: bit patterns are not ordered, the
-// values they encode are — as int32 the cell 0xFFFFFFFB is -5 and compares
-// below 10, while as a raw word it is above it.
+// Checks whether the cell `a` is less than or equal to the cell `b`, both
+// holding values of the scalar type that `type` names. Cells of
+// `value_type::int32` and `value_type::float32` are compared as the numbers
+// they encode, e.g. as `value_type::int32` the cell `0xFFFFFFFB` encodes -5
+// and compares below the cell of 10; cells of `value_type::boolean` and
+// `value_type::uint32` are compared as unsigned words.
 //
-// A NaN compares false against everything, so a float restored from a
-// corrupted cell falls outside every range — which is what it should do. A
-// bool cell holds 0 or 1; any other word is corruption and compares outside
-// [false, true], even though from_raw would read it as true.
+// Returns `false` if `type` is `value_type::float32` and either cell holds a
+// NaN. A `value_type::boolean` cell other than 0 and 1 compares above the
+// cell of `true`, although `from_raw` decodes it as `true`.
 constexpr bool less_equal(value_type type, raw_value a, raw_value b)
 {
   switch (type) {
@@ -229,6 +250,10 @@ constexpr bool less_equal(value_type type, raw_value a, raw_value b)
   return false;
 }
 
+// Checks whether the cell `v` lies in [`lo`, `hi`], with the cells compared
+// as `less_equal` compares them under `type`. Hence a `value_type::float32`
+// cell that holds a NaN is in no range, and a `value_type::boolean` cell
+// other than 0 and 1 is in no range whose bounds encode `bool` values.
 constexpr bool
 in_range(value_type type, raw_value v, raw_value lo, raw_value hi)
 {
