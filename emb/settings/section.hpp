@@ -28,9 +28,9 @@ namespace settings {
 // `load` replaces the image without marking anything.
 //
 // A section can be constant-initialized and then holds the defaults in its
-// image. The behavior is undefined if `save`, `wipe` or `sequence` is called
-// before `load` has bound the section to a medium; the other member
-// functions may be called before it.
+// image. The behavior is undefined if `save` or `wipe` is called before
+// `load` has bound the section to a medium; the other member functions may
+// be called before it.
 //
 // `Word` is the word type of `pending()`, as in `basic_pending_changes`.
 // Apart from `pending()`, the section is not synchronized: a call to a
@@ -51,6 +51,7 @@ class section {
   image<Schema> stored_;
   basic_pending_changes<Word> pending_;
   load_result last_load_;
+  std::uint32_t sequence_ = 0;
   std::optional<store_type> store_;
 
 public:
@@ -69,6 +70,7 @@ public:
     store_.emplace(medium);
     last_load_ = store_->load(values_);
     stored_ = values_;
+    sequence_ = last_load_.record.seq;
     return last_load_;
   }
 
@@ -79,38 +81,47 @@ public:
 
   // Writes the image to the medium as the next record, as `store::save`
   // does. After a successful write, `unsaved()` is `false` until a value
-  // changes.
+  // changes, and `sequence()` returns the number of the record written.
   constexpr std::expected<void, save_failure<error_type>> save()
   {
     ASSUME(store_.has_value());
-    auto const result = store_->save(values_);
-    if (result) stored_ = values_;
-    return result;
+    return store_->save(values_).transform([this](save_result const& saved) {
+      stored_ = values_;
+      sequence_ = saved.seq;
+    });
   }
 
   // Brings every slot of the section on the medium to the erased state, as
   // `store::wipe` does. The image is left as it is; after a successful wipe,
   // `unsaved()` compares it with the defaults, which the next startup would
-  // load.
+  // load, and `sequence()` returns zero.
   constexpr std::expected<void, error_type> wipe()
   {
     ASSUME(store_.has_value());
     auto const result = store_->wipe();
-    if (result) stored_ = image<Schema>{};
+    if (result) {
+      stored_ = image<Schema>{};
+      sequence_ = 0;
+    }
     return result;
   }
 
-  // Returns the sequence number of the last record that the section numbered
-  // or found on the medium. `load` sets it to the number in the newest record
-  // header, or to zero if there is none or if the medium refused a read and
-  // no record was restored; a successful `wipe` sets it to zero. Every `save`
-  // increments it and numbers its record with the result, whether or not the
-  // write succeeds; after a load that refused a read and restored nothing,
-  // the save first takes it from the headers.
+  // Returns the sequence number of the record that the section last restored
+  // or wrote, or zero if there is none. `load` sets it to the number of the
+  // record restored, or to zero if none was; a successful `save` sets it to
+  // the number of the record written, and a successful `wipe` to zero; a
+  // failed `save` or `wipe` leaves it unchanged. Before the first `load`, it
+  // is zero.
+  //
+  // A save numbers its record from the newest whole record on the medium,
+  // not from `sequence()`: with the number of that record plus the distance,
+  // in slots along the ring, from that record to the slot the save takes, or
+  // with one if the medium holds no whole record. The distance exceeds one by
+  // the number of slots that the save stepped over because they were not
+  // erased, e.g. because they hold the debris of failed saves.
   constexpr std::uint32_t sequence() const
   {
-    ASSUME(store_.has_value());
-    return store_->sequence();
+    return sequence_;
   }
 
   constexpr basic_pending_changes<Word>& pending()

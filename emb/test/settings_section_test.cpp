@@ -143,6 +143,55 @@ consteval bool test_wipe_leaves_the_image()
   return true;
 }
 
+// `sequence()` is the number of a record on the medium: the one a load
+// restored or a save wrote, zero if there is none. A failed save wrote
+// nothing and leaves it, and the save after a load that could not read
+// numbers past the records on the medium, not past zero.
+consteval bool test_sequence_follows_the_medium()
+{
+  fram memory;
+  test_section settings;
+  auto _ = settings.load(memory);
+  if (settings.sequence() != 0) return false;
+
+  for (auto seq = 1u; seq <= 3; ++seq) {
+    if (!settings.save()) return false;
+    if (settings.sequence() != seq) return false;
+  }
+
+  test_section restarted;
+  auto _ = restarted.load(memory);
+  if (restarted.last_load().record.seq != 3) return false;
+  if (restarted.sequence() != 3) return false;
+
+  memory.set_power_budget(0);
+  if (restarted.save()) return false;
+  if (restarted.sequence() != 3) return false;
+
+  memory.set_power_budget(fram::unlimited);
+  if (!restarted.save()) return false;
+  if (restarted.sequence() != 4) return false;
+
+  memory.set_read_fault(true);
+  test_section blind;
+  auto _ = blind.load(memory);
+  if (!blind.last_load().read_failed) return false;
+  if (blind.sequence() != 0) return false;
+
+  memory.set_read_fault(false);
+  if (!blind.save()) return false;
+  if (blind.sequence() != 5) return false;
+
+  test_section again;
+  auto _ = again.load(memory);
+  if (again.sequence() != blind.sequence()) return false;
+
+  if (!again.wipe()) return false;
+  if (again.sequence() != 0) return false;
+
+  return true;
+}
+
 consteval bool test_access_by_index()
 {
   fram memory;
@@ -210,6 +259,7 @@ static_assert(test_load_from_an_empty_medium());
 static_assert(test_a_write_marks_its_group());
 static_assert(test_save_and_restart());
 static_assert(test_wipe_leaves_the_image());
+static_assert(test_sequence_follows_the_medium());
 static_assert(test_access_by_index());
 static_assert(test_restore_all_defaults_spares_the_read_only());
 

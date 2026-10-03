@@ -55,8 +55,8 @@ using od_settings_for =
 
 // The class template `od_section_status` provides readers, for `od_ro`, of
 // the state of `Section`, a `settings::section`: where its records are kept,
-// how many have been written, what the last load found and what changes are
-// waiting to be applied.
+// how far its saves have advanced around the slots, what the last load found
+// and what changes are waiting to be applied.
 template<auto& Section>
 class od_section_status {
   using section_type = detail::section_t<Section>;

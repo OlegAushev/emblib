@@ -129,7 +129,7 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `detail::put_u16`, `detail::put_u32`, `detail::get_u16`,
     `detail::get_u32`
   - [x] `detail::crc32`
-  - [x] `encode_record`, `decode_header`, `decode_record`
+  - [x] `encode_record`, `decode_header`, `check_record`, `decode_record`
 - [x] `emb/settings/schema.hpp`
   - [x] `detail::duplicate_parameter_name`, `detail::parameter_id_collision`
     (`detail::unknown_parameter_message` без комментария)
@@ -141,7 +141,8 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `section`
 - [x] `emb/settings/store.hpp`
   - [x] `placement`
-  - [x] `save_stage`, `save_failure`, `load_result`
+  - [x] `save_stage`, `save_failure`, `save_result`, `load_result`
+  - [x] `detail::slot_ring`
   - [x] `store`
 - [x] `emb/settings/value.hpp`
   - [x] `value_type`

@@ -41,8 +41,8 @@ namespace settings {
 // the footer (`record_footer_size` bytes) are both multiples of eight bytes,
 // so a medium whose write granularity divides eight can write either one
 // alone. A store writes the body first and the footer last, never the other
-// way round: the footer commits the record, and until it is complete the
-// record fails the checks of `decode_record`.
+// way round: the footer commits the record, and until every byte of it holds
+// its value the record fails the checks of `decode_record`.
 inline constexpr std::uint16_t record_format = 1;
 
 // Sizes, in bytes, of the header of a record, of one cell with its
@@ -220,8 +220,8 @@ constexpr std::size_t encode_record(std::span<std::byte> dest,
 // format differs from `record_format`.
 //
 // Checks nothing else: neither `count` nor the footer nor the CRC. A header
-// it returns may belong to a torn or corrupted record, which only
-// `decode_record` detects.
+// it returns may belong to a torn or corrupted record, which `check_record`
+// and `decode_record` detect.
 constexpr std::optional<record_header>
 decode_header(std::span<std::byte const> src, std::uint32_t magic)
 {
@@ -238,12 +238,34 @@ decode_header(std::span<std::byte const> src, std::uint32_t magic)
   return header;
 }
 
+// Returns the header of the record at the beginning of `src` if the record
+// is whole, or `std::nullopt` otherwise. Bytes of `src` past the record are
+// ignored.
+//
+// The record is whole if its header stores `magic` and `record_format`,
+// `src` holds the `count` cells the header declares and the footer, the
+// footer repeats `magic`, and the stored CRC equals `detail::crc32` of all
+// bytes before it. Computes the CRC, a pass over the record, only if every
+// other condition holds.
+constexpr std::optional<record_header>
+check_record(std::span<std::byte const> src, std::uint32_t magic)
+{
+  auto const header = decode_header(src, magic);
+  if (!header) return std::nullopt;
+
+  auto const size = record_size(header->count);
+  if (src.size() < size) return std::nullopt;
+  if (detail::get_u32(src, size - 8) != magic) return std::nullopt;
+  if (detail::get_u32(src, size - 4) != detail::crc32(src.first(size - 4))) {
+    return std::nullopt;
+  }
+  return header;
+}
+
 // Decodes the record at the beginning of `src` into `values` and returns a
 // `load_report` of the outcome. Bytes of `src` past the record are ignored.
 //
-// The record is whole if `decode_header` accepts it for `magic`, `src`
-// holds the `count` cells the header declares and the footer, the repeated
-// magic equals `magic`, and the CRC matches. If the record is not whole,
+// If the record is not whole, i.e. if `check_record` rejects it for `magic`,
 // returns a report whose `valid` is `false` and leaves `values` unchanged.
 // Otherwise, sets every parameter in `values` to its default value, then
 // assigns each cell to the parameter of `Schema` with its identifier, if
@@ -257,15 +279,8 @@ constexpr load_report decode_record(std::span<std::byte const> src,
 {
   load_report report;
 
-  auto const header = decode_header(src, magic);
+  auto const header = check_record(src, magic);
   if (!header) return report;
-
-  auto const size = record_size(header->count);
-  if (src.size() < size) return report;
-  if (detail::get_u32(src, size - 8) != magic) return report;
-  if (detail::get_u32(src, size - 4) != detail::crc32(src.first(size - 4))) {
-    return report;
-  }
 
   report.valid = true;
   report.seq = header->seq;

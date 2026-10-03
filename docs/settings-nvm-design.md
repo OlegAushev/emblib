@@ -15,9 +15,11 @@ application kept in `params.hpp/.cpp` moved into emblib as
 `settings::section`, and what had been `section`, the place on a medium,
 became `placement`. The same day the store stopped letting a run of failed
 saves reach the newest record, and a load that restores nothing stopped
-resetting the sequence (§10). The store's
-algorithms, invariants and failure scenarios are described in detail, in
-Russian, in `settings-store-algorithms.ru.md`.
+resetting the sequence (§10). On 2026-10-03 the store was rewritten to
+keep nothing about the medium between calls: each call reads every slot
+whole and trusts only whole records (§5, §10). The store's algorithms,
+invariants and failure scenarios are described in detail, in Russian, in
+`settings-store-algorithms.ru.md`.
 
 ## 1. Scope
 
@@ -200,7 +202,7 @@ record (24 + 8N bytes):
   0x00     4    magic      section marker
   0x04     2    format     layout version of the record itself (not the schema)
   0x06     2    count      number of cells
-  0x08     4    seq        monotonic write counter
+  0x08     4    seq        sequence number, grows along the ring
   0x0C     4    schema_id  fingerprint of the identifiers that wrote it
   0x10  8*N     cells      N x { u32 id; u32 raw }
   ...      4    magic      repeated: a torn record is visible at a glance
@@ -241,19 +243,24 @@ inline constexpr placement config_placement{.magic = ..., .base = 0,
 ```
 
 Slots hold successive records; a save writes the next one and leaves the
-previous intact. Where erasing is required, slots are grouped into blocks
-the size of the medium's erase unit, and only the first slot of a block
-pays for an erase — by which time the newest record lives in another block.
-That is asserted, not assumed: with `needs_erase`, the slots must span at
-least two blocks, and however many saves fail in a row, the position never
-enters the block of the newest record the store knows of (§10).
+previous intact. On every medium, slots are grouped into blocks the size
+of the medium's erase unit, and a save that enters a block erases it
+first; on FRAM, which has no erase unit, a block is one slot and erasing
+it fills it with `erased_value`. The store keeps no position: a save reads
+every slot, finds the newest whole record (see Load) and takes the first
+slot after it, in its block, that reads erased; if none is left, it
+erases the next block and takes its first slot. An empty section starts
+at slot 0, erasing block 0. A record therefore always goes into erased
+bytes, FRAM included, and the newest record's slot is never written, nor
+its block erased. That is asserted, not assumed: the slots must span at
+least two blocks, so the next block is never the newest record's (§10).
 
 Each section declares `slot_capacity` as a **constant, not derived from the
 current parameter count** — otherwise adding a parameter would shift the
 slot stride and invalidate everything already stored.
 `static_assert(record_size <= slot_capacity)`.
 
-For the 58 parameters of the current product: record = 488 B,
+For the 60 parameters of the current product: record = 504 B,
 `slot_capacity` = 1024 B (room for 125).
 
 - FRAM (FM25W256, 32 KB): two slots, 2 KB of 32; endurance is a non-issue.
@@ -276,29 +283,50 @@ facts about the memory.
 
 ### Commit protocol (identical on all three media)
 
-1. Build the record in a RAM buffer — one burst instead of 58 small writes,
+1. Read every slot whole and decide from what is there (see Slots and
+   Load): the slot, whether to erase the block it starts, and the sequence
+   number — the newest record's plus the distance from its slot to the new
+   one. A slot the medium refuses to read may hold the newest record, so a
+   save that meets one writes nothing and fails with `save_stage::scan`;
+   so does a save whose record would not come out newest, which is checked
+   on what the pass found before anything is written (see §10).
+2. Build the record in a RAM buffer — one burst instead of 60 small writes,
    and mandatory anyway for flash granularity.
-2. Pick the next slot; erase it if the medium needs it. Where it does,
-   a slot inside a block is read first, and one holding debris sends the
-   save to the next block (see "Every save asks which slot it takes" in
-   §10).
-3. Write header and cells.
-4. **Write the footer last.** A record interrupted by power loss has no
-   valid CRC and is invisible to the loader; the previous record is
-   untouched.
-5. Read back and verify the CRC. This catches a dead FRAM or a failed
-   program — the stack it replaced had no such check. The in-RAM position
-   does not wait for it: the slot and the sequence number are spent before
-   the first write, whatever the outcome — though the position never moves
-   onto the slot of the newest record the store knows of, nor, where erasing
-   is required, onto the first slot of its block (see §10).
+3. Erase the block if the save enters one: a sector on flash, the slot
+   itself on FRAM, filled with `erased_value`. The record goes into erased
+   bytes on every medium.
+4. Write header and cells.
+5. **Write the footer last.** A record interrupted by power loss is not
+   whole and is invisible to the loader, unless the tear left unwritten
+   only bytes that already held their values — the last byte of the CRC
+   is `0xFF` in about one record in 256, and the slot is erased — and
+   then the next load restores it: a failed save leaves the old record or
+   the new one. The previous record is untouched either way.
+6. Read back and compare: the record must be whole and carry its sequence
+   number and the CRC that was written. This catches a dead FRAM or a
+   failed program — the stack it replaced had no such check — and, since
+   the CRC is compared with the one written, a slot that holds another
+   record under the same number. Nothing is kept in RAM, whatever the
+   outcome: the next save reads the medium again and finds there what this
+   one left — a record that landed although the save failed, or debris,
+   which it steps over or erases.
 
 ### Load
 
-1. Read the 16-byte header of every slot, once per load.
-2. Candidates: valid magic, known format, sane count, record fits the slot.
-3. Try candidates from the highest `seq` down: read fully, check CRC; the
-   first whole record wins. None valid → all defaults + a reported fault.
+1. Read every slot whole, once per load, as a save and a wipe do, and sort
+   each: erased, a whole record (`check_record`: magic, format, a size that
+   fits the slot, the footer's magic and the CRC), or anything else. A
+   header with no whole record behind it counts for nothing; a slot the
+   medium refuses to read is left out and reported.
+2. The newest record is the whole record newer than every other under
+   `seq_newer`; of two with one number, the one in the lower slot. Where
+   none is newer than all the others — only on a medium the store before
+   2026-10-03 numbered above a header whose top bit had rotted — the
+   highest number taken unsigned wins.
+3. Read the newest record again, decode it and require the number the
+   pass saw; a read the medium refuses is retried once. A record that
+   fails drops out and the next newest is tried. None left → all
+   defaults + a reported fault.
 4. Per cell: binary search `id` in the constexpr descriptor table sorted by
    id. Unknown id → ignored (removed parameter). Found → **validated against
    its bounds before entering the image**; out of range → default,
@@ -370,8 +398,9 @@ concept some_block_storage = requires {
 
 - `erase` is required of every medium, including those with no erased state:
   it means "bring this range to `erased_value`", which keeps an explicit
-  wipe honest on FRAM. `needs_erase` separately says whether `write`
-  *requires* an erased target.
+  wipe honest on FRAM and lets every save write into erased bytes there
+  too (§5). `needs_erase` separately says whether `write` *requires* an
+  erased target; the store no longer asks.
 - The error type belongs to the backend. Drivers already have a vocabulary
   (the FRAM driver's own reasons, with the bus's error as a cause; the
   flash driver's status flags); a common enum here would only add a
@@ -664,113 +693,220 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   carried and refused points at a range that moved under an old record, a
   value never carried at a schema that grew.
 - **CRC-32 is computed a bit at a time.** A table would cost a kilobyte of
-  flash to save microseconds on an operation that runs twice a boot.
-- **Every save asks which slot it takes.** On a medium that must be
-  erased, a save reads the slot the position names before writing to it,
-  unless the slot starts a block — entering a block erases it. A slot that
-  is neither a record nor erased holds the debris of a save that never
-  committed, and the save steps to the next block: the block it is standing
-  in cannot be erased, since the record just restored may live there. The
-  first version kept a flag instead, raised by a restart or a failed save
-  and cleared by the first look that found the slot erased, which assumed
-  the debris sits right behind the newest record. It need not: a save the
-  medium refuses before its first byte still spends its slot, so the debris
-  of the next attempt lies a slot further on. After a restart the look
-  found that hole erased, and the save after it wrote into the debris —
-  which on NOR fails the read-back with no cause, the signature reserved
-  for a memory that no longer holds data. Whether a slot is erased is a
-  fact about the medium, and caching it meant proving that every path to a
-  position marks it right; that proof was wrong once. The look costs a
-  slot read per save, a kilobyte against the milliseconds of programming,
-  and compiles away where the medium needs no erase. Erasing on every
-  restart instead would cost a block per boot, which on a section of 128
-  slots to a block is 128 times the wear.
-- **A restart takes its sequence number from the newest header and its
-  position from the newest whole record.** Where the medium stopped and
-  what it holds are different questions. A save interrupted before it
-  committed leaves a header claiming a generation that no record backs,
-  and numbering the next record below it would put two records on one
-  generation, which a load can then only order by slot — so the number
-  follows the header. The position cannot: on two slots the slot past the
-  debris is the record just restored, and on flash a lap-old header whose
-  sequence number rotted upwards — NOR loses programmed bits, and a
-  sequence number is mostly zeros — would put the position in the old
-  block, from where the step over the debris lands in the block of the
-  record restored and erases it. Following the record instead costs, after
-  a torn save whose header landed, the rest of that block: one erase per
-  such incident, not per boot.
-- **A load reads every header once.** One pass maps the sequence number of
-  every candidate, and trying the next one reads only its record.
-  Rereading the headers per candidate cost a pass for every header above
-  the newest whole record — one per torn save, until the ring erases its
-  block — and a pass is 256 slots in the product's flash geometry; on an
-  external SPI NOR it would be half a second of loading. The map costs four
-  bytes a slot of stack while `load()` or `survey()` runs. Of what a
-  candidate can turn out to be, only a read the medium refused is carried
-  out of the load: debris is ordinary, and outliving it is what the search
-  is for.
+  flash, and when the CRC ran twice a boot it would have saved
+  microseconds. Since every call checks every whole record ("Only whole
+  records count"), it runs some 130 to 260 times a load or a save once the
+  product's flash has gone round its ring, about 0.1 ms each — most of the
+  16 to 31 ms a load now takes, and still not worth a kilobyte. If it ever
+  is, a table of sixteen words read a nibble at a time gives the same CRC
+  about three times faster for 64 bytes, and costs less in constant
+  expressions too, where the CRC is most of what the tests spend.
+- ~~**Every save asks which slot it takes.**~~ Superseded on 2026-10-03 by
+  "A save writes only erased bytes, FRAM included": a save reads every
+  slot, not only the one a position names, and there is no position left
+  to name one.
+- ~~**A restart takes its sequence number from the newest header and its
+  position from the newest whole record.**~~ Superseded on 2026-10-03 by
+  "Only whole records count" and "Sequence numbers follow the ring": the
+  slot and the number both follow the newest whole record now, and a
+  header with nothing whole behind it, torn or rotted, moves neither.
+- ~~**A load reads every header once.**~~ Superseded on 2026-10-03 by "Only
+  whole records count": a load, a save and a wipe each read every slot
+  whole, once, and check every record's CRC.
 - **The store's buffer is a slot, not a record.** A firmware that declared
   more parameters wrote a longer record, and refusing to read it would
   silently discard the settings of anyone downgrading. The RAM cost is
   `slot_capacity`, which is the application's own number — the same one it
   reserved on the medium.
-- **A failed save says which step failed** — erase, body, commit or
-  verify — and carries the medium's own error code, except after a
-  successful write that did not read back, where there is no code to carry
-  and the absence is the diagnosis.
-- **The slot and the sequence number are both spent before the first
-  write**, whether or not the attempt succeeds — with one exception. The
-  slot, so a retry does not land on the debris of the attempt before it,
-  unless the only other slot holds the newest record (next item). The
-  sequence number, because a failed save can still have landed — the record
-  wrote and only the read-back failed — and reusing the number would leave
-  two records claiming one generation, which a load orders by slot rather
-  than by age, silently preferring the older one. The exception is an erase
-  that was refused: nothing was written, so there is no debris to avoid,
-  and the block still has to be erased. So the slot stays, and a sector
-  that never erases makes every save fail with `save_stage::erase`.
-  Spending the slot would put the position inside the uncleared block, from
-  where the step over the previous lap's records would take the next block.
-  With two blocks that is the block of the newest record: before the
-  position skipped it (next item), the step erased it, and the store quietly
-  turned into a single block that erased its own newest record on every
-  lap. Now the skip brings the step back to the refused block, so with two
-  blocks the exception makes no difference; with more, a spent slot would
-  quietly carry the save past a sector that never erases, and the exception
-  is what reports it.
-- **A save never takes the slot of the newest record the store knows of**
-  — the one the last successful save wrote or the load restored — nor
-  enters its block on a medium that must be erased. Spending the slot on
-  every failure walks the position around the ring, and nothing used to
-  stop it short of that record. On two FRAM slots the second failure in a
-  row wrote over it, and a tear there left no whole record at all. On flash
-  the walk reached the block of the newest record and erased it: after 129
-  to 256 failures in a row in the product's geometry, and on the second one
-  where the medium will not read, since a slot that does not read counts as
-  written and sends each save to the next block. The store keeps that
-  record's slot, and the position skips it, or, on flash, the start of its
-  block, for the start of the block after it. On two FRAM slots a retry
-  therefore goes over its own debris, which is harmless there. Not spending
-  the slot on failure where nothing needs erasing would have closed FRAM
-  alone; one rule for both media holds as an invariant rather than as a
-  consequence of the order the ring is walked in. The sequence number is
-  still spent: on flash an unverified record can outlive the next one.
-- **A load that restores nothing positions itself from the headers.** It
-  used to reset the position and the sequence to zero. While the medium
-  reads, that only numbered the next record below the debris, which a load
-  rejects anyway. After a read failure at startup it lost a save: records
-  the load could not read may be whole, a record numbered one is older than
-  them, and once the medium read again the next load restored the old
-  settings; on flash, entering slot 0 also erased block 0, where the newest
-  record may have been. Now a load that read everything continues above
-  the newest header and takes the slot after it, as a survey does, and one
-  the medium refused leaves the position unset, so the next save surveys
-  the headers first.
-- **A save before the first load surveys the headers.** Otherwise it would
-  start counting from one and write a record that looks older than what is
-  stored — invisible to the next load, which takes the highest sequence
-  number. The regression test fails without the survey. Headers are all it
-  reads, which leaves one gap — see the open question on it.
+- **A failed save says which step failed** — scan, erase, body, commit or
+  verify — and carries the medium's own error code, except where there is
+  no code to carry and the absence is the diagnosis: a scan that read
+  every slot and found that the record would not come out newest, and a
+  write that went through but did not read back. A save that fails at the
+  scan has written nothing; on FRAM, `erase` is the fill of the slot.
+- ~~**The slot and the sequence number are both spent before the first
+  write**~~, whether or not the attempt succeeds. Superseded on 2026-10-03
+  by "Sequence numbers follow the ring": nothing is spent in RAM. An
+  attempt that left nothing costs nothing, and one that left a record or
+  debris is found on the medium by the next save.
+- ~~**A save never takes the slot of the newest record the store knows
+  of**~~, nor enters its block on a medium that must be erased. Superseded
+  on 2026-10-03 by "A save writes only erased bytes, FRAM included": the
+  store knows of no record between calls; every save finds the newest one
+  on the medium and writes after it, never over it, and never erases its
+  block.
+- ~~**A load that restores nothing positions itself from the headers.**~~
+  Superseded on 2026-10-03 by "The store keeps nothing about the medium"
+  and "A save refuses a section it cannot read whole": there is no
+  position to set, and after a read failure a save writes only once every
+  slot reads.
+- ~~**A save before the first load surveys the headers.**~~ Superseded on
+  2026-10-03 by "The store keeps nothing about the medium": every save
+  reads the whole section first and checks records rather than headers,
+  so a save before the first load is like any other.
+- **The store keeps nothing about the medium.** Between calls it holds the
+  medium and a buffer, nothing else. Every load, save and wipe reads every
+  slot whole, sorts each into erased, a whole record with its sequence
+  number, or anything else, and decides from that table alone, by pure
+  functions. The tests check those on every arrangement of erased, whole and
+  other slots on five rings of two to six slots, the whole records numbered
+  as this store numbers them, and on a ring of eight slots in blocks of
+  four, where only the slots after the newest record in its block take every
+  class. A restart, a save before the first load and a save after a failed
+  one are therefore one case. The store it replaced carried a position, a
+  sequence number, the slot of the newest record it knew of and whether it
+  had surveyed the headers, and each of its special cases — the struck
+  entries above — patched a way that knowledge could part from the medium: a
+  restart, a failed save, a run of them, a save before any load, a load that
+  restored nothing. Each patch was argued sound, and twice the argument was
+  wrong; a model of the store that tried every fault on every path found six
+  more ways to lose a save, two of them from a single rotted bit (the
+  entries below). Which slots are erased, which record is newest and what to
+  number next are facts about the medium, and reading them again costs less
+  than proving a copy of them right. The price is the pass: on the product's
+  flash, 256 reads of a kilobyte and a CRC of every whole record make a load
+  16 to 31 ms and a save 25 to 40 ms, against 0.2 and 8 before; on FRAM a
+  load takes 12 ms at 2 MHz and 49 at 500 kHz, a save 16 and 66. The product
+  loads once at startup and saves only while the drive stands still. The
+  table takes about a kilobyte of stack in the flash geometry, as the header
+  map did.
+- **Only whole records count.** A slot is a record only if `check_record`
+  accepts it: the header's magic and format, a size that fits the slot,
+  the footer's magic and the CRC. A header with nothing whole behind it —
+  a torn save's, a rotted one, another section's leftovers — counts for
+  nothing: it neither names the newest record nor numbers the next. The
+  old store let headers do both, to spare a CRC per slot, and lost saves
+  through them. A save after a load the medium refused trusted the header
+  of a torn save, which on two FRAM slots put it over the last good record
+  and on flash, with no rot at all, could erase that record's block; and a
+  number taken from a header whose top bit had rotted moved the count by
+  2^31, after which a save that had succeeded could lose, after a restart,
+  to a record 45 saves older. `decode_record` calls `check_record` first,
+  so the pass and the load agree on what is whole. The pass reuses the
+  buffer, so a load reads the newest record again to decode it. A refused
+  read there is retried once, since one refusal would otherwise send the
+  load to an older record or the defaults with the newest just read whole,
+  and a record that reads back other than the pass saw it drops out like
+  any other. Decoding during the pass would save that read at the price of
+  a second path through the choice of the newest.
+- **The newest record is the one newer than all others.** `seq_newer` is
+  modular, which lets the counter wrap, but it is not an ordering: it is
+  not transitive, and of two numbers 2^31 apart neither is newer. The old
+  load took a running maximum under it, which on numbers that far apart
+  depends on the order of the slots: on the product's flash, 300 saves and
+  one rotted top bit in slot 0 made it restore the 256th, and the next
+  save erased block 0, holding the 257th to the 300th. The newest record
+  is now the whole record newer than every other whole one; of two with
+  one number, the one in the lower slot, as before. On a medium this store
+  wrote, such a record always exists, since the numbers of its whole
+  records lie within a ring's length of each other ("Sequence numbers
+  follow the ring"), where the relation is a strict order. Where none is
+  newer than all the others, the highest number taken unsigned wins. Only
+  the old store left such media, by numbering above a header whose top bit
+  had rotted — NOR loses programmed bits, and a sequence number is mostly
+  zeros — so the records with the top bit set are the ones it wrote after
+  the rot, and the highest of them is the newest. Without rot, the rule
+  restores what the old load restored.
+- **A save writes only erased bytes, FRAM included.** Slots form blocks on
+  every medium, a block being what a save erases on entering it: a sector
+  on flash, one slot on FRAM, where erasing fills the slot with
+  `erased_value`. A save takes the first slot after the newest record, in
+  its block, that reads erased; if none is left, it erases the next block
+  and takes its first slot. It never writes the newest record's slot nor
+  erases its block, and it enters any other block only through a whole
+  erase, so a block that a cut erase left half done is erased again rather
+  than written into. A tear then leaves the new record's prefix over
+  erased bytes and never splices it onto an old record. On FRAM such a
+  splice could bring one back: once the numbering restarted — after a wipe
+  cut short, or with every record corrupted — a new record could carry the
+  header of an old one still in its slot, and a tear right after the bytes
+  the old one had lost left it whole again, numbered above the last
+  successful save. The fill costs a kilobyte written per save, 4 ms at
+  2 MHz and 16 at 500 kHz, and buys one rule for every medium: the store
+  no longer asks `needs_erase`. Entering a block erases it even if it
+  reads erased, which rules out cells an interrupted erase left weak, at
+  the cost of one needless erase per block on a fresh medium and as many
+  after every wipe — the wipe erases every block, and the saves after it
+  erase each again on entry: two sector erases each time on the product's
+  flash. Inside a block a refused write or a medium that keeps nothing
+  costs nothing, since the next save finds the same slot erased; at the
+  start of a block every failed attempt erases the block again.
+- **Sequence numbers follow the ring.** A record is numbered with the
+  newest record's number plus the distance from that record's slot to its
+  own along the ring, and the first record of an empty section with one.
+  A number is thus the record's place on the ring unrolled since the
+  section was last empty, so on flash the number over `slots_per_block` —
+  `erase_cycles` under `3000h` — again counts the blocks the saves have
+  filled, about the erases. Nothing is spent on an attempt: one that left
+  nothing costs nothing, one that left a record is found by the next pass
+  and numbered above, and one that left debris costs the slot the debris
+  occupies. The old store spent a number and a slot on every attempt,
+  because a save that failed may still have landed and reusing its number
+  would put two records on one generation; the pass now sees what landed.
+  On a medium this store wrote, the numbers of whole records differ by
+  their distance on the ring, less than its length and far inside the
+  2^31 within which `seq_newer` orders. Counting the distance rather than
+  adding one also gives every slot its own number from the same newest
+  record: the debris of an attempt that later reads whole — a write cut on
+  marginal cells can — never shares a number with the save after it, nor
+  outranks it.
+- **A save refuses a section it cannot read whole.** If the medium refuses
+  a read of any slot, the save writes nothing and fails with
+  `save_stage::scan` and the medium's error. The slot it could not read
+  may hold the newest record, and every decision hangs on that record: a
+  save without it may number below it, write over it or erase its block.
+  The old store took what it could not read for absent: a save after a
+  load that read nothing took the section for empty, numbered its record
+  one and erased block 0, and a load that missed some headers numbered the
+  next record below records it could not see. A load still restores the
+  newest record among those it read and reports that a read failed, and a
+  wipe erases whether it read or not (below). On the product's media a
+  refused read is a failing FRAM bus — the internal flash refuses none —
+  so a save goes through again once the bus does.
+- **A save checks before writing that the next load would restore it.** It
+  applies its plan to the table the pass built — the block erased if it is
+  to be, the new record in its slot — and requires the newest record of
+  the result to be the new one; otherwise it writes nothing and fails with
+  `save_stage::scan`, without a cause. On a medium this store wrote the
+  check never fails, since the new record is numbered above every whole
+  record within a ring's length. It is there for the media the old store
+  left after a rotted top bit, where whole records can lie 2^31 apart and
+  a record numbered from the newest need not come out newest: without the
+  check such a save would succeed and the next load restore something
+  older. With it, success means that the next load that reads the section
+  restores this record, on every medium. A wipe ends the refusals, and
+  since a wipe leaves the image as it was, a save right after it keeps the
+  values in use.
+- **The read-back compares the CRC it wrote.** After the footer, a save
+  reads the record back and requires it whole, with its own sequence
+  number and the CRC it encoded. The old read-back only asked whether what
+  it read was a consistent record with that number: on two FRAM slots,
+  after a load that could not read the newest header, a save numbered
+  itself like that record, wrote over it into a memory that kept nothing,
+  read the record back whole under its own number and reported success;
+  the next load restored the old values. The CRC makes the check one of
+  identity — another record under the same number has another CRC unless
+  it holds the same values. A read-back the medium refuses fails with its
+  error; one that reads something else fails without a cause, the
+  signature of a memory that does not keep what it accepts.
+- **A wipe erases the newest record's block last.** It erases every block
+  in ring order, starting after the newest record's, so a wipe cut short
+  leaves the newest record or nothing: the blocks erased first hold only
+  older records, and in the last one the records before the newest go
+  before it, as long as an erase cut short clears its range from the
+  start. Erasing in address order, as before, could leave an older record
+  standing alone — up to a block of saves older — and the next load
+  restored it. A tombstone was rejected: a record of defaults written into
+  a freshly erased block of its own, then every other block erased, then
+  that block. It costs one more sector erase, about two seconds, needs a
+  section that reads and writes, and a wipe cut short can leave it whole,
+  a valid record of defaults that a load cannot tell from real settings.
+  A pass to confirm the erase was rejected too: it would need an error of
+  its own from `wipe`, and the application to handle it. A wipe reads
+  only to find that order and erases even what it could not read: it is
+  the last resort for a section that refuses saves, and must not refuse in
+  turn. Such a wipe guesses the order from what it read and promises
+  nothing about a cut.
 - **Tests follow the in-tree convention** (`emb/test/*_test.cpp`, anonymous
   namespace, `static_assert` only): they cost compile time and contribute no
   symbols to the image.
@@ -793,10 +929,10 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   or on the type (`pu`, `spu`), and a copy in the row would be wrong for
   some build.
 
-## 10a. What the switch-over changed for an operator
+## 10a. What changed for an operator
 
-Two behaviours changed on purpose, and both are visible from a CANopen
-tool:
+The switch-over changed two behaviours on purpose, and both are visible
+from a CANopen tool:
 
 - **A write no longer persists by itself.** It lands in the image; `1010h`
   puts it on the medium as one record. That is what buys atomicity — a
@@ -809,6 +945,39 @@ tool:
 - **A value outside a parameter's bounds is refused**, with
   `value_range_exceeded`, where before it was silently clamped by the
   wrapper the config reader applied. The operator now learns.
+
+The rewrite of the store on 2026-10-03 (§10) changed three more:
+
+- **`sequence` and `erase_cycles` follow the ring.** A record's number is
+  the newest record's plus the slots from it to the new one, so `sequence`
+  (`3000h:05`) is the newest record's place on the ring unrolled since the
+  section was last empty, and on flash `erase_cycles` (`3000h:06`), its
+  quotient by `slots_per_block`, again counts the blocks the saves have
+  filled — about the erases. A save that failed and left nothing costs no
+  number; one that tore makes the next record's number skip the slot it
+  tore in. Debris and rotted headers move neither count, where a rotted
+  top bit used to add 2^31. `sequence` follows the medium: a load sets it
+  to the number of the record it restored, or zero if none; a save that
+  succeeds, to its record's; a wipe that succeeds, to zero. A failed save
+  leaves it as it was, where it used to count the attempt. Right after the
+  update both can read lower than the old firmware showed, since it
+  numbered above the headers of torn saves and counted every failed
+  attempt.
+- **A save refuses a medium it cannot read.** If any slot fails to read,
+  `1010h` answers `data_store_error` and `nvm_write_error` is raised, as
+  for any failed save, but nothing was written: the slot that did not read
+  may hold the newest record, which the old firmware, writing blind, could
+  erase or number below. The save goes through once the medium reads
+  again. On a medium the old firmware numbered above a rotted header, a
+  save can be refused the same way with every read succeeding, when no
+  record it could write would come out newest; erasing all parameters
+  (`1011h:03`) clears that, and the next `1010h` stores the values in use.
+- **A save on FRAM fills its slot before writing the record**, and every
+  load and save reads the whole section first. On FRAM a save takes about
+  16 ms on the rev_a's 2 MHz bus and 66 on the miniboard's 500 kHz, where
+  it took 4 and 16, and a load 12 and 49, where it took 2 and 9. On the
+  product's flash a load takes 16 to 31 ms and a save 25 to 40, where they
+  took 0.2 and 8.
 
 ## 10b. What applying taught us
 
@@ -856,17 +1025,13 @@ tool:
   (`3000h`, sub-indices `11h` and `12h`).
 - **Counters** (hour meter, energy, fault counts) need their own append-log
   region; out of scope here, but the region layout should leave room.
-- **`survey()` trusts headers.** A save before the first load, after a
-  save that tore, is positioned by the newest header — which on two slots
-  is the slot past the debris, i.e. the last good record; if that save
-  tears too, nothing is left. On flash a lap-old header that rotted newer
-  puts the position in the old block the same way, from where the step
-  over the debris erases the block of the newest record. The store keeps
-  the slot of that header, not of a whole record, so keeping it does not
-  help. The application loads before anything can save, but the first save
-  after a load that the medium refused and that restored nothing takes the
-  same path; the gap needs a read failure at startup, a torn save before
-  it, and a tear of this one. Closing it means
-  the survey checking records as the load does: a `record_whole()` in
-  `record.hpp`, shared by both, at the cost of a CRC per candidate on that
-  path.
+- ~~**`survey()` trusts headers.**~~ Settled on 2026-10-03 by the rewrite
+  of the store (§10): there is no survey and no position. Every save reads
+  every slot whole and writes after the newest whole record, a header with
+  nothing whole behind it counts for nothing, and a save after a load the
+  medium refused writes only once every slot reads. The gap was wider than
+  stated: on flash it needed no rot, since the header of a save torn in
+  the last slot of a block put the position at the start of the next
+  block, the newest record's. The `record_whole()` it called for is
+  `check_record`, shared by the pass and `decode_record`, at the cost it
+  named — a CRC per record — paid on every call rather than on that path.
