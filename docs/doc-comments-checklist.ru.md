@@ -16,6 +16,14 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `emb::ensure`
 - [x] `emb/concurrent/double_buffer.hpp`
   - [x] `double_buffer`
+- [x] `emb/container/circular_buffer.hpp`
+  - [x] `circular_buffer`
+- [x] `emb/container/inplace_queue.hpp`
+  - [x] `inplace_queue`
+- [x] `emb/container/inplace_stack.hpp`
+  - [x] `inplace_stack`
+- [x] `emb/container/inplace_vector.hpp`
+  - [x] `inplace_vector`
 - [x] `emb/controller.hpp`
   - [x] `controller_action`
   - [x] `detail::error`
@@ -255,10 +263,6 @@ emblib не попал. Такие файлы помечены «песочни�
 - [ ] `emb/concurrent/spsc_queue.hpp`
 - [ ] `emb/concurrent/triple_buffer.hpp`
 - [ ] `emb/concurrent/wide_counter.hpp`
-- [ ] `emb/container/circular_buffer.hpp`
-- [ ] `emb/container/inplace_queue.hpp`
-- [ ] `emb/container/inplace_stack.hpp`
-- [ ] `emb/container/inplace_vector.hpp`
 - [ ] `emb/delegate.hpp`
 - [ ] `emb/foc.hpp`
 - [ ] `emb/foc/deadtime_compensation.hpp`

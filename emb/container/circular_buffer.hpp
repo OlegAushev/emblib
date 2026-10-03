@@ -10,6 +10,27 @@
 
 namespace emb {
 
+// The class template `circular_buffer` is a double-ended queue that stores up
+// to `Capacity` elements of type `T` inside the object, without dynamic
+// allocation. An element is constructed when it is added and destroyed when it
+// is removed, so `T` need not be default constructible. Adding an element to a
+// full buffer removes the element at the opposite end: `push_back` and
+// `emplace_back` remove the front element, and `push_front` and `emplace_front`
+// the back element. A buffer modified only by `push_back` thus holds the last
+// `Capacity` elements pushed, the oldest at the front. `try_push_back` and
+// `try_push_front` never remove an element: if the buffer is full, they return
+// `false`, leaving the buffer and their argument unchanged.
+//
+// If `front`, `back`, `pop_front` or `pop_back` is called on an empty buffer,
+// or `operator[]` with an index not less than `size()`, an `assert` fails; if
+// `NDEBUG` is defined, the behavior is undefined. `try_pop_front` and
+// `try_pop_back` return the removed element, or `std::nullopt` if the buffer is
+// empty.
+//
+// If `T` is trivially copyable, so is `circular_buffer`: copying or moving a
+// buffer copies the storage for all `Capacity` elements, whatever `size()` is,
+// and a moved-from buffer keeps its elements. Otherwise only the elements are
+// copied or moved, and a moved-from buffer is empty.
 template<typename T, std::size_t Capacity>
   requires(Capacity > 0)
 class circular_buffer {
@@ -165,6 +186,9 @@ public:
     return *slot_ptr(index_of(size_ - 1));
   }
 
+  // Returns a reference to the element at position `i` counted from the
+  // front, i.e. `(*this)[0]` is `front()` and `(*this)[size() - 1]` is
+  // `back()`.
   [[nodiscard]] constexpr reference operator[](size_type i)
   {
     ASSUME(i < size_);
@@ -282,6 +306,8 @@ public:
     return result;
   }
 
+  // Replaces the contents with `capacity()` copies of `value`, so that the
+  // buffer is full whatever its size was.
   constexpr void fill(value_type const& value)
     requires std::is_copy_constructible_v<T>
   {

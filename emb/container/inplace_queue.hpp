@@ -10,6 +10,23 @@
 
 namespace emb {
 
+// The class template `inplace_queue` is a first-in, first-out container that
+// stores up to `Capacity` elements of type `T` inside the object, without
+// dynamic allocation. An element is constructed when it is added and destroyed
+// when it is removed, so `T` need not be default constructible. `push` and
+// `emplace` add an element at the back, and `pop` removes the element at the
+// front: `front()` is the oldest element and `back()` the newest.
+//
+// If `front`, `back` or `pop` is called on an empty queue, or `push` or
+// `emplace` on a full one, an `assert` fails; if `NDEBUG` is defined, the
+// behavior is undefined. `try_push` returns `false` if the queue is full,
+// leaving the queue and its argument unchanged, and `try_pop` removes the front
+// element and returns it, or returns `std::nullopt` if the queue is empty.
+//
+// If `T` is trivially copyable, so is `inplace_queue`: copying or moving a
+// queue copies the storage for all `Capacity` elements, whatever `size()` is,
+// and a moved-from queue keeps its elements. Otherwise only the elements are
+// copied or moved, and a moved-from queue is empty.
 template<typename T, std::size_t Capacity>
   requires(Capacity > 0)
 class inplace_queue {

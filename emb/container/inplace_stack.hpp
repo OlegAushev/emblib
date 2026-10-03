@@ -10,6 +10,23 @@
 
 namespace emb {
 
+// The class template `inplace_stack` is a last-in, first-out container that
+// stores up to `Capacity` elements of type `T` inside the object, without
+// dynamic allocation. An element is constructed when it is added and destroyed
+// when it is removed, so `T` need not be default constructible. `push` and
+// `emplace` add an element on top of the stack, `top` accesses the top element,
+// and `pop` removes it.
+//
+// If `top` or `pop` is called on an empty stack, or `push` or `emplace` on a
+// full one, an `assert` fails; if `NDEBUG` is defined, the behavior is
+// undefined. `try_push` returns `false` if the stack is full, leaving the stack
+// and its argument unchanged, and `try_pop` removes the top element and returns
+// it, or returns `std::nullopt` if the stack is empty.
+//
+// If `T` is trivially copyable, so is `inplace_stack`: copying or moving a
+// stack copies the storage for all `Capacity` elements, whatever `size()` is,
+// and a moved-from stack keeps its elements. Otherwise only the elements are
+// copied or moved, and a moved-from stack is empty.
 template<typename T, std::size_t Capacity>
   requires(Capacity > 0)
 class inplace_stack {

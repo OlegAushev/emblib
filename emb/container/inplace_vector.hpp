@@ -10,6 +10,24 @@
 
 namespace emb {
 
+// The class template `inplace_vector` is a sequence container that stores up to
+// `Capacity` elements of type `T` inside the object, without dynamic
+// allocation. An element is constructed when it is added and destroyed when it
+// is removed, so `T` need not be default constructible. `push_back` and
+// `emplace_back` add an element at the end and `pop_back` removes the last one,
+// so the elements stay in the order in which they were added.
+//
+// If `front`, `back` or `pop_back` is called on an empty vector, `push_back` or
+// `emplace_back` on a full one, or `operator[]` with an index not less than
+// `size()`, an `assert` fails; if `NDEBUG` is defined, the behavior is
+// undefined. `try_push_back` returns `false` if the vector is full, leaving the
+// vector and its argument unchanged, and `try_pop_back` removes the last
+// element and returns it, or returns `std::nullopt` if the vector is empty.
+//
+// If `T` is trivially copyable, so is `inplace_vector`: copying or moving a
+// vector copies the storage for all `Capacity` elements, whatever `size()` is,
+// and a moved-from vector keeps its elements. Otherwise only the elements are
+// copied or moved, and a moved-from vector is empty.
 template<typename T, std::size_t Capacity>
   requires(Capacity > 0)
 class inplace_vector {
