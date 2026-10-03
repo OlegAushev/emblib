@@ -294,7 +294,6 @@ emblib не попал. Такие файлы помечены «песочни�
 - [ ] `emb/memory/memory_def.hpp`
 - [ ] `emb/noncopyable.hpp`
 - [ ] `emb/nvm/storage.hpp`
-- [ ] `emb/nvm_obsolete.hpp`
 - [ ] `emb/pipe.hpp`
 - [ ] `emb/scheduler/basic_scheduler.hpp`
 - [ ] `emb/scope.hpp`
