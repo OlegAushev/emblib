@@ -3,6 +3,9 @@
 #include <emb/assert.hpp>
 
 #include <array>
+#include <compare>
+#include <cstddef>
+#include <iterator>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -38,8 +41,6 @@ public:
   using const_reference = value_type const&;
   using pointer = value_type*;
   using const_pointer = value_type const*;
-  using iterator = pointer;
-  using const_iterator = const_pointer;
 
 private:
   struct no_value_t {};
@@ -60,6 +61,121 @@ private:
     }
   };
 
+  template<bool Const>
+  class basic_iterator {
+  public:
+    using iterator_concept = std::random_access_iterator_tag;
+    using iterator_category = std::random_access_iterator_tag;
+    using value_type = T;
+    using difference_type = std::ptrdiff_t;
+    using pointer = std::conditional_t<Const, T const*, T*>;
+    using reference = std::conditional_t<Const, T const&, T&>;
+
+  private:
+    using slot_pointer = std::conditional_t<Const, slot const*, slot*>;
+
+    slot_pointer slot_ = nullptr;
+
+    friend inplace_vector;
+    friend basic_iterator<!Const>;
+
+    constexpr explicit basic_iterator(slot_pointer s) : slot_{s} {}
+
+  public:
+    constexpr basic_iterator() = default;
+
+    constexpr basic_iterator(basic_iterator<!Const> const& other)
+      requires Const
+        : slot_{other.slot_}
+    {
+    }
+
+    constexpr reference operator*() const
+    {
+      return slot_->value;
+    }
+
+    constexpr pointer operator->() const
+    {
+      return &slot_->value;
+    }
+
+    constexpr reference operator[](difference_type n) const
+    {
+      return slot_[n].value;
+    }
+
+    constexpr basic_iterator& operator++()
+    {
+      ++slot_;
+      return *this;
+    }
+
+    constexpr basic_iterator operator++(int)
+    {
+      basic_iterator old{*this};
+      ++slot_;
+      return old;
+    }
+
+    constexpr basic_iterator& operator--()
+    {
+      --slot_;
+      return *this;
+    }
+
+    constexpr basic_iterator operator--(int)
+    {
+      basic_iterator old{*this};
+      --slot_;
+      return old;
+    }
+
+    constexpr basic_iterator& operator+=(difference_type n)
+    {
+      slot_ += n;
+      return *this;
+    }
+
+    constexpr basic_iterator& operator-=(difference_type n)
+    {
+      slot_ -= n;
+      return *this;
+    }
+
+    friend constexpr basic_iterator operator+(basic_iterator lhs,
+                                              difference_type rhs)
+    {
+      return lhs += rhs;
+    }
+
+    friend constexpr basic_iterator operator+(difference_type lhs,
+                                              basic_iterator rhs)
+    {
+      return rhs += lhs;
+    }
+
+    friend constexpr basic_iterator operator-(basic_iterator lhs,
+                                              difference_type rhs)
+    {
+      return lhs -= rhs;
+    }
+
+    friend constexpr difference_type operator-(basic_iterator lhs,
+                                               basic_iterator rhs)
+    {
+      return lhs.slot_ - rhs.slot_;
+    }
+
+    friend constexpr bool operator==(basic_iterator, basic_iterator) = default;
+    friend constexpr auto operator<=>(basic_iterator, basic_iterator) = default;
+  };
+
+public:
+  using iterator = basic_iterator<false>;
+  using const_iterator = basic_iterator<true>;
+
+private:
   std::array<slot, Capacity> data_{};
   static constexpr size_type capacity_ = Capacity;
   size_type size_ = 0;
@@ -195,34 +311,24 @@ public:
     return *slot_ptr(size_ - 1);
   }
 
-  [[nodiscard]] constexpr pointer data()
-  {
-    return slot_ptr(0);
-  }
-
-  [[nodiscard]] constexpr const_pointer data() const
-  {
-    return slot_ptr(0);
-  }
-
   [[nodiscard]] constexpr iterator begin()
   {
-    return slot_ptr(0);
+    return iterator{data_.data()};
   }
 
   [[nodiscard]] constexpr const_iterator begin() const
   {
-    return slot_ptr(0);
+    return const_iterator{data_.data()};
   }
 
   [[nodiscard]] constexpr iterator end()
   {
-    return slot_ptr(0) + size_;
+    return iterator{data_.data() + size_};
   }
 
   [[nodiscard]] constexpr const_iterator end() const
   {
-    return slot_ptr(0) + size_;
+    return const_iterator{data_.data() + size_};
   }
 
   [[nodiscard]] constexpr const_iterator cbegin() const

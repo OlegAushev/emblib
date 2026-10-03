@@ -1,5 +1,8 @@
 #include <emb/container/inplace_vector.hpp>
 
+#include <algorithm>
+#include <iterator>
+
 namespace {
 
 template<typename Vector>
@@ -9,6 +12,7 @@ constexpr bool test_inplace_vector(Vector v)
   int const cap{static_cast<int>(v.capacity())};
 
   assert(v.empty() && v.size() == 0);
+  assert(v.begin() == v.end());
 
   v.push_back(1);
   assert(!v.empty() && v.size() == 1);
@@ -40,6 +44,14 @@ constexpr bool test_inplace_vector(Vector v)
     sum += x;
   }
   assert(sum == cap * (cap + 1) / 2);
+
+  [[maybe_unused]] int iterated_sum{0};
+  for (int const x : v) {
+    iterated_sum += x;
+  }
+  assert(iterated_sum == sum);
+  assert(v.end() - v.begin() == cap);
+  assert(v.begin()[cap - 1] == cap);
 
   for (auto i{cap}; i >= 1; --i) {
     assert(v.back() == i);
@@ -261,6 +273,63 @@ constexpr bool test_inplace_vector_no_default_ctor()
   return true;
 }
 
+using int_vector = emb::inplace_vector<int, 4>;
+
+static_assert(std::random_access_iterator<int_vector::iterator>);
+static_assert(std::random_access_iterator<int_vector::const_iterator>);
+static_assert(std::same_as<std::iter_reference_t<int_vector::const_iterator>,
+                           int const&>);
+static_assert(
+    std::is_convertible_v<int_vector::iterator, int_vector::const_iterator>);
+static_assert(
+    !std::is_convertible_v<int_vector::const_iterator, int_vector::iterator>);
+
+constexpr bool test_inplace_vector_iterators()
+{
+  int alive = 0;
+  emb::inplace_vector<tracked, 4> v;
+  for (int i = 1; i <= 3; ++i) {
+    v.emplace_back(i, &alive);
+  }
+
+  for (auto& t : v) {
+    t.value *= 10;
+  }
+  assert(v[0].value == 10 && v[1].value == 20 && v[2].value == 30);
+
+  auto const& cv = v;
+  [[maybe_unused]] int sum = 0;
+  for (auto const& t : cv) {
+    sum += t.value;
+  }
+  assert(sum == 60);
+
+  emb::inplace_vector<tracked, 4>::const_iterator it = v.begin();
+  assert(it == cv.begin() && it != v.end() && it < v.end());
+  assert(v.end() - it == 3);
+  assert(it[1].value == 20 && (it + 2)->value == 30);
+  assert((v.end() - 1)->value == 30);
+  ++it;
+  assert(it->value == 20);
+  assert(alive == 3);
+
+  return true;
+}
+
+constexpr bool test_inplace_vector_sort()
+{
+  emb::inplace_vector<int, 5> v;
+  for (int const x : {3, 5, 1, 4, 2}) {
+    v.push_back(x);
+  }
+  std::sort(v.begin(), v.end());
+  for (auto i = 0uz; i < v.size(); ++i) {
+    assert(v[i] == static_cast<int>(i) + 1);
+  }
+
+  return true;
+}
+
 static_assert(test_inplace_vector_lifecycle());
 static_assert(test_inplace_vector_copy());
 static_assert(test_inplace_vector_move());
@@ -268,5 +337,7 @@ static_assert(test_inplace_vector_move_push());
 static_assert(test_inplace_vector_try_pop());
 static_assert(test_inplace_vector_try_push());
 static_assert(test_inplace_vector_no_default_ctor());
+static_assert(test_inplace_vector_iterators());
+static_assert(test_inplace_vector_sort());
 
 } // namespace
