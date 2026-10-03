@@ -7,7 +7,7 @@
 
 #include <emb/nvm/storage.hpp>
 #include <emb/settings/store.hpp>
-#include <emb/test/mock/block_storage.hpp>
+#include <emb/test/mock/ram_storage.hpp>
 
 namespace {
 
@@ -26,7 +26,7 @@ inline constexpr auto body_bytes = record_body_size(schema.count);
 inline constexpr auto record_bytes = record_size(schema.count);
 
 // FRAM: byte writes, no erase, two slots of one record each.
-using fram = test::block_storage<64>;
+using fram = test::ram_storage<64>;
 inline constexpr placement fram_placement{.magic = magic,
                                           .base = 0,
                                           .slot_capacity = record_bytes,
@@ -35,7 +35,7 @@ inline constexpr placement fram_placement{.magic = magic,
 
 // Internal flash: four-byte writes, an erased target required, two erase
 // blocks of two slots each.
-using flash = test::block_storage<128, 4, true, 64>;
+using flash = test::ram_storage<128, 4, true, 64>;
 inline constexpr placement flash_placement{.magic = magic,
                                            .base = 0,
                                            .slot_capacity = record_bytes,

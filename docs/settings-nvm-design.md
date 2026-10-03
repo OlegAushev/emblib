@@ -380,7 +380,7 @@ lives in `config` meanwhile.
 
 ```cpp
 template<typename T>
-concept some_block_storage = requires {
+concept some_storage = requires {
   typename T::addr_type;
   typename T::error_type;
   { T::capacity }         -> std::convertible_to<std::size_t>;
@@ -482,7 +482,7 @@ external/emblib/emb/
                                       parameters, see §7
   can/canopen/od_section.hpp   [done] od_settings_for a section, and the
                                       readers of its state under 3000h
-  test/mock/block_storage.hpp  [done] constexpr RAM backend for tests
+  test/mock/ram_storage.hpp  [done] constexpr RAM backend for tests
   test/mock/plain_word.hpp     [done] a std::atomic stand-in for pending
                                       changes in constant expressions
   test/*_test.cpp                     in-tree convention: anonymous namespace,
@@ -534,7 +534,7 @@ firmware behaviourally unchanged.
 **Phase 1 — the application, alongside the old stack, nothing switched.**
 
 9. `src/common/nvm/fm25w256_fram.hpp` — **done**: the driver models
-   `some_block_storage` directly, no adapter; it has since moved to embdev
+   `some_storage` directly, no adapter; it has since moved to embdev
    as `emb/dev/fm25w256.hpp`
 10. `src/app/inverter/settings/schema.hpp` — **done**: same parameters,
     plus bounds, groups and apply policies; checked against the old layout

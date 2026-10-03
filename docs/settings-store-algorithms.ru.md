@@ -162,7 +162,7 @@ FRAM:  2 слота по 1 КиБ, slots_per_block = 1
 
 ### 1.3. Что требуется от носителя
 
-Концепт `nvm::some_block_storage`: типы `addr_type` и `error_type`,
+Концепт `nvm::some_storage`: типы `addr_type` и `error_type`,
 константы `capacity`, `write_granularity`, `needs_erase`, `erased_value`,
 операции `read`, `write`, `erase`, каждая возвращает
 `std::expected<void, error_type>`.
@@ -1347,7 +1347,7 @@ CRC втрое быстрее и дешевле в `constexpr` (≈ 170 опер
 
 ### 9.1. Мок носителя
 
-`emb/test/mock/block_storage.hpp` — носитель в ОЗУ, `constexpr`
+`emb/test/mock/ram_storage.hpp` — носитель в ОЗУ, `constexpr`
 целиком, параметризованный ёмкостью, гранулярностью записи, требованием
 стирания, размером блока стирания и стёртым значением. Органы
 управления:

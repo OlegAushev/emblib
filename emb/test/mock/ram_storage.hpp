@@ -21,14 +21,14 @@ enum class storage_fault {
   unreadable,
 };
 
-// A RAM-backed some_block_storage for tests. Constexpr throughout, so whole
+// A RAM-backed some_storage for tests. Constexpr throughout, so whole
 // scenarios — write, cut the power, reboot, load — run inside static_assert
 // and cost nothing at run time.
 //
 // Parameterized by the three traits that actually differ between media:
-//   block_storage<256>                     — FRAM: byte writes, no erase,
+//   ram_storage<256>                     — FRAM: byte writes, no erase,
 //                                            any range erasable
-//   block_storage<1024, 4, true, 256>      — flash: 4-byte write units,
+//   ram_storage<1024, 4, true, 256>      — flash: 4-byte write units,
 //                                            erased target required,
 //                                            256-byte erase blocks
 //
@@ -41,7 +41,7 @@ template<std::size_t Capacity,
          bool NeedsErase = false,
          std::size_t EraseBlock = 1,
          std::byte ErasedValue = std::byte{0xFF}>
-class block_storage {
+class ram_storage {
 public:
   using addr_type = std::uint32_t;
   using error_type = storage_fault;
@@ -56,7 +56,7 @@ public:
 
   using result = std::expected<void, error_type>;
 
-  constexpr block_storage()
+  constexpr ram_storage()
   {
     cells_.fill(ErasedValue);
   }

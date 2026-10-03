@@ -4,7 +4,7 @@
 #include <emb/can/canopen/od_handlers.hpp>
 #include <emb/can/canopen/od_section.hpp>
 #include <emb/settings/section.hpp>
-#include <emb/test/mock/block_storage.hpp>
+#include <emb/test/mock/ram_storage.hpp>
 
 namespace {
 
@@ -22,7 +22,7 @@ inline constexpr auto schema = settings::make_schema(
                     {.min = std::int32_t{1}, .max = std::int32_t{64}}),
     settings::param("prod.serial", std::uint32_t{0}, {.writable = false}));
 
-using flash = emb::test::block_storage<1024, 4, true, 128>;
+using flash = emb::test::ram_storage<1024, 4, true, 128>;
 inline constexpr settings::placement flash_placement{.magic = 0x47464354u,
                                                      .base = 0,
                                                      .slot_capacity = 64,

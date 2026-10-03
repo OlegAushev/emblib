@@ -37,7 +37,7 @@ namespace settings {
 // non-const member function must not run concurrently with any other call
 // on the section, except, with the default `Word`, a call on `pending()`.
 template<auto& Schema,
-         nvm::some_block_storage Storage,
+         nvm::some_storage Storage,
          placement Placement,
          typename Word = std::atomic<std::uint32_t>>
 class section {

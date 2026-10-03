@@ -239,7 +239,7 @@ struct slot_ring {
 //
 // `Storage::write_granularity` must divide 8. The store refers to the medium
 // passed to its constructor, which must outlive it.
-template<auto& Schema, nvm::some_block_storage Storage, placement Placement>
+template<auto& Schema, nvm::some_storage Storage, placement Placement>
 class store {
   using addr_type = typename Storage::addr_type;
   using error_type = typename Storage::error_type;

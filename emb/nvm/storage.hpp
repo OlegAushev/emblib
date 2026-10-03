@@ -43,7 +43,7 @@ namespace nvm {
 //  - write addresses and lengths are multiples of write_granularity;
 //  - an erase range covers whole erase blocks of the medium.
 template<typename T>
-concept some_block_storage =
+concept some_storage =
     requires {
       typename T::addr_type;
       typename T::error_type;
@@ -69,12 +69,12 @@ concept some_block_storage =
        };
 
 // Result of a backend operation, spelled once for the code that chains them.
-template<some_block_storage Storage>
+template<some_storage Storage>
 using result = std::expected<void, typename Storage::error_type>;
 
 // Whether a range read back from storage is still in the erased state — how
 // a slot scan tells "never written" from "written and then corrupted".
-template<some_block_storage Storage>
+template<some_storage Storage>
 constexpr bool is_erased(std::span<std::byte const> data)
 {
   return std::ranges::all_of(data, [](std::byte b) {

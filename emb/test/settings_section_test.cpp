@@ -1,7 +1,7 @@
 #include <cstdint>
 
 #include <emb/settings/section.hpp>
-#include <emb/test/mock/block_storage.hpp>
+#include <emb/test/mock/ram_storage.hpp>
 #include <emb/test/mock/plain_word.hpp>
 
 namespace {
@@ -33,7 +33,7 @@ inline constexpr auto schema = make_schema(
           std::uint32_t{0},
           {.group = group::motor, .writable = false}));
 
-using fram = test::block_storage<512>;
+using fram = test::ram_storage<512>;
 inline constexpr placement fram_placement{.magic = 0x47464354u,
                                           .base = 0,
                                           .slot_capacity = 128,

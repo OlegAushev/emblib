@@ -3,7 +3,7 @@
 #include <span>
 
 #include <emb/nvm/storage.hpp>
-#include <emb/test/mock/block_storage.hpp>
+#include <emb/test/mock/ram_storage.hpp>
 
 namespace {
 
@@ -11,16 +11,16 @@ using namespace emb;
 using test::storage_fault;
 
 // FRAM: byte-granular writes, no erase needed.
-using fram_storage = test::block_storage<64>;
+using fram_storage = test::ram_storage<64>;
 
 // Internal flash: 4-byte write units, target must be erased, 32-byte
 // erase blocks (a scaled-down stand-in for a sector).
-using flash_storage = test::block_storage<128, 4, true, 32>;
+using flash_storage = test::ram_storage<128, 4, true, 32>;
 
 // -- Concept --
 
-static_assert(nvm::some_block_storage<fram_storage>);
-static_assert(nvm::some_block_storage<flash_storage>);
+static_assert(nvm::some_storage<fram_storage>);
+static_assert(nvm::some_storage<flash_storage>);
 
 struct no_erase {
   using addr_type = std::uint32_t;
@@ -74,10 +74,10 @@ struct untyped_erased_value {
   std::expected<void, int> erase(addr_type, std::size_t);
 };
 
-static_assert(!nvm::some_block_storage<no_erase>);
-static_assert(!nvm::some_block_storage<no_error_type>);
-static_assert(!nvm::some_block_storage<bool_returning>);
-static_assert(!nvm::some_block_storage<untyped_erased_value>);
+static_assert(!nvm::some_storage<no_erase>);
+static_assert(!nvm::some_storage<no_error_type>);
+static_assert(!nvm::some_storage<bool_returning>);
+static_assert(!nvm::some_storage<untyped_erased_value>);
 
 // -- Behaviour --
 //

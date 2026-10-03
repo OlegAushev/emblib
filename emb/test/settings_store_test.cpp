@@ -7,7 +7,7 @@
 
 #include <emb/nvm/storage.hpp>
 #include <emb/settings/store.hpp>
-#include <emb/test/mock/block_storage.hpp>
+#include <emb/test/mock/ram_storage.hpp>
 #include <emb/units.hpp>
 
 namespace {
@@ -44,7 +44,7 @@ inline constexpr auto next_schema =
                 param("hall.poll_num", std::int32_t{4}));
 
 // FRAM: byte writes, no erase, two slots.
-using fram = test::block_storage<512>;
+using fram = test::ram_storage<512>;
 inline constexpr placement fram_placement{.magic = magic,
                                           .base = 0,
                                           .slot_capacity = 128,
@@ -53,7 +53,7 @@ using fram_store = store<schema, fram, fram_placement>;
 
 // Internal flash: four-byte writes, an erased target required, two erase
 // blocks of two slots each.
-using flash = test::block_storage<1024, 4, true, 128>;
+using flash = test::ram_storage<1024, 4, true, 128>;
 inline constexpr placement flash_placement{.magic = magic,
                                            .base = 0,
                                            .slot_capacity = 64,
@@ -665,7 +665,7 @@ consteval bool test_a_restart_onto_debris_with_no_header()
 
 // Internal flash with blocks of four slots: deep enough for a record, a hole
 // and debris to share one.
-using deep = test::block_storage<2048, 4, true, 256>;
+using deep = test::ram_storage<2048, 4, true, 256>;
 inline constexpr placement deep_placement{.magic = magic,
                                           .base = 0,
                                           .slot_capacity = 64,
@@ -1026,7 +1026,7 @@ consteval bool test_flash_round_trip()
 
 // A section with more slots than a word has bits: what a 128 KiB erase
 // block looks like when slots are a kilobyte.
-using wide = test::block_storage<4096, 4, true, 1024>;
+using wide = test::ram_storage<4096, 4, true, 1024>;
 inline constexpr placement wide_placement{.magic = magic,
                                           .base = 0,
                                           .slot_capacity = 64,
