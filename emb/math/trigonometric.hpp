@@ -1,8 +1,15 @@
 #pragma once
 
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <numbers>
+
+#ifdef __arm__
+extern "C" {
+#include "arm_math.h"
+}
+#endif
 
 namespace emb {
 
@@ -229,6 +236,87 @@ constexpr float fast_atan2(float y, float x)
   }
 
   return r;
+}
+
+// Computes the sine of `x` (measured in radians) with the target's run-time
+// implementation: `arm_sin_f32` from CMSIS-DSP on 32-bit Arm, `std::sin` on
+// other targets. `arm_sin_f32` has an absolute error below 1.9e-5 for
+// |`x`| <= 2pi and below 1e-4 for |`x`| <= 1000.
+inline float builtin_sin(float x)
+{
+#ifdef __arm__
+  return arm_sin_f32(x);
+#else
+  return std::sin(x);
+#endif
+}
+
+// Computes the sine of `x` (measured in radians). Returns `builtin_sin(x)` at
+// run time. During constant evaluation, returns `lookup_sin(x)`, whose absolute
+// error is below 4e-7 for |`x`| <= 2pi and below 1e-4 for |`x`| <= 1000.
+constexpr float sin(float x)
+{
+  if !consteval {
+    return builtin_sin(x);
+  }
+  else {
+    return lookup_sin(x);
+  }
+}
+
+// Computes the cosine of `x` (measured in radians) with the target's run-time
+// implementation: `arm_cos_f32` from CMSIS-DSP on 32-bit Arm, `std::cos` on
+// other targets. `arm_cos_f32` has an absolute error below 1.9e-5 for
+// |`x`| <= 2pi and below 1.1e-4 for |`x`| <= 1000.
+inline float builtin_cos(float x)
+{
+#ifdef __arm__
+  return arm_cos_f32(x);
+#else
+  return std::cos(x);
+#endif
+}
+
+// Computes the cosine of `x` (measured in radians). Returns `builtin_cos(x)` at
+// run time. During constant evaluation, returns `lookup_cos(x)`, whose absolute
+// error is below 5e-7 for |`x`| <= 2pi and below 1e-4 for |`x`| <= 1000.
+constexpr float cos(float x)
+{
+  if !consteval {
+    return builtin_cos(x);
+  }
+  else {
+    return lookup_cos(x);
+  }
+}
+
+// Computes the arc tangent of `y`/`x`, in [-pi, pi], using the signs of `y` and
+// `x` to determine the quadrant, with the target's run-time implementation:
+// `arm_atan2_f32` from CMSIS-DSP on 32-bit Arm, `std::atan2` on other targets.
+// `arm_atan2_f32` has an absolute error below 4.5e-7 for finite `y` and `x`
+// that are not both zero. If both are zero, the result is zero on 32-bit Arm.
+inline float builtin_atan2(float y, float x)
+{
+#ifdef __arm__
+  float ret = 0.0f;
+  arm_atan2_f32(y, x, &ret);
+  return ret;
+#else
+  return std::atan2(y, x);
+#endif
+}
+
+// Computes the arc tangent of `y`/`x`, in [-pi, pi], using the signs of `y` and
+// `x` to determine the quadrant. Returns `builtin_atan2(y, x)` at run time.
+// During constant evaluation, returns `fast_atan2(y, x)`.
+constexpr float atan2(float y, float x)
+{
+  if !consteval {
+    return builtin_atan2(y, x);
+  }
+  else {
+    return fast_atan2(y, x);
+  }
 }
 
 } // namespace emb

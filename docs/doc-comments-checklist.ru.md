@@ -49,27 +49,34 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `clarke_inputs`
   - [x] `clarke_transform`
   - [x] `invclarke_transform`
-- [x] `emb/math.hpp`
-  - [x] `builtin_sin`, `sin`
-  - [x] `builtin_cos`, `cos`
-  - [x] `builtin_atan2`, `atan2`
-  - [x] `fast_rsqrt`
-  - [x] `builtin_rsqrt`, `rsqrt`
-  - [x] `fast_sqrt`
-  - [x] `builtin_sqrt`, `sqrt`
-  - [x] `fmod_trivial`, `fmod`
-  - [x] `sgn`, `iseven`, `isodd`, `approx`
+- [x] `emb/math.hpp` — только подключает заголовки `emb/math/`, сущностей нет
+- [x] `emb/math/angle.hpp`
   - [x] `to_rad`, `to_deg`, `to_eradps`, `to_rpm`
   - [x] `norm2pi`, `normpi`, `norm2pi_fast`, `normpi_fast`
 - [x] `emb/math/clamped.hpp`
   - [x] `clamped`
   - [x] `signed_pu`, `unsigned_pu`, `signed_pu_f32`, `unsigned_pu_f32`
+- [x] `emb/math/numeric.hpp`
+  - [x] `fmod_trivial`, `fmod`
+  - [x] `sgn`, `iseven`, `isodd`, `approx`
 - [x] `emb/math/scaled.hpp`
   - [x] `saturate_round`
   - [x] `quantize`, `dequantize`
   - [x] `some_quantity`, `some_ratio`
   - [x] `detail::scaled`
   - [x] `scaled` (псевдоним)
+- [x] `emb/math/sqrt.hpp`
+  - [x] `fast_rsqrt`
+  - [x] `builtin_rsqrt`, `rsqrt`
+  - [x] `fast_sqrt`
+  - [x] `builtin_sqrt`, `sqrt`
+- [ ] `emb/math/trigonometric.hpp` — песочница: `lookup_sin`, `fast_atan2`, таблица sin/cos
+  - [ ] `detail::sincos_lookup_table`
+  - [ ] `lookup_sin`, `lookup_cos`
+  - [ ] `fast_atan2`
+  - [x] `builtin_sin`, `sin`
+  - [x] `builtin_cos`, `cos`
+  - [x] `builtin_atan2`, `atan2`
 - [x] `emb/meta.hpp` — только подключает заголовки `emb/meta/`, сущностей нет
 - [x] `emb/meta/all_same.hpp`
   - [x] `all_same` (`detail::all_same_v` без комментария: его покрывает
@@ -292,7 +299,6 @@ emblib не попал. Такие файлы помечены «песочни�
 - [ ] `emb/hall/sector.hpp`
 - [ ] `emb/integrator.hpp` — песочница: `integrator`
 - [ ] `emb/math/saturation.hpp`
-- [ ] `emb/math/trigonometric.hpp` — песочница: `lookup_sin`, `fast_atan2`, таблица sin/cos
 - [ ] `emb/noncopyable.hpp`
 - [ ] `emb/nvm/storage.hpp`
 - [ ] `emb/pipe.hpp`
