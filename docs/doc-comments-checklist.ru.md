@@ -293,9 +293,6 @@ emblib не попал. Такие файлы помечены «песочни�
 - [ ] `emb/integrator.hpp` — песочница: `integrator`
 - [ ] `emb/math/saturation.hpp`
 - [ ] `emb/math/trigonometric.hpp` — песочница: `lookup_sin`, `fast_atan2`, таблица sin/cos
-- [ ] `emb/memory/eeprom/eeprom.cpp`
-- [ ] `emb/memory/eeprom/eeprom.hpp`
-- [ ] `emb/memory/memory_def.hpp`
 - [ ] `emb/noncopyable.hpp`
 - [ ] `emb/nvm/storage.hpp`
 - [ ] `emb/pipe.hpp`
