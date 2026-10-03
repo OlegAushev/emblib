@@ -485,8 +485,8 @@ external/emblib/emb/
   test/mock/ram_storage.hpp  [done] constexpr RAM backend for tests
   test/mock/plain_word.hpp     [done] a std::atomic stand-in for pending
                                       changes in constant expressions
-  test/*_test.cpp                     in-tree convention: anonymous namespace,
-                                      static_assert only
+  */test/*_test.cpp                   in-tree convention: next to the module,
+                                      anonymous namespace, static_assert only
 
 external/embdev/emb/dev/
   fm25w256.hpp                 [done] the driver itself models the concept:
@@ -907,9 +907,9 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   the last resort for a section that refuses saves, and must not refuse in
   turn. Such a wipe guesses the order from what it read and promises
   nothing about a cut.
-- **Tests follow the in-tree convention** (`emb/test/*_test.cpp`, anonymous
-  namespace, `static_assert` only): they cost compile time and contribute no
-  symbols to the image.
+- **Tests follow the in-tree convention** (`emb/<module>/test/*_test.cpp`,
+  anonymous namespace, `static_assert` only): they cost compile time and
+  contribute no symbols to the image.
 - **Settings objects are rows with a binding, not a generated section.** A
   row names its parameter with `od_settings<...>::rw<"name">` inside the
   ordinary table, so settings objects and the others share one table, one

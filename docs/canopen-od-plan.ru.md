@@ -470,11 +470,12 @@ constinit emb::can::canopen::od_view<context> const dictionary{table};
    - изменить: `emb/can/canopen/od.hpp`, `detail/sdo_server.hpp`,
      `server.hpp`;
    - создать: `od_dictionary.hpp`, `detail/od_check.hpp`,
-     `od_handlers.hpp`, `emb/test/canopen_od_test.cpp`;
+     `od_handlers.hpp`, `emb/can/canopen/test/od_test.cpp`;
    - докомментарии на уровне классов, в стиле cppreference; `""` для
      соседних файлов, `<>` для путей от корня.
 2. **emblib** `feat(canopen): bind settings parameters to the dictionary`
-   - создать: `od_settings.hpp`, `emb/test/canopen_od_settings_test.cpp`;
+   - создать: `od_settings.hpp`,
+     `emb/can/canopen/test/od_settings_test.cpp`;
    - обновить `docs/settings-nvm-design.md`: §7 и §8 построены, `expose`
      теперь читается, restore по ключу идёт через `restore_default_at`;
    - обновить `docs/doc-comments-checklist.ru.md` и статус этого
@@ -542,7 +543,7 @@ constinit emb::can::canopen::od_view<context> const dictionary{table};
 Глоб собирает их в прошивку каждого потребителя (ARM GCC 15, `-Werror`);
 кроме того, их прогоняют на host g++ 16 и через `clang-check`.
 
-`emb/test/canopen_od_test.cpp`:
+`emb/can/canopen/test/od_test.cpp`:
 - порядок ключей, `sizeof(od_entry<ctx>) == 8 + 2 * sizeof(void*)`;
 - access и тип каждого построителя: все 8 скаляров, обёртка, `expected`;
 - `od_rw`: чтение и запись через одну запись, читатель с обёрткой и
@@ -556,7 +557,7 @@ constinit emb::can::canopen::od_view<context> const dictionary{table};
 - точный текст `detail::od_check(bad)` для T1–T14. `make_dictionary`
   зовёт ту же функцию, так что этим проверены и его отказы.
 
-`emb/test/canopen_od_settings_test.cpp`:
+`emb/can/canopen/test/od_settings_test.cpp`:
 - схема с bool, int32, uint32, float и обёрткой, плюс незаписываемый и
   скрытый параметры; constexpr-заглушки аксессоров;
 - `od_type_of`, `to_sdo_abort`, отказ для int8;
