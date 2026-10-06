@@ -19,7 +19,11 @@ resetting the sequence (§10). On 2026-10-03 the store was rewritten to
 keep nothing about the medium between calls: each call reads every slot
 whole and trusts only whole records (§5, §10). The store's algorithms,
 invariants and failure scenarios are described in detail, in Russian, in
-`settings-store-algorithms.ru.md`.
+`settings-store-algorithms.ru.md`. On 2026-10-05 the section stopped
+marking the groups a write changed: a value waits to be applied while it
+differs from the value applied, which the section keeps as a third image,
+so a value written and put back owes neither a rebuild nor a restart (§4,
+§10).
 
 ## 1. Scope
 
@@ -112,7 +116,7 @@ enum class error { unknown_parameter, read_only, type_mismatch, out_of_range };
 std::span<descriptor const> descriptors();
 std::optional<index> find(std::string_view name);
 std::expected<value, error> get_at(index);
-std::expected<std::optional<change>, error> set_at(index, value);
+std::expected<void, error> set_at(index, value);
 }
 ```
 
@@ -140,34 +144,41 @@ communication task.
   `configure(config const&)`; its constructor delegates to it. Construction
   splits into *acquiring dependencies* (references, peripherals — immutable
   for life) and *parametrization* (recomputable).
-- The settings layer keeps an atomic dirty mask over groups. An SDO write
-  validates, updates the RAM image and sets a bit. Nothing blocking or
-  recomputing happens in the CAN context.
-- The owner checks the mask where it knows the state is consistent:
+- The settings layer keeps, next to the RAM image, the values applied:
+  those the derived state was last built from. An SDO write validates and
+  updates the RAM image, nothing else; a value waits to be applied while it
+  differs from the one applied. Nothing blocking or recomputing happens in
+  the CAN context.
+- The owner looks for a difference where it knows the state is consistent:
 
 ```cpp
-if (settings::config.pending().take(group::model, apply_policy::live)) {
+if (settings::config.take(group::model, apply_policy::live)) {
   if (!model_.configure(settings::read_model_config(),
                         settings::read_mras_config()))
     trouble::set(trouble::invalid_config{});
 }
 ```
 
-One operation tests and clears, rather than a query followed by an
+One operation checks and records, rather than a query followed by an
 acknowledgement: a change that lands between the two would otherwise be
-dropped — its bit cleared, its value never applied. Taking first and
-reconfiguring afterwards can at worst apply the same value twice.
+dropped — recorded as applied while the state was built without it.
+Taking first and reconfiguring afterwards can at worst apply the same
+value twice.
 
 `up_to` is what the caller can honour: a running drive takes
 `apply_policy::live` and leaves `on_safe_state` changes waiting for a state
 where they are safe; nothing takes `on_restart`, which is what keeps
-`restart_required` standing until the restart.
+`restart_required` standing until the restart or until the value is put
+back.
 
 Pull, not registration: no lifetimes, no reverse dependency, no hidden
 observers, and the safe point sits literally in the code that knows it is
-safe. The cost is one atomic load per control cycle. `md::motor_drive`
-hand-rolled this pattern in `pending_pwm_freq_` / `pending_calibration_`;
-the mechanism generalizes that single instance.
+safe. The cost is a pass over the cells per `take`; it compares the cells
+before it reads a descriptor, so it reads the descriptors of the values
+that differ only, and none while nothing differs. `md::motor_drive`
+hand-rolled this pattern in `pending_calibration_` and in
+`requested_pwm_freq_` / `applied_pwm_freq_`, which compares the frequency
+requested with the one applied; the mechanism generalizes them.
 
 `configure()` decides explicitly what survives a reconfiguration: changing
 `Kp/Ki` keeps the integrator (they are tuned while running, and a reset
@@ -186,11 +197,16 @@ quiet-period debounce, and group validation runs before the swap, keeping
 the old config on failure.
 
 Not built. A calibration result reaches the image in one call, which
-nothing can split; twelve writes over SDO are twelve changes, and standing
-still, each is applied at the next task tick, so the sensor is rebuilt from
-a mix of old and new angles until the last one lands — harmless, since no
-current flows. The validation has nothing to check with yet:
-`emb::hall::validate(calibration_result)` accepts any angles.
+nothing can split, and as values already applied, since the sensor took
+them when they were computed (`adopt`, §10); twelve writes over SDO are
+twelve changes, and standing still, each is applied at the next task tick,
+so the sensor is rebuilt from a mix of old and new angles until the last
+one lands. No current flows, but each mix is checked: `configure()` runs
+`emb::hall::validate` (every angle in [0, 360), the six of a direction
+distinct) and keeps the sensor as it was when a mix fails, and the drive
+then raises `hall_invalid_calibration`, which stops it until an operator
+clears the status. A write order that passes through a repeated angle does
+that, even once the last write completes a valid set.
 
 ## 5. NVM record format
 
@@ -472,19 +488,16 @@ external/emblib/emb/
   settings/schema.hpp          [done] make_schema, lookup by name and by id,
                                       descriptor table, uniqueness checks
   settings/image.hpp           [done] RAM image, typed and erased access
-  settings/pending.hpp         [done] dirty groups, split by apply policy
   settings/record.hpp          [done] record layout, encode and decode
   settings/store.hpp           [done] slots, active record, commit, load
                                       report
-  settings/section.hpp         [done] one section: the image, its record,
-                                      pending changes; load/save/wipe
+  settings/section.hpp         [done] one section: the image, the values
+                                      stored and applied; load/save/wipe/take
   can/canopen/od_settings.hpp  [done] per-row bindings of the schema's
                                       parameters, see §7
   can/canopen/od_section.hpp   [done] od_settings_for a section, and the
                                       readers of its state under 3000h
   test/mock/ram_storage.hpp  [done] constexpr RAM backend for tests
-  test/mock/plain_word.hpp     [done] a std::atomic stand-in for pending
-                                      changes in constant expressions
   */test/*_test.cpp                   in-tree convention: next to the module,
                                       anonymous namespace, static_assert only
 
@@ -521,7 +534,9 @@ firmware behaviourally unchanged.
 2. `nvm/storage.hpp` + mock backend — **done**
 3. `settings/value.hpp` — **done**
 4. `settings/param.hpp` + `settings/schema.hpp` — **done**
-5. `settings/image.hpp` + `settings/pending.hpp` — **done**
+5. `settings/image.hpp` + `settings/pending.hpp` — **done**; the second
+   has since gone: on 2026-10-05 the section replaced its masks with the
+   values applied (§4, §10)
 6. `settings/record.hpp` — **done**
 7. `settings/store.hpp` — **done**
 8. Store tests — **done**: two mock media (FRAM-like; flash-like with
@@ -565,7 +580,7 @@ The first has since lost its argument: the build picks the medium, and
     emblib's `od.hpp`. Binding the rows to the schema (dropping the
     hand-written type and default columns, and the thunks with them)
     followed on 2026-09-29, see §7.
-15. `configure()` entry points and dirty groups — **done**. The seam is
+15. `configure()` entry points and unapplied groups — **done**. The seam is
     the drive's periodic task tick, which already runs in task context with
     the control timebase masked: `motor_drive::apply_pending_settings()`
     decides from its own state what it can promise (`on_safe_state` when
@@ -655,22 +670,74 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   range checking are separate mechanisms and both are wanted.
 - **The image holds no atomics.** It is plain data with typed and erased
   access, which keeps it usable in constant expressions — and therefore
-  testable the way everything else in the library is. Sharing one between
-  contexts is the application's business; the image only reports what a
-  write changed, and `pending_changes` records it.
-- **`take()` instead of `changed()` + `acknowledge()`.** Test-and-clear in
-  one operation cannot drop a change that arrives between the two calls.
-- **A write that leaves a cell as it was reports no change**
-  (`std::nullopt`). Otherwise a profile written whole, or a restore of
-  defaults that were already there, marks every group it touches: live
-  tuning of a group freezes behind a restart nothing needs, and
-  `restart_required()` stands for nothing. A value changed and changed back
-  stays marked: the masks record changes, not a difference from what was
-  applied.
-- **`pending_changes` is templated on its word type**, so the bit
-  arithmetic is checked in constant expressions with a plain word while
-  production uses `std::atomic<std::uint32_t>`; the test also instantiates
-  the atomic form so it is compiled for the target.
+  testable the way everything else in the library is. Since 2026-10-05 the
+  section that holds it has none either: a call to a non-const member must
+  not overlap any other call, while const calls may overlap each other.
+  Sharing one between contexts is the application's business. A section
+  can no longer be called from an interrupt handler, which nothing did: an
+  interrupt with a value to write hands it to a task, as the inverter's
+  drive does with a hall calibration.
+- **`take()` instead of `changed()` + `acknowledge()`.** Check-and-record
+  in one operation cannot drop a change that arrives between the two calls.
+- ~~**A write that leaves a cell as it was reports no change**~~
+  (`std::nullopt`). Superseded on 2026-10-05 by "Unapplied is a difference
+  from the values applied, not a record of writes": a write reports only
+  an error now, and one that leaves a cell as it was leaves every
+  difference as it was, so a profile written whole, or a restore of
+  defaults that were already there, still owes nothing.
+- ~~**`pending_changes` is templated on its word type.**~~ Superseded on
+  2026-10-05 by "Unapplied is a difference from the values applied, not a
+  record of writes": with the masks gone there is no word to choose, and
+  the tests check the section as the target runs it, bar the medium.
+- **Unapplied is a difference from the values applied, not a record of
+  writes.** Next to the image and the values stored, the section keeps a
+  third image: the values applied, from which the application last built its
+  derived state. A parameter is unapplied while its cell differs from the
+  applied one, compared by encoding as `unsaved()` compares, and
+  `restart_required()` is `unapplied(apply_policy::on_restart)`. `set`,
+  `set_at`, `restore_default_at` and `restore_all_defaults` change the image
+  only. `take(group, up_to)` refuses a group in which a value under a policy
+  stricter than `up_to` differs, returns `false` for one in which nothing
+  differs, and otherwise records every value of the group as applied, for
+  the caller to rebuild the group from the image. `load` records what it
+  restored, since the application builds its state after the load; `save`
+  and `wipe` leave the values applied alone, since a restart owed before a
+  save is owed after it. The masks this replaced, one per apply policy,
+  recorded writes: a write that changed a cell marked its group under the
+  parameter's policy, and the mark stayed until a `take` cleared it, so a
+  value written and put back stayed marked. An `on_restart` parameter put
+  back kept `restart_required` and the unapplied warning lit until the
+  restart, and its mark held every later `live` or `on_safe_state` change of
+  its group until then. An `on_safe_state` parameter written while the drive
+  ran and put back kept the warning lit and the live changes of its group
+  waiting until the drive stopped, and then had the group rebuilt for
+  nothing. Now the flags follow the values: a value put back before it was
+  applied owes nothing. The price is one image more — four bytes per
+  parameter, less the twelve bytes the masks took — which a
+  constant-initialized section pays in RAM and again in the flash that holds
+  its initial values. Every `take` costs a pass over the cells. An owner
+  whose `configure()` refuses the values still has them recorded as applied,
+  as the masks had them cleared. Any one-byte group identifier works now,
+  where the masks held 32 groups. Rejected: applied cells kept only for the
+  parameters that are not live, with a mask for the live ones — two
+  mechanisms to save some 120 bytes; a change counter per group and policy,
+  which cannot see a value put back; a hash of the cells of each group,
+  which can collide and cannot say which parameter differs; and a defaulted
+  `operator==` on the image, which libstdc++ lowers to `__builtin_memcmp` on
+  a `std::array` while newlib-nano's `memcmp` compares a byte at a time, so
+  the comparison stays a loop over the cells, a word at a time.
+- **`adopt` records a value its owner has applied itself.** `adopt<Name>`
+  writes like `set<Name>` and records the value as applied too. The hall
+  sensor applies a calibration result in the timebase interrupt, and the
+  drive's task records the twelve angles with `adopt` before it takes group
+  `hall`: a `take` that another value of the group calls for still rebuilds
+  the sensor from the image, so the angles have to be there first. Written
+  with `set`, the angles would wait for a `take` to rebuild a sensor that
+  already holds them. Worse, when the group cannot be taken as the
+  calibration finishes — the drive already started again, or a stricter
+  value of the group differs — an operator who writes the old angles back
+  leaves the image saying the old calibration while the sensor keeps the
+  new one, and once nothing else differs, no flag says so.
 - **The erased accessors are spelled apart from the typed ones** —
   `get_at`/`set_at` by index, `get`/`set` by name, `cell`/`assign_cell` for
   raw cells. Not merely different addressing: the by-index path enforces
@@ -979,6 +1046,31 @@ The rewrite of the store on 2026-10-03 (§10) changed three more:
   product's flash a load takes 16 to 31 ms and a save 25 to 40, where they
   took 0.2 and 8.
 
+Counting as unapplied what differs from the values applied, on 2026-10-05
+(§10), changed three more:
+
+- **`restart_required` and `unapplied` follow the values.** `unapplied`
+  (`3000h:12`) and the warning `unapplied_changes` stand while any value
+  differs from the one applied, `restart_required` (`3000h:11`) and its
+  warning while an `on_restart` value does, and each clears once the
+  values are applied — at the restart, for `on_restart` — or put back.
+  Before, a write kept them lit until its group was applied, even after
+  the value was put back: an `on_restart` parameter until the restart,
+  holding back every later change of its group, and an `on_safe_state`
+  one written while the drive ran until the drive stopped. Put back means
+  bit for bit, since cells are compared by their encoding: `-0.0` does not
+  put back `+0.0`. A value put back before it was applied rebuilds nothing
+  either: put back in group `motor`, it no longer resets the observer, and
+  a value set through the `ctl` objects `2001h:03` to `2001h:05`, which
+  bypass the image, survives such a pair of writes.
+- **`1011h:04` clears them only where the value applied is the default.**
+  It restores the default, not the value applied, so it undoes a change
+  only of a parameter that runs on its default. For any other, write back
+  the value it runs on.
+- **`3000h:12` is called `unapplied`**, after the member that answers it,
+  where it was `changes_pending`. A tool that finds objects by name needs
+  the new one.
+
 ## 10b. What applying taught us
 
 - **A group is applied whole, so a group that also waits on something
@@ -988,21 +1080,27 @@ The rewrite of the store on 2026-10-03 (§10) changed three more:
   values that include the swap. The rule lives inside `take()` rather than
   in its callers: a caller that forgets it gets no diagnostic, only a phase
   swap in a spinning machine. A consequence worth knowing: one parameter
-  needing a restart freezes live tuning of its group until the restart,
-  which is the safe direction.
-- **What `take()` cannot promise**: a stricter change marked after it
-  returned is in the image by the time the caller reads its configuration.
-  Narrowing that window inside the masks does not close it — the take and
-  the reading of the configuration would have to be one operation. Where it
-  matters, keep marking and applying out of each other's way; in the
-  inverter both run as tasks in the same loop.
+  needing a restart freezes live tuning of its group until the restart or
+  until the value is put back, which is the safe direction.
+- **`take()` has a precondition**: writes to the parameters of the group
+  must not run between `take` and the caller's reading of the image. A
+  value written in between reaches the caller whatever its policy — a
+  stricter one too, which `take` never saw. No check inside `take` closes
+  that window: the take and the reading of the configuration would have to
+  be one operation. In the inverter the precondition holds by
+  construction: every call on the section runs in the main loop — SDO in
+  `can_server.run()`, the drive's task, the trouble task — so nothing
+  writes between a `take` and the reading after it.
 - **Reconfiguration is not atomic against the current loop.** The task
   tick masks the timebase and below; the ADC and PWM interrupts (priority
   0 and 2) still preempt. No value tears — every one is a word — and each
   group's derived state tolerates a single control step built from a mix of
   old and new coefficients. The one structure that would not, the angle
   sensor's sector maps, is only ever rebuilt in a state where no current
-  flows, which is what its `on_safe_state` policy is for.
+  flows, which is what its `on_safe_state` policy is for. Masking the
+  timebase does a second job: the drive's state machine moves in the
+  timebase interrupt, so the state `up_to` was read from holds until the
+  rebuild ends.
 - **`isense.zero_drift_th` went back to `on_restart`.** Nothing can reach
   the zero-drift calibrator to tell it otherwise: it is not owned by the
   drive and has no periodic task of its own. Declaring it live would have
@@ -1021,8 +1119,10 @@ The rewrite of the store on 2026-10-03 (§10) changed three more:
   directly and avoid that variant-to-variant conversion, which nothing has
   asked for since.
 - **Exposing stored vs active value** for `on_restart` parameters over the
-  OD, beyond the `restart_required` and `changes_pending` flags
-  (`3000h`, sub-indices `11h` and `12h`).
+  OD, beyond the `restart_required` and `unapplied` flags (`3000h`,
+  sub-indices `11h` and `12h`). Since 2026-10-05 the section keeps the
+  values applied, which for an `on_restart` parameter are the active ones;
+  what is missing is a way to read them over the OD.
 - **Counters** (hour meter, energy, fault counts) need their own append-log
   region; out of scope here, but the region layout should leave room.
 - ~~**`survey()` trusts headers.**~~ Settled on 2026-10-03 by the rewrite

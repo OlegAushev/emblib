@@ -1,10 +1,7 @@
-#include <atomic>
 #include <type_traits>
 
 #include <emb/math/clamped.hpp>
 #include <emb/settings/image.hpp>
-#include <emb/settings/pending.hpp>
-#include <emb/test/mock/plain_word.hpp>
 #include <emb/units.hpp>
 
 namespace {
@@ -41,7 +38,6 @@ inline constexpr auto schema = make_schema(
 using img = image<schema>;
 
 static_assert(img::count == 5);
-static_assert(groups_fit<schema>());
 
 // -- Defaults --
 
@@ -69,11 +65,7 @@ consteval bool test_typed_access()
 {
   img values;
 
-  auto const written = values.set<"drive.runout_speed">(rpm{250.0f});
-  if (!written) return false;
-  if (*written != change{group_id{group::drive}, apply_policy::live}) {
-    return false;
-  }
+  if (!values.set<"drive.runout_speed">(rpm{250.0f})) return false;
   if (values.get<"drive.runout_speed">() != rpm{250.0f}) return false;
 
   // Out of the declared range: refused, and the cell keeps its value.
@@ -113,6 +105,9 @@ consteval bool test_erased_access()
 
   auto const closed = values.set_at(serial, value{std::uint32_t{1}});
   if (closed || closed.error() != error::read_only) return false;
+  // Closed comes before the type: a closed parameter refuses any value.
+  auto const closed_float = values.set_at(serial, value{1.0f});
+  if (closed_float || closed_float.error() != error::read_only) return false;
 
   auto const out = values.set_at(speed, value{9000.0f});
   if (out || out.error() != error::out_of_range) return false;
@@ -140,34 +135,29 @@ consteval bool test_unchanged_write()
 {
   img values;
   constexpr auto speed = *schema.index_of("drive.runout_speed");
+  constexpr auto held = to_raw(rpm{100.0f});
 
-  // Writing what a cell already holds is accepted and changes nothing,
-  // whichever path the write takes.
-  auto const same = values.set<"drive.runout_speed">(rpm{100.0f});
-  if (!same || same->has_value()) return false;
+  // Writing what a cell already holds is accepted and leaves the cell as it
+  // was, whichever path the write takes.
+  if (!values.set<"drive.runout_speed">(rpm{100.0f})) return false;
+  if (values.cell(speed) != held) return false;
+  if (!values.set_at(speed, value{100.0f})) return false;
+  if (values.cell(speed) != held) return false;
+  if (!values.restore_default<"drive.runout_speed">()) return false;
+  if (values.cell(speed) != held) return false;
+  if (!values.restore_default_at(speed)) return false;
+  if (values.cell(speed) != held) return false;
 
-  auto const same_at = values.set_at(speed, value{100.0f});
-  if (!same_at || same_at->has_value()) return false;
+  // A value that differs is written; the same value again is accepted.
+  if (!values.set<"motor.p">(std::int32_t{4})) return false;
+  if (values.get<"motor.p">() != 4) return false;
+  if (!values.set<"motor.p">(std::int32_t{4})) return false;
+  if (values.get<"motor.p">() != 4) return false;
 
-  auto const restored = values.restore_default<"drive.runout_speed">();
-  if (!restored || restored->has_value()) return false;
-
-  auto const restored_at = values.restore_default_at(speed);
-  if (!restored_at || restored_at->has_value()) return false;
-
-  // A value that differs is still a change; the same value again is not.
-  auto const changed = values.set<"motor.p">(std::int32_t{4});
-  if (!changed) return false;
-  if (*changed != change{group_id{group::model}, apply_policy::on_restart}) {
-    return false;
-  }
-  auto const again = values.set<"motor.p">(std::int32_t{4});
-  if (!again || again->has_value()) return false;
-
-  // Bounds are checked first: an out-of-range value is refused, not
-  // compared.
+  // An out-of-range value is refused, and the cell keeps its value.
   auto const out = values.set<"motor.p">(std::int32_t{65});
   if (out || out.error() != error::out_of_range) return false;
+  if (values.get<"motor.p">() != 4) return false;
 
   return true;
 }
@@ -181,7 +171,7 @@ consteval bool test_cells()
 
   if (values.cell(p) != to_raw(std::int32_t{11})) return false;
 
-  // A loader assigns without validation and without reporting a change.
+  // A loader assigns without validation.
   values.assign_cell(p, to_raw(std::int32_t{4}));
   if (values.get<"motor.p">() != 4) return false;
 
@@ -192,186 +182,10 @@ consteval bool test_cells()
   return true;
 }
 
-// -- Pending changes --
-//
-// The word type is swapped for a plain one so the bit arithmetic runs in a
-// constant expression; std::atomic cannot.
-
-using test_pending = basic_pending_changes<test::plain_word>;
-
-consteval bool test_pending_is_taken_once()
-{
-  test_pending pending;
-  constexpr group_id drive{group::drive};
-
-  if (pending.take(drive, apply_policy::live)) return false;
-
-  pending.mark(drive, apply_policy::live);
-  if (!pending.changed(drive, apply_policy::live)) return false;
-  if (!pending.take(drive, apply_policy::live)) return false;
-  // Taken means cleared.
-  if (pending.take(drive, apply_policy::live)) return false;
-  if (pending.changed(drive, apply_policy::live)) return false;
-
-  return true;
-}
-
-consteval bool test_pending_respects_the_policy()
-{
-  test_pending pending;
-  constexpr group_id model{group::model};
-
-  pending.mark(model, apply_policy::on_safe_state);
-
-  // A caller that can only apply live changes leaves it waiting.
-  if (pending.take(model, apply_policy::live)) return false;
-  if (!pending.changed(model, apply_policy::on_safe_state)) return false;
-
-  // One that can reconfigure safely takes it, and takes live changes too.
-  pending.mark(model, apply_policy::live);
-  if (!pending.take(model, apply_policy::on_safe_state)) return false;
-  if (pending.changed(model, apply_policy::on_safe_state)) return false;
-
-  return true;
-}
-
-consteval bool test_a_group_waiting_on_more_is_refused()
-{
-  test_pending pending;
-  constexpr group_id model{group::model};
-
-  pending.mark(model, apply_policy::live);
-  pending.mark(model, apply_policy::on_safe_state);
-
-  // A caller that can only apply live changes gets nothing: the group is
-  // rebuilt whole, and half of it must wait for a safe state.
-  if (pending.take(model, apply_policy::live)) return false;
-  // And nothing was consumed on the way out.
-  if (!pending.changed(model, apply_policy::live)) return false;
-
-  // A caller that can honour both takes both.
-  if (!pending.take(model, apply_policy::on_safe_state)) return false;
-  if (pending.changed(model, apply_policy::on_safe_state)) return false;
-
-  // A change that needs a restart refuses the group to everyone.
-  pending.mark(model, apply_policy::live);
-  pending.mark(model, apply_policy::on_restart);
-  if (pending.take(model, apply_policy::on_safe_state)) return false;
-  if (!pending.changed(model, apply_policy::live)) return false;
-
-  return true;
-}
-
-consteval bool test_pending_groups_are_independent()
-{
-  test_pending pending;
-  constexpr group_id drive{group::drive};
-  constexpr group_id model{group::model};
-
-  pending.mark(drive, apply_policy::live);
-  pending.mark(model, apply_policy::live);
-
-  if (!pending.take(drive, apply_policy::live)) return false;
-  if (!pending.changed(model, apply_policy::live)) return false;
-  if (pending.mask(apply_policy::live) != (1u << model.value)) return false;
-
-  return true;
-}
-
-consteval bool test_restart_required()
-{
-  test_pending pending;
-  constexpr group_id model{group::model};
-
-  if (pending.restart_required()) return false;
-
-  pending.mark(change{model, apply_policy::on_restart});
-  if (!pending.restart_required()) return false;
-
-  // Nothing a caller can honour, so nothing is taken and the condition
-  // stands until the restart.
-  if (pending.take(model, apply_policy::on_safe_state)) return false;
-  if (!pending.restart_required()) return false;
-
-  pending.clear();
-  if (pending.restart_required()) return false;
-
-  return true;
-}
-
-consteval bool test_unchanged_write_owes_nothing()
-{
-  test_pending pending;
-  img values;
-
-  // What the image reports is marked as it stands: a write that left the
-  // value as it was leaves nothing pending, not even a restart.
-  pending.mark(std::optional<change>{});
-  pending.mark(*values.set<"motor.p">(std::int32_t{11}));
-  pending.mark(*values.restore_default<"model.torque_slope">());
-  for (auto const p : {apply_policy::live,
-                       apply_policy::on_safe_state,
-                       apply_policy::on_restart}) {
-    if (pending.mask(p) != 0) return false;
-  }
-
-  pending.mark(*values.set<"motor.p">(std::int32_t{12}));
-  if (!pending.restart_required()) return false;
-
-  return true;
-}
-
-consteval bool test_any_change_is_pending()
-{
-  test_pending pending;
-  constexpr group_id drive{group::drive};
-  constexpr group_id model{group::model};
-
-  if (pending.any()) return false;
-
-  pending.mark(drive, apply_policy::live);
-  if (!pending.any()) return false;
-  if (!pending.take(drive, apply_policy::live)) return false;
-  if (pending.any()) return false;
-
-  pending.mark(model, apply_policy::on_restart);
-  if (pending.take(model, apply_policy::on_safe_state)) return false;
-  if (!pending.any()) return false;
-
-  pending.clear();
-  if (pending.any()) return false;
-
-  return true;
-}
-
-// The production instantiation must compile for the target too, not only
-// the test double it is checked through.
-[[maybe_unused]] void instantiate_atomic_pending()
-{
-  constexpr group_id drive{group::drive};
-  pending_changes pending;
-  pending.mark(change{drive, apply_policy::live});
-  pending.mark(std::optional<change>{});
-  [[maybe_unused]] auto const taken = pending.take(drive, apply_policy::live);
-  [[maybe_unused]] auto const waiting =
-      pending.changed(drive, apply_policy::live);
-  [[maybe_unused]] auto const bits = pending.mask(apply_policy::live);
-  [[maybe_unused]] auto const restart = pending.restart_required();
-  [[maybe_unused]] auto const anything = pending.any();
-  pending.clear();
-}
-
 static_assert(test_defaults());
 static_assert(test_typed_access());
 static_assert(test_erased_access());
 static_assert(test_unchanged_write());
 static_assert(test_cells());
-static_assert(test_pending_is_taken_once());
-static_assert(test_pending_respects_the_policy());
-static_assert(test_a_group_waiting_on_more_is_refused());
-static_assert(test_pending_groups_are_independent());
-static_assert(test_restart_required());
-static_assert(test_unchanged_write_owes_nothing());
-static_assert(test_any_change_is_pending());
 
 } // namespace

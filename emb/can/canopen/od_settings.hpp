@@ -92,13 +92,13 @@ concept od_settings_accessors =
 
 // The class template `od_settings` binds objects to the parameters of the
 // settings schema `Schema`, which it reaches through the application's
-// by-index accessors, the ones that also record what a write changed. A row
-// names its parameter once, as in `od_settings<...>::rw<"motor.p">`: the
-// object's type is the parameter's, its `arg` is the parameter's index, and
-// an `rw` object is restorable through 1011h:04 by `RestoreAt`. `ro` binds a
-// parameter for reading only. Every row carries `catalog`, so
-// `make_dictionary` checks that each exposed parameter has exactly one row
-// and each hidden one none, as soon as the dictionary has one such row.
+// by-index accessors. A row names its parameter once, as in
+// `od_settings<...>::rw<"motor.p">`: the object's type is the parameter's,
+// its `arg` is the parameter's index, and an `rw` object is restorable
+// through 1011h:04 by `RestoreAt`. `ro` binds a parameter for reading only.
+// Every row carries `catalog`, so `make_dictionary` checks that each exposed
+// parameter has exactly one row and each hidden one none, as soon as the
+// dictionary has one such row.
 //
 // Binding an unknown, hidden or, with `rw`, read-only parameter is reported
 // at the row. A value of a type no parameter can hold is refused with

@@ -5,7 +5,6 @@
 
 #include <array>
 #include <expected>
-#include <optional>
 
 #include <cstddef>
 #include <cstdint>
@@ -36,10 +35,7 @@ enum class error : std::uint8_t {
 // On construction, every cell holds the default of its parameter.
 //
 // A write through `set`, `restore_default`, `set_at` or `restore_default_at`
-// that is accepted returns the `change` it made, i.e. the group and the apply
-// policy of the parameter, or `std::nullopt` if the cell already held the
-// same encoding. A write that is refused returns an `error` and leaves the
-// cell as it was.
+// that is refused returns an `error` and leaves the cell as it was.
 //
 // An `image` holds no atomics and takes no locks: contexts that share one,
 // e.g. a task and an interrupt handler, must keep a write from overlapping
@@ -73,7 +69,7 @@ public:
   // or a value recorded in production, writes it here. Returns
   // `error::out_of_range` if `v` is outside the bounds of the parameter.
   template<fixed_string Name>
-  constexpr std::expected<std::optional<change>, error>
+  constexpr std::expected<void, error>
   set(typename parameter<Schema, Name>::type const& v)
   {
     using param_type = parameter<Schema, Name>;
@@ -82,7 +78,7 @@ public:
 
   // Writes the default of the parameter `Name`, as `set` does.
   template<fixed_string Name>
-  constexpr std::expected<std::optional<change>, error> restore_default()
+  constexpr std::expected<void, error> restore_default()
   {
     using param_type = parameter<Schema, Name>;
     return write(param_type::index, param_type::desc.def);
@@ -106,8 +102,7 @@ public:
   // `error::type_mismatch` if `v` holds another alternative than the scalar
   // type of the parameter, otherwise `error::out_of_range` if `v` is outside
   // the bounds of the parameter.
-  constexpr std::expected<std::optional<change>, error>
-  set_at(std::size_t index, value const& v)
+  constexpr std::expected<void, error> set_at(std::size_t index, value const& v)
   {
     if (index >= count) {
       return std::unexpected(error::unknown_parameter);
@@ -128,8 +123,7 @@ public:
   // `error::unknown_parameter` if `index >= count`, otherwise
   // `error::read_only` if the parameter is not `writable`: what a protocol may
   // not write, it may not reset either.
-  constexpr std::expected<std::optional<change>, error>
-  restore_default_at(std::size_t index)
+  constexpr std::expected<void, error> restore_default_at(std::size_t index)
   {
     if (index >= count) {
       return std::unexpected(error::unknown_parameter);
@@ -143,8 +137,7 @@ public:
     return write(index, desc.def);
   }
 
-  // Assigns every parameter its default, whether or not it is `writable`, and
-  // reports no change.
+  // Assigns every parameter its default, whether or not it is `writable`.
   constexpr void restore_defaults()
   {
     for (auto i = 0uz; i < count; ++i)
@@ -161,8 +154,8 @@ public:
   }
 
   // Assigns `cell` to the parameter at `index` as it is, i.e. without
-  // checking it against the bounds of the parameter, and reports no change.
-  // The behavior is undefined if `index >= count`.
+  // checking it against the bounds of the parameter. The behavior is
+  // undefined if `index >= count`.
   constexpr void assign_cell(std::size_t index, raw_value cell)
   {
     cells_[index] = cell;
@@ -172,19 +165,14 @@ private:
   // Returns `error::out_of_range` if `cell` is outside the bounds of the
   // parameter at `index`; otherwise writes it there. The behavior is
   // undefined if `index >= count`.
-  constexpr std::expected<std::optional<change>, error> write(std::size_t index,
-                                                              raw_value cell)
+  constexpr std::expected<void, error> write(std::size_t index, raw_value cell)
   {
     auto const& desc = Schema.parameters[index];
     if (!in_range(desc.type, cell, desc.min, desc.max)) {
       return std::unexpected(error::out_of_range);
     }
-    if (cells_[index] == cell) {
-      return std::nullopt;
-    }
-
     cells_[index] = cell;
-    return change{desc.group, desc.apply};
+    return {};
   }
 };
 

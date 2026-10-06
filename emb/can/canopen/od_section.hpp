@@ -45,7 +45,7 @@ section_restore_default_at(std::size_t index)
 
 // The alias template `od_settings_for` is the `od_settings` bridge to the
 // parameters of `Section`, a `settings::section`, through the by-index
-// accessors of `Section`, which mark what a write changes.
+// accessors of `Section`.
 template<auto& Section>
 using od_settings_for =
     od_settings<detail::section_t<Section>::schema,
@@ -55,8 +55,8 @@ using od_settings_for =
 
 // The class template `od_section_status` provides readers, for `od_ro`, of
 // the state of `Section`, a `settings::section`: where its records are kept,
-// how far its saves have advanced around the slots, what the last load found
-// and what changes are waiting to be applied.
+// how far its saves have advanced around the slots, what the last load found,
+// and whether values wait to be applied or for a restart.
 template<auto& Section>
 class od_section_status {
   using section_type = detail::section_t<Section>;
@@ -162,12 +162,12 @@ public:
 
   static bool restart_required()
   {
-    return Section.pending().restart_required();
+    return Section.restart_required();
   }
 
-  static bool changes_pending()
+  static bool unapplied()
   {
-    return Section.pending().any();
+    return Section.unapplied();
   }
 };
 

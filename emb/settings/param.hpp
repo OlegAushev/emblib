@@ -15,7 +15,7 @@ namespace settings {
 // The scoped enumeration `apply_policy` defines when a change to the value of
 // a parameter may take effect. The enumerators are ordered from the least to
 // the most demanding: wherever a change of one policy may take effect, so may
-// a change of any policy before it. `pending_changes` relies on that order.
+// a change of any policy before it. `section::take` relies on that order.
 enum class apply_policy : std::uint8_t {
   // Policy of a parameter that feeds only state the application can
   // recompute at any time: a change may take effect at once, in any state.
@@ -37,9 +37,6 @@ enum class apply_policy : std::uint8_t {
 //
 //   enum class group : std::uint8_t { drive, model, ... };
 //   param("model.speed_Kp", 0.8f, {.group = group::model, ...})
-//
-// A group that `pending_changes` tracks must have a `value` less than
-// `pending_changes::group_limit`.
 struct group_id {
   std::uint8_t value = 0;
 
@@ -60,15 +57,6 @@ struct group_id {
   }
 
   friend constexpr bool operator==(group_id, group_id) = default;
-};
-
-// Report of a write that changed the value of a parameter: the group and the
-// apply policy of the parameter, which `pending_changes::mark` records.
-struct change {
-  group_id group;
-  apply_policy apply;
-
-  friend constexpr bool operator==(change, change) = default;
 };
 
 // Type-erased description of one parameter, the same structure whatever the

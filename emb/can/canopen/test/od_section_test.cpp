@@ -71,7 +71,7 @@ consteval bool test_dictionary()
       {{0x3000, 0x0F}, "config", "nvm",   "rejected",         "", uint32,  od_ro<status::rejected>},
       {{0x3000, 0x10}, "config", "nvm",   "missing",          "", uint32,  od_ro<status::missing>},
       {{0x3000, 0x11}, "config", "nvm",   "restart_required", "", boolean, od_ro<status::restart_required>},
-      {{0x3000, 0x12}, "config", "nvm",   "changes_pending",  "", boolean, od_ro<status::changes_pending>},
+      {{0x3000, 0x12}, "config", "nvm",   "unapplied",        "", boolean, od_ro<status::unapplied>},
       {{0x3002, 0x01}, "config", "drive", "phase_swap",       "", boolean, bridge::rw<"drive.phase_swap">},
       {{0x3004, 0x01}, "config", "motor", "pole_pairs",       "", int32,   bridge::rw<"motor.p">},
       {{0x3009, 0x01}, "config", "prod",  "serial",           "", uint32,  bridge::ro<"prod.serial">},

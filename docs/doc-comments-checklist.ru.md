@@ -125,15 +125,11 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `image`
 - [x] `emb/settings/param.hpp`
   - [x] `apply_policy`
-  - [x] `group_id`, `change`, `descriptor`
+  - [x] `group_id`, `descriptor`
   - [x] `detail::parameter_default_outside_range`,
     `detail::parameter_min_above_max`
   - [x] `detail::lowest`, `detail::highest`, `detail::identify`
   - [x] `options`, `declaration`, `param`
-- [x] `emb/settings/pending.hpp`
-  - [x] `detail::group_bit`, `detail::policy_index`
-  - [x] `basic_pending_changes`, `pending_changes`
-  - [x] `groups_fit`
 - [x] `emb/settings/record.hpp`
   - [x] `record_format` (с описанием формата записи)
   - [x] `record_header_size`, `record_cell_size`, `record_footer_size`
