@@ -230,7 +230,7 @@ public:
 
   template<typename State>
     requires detail::one_of_fsm_states<State, States...>
-  constexpr bool is_in_state() const
+  constexpr bool in_state() const
   {
     return std::holds_alternative<State>(state_);
   }

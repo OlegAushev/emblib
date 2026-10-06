@@ -308,7 +308,7 @@ public:
     requires(sizeof...(State) > 0)
          && (typelist_contains<state_list, State> && ...)
          && typelist_unique<typelist<State...>>
-  [[nodiscard]] constexpr bool is_in_state() const
+  [[nodiscard]] constexpr bool in_state() const
   {
     return (std::holds_alternative<State>(state_) || ...);
   }

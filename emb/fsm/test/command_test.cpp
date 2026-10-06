@@ -380,7 +380,7 @@ constexpr bool test_state_names_the_control()
   vehicle v;
 
   deliver_all<channels>(v);
-  assert(v.is_in_state<parked>());
+  assert(v.in_state<parked>());
   assert(v.last_gear == gear::neutral);
   assert(v.speeds[0] == speed{});
 
@@ -402,7 +402,7 @@ constexpr bool test_delivery_order()
   // rolling, and the speed channel reads the state it moved to; the variant
   // hands over the one event it holds
   deliver_all<channels>(v);
-  assert(v.is_in_state<rolling>());
+  assert(v.in_state<rolling>());
   assert(v.last_gear == gear::forward);
   assert(v.speeds[0] == speed{10.f});
   assert(v.deliveries == 3);
@@ -438,7 +438,7 @@ constexpr bool test_nothing_to_restore()
   v.pedal_gear = gear::neutral;
   v.dispatch(halt{});
   deliver_all<channels>(v);
-  assert(v.is_in_state<parked>());
+  assert(v.in_state<parked>());
   assert(v.last_gear == gear::neutral);
   assert(v.speeds[2] == speed{});
 
@@ -476,7 +476,7 @@ constexpr bool test_read_follows_the_state()
   // rolling names
   v.pedal_gear = gear::forward;
   deliver<gear_channel>(v);
-  assert(v.is_in_state<rolling>());
+  assert(v.in_state<rolling>());
   assert(read<throttle_channel>(v) == throttle{40.f});
 
   return true;
@@ -490,7 +490,7 @@ constexpr bool test_read_dispatches_nothing()
   // reading go leaves the vehicle parked, and reading a speed hands the
   // machine nothing
   assert(std::holds_alternative<go>(read<gear_channel>(v)));
-  assert(v.is_in_state<parked>());
+  assert(v.in_state<parked>());
   assert(read<speed_channel>(v) == speed{});
   assert(v.deliveries == 0);
 

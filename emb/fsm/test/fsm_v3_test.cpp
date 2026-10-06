@@ -94,41 +94,41 @@ struct SwitchVisitor {
 constexpr bool test_moore_fsm_v3()
 {
   Switch s;
-  assert(s.is_in_state<ClosedState>());
+  assert(s.in_state<ClosedState>());
   assert(s.state_id() == SwitchStateId::closed);
   assert(s.closed_entries == 1);
   assert(s.visit(SwitchVisitor{}) == SwitchStateId::closed);
 
   s.force_transition<OpenState>();
-  assert(s.is_in_state<OpenState>());
+  assert(s.in_state<OpenState>());
   assert(s.state_id() == SwitchStateId::open);
   assert(s.closed_entries == 1);
   assert(s.open_entries == 1);
   assert(s.visit(SwitchVisitor{}) == SwitchStateId::open);
 
   s.dispatch(OpenEvent{});
-  assert(s.is_in_state<OpenState>());
+  assert(s.in_state<OpenState>());
   assert(s.state_id() == SwitchStateId::open);
   assert(s.closed_entries == 1);
   assert(s.open_entries == 1);
   assert(s.visit(SwitchVisitor{}) == SwitchStateId::open);
 
   s.dispatch(CloseEvent{});
-  assert(s.is_in_state<ClosedState>());
+  assert(s.in_state<ClosedState>());
   assert(s.state_id() == SwitchStateId::closed);
   assert(s.closed_entries == 2);
   assert(s.open_entries == 1);
   assert(s.visit(SwitchVisitor{}) == SwitchStateId::closed);
 
   s.dispatch(CloseEvent{});
-  assert(s.is_in_state<ClosedState>());
+  assert(s.in_state<ClosedState>());
   assert(s.state_id() == SwitchStateId::closed);
   assert(s.closed_entries == 2);
   assert(s.open_entries == 1);
   assert(s.visit(SwitchVisitor{}) == SwitchStateId::closed);
 
   s.dispatch(OpenEvent{});
-  assert(s.is_in_state<OpenState>());
+  assert(s.in_state<OpenState>());
   assert(s.state_id() == SwitchStateId::open);
   assert(s.closed_entries == 2);
   assert(s.open_entries == 2);
@@ -216,32 +216,32 @@ struct SwitchVisitor {
 constexpr bool test_mealy_fsm_v3()
 {
   Switch s;
-  assert(s.is_in_state<ClosedState>());
+  assert(s.in_state<ClosedState>());
   assert(s.state_id() == SwitchStateId::closed);
   assert(s.visit(SwitchVisitor{}) == SwitchStateId::closed);
 
   s.force_transition<OpenState>();
-  assert(s.is_in_state<OpenState>());
+  assert(s.in_state<OpenState>());
   assert(s.state_id() == SwitchStateId::open);
   assert(s.visit(SwitchVisitor{}) == SwitchStateId::open);
 
   s.dispatch(OpenEvent{});
-  assert(s.is_in_state<OpenState>());
+  assert(s.in_state<OpenState>());
   assert(s.state_id() == SwitchStateId::open);
   assert(s.visit(SwitchVisitor{}) == SwitchStateId::open);
 
   s.dispatch(CloseEvent{});
-  assert(s.is_in_state<ClosedState>());
+  assert(s.in_state<ClosedState>());
   assert(s.state_id() == SwitchStateId::closed);
   assert(s.visit(SwitchVisitor{}) == SwitchStateId::closed);
 
   s.dispatch(CloseEvent{});
-  assert(s.is_in_state<ClosedState>());
+  assert(s.in_state<ClosedState>());
   assert(s.state_id() == SwitchStateId::closed);
   assert(s.visit(SwitchVisitor{}) == SwitchStateId::closed);
 
   s.dispatch(OpenEvent{});
-  assert(s.is_in_state<OpenState>());
+  assert(s.in_state<OpenState>());
   assert(s.state_id() == SwitchStateId::open);
   assert(s.visit(SwitchVisitor{}) == SwitchStateId::open);
 
@@ -406,7 +406,7 @@ struct SwitchVisitor {
 constexpr bool test_mixed_fsm_v3()
 {
   Switch s;
-  assert(s.is_in_state<ClosedState>());
+  assert(s.in_state<ClosedState>());
   assert(s.state_id() == SwitchStateId::closed);
   assert(s.closed_entries == 1);
   assert(s.visit(SwitchVisitor{}) == SwitchStateId::closed);
@@ -415,7 +415,7 @@ constexpr bool test_mixed_fsm_v3()
   assert(s.updates == 1);
 
   s.force_transition<OpenState>();
-  assert(s.is_in_state<OpenState>());
+  assert(s.in_state<OpenState>());
   assert(s.state_id() == SwitchStateId::open);
   assert(s.closed_entries == 1);
   assert(s.closed_exits == 1);
@@ -427,7 +427,7 @@ constexpr bool test_mixed_fsm_v3()
   assert(s.updates == 2);
 
   s.dispatch(OpenEvent{});
-  assert(s.is_in_state<OpenState>());
+  assert(s.in_state<OpenState>());
   assert(s.state_id() == SwitchStateId::open);
   assert(s.closed_entries == 1);
   assert(s.closed_exits == 1);
@@ -439,7 +439,7 @@ constexpr bool test_mixed_fsm_v3()
   assert(s.updates == 3);
 
   s.dispatch(CloseEvent{});
-  assert(s.is_in_state<ClosedState>());
+  assert(s.in_state<ClosedState>());
   assert(s.state_id() == SwitchStateId::closed);
   assert(s.closed_entries == 2);
   assert(s.closed_exits == 1);
@@ -451,7 +451,7 @@ constexpr bool test_mixed_fsm_v3()
   assert(s.updates == 4);
 
   s.dispatch(CloseEvent{});
-  assert(s.is_in_state<ClosedState>());
+  assert(s.in_state<ClosedState>());
   assert(s.state_id() == SwitchStateId::closed);
   assert(s.closed_entries == 2);
   assert(s.closed_exits == 1);
@@ -463,7 +463,7 @@ constexpr bool test_mixed_fsm_v3()
   assert(s.updates == 5);
 
   s.dispatch(OpenEvent{});
-  assert(s.is_in_state<OpenState>());
+  assert(s.in_state<OpenState>());
   assert(s.state_id() == SwitchStateId::open);
   assert(s.closed_entries == 2);
   assert(s.closed_exits == 2);
@@ -472,7 +472,7 @@ constexpr bool test_mixed_fsm_v3()
   assert(s.visit(SwitchVisitor{}) == SwitchStateId::open);
 
   s.dispatch(DestroyEvent{});
-  assert(s.is_in_state<DestroyedState>());
+  assert(s.in_state<DestroyedState>());
   assert(s.state_id() == SwitchStateId::destroyed);
   assert(s.closed_entries == 2);
   assert(s.closed_exits == 2);
@@ -485,33 +485,33 @@ constexpr bool test_mixed_fsm_v3()
 
 static_assert(test_mixed_fsm_v3());
 
-constexpr bool test_is_in_state_v3()
+constexpr bool test_in_state_v3()
 {
   Switch s;
-  assert(s.is_in_state<ClosedState>());
-  assert((s.is_in_state<ClosedState, OpenState>()));
-  assert((s.is_in_state<DestroyedState, ClosedState>()));
-  assert(!(s.is_in_state<OpenState, DestroyedState>()));
+  assert(s.in_state<ClosedState>());
+  assert((s.in_state<ClosedState, OpenState>()));
+  assert((s.in_state<DestroyedState, ClosedState>()));
+  assert(!(s.in_state<OpenState, DestroyedState>()));
 
   s.force_transition<OpenState>();
-  assert(!s.is_in_state<ClosedState>());
-  assert((s.is_in_state<ClosedState, OpenState>()));
-  assert((s.is_in_state<OpenState, DestroyedState>()));
+  assert(!s.in_state<ClosedState>());
+  assert((s.in_state<ClosedState, OpenState>()));
+  assert((s.in_state<OpenState, DestroyedState>()));
 
   s.dispatch(DestroyEvent{});
-  assert(s.is_in_state<DestroyedState>());
-  assert(!(s.is_in_state<ClosedState, OpenState>()));
-  assert((s.is_in_state<OpenState, DestroyedState>()));
-  assert((s.is_in_state<OpenState, ClosedState, DestroyedState>()));
+  assert(s.in_state<DestroyedState>());
+  assert(!(s.in_state<ClosedState, OpenState>()));
+  assert((s.in_state<OpenState, DestroyedState>()));
+  assert((s.in_state<OpenState, ClosedState, DestroyedState>()));
 
   return true;
 }
 
-static_assert(test_is_in_state_v3());
+static_assert(test_in_state_v3());
 
 template<typename... States>
 concept state_query =
-    requires(Switch const& s) { s.template is_in_state<States...>(); };
+    requires(Switch const& s) { s.template in_state<States...>(); };
 
 static_assert(state_query<OpenState>);
 static_assert(state_query<OpenState, ClosedState, DestroyedState>);
