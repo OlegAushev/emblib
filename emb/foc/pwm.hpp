@@ -4,6 +4,7 @@
 #include <emb/math.hpp>
 
 #include <algorithm>
+#include <variant>
 
 namespace emb {
 namespace foc {
@@ -80,9 +81,32 @@ struct dpwmmax {
 
 } // namespace pwm_mode
 
+template<typename T>
+concept some_pwm_mode = requires (T const& mode, float v) {
+  { mode.offset(v, v, v) } -> std::same_as<float>;
+};
+
+namespace detail {
+
+template<some_pwm_mode Mode>
+constexpr float
+offset(Mode const& mode, float Va, float Vb, float Vc)
+{
+  return mode.offset(Va, Vb, Vc);
+}
+
+template<some_pwm_mode... Modes>
+constexpr float
+offset(std::variant<Modes...> const& mode, float Va, float Vb, float Vc)
+{
+  return mode.visit([&](auto const& m) { return m.offset(Va, Vb, Vc); });
+}
+
+} // namespace detail
+
 template<typename Mode>
-constexpr three_phase<emb::unsigned_pu_f32> modulate(voltage_abc const& Vs,
-                                                     float Vdc)
+constexpr three_phase<emb::unsigned_pu_f32>
+modulate(Mode const& mode, voltage_abc const& Vs, float Vdc)
 {
   if (Vdc <= 0.f) {
     return {.a = unsigned_pu_f32{0.5f},
@@ -97,7 +121,7 @@ constexpr three_phase<emb::unsigned_pu_f32> modulate(voltage_abc const& Vs,
   float const Vc = Vs.c * inv;
 
   // common-mode offset
-  float const Voff = Mode::offset(Va, Vb, Vc);
+  float const Voff = detail::offset(mode, Va, Vb, Vc);
 
   // duty cycles
   return {.a = emb::unsigned_pu_f32{(Va + Voff + 1.f) * 0.5f},
