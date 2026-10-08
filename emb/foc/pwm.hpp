@@ -26,6 +26,39 @@ struct svpwm {
   }
 };
 
+struct dpwmmin {
+  static constexpr float offset(float Va, float Vb, float Vc)
+  {
+    return -1.f - std::min({Va, Vb, Vc});
+  }
+};
+
+struct dpwmmax {
+  static constexpr float offset(float Va, float Vb, float Vc)
+  {
+    return 1.f - std::max({Va, Vb, Vc});
+  }
+};
+
+namespace detail {
+
+constexpr bool in_sector_0_2_4(float Va, float Vb, float Vc)
+{
+  return (Va >= Vb && Vb >= Vc)
+      || (Vb >= Vc && Vc >= Va)
+      || (Vc >= Va && Va >= Vb);
+}
+
+} // namespace detail
+
+struct dpwm0 {
+  static constexpr float offset(float Va, float Vb, float Vc)
+  {
+    return detail::in_sector_0_2_4(Va, Vb, Vc) ? dpwmmin::offset(Va, Vb, Vc)
+                                               : dpwmmax::offset(Va, Vb, Vc);
+  }
+};
+
 struct dpwm1 {
   static constexpr float offset(float Va, float Vb, float Vc)
   {
@@ -34,25 +67,11 @@ struct dpwm1 {
   }
 };
 
-struct dpwm0 {
-  static constexpr float offset(float Va, float Vb, float Vc)
-  {
-    auto const [mn, mx] = std::minmax({Va, Vb, Vc});
-    bool const clamp_low = (Va >= Vb && Vb >= Vc)
-                        || (Vb >= Vc && Vc >= Va)
-                        || (Vc >= Va && Va >= Vb);
-    return clamp_low ? (-1.f - mn) : (1.f - mx);
-  }
-};
-
 struct dpwm2 {
   static constexpr float offset(float Va, float Vb, float Vc)
   {
-    auto const [mn, mx] = std::minmax({Va, Vb, Vc});
-    bool const clamp_high = (Va >= Vb && Vb >= Vc)
-                         || (Vb >= Vc && Vc >= Va)
-                         || (Vc >= Va && Va >= Vb);
-    return clamp_high ? (1.f - mx) : (-1.f - mn);
+    return detail::in_sector_0_2_4(Va, Vb, Vc) ? dpwmmax::offset(Va, Vb, Vc)
+                                               : dpwmmin::offset(Va, Vb, Vc);
   }
 };
 
@@ -65,17 +84,48 @@ struct dpwm3 {
   }
 };
 
-struct dpwmmin {
-  static constexpr float offset(float Va, float Vb, float Vc)
+struct adaptive_dpwm {
+  current_dq I;
+  voltage_dq V;
+
+  constexpr float offset(float Va, float Vb, float Vc) const
   {
-    return -1.f - std::min({Va, Vb, Vc});
+    float const p = V.d * I.d + V.q * I.q;
+    float const q = V.q * I.d - V.d * I.q;
+    if (std::abs(q) <= 0.2679f * std::abs(p)) { // 15 deg
+      return dpwm1::offset(Va, Vb, Vc);
+    }
+    return (p * q > 0.f) ? dpwm2::offset(Va, Vb, Vc)
+                         : dpwm0::offset(Va, Vb, Vc);
   }
 };
 
-struct dpwmmax {
-  static constexpr float offset(float Va, float Vb, float Vc)
+struct gdpwm {
+  current_dq I;
+  voltage_dq V;
+
+  constexpr float offset(float Va, float Vb, float Vc) const
   {
-    return 1.f - std::max({Va, Vb, Vc});
+    constexpr float inv_sqrt3 = std::numbers::inv_sqrt3_v<float>;
+    float p = V.d * I.d + V.q * I.q;
+    float q = V.q * I.d - V.d * I.q;
+    if (std::abs(q) >= inv_sqrt3 * std::abs(p)) {
+      return (p * q > 0.f) ? dpwm2::offset(Va, Vb, Vc)
+                           : dpwm0::offset(Va, Vb, Vc);
+    }
+
+    if (p < 0.f) {
+      p = -p;
+      q = -q;
+    }
+
+    float const k = q * inv_sqrt3;
+    float const Ra = p * Va + k * (Vb - Vc);
+    float const Rb = p * Vb + k * (Vc - Va);
+    float const Rc = p * Vc + k * (Va - Vb);
+    auto const [rmn, rmx] = std::minmax({Ra, Rb, Rc});
+    return (rmx + rmn > 0.f) ? dpwmmax::offset(Va, Vb, Vc)
+                             : dpwmmin::offset(Va, Vb, Vc);
   }
 };
 
