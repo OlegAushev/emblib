@@ -273,8 +273,6 @@ emblib не попал. Такие файлы помечены «песочни�
 - [ ] `emb/foc/dq_controller.hpp`
 - [ ] `emb/foc/park.hpp`
 - [ ] `emb/foc/pwm.hpp`
-- [ ] `emb/foc/sinpwm.hpp`
-- [ ] `emb/foc/svpwm.hpp`
 - [ ] `emb/foc/to_polar.hpp`
 - [ ] `emb/foc/types.hpp`
 - [ ] `emb/foc/utility.hpp`

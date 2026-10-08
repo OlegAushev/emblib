@@ -5,8 +5,6 @@
 #include <emb/foc/dq_controller.hpp>
 #include <emb/foc/park.hpp>
 #include <emb/foc/pwm.hpp>
-#include <emb/foc/sinpwm.hpp>
-#include <emb/foc/svpwm.hpp>
 #include <emb/foc/to_polar.hpp>
 #include <emb/foc/types.hpp>
 #include <emb/foc/utility.hpp>
