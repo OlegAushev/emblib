@@ -117,11 +117,16 @@ public:
     return {};
   }
 
-  void on_timeout()
+  [[nodiscard]] std::optional<error> on_timeout()
   {
     offset_ = emb::units::erad_f32{0};
     angle_ = sector_span_.entry + sector_halfwidth;
     speedfilter_.set_output(emb::units::eradps_f32{0});
+
+    if (!capture_sector().has_value()) {
+      return error::invalid_input;
+    }
+    return std::nullopt;
   }
 
   emb::units::erad_f32 angle() const
