@@ -35,6 +35,10 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `backcalculation_pi_controller`, `clamping_pi_controller`
 - [x] `emb/expected.hpp`
   - [x] `TRY`
+- [x] `emb/filter/cascaded_filter.hpp`
+  - [x] `cascaded_filter`
+- [x] `emb/filter/concepts.hpp`
+  - [x] `some_filter`
 - [x] `emb/filter/exponential_filter.hpp`
   - [x] `exponential_filter`
 - [x] `emb/filter/exponential_median_filter.hpp`
