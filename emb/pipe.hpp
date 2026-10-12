@@ -13,7 +13,7 @@ namespace emb::pipe {
 //
 //   ctx.I.dq = ctx.I.phase | clarke_transform
 //                          | store(ctx.I.ab)
-//                          | park_transform(sine, cosine);
+//                          | park_transform(theta);
 template<typename Self>
 struct pipeable {};
 

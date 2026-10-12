@@ -2,6 +2,7 @@
 
 #include <emb/math.hpp>
 #include <emb/three_phase.hpp>
+#include <emb/units/angle.hpp>
 #include <emb/units/electrical.hpp>
 
 namespace emb {
@@ -43,6 +44,22 @@ using voltage_abc = vec_abc<units::tags::volt>;
 using voltage_ab = vec_ab<units::tags::volt>;
 using voltage_dq = vec_dq<units::tags::volt>;
 using voltage_polar = vec_polar<units::tags::volt>;
+
+// The struct `sin_cos` holds an angle theta as its sine and cosine, the form
+// the Park transforms take: (`cosine`, `sine`) is the unit vector of the d axis
+// in the stationary alpha-beta frame. A default-constructed `sin_cos` holds the
+// angle zero.
+struct sin_cos {
+  float sine = 0.0f;
+  float cosine = 1.0f;
+};
+
+// Returns the sine and cosine of `theta`, computed with `emb::sin` and
+// `emb::cos`.
+constexpr sin_cos to_sin_cos(units::erad_f32 theta)
+{
+  return {.sine = emb::sin(theta.value), .cosine = emb::cos(theta.value)};
+}
 
 template<typename T>
 concept some_motor = requires(T m) {
