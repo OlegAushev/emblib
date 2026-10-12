@@ -7,10 +7,10 @@ namespace emb {
 namespace foc {
 
 template<typename Q>
-constexpr vec_polar<Q> to_polar(vec_ab<Q> arg)
+constexpr vec_polar<Q> to_polar(vec_ab<Q> x)
 {
-  return {.mag = emb::sqrt(arg.alpha * arg.alpha + arg.beta * arg.beta),
-          .theta = emb::atan2(arg.beta, arg.alpha)};
+  return {.mag = emb::sqrt(x.alpha * x.alpha + x.beta * x.beta),
+          .theta = emb::atan2(x.beta, x.alpha)};
 }
 
 } // namespace foc

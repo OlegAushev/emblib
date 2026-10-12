@@ -6,17 +6,17 @@ namespace emb {
 namespace foc {
 
 template<typename Q>
-constexpr vec_dq<Q> park_transform(vec_ab<Q> v_ab, sin_cos theta)
+constexpr vec_dq<Q> park_transform(vec_ab<Q> x, sin_cos theta)
 {
-  return {.d = (v_ab.alpha * theta.cosine) + (v_ab.beta * theta.sine),
-          .q = (v_ab.beta * theta.cosine) - (v_ab.alpha * theta.sine)};
+  return {.d = (x.alpha * theta.cosine) + (x.beta * theta.sine),
+          .q = (x.beta * theta.cosine) - (x.alpha * theta.sine)};
 }
 
 template<typename Q>
-constexpr vec_ab<Q> invpark_transform(vec_dq<Q> v_dq, sin_cos theta)
+constexpr vec_ab<Q> invpark_transform(vec_dq<Q> x, sin_cos theta)
 {
-  return {.alpha = (v_dq.d * theta.cosine) - (v_dq.q * theta.sine),
-          .beta = (v_dq.q * theta.cosine) + (v_dq.d * theta.sine)};
+  return {.alpha = (x.d * theta.cosine) - (x.q * theta.sine),
+          .beta = (x.q * theta.cosine) + (x.d * theta.sine)};
 }
 
 } // namespace foc
