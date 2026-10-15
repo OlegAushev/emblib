@@ -1,6 +1,6 @@
 #pragma once
 
-#include <emb/meta/fixed_string.hpp>
+#include <emb/settings/param.hpp>
 #include <emb/settings/schema.hpp>
 
 #include <array>
@@ -55,32 +55,38 @@ public:
     restore_defaults();
   }
 
-  // -- Access by name --
+  // -- Access by declaration --
 
-  template<fixed_string Name>
-  constexpr typename parameter<Schema, Name>::type get() const
+  // Returns the value of the parameter that `Decl` declares, of the type
+  // `parameter<Schema, Decl>::type`.
+  template<auto& Decl>
+    requires some_declaration<decltype(Decl)>
+  constexpr typename parameter<Schema, Decl>::type get() const
   {
-    using param_type = parameter<Schema, Name>;
+    using param_type = parameter<Schema, Decl>;
     return from_raw<typename param_type::type>(cells_[param_type::index]);
   }
 
-  // Writes `v` to the parameter `Name` whether or not it is `writable`: the
-  // code that owns a parameter closed to protocols, e.g. a calibration result
-  // or a value recorded in production, writes it here. Returns
-  // `error::out_of_range` if `v` is outside the bounds of the parameter.
-  template<fixed_string Name>
+  // Writes `v` to the parameter that `Decl` declares whether or not it is
+  // `writable`: the code that owns a parameter closed to protocols, e.g. a
+  // calibration result or a value recorded in production, writes it here.
+  // Returns `error::out_of_range` if `v` is outside the bounds of the
+  // parameter.
+  template<auto& Decl>
+    requires some_declaration<decltype(Decl)>
   constexpr std::expected<void, error>
-  set(typename parameter<Schema, Name>::type const& v)
+  set(typename parameter<Schema, Decl>::type const& v)
   {
-    using param_type = parameter<Schema, Name>;
+    using param_type = parameter<Schema, Decl>;
     return write(param_type::index, to_raw(v));
   }
 
-  // Writes the default of the parameter `Name`, as `set` does.
-  template<fixed_string Name>
+  // Writes the default of the parameter that `Decl` declares, as `set` does.
+  template<auto& Decl>
+    requires some_declaration<decltype(Decl)>
   constexpr std::expected<void, error> restore_default()
   {
-    using param_type = parameter<Schema, Name>;
+    using param_type = parameter<Schema, Decl>;
     return write(param_type::index, param_type::desc.def);
   }
 

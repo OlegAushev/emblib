@@ -15,12 +15,17 @@ namespace settings = emb::settings;
 
 struct ctx {};
 
-inline constexpr auto schema = settings::make_schema(
-    settings::param("drive.phase_swap", false),
+inline constexpr auto drive_phase_swap =
+    settings::param("drive.phase_swap", false);
+inline constexpr auto motor_p =
     settings::param("motor.p",
                     std::int32_t{11},
-                    {.min = std::int32_t{1}, .max = std::int32_t{64}}),
-    settings::param("prod.serial", std::uint32_t{0}, {.writable = false}));
+                    {.min = std::int32_t{1}, .max = std::int32_t{64}});
+inline constexpr auto prod_serial =
+    settings::param("prod.serial", std::uint32_t{0}, {.writable = false});
+
+inline constexpr auto schema =
+    settings::make_schema(drive_phase_swap, motor_p, prod_serial);
 
 using flash = emb::test::ram_storage<1024, 4, true, 128>;
 inline constexpr settings::placement flash_placement{.magic = 0x47464354u,
@@ -41,9 +46,9 @@ consteval od_binding<ctx> bind()
 }
 
 static_assert(bridge::catalog.names.size() == schema.count);
-static_assert(bind<bridge::rw<"motor.p">>().type == int32);
-static_assert(bind<bridge::rw<"motor.p">>().arg == 1);
-static_assert(bind<bridge::ro<"prod.serial">>().write == nullptr);
+static_assert(bind<bridge::rw<motor_p>>().type == int32);
+static_assert(bind<bridge::rw<motor_p>>().arg == 1);
+static_assert(bind<bridge::ro<prod_serial>>().write == nullptr);
 
 static_assert(status::magic() == flash_placement.magic);
 static_assert(status::slot_count() == 4);
@@ -72,9 +77,9 @@ consteval bool test_dictionary()
       {{0x3000, 0x10}, "config", "nvm",   "missing",          "", uint32,  od_ro<status::missing>},
       {{0x3000, 0x11}, "config", "nvm",   "restart_required", "", boolean, od_ro<status::restart_required>},
       {{0x3000, 0x12}, "config", "nvm",   "unapplied",        "", boolean, od_ro<status::unapplied>},
-      {{0x3002, 0x01}, "config", "drive", "phase_swap",       "", boolean, bridge::rw<"drive.phase_swap">},
-      {{0x3004, 0x01}, "config", "motor", "pole_pairs",       "", int32,   bridge::rw<"motor.p">},
-      {{0x3009, 0x01}, "config", "prod",  "serial",           "", uint32,  bridge::ro<"prod.serial">},
+      {{0x3002, 0x01}, "config", "drive", "phase_swap",       "", boolean, bridge::rw<drive_phase_swap>},
+      {{0x3004, 0x01}, "config", "motor", "pole_pairs",       "", int32,   bridge::rw<motor_p>},
+      {{0x3009, 0x01}, "config", "prod",  "serial",           "", uint32,  bridge::ro<prod_serial>},
   };
   // clang-format on
 

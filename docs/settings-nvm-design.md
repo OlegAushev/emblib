@@ -2,7 +2,7 @@
 
 Status: done. Every step of the plan is implemented: the settings live in
 a schema with bounds, groups and apply policies; they are stored as whole
-records that commit or do not; they are reached by name from the
+records that commit or do not; they are reached by declaration from the
 application and by index from a protocol; and a change takes effect without
 a restart wherever the schema says it may. The stack it replaced is gone.
 
@@ -23,7 +23,9 @@ invariants and failure scenarios are described in detail, in Russian, in
 marking the groups a write changed: a value waits to be applied while it
 differs from the value applied, which the section keeps as a third image,
 so a value written and put back owes neither a rebuild nor a restart (§4,
-§10).
+§10). On 2026-10-15 the application stopped naming a parameter by a
+string: the typed access and a dictionary row take the parameter's
+declaration, a `constexpr` variable the schema lists (§3, §7, §10).
 
 ## 1. Scope
 
@@ -49,7 +51,7 @@ A replacement for the current NVM parameter stack (`emb/nvm.hpp` +
         ^                          ^
         |                          |
     app schema                 emb::can::canopen::od_settings
-    (parameter list)           (adapter: OD table -> schema by name)
+    (parameter list)           (adapter: OD table -> schema by declaration)
 ```
 
 The dependency arrow never points from `settings` to a protocol. The
@@ -79,14 +81,27 @@ struct descriptor {
 Declared as:
 
 ```cpp
-inline constexpr auto schema = settings::make_schema(
-  param("drive.phase_swap", false, {.group = group::drive}),
+inline constexpr auto phase_swap =
+  param("drive.phase_swap", false, {.group = group::drive});
+inline constexpr auto runout_speed =
   param("drive.runout_speed", rpm{100.0f},
         {.min = rpm{0.0f}, .max = rpm{5000.0f},
-         .group = group::drive, .apply = apply_policy::live}),
+         .group = group::drive, .apply = apply_policy::live});
+inline constexpr auto stopping_torque =
   param("drive.stopping_torque", pu{0.05f},          // clamped: own bounds
-        {.group = group::drive, .apply = apply_policy::live}));
+        {.group = group::drive, .apply = apply_policy::live});
+
+inline constexpr auto schema =
+  settings::make_schema(phase_swap, runout_speed, stopping_torque);
 ```
+
+The declaration is also the key of the typed access: `get<runout_speed>()`
+returns an `rpm`, and `parameter<schema, runout_speed>` gives the index,
+the default and the descriptor. The schema must hold the declaration
+itself, one of the same name, type and descriptor, or the access does not
+compile. The name remains what a stored value is matched by (§5): the
+variable can be renamed and the value stays, the name cannot. A parameter
+reached by index only may be declared in the `make_schema` call.
 
 The type comes from the default, so a literal needs its suffix — `param("x",
 0.05)` does not compile. Per-parameter checks (default within bounds, min
@@ -430,7 +445,8 @@ concept some_storage = requires {
 
 The OD table keeps what genuinely belongs to CANopen — index/subindex,
 display name, categories, unit — and pulls access and validation from the
-schema by name. The type is pulled from the schema as well, and written in
+schema through the parameter's declaration. The type is pulled from the
+schema as well, and written in
 the row besides, so that a text parser can build a host's table from the
 source; the dictionary checks that the two agree. Built on 2026-09-29 as a
 binding per row of the application's constexpr table
@@ -440,16 +456,18 @@ binding per row of the application's constexpr table
 
 ```cpp
 using param = emb::can::canopen::od_settings_for<settings::config>;
+namespace params = settings::params;
 
 inline constexpr emb::can::canopen::od_row<context> rows[] = {
-  {{0x3002, 0x01}, "config", "drive", "phase_swap",   "",     boolean, param::rw<"drive.phase_swap">},
-  {{0x3002, 0x02}, "config", "drive", "torque_slope", "pu/s", float32, param::rw<"model.torque_slope">},
+  {{0x3002, 0x01}, "config", "drive", "phase_swap",   "",     boolean, param::rw<params::drive::phase_swap>},
+  {{0x3002, 0x02}, "config", "drive", "torque_slope", "pu/s", float32, param::rw<params::model::torque_slope>},
   // ...
 };
 ```
 
-The name is written once instead of three times, and the type written in
-the row must be the parameter's, so the two cannot disagree. A row carries
+The parameter is named once instead of three times, by its declaration,
+and the type written in the row must be the parameter's, so the two cannot
+disagree. A row carries
 the parameter's index as its argument, and one shared function reads, one
 writes and one restores every parameter: the 116 per-parameter thunks are
 gone.
@@ -485,7 +503,8 @@ external/emblib/emb/
   settings/value.hpp           [done] value_type, value, cell conversions
   settings/param.hpp           [done] param(): def/min/max, writable, group,
                                       apply_policy, expose
-  settings/schema.hpp          [done] make_schema, lookup by name and by id,
+  settings/schema.hpp          [done] make_schema, `parameter` by
+                                      declaration, lookup by name and by id,
                                       descriptor table, uniqueness checks
   settings/image.hpp           [done] RAM image, typed and erased access
   settings/record.hpp          [done] record layout, encode and decode
@@ -615,7 +634,7 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
 - **`fixed_string`: array named `chars`, `data()`/`size()` as functions.**
   Frees the two names for member functions, which makes the type a valid
   `static_assert` message: a failed compile-time lookup can then print
-  `unknown parameter 'motor.p'` in the diagnostic line itself.
+  `Parameter 'motor.p' is not in the schema` in the diagnostic line itself.
 - **No implicit conversion from `fixed_string` to `string_view`.** Template
   parameter objects have static storage, so the intended use is safe either
   way, but the type is general-purpose and an implicit view turns any
@@ -739,9 +758,10 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   leaves the image saying the old calibration while the sensor keeps the
   new one, and once nothing else differs, no flag says so.
 - **The erased accessors are spelled apart from the typed ones** —
-  `get_at`/`set_at` by index, `get`/`set` by name, `cell`/`assign_cell` for
-  raw cells. Not merely different addressing: the by-index path enforces
-  `writable` and the by-name path does not, and one name for two promises
+  `get_at`/`set_at` by index, `get`/`set` by declaration, `cell`/
+  `assign_cell` for raw cells. Not merely different addressing: the
+  by-index path enforces `writable` and the typed path does not, and one
+  name for two promises
   hides that at every call site.
 - **`writable` gates the erased path only.** A parameter closed to a
   protocol — a factory calibration — must still be writable by the code
@@ -978,8 +998,8 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   anonymous namespace, `static_assert` only): they cost compile time and
   contribute no symbols to the image.
 - **Settings objects are rows with a binding, not a generated section.** A
-  row names its parameter with `od_settings<...>::rw<"name">` inside the
-  ordinary table, so settings objects and the others share one table, one
+  row names its parameter with `od_settings<...>::rw<declaration>` inside
+  the ordinary table, so settings objects and the others share one table, one
   sort and one set of checks. A separate section would have needed a merge
   step and a second place where keys live.
 - **Coverage through a catalog each row carries.** The bridge cannot see the
@@ -995,6 +1015,21 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   depend on the build (`drive.pwm_freq` differs between debug and release)
   or on the type (`pu`, `spu`), and a copy in the row would be wrong for
   some build.
+- **A parameter is named by its declaration, not by its name** (2026-10-15).
+  The typed access and a dictionary row take the `constexpr` variable that
+  holds the declaration, `get<params::motor::p>()` and
+  `rw<params::motor::p>`, and `parameter` checks that the schema holds that
+  declaration, of the same type and descriptor. A misspelt key is then an
+  unknown identifier, which an editor completes and finds the uses of, and
+  the key leads to the parameter's type, default and bounds in one step.
+  The name stays the key of the stored value and of the catalog, so
+  renaming the variable keeps what is stored and changing the name loses
+  it, as before. Both keys side by side were rejected: `parameter` and `rw`
+  are a class and a variable template, which cannot be overloaded on the
+  kind of their parameter, and a key type taking either would keep two
+  spellings for good. A declaration is taken as `auto& Decl` constrained by
+  `some_declaration<decltype(Decl)>`: Clang rejects the shorter
+  `some_declaration auto& Decl`.
 
 ## 10a. What changed for an operator
 

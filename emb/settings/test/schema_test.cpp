@@ -14,29 +14,36 @@ using pu = unsigned_pu_f32;
 
 enum class group : std::uint8_t { drive, model };
 
-inline constexpr auto schema =
-    make_schema(param("drive.phase_swap", false, {.group = group::drive}),
-                param("drive.runout_speed",
-                      rpm{100.0f},
-                      {.min = rpm{0.0f},
-                       .max = rpm{5000.0f},
-                       .group = group::drive,
-                       .apply = apply_policy::live}),
-                param("motor.p",
-                      std::int32_t{11},
-                      {.min = std::int32_t{1},
-                       .max = std::int32_t{64},
-                       .group = group::model}),
-                // A clamped brings its own bounds: nothing to spell out.
-                param("drive.stopping_torque",
-                      pu{0.05f},
-                      {.group = group::drive, .apply = apply_policy::live}),
-                param("prot.watchdog_timeout",
-                      std::uint32_t{1000},
-                      {.max = std::uint32_t{60000},
-                       .group = group::drive,
-                       .writable = false,
-                       .expose = false}));
+inline constexpr auto drive_phase_swap =
+    param("drive.phase_swap", false, {.group = group::drive});
+inline constexpr auto drive_runout_speed = param("drive.runout_speed",
+                                                 rpm{100.0f},
+                                                 {.min = rpm{0.0f},
+                                                  .max = rpm{5000.0f},
+                                                  .group = group::drive,
+                                                  .apply = apply_policy::live});
+inline constexpr auto motor_p = param(
+    "motor.p",
+    std::int32_t{11},
+    {.min = std::int32_t{1}, .max = std::int32_t{64}, .group = group::model});
+// A clamped brings its own bounds: nothing to spell out.
+inline constexpr auto drive_stopping_torque =
+    param("drive.stopping_torque",
+          pu{0.05f},
+          {.group = group::drive, .apply = apply_policy::live});
+inline constexpr auto prot_watchdog_timeout =
+    param("prot.watchdog_timeout",
+          std::uint32_t{1000},
+          {.max = std::uint32_t{60000},
+           .group = group::drive,
+           .writable = false,
+           .expose = false});
+
+inline constexpr auto schema = make_schema(drive_phase_swap,
+                                           drive_runout_speed,
+                                           motor_p,
+                                           drive_stopping_torque,
+                                           prot_watchdog_timeout);
 
 // -- Shape --
 
@@ -58,13 +65,13 @@ static_assert(std::same_as<type_at<schema, 0>, bool>);
 static_assert(std::same_as<type_at<schema, 1>, rpm>);
 static_assert(std::same_as<type_at<schema, 3>, pu>);
 
-using speed = parameter<schema, "drive.runout_speed">;
+using speed = parameter<schema, drive_runout_speed>;
 static_assert(speed::index == 1);
 static_assert(std::same_as<speed::type, rpm>);
 static_assert(speed::default_value == rpm{100.0f});
-static_assert(parameter<schema, "motor.p">::default_value == 11);
-static_assert(parameter<schema, "drive.phase_swap">::default_value == false);
-static_assert(parameter<schema, "drive.stopping_torque">::default_value
+static_assert(parameter<schema, motor_p>::default_value == 11);
+static_assert(parameter<schema, drive_phase_swap>::default_value == false);
+static_assert(parameter<schema, drive_stopping_torque>::default_value
               == pu{0.05f});
 
 // -- Descriptor contents --

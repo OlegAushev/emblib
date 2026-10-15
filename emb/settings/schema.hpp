@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <array>
+#include <concepts>
 #include <optional>
 #include <string_view>
 #include <type_traits>
@@ -26,10 +27,25 @@ namespace detail {
 void duplicate_parameter_name();
 void parameter_id_collision();
 
+// The name that the declaration `Decl` gives its parameter, as a
+// `fixed_string`, for the messages of failed `static_assert`s.
+template<auto& Decl>
+inline constexpr auto name_of = [] {
+  fixed_string<Decl.desc.name.size() + 1> name;
+  std::ranges::copy(Decl.desc.name, name.chars);
+  return name;
+}();
+
 template<fixed_string Name>
-consteval auto unknown_parameter_message()
+consteval auto unlisted_parameter_message()
 {
-  return "Unknown parameter '" + Name + "'";
+  return "Parameter '" + Name + "' is not in the schema";
+}
+
+template<fixed_string Name>
+consteval auto redeclared_parameter_message()
+{
+  return "Parameter '" + Name + "' is declared otherwise in the schema";
 }
 
 } // namespace detail
@@ -76,13 +92,19 @@ struct basic_schema {
 };
 
 // Returns the schema of the parameters `params`, in the order given, which is
-// their declaration order. Templates such as `parameter` take a schema by
-// reference, as `auto& Schema`, so the result is kept in a `constexpr`
-// variable with static storage duration:
+// their order in the schema: the index of a parameter is its position among
+// `params`. Templates such as `parameter` take a schema and a declaration by
+// reference, as `auto& Schema` and `auto& Decl`, so the result and the
+// declarations are kept in `constexpr` variables with static storage
+// duration:
 //
-//   inline constexpr auto schema = make_schema(
-//       param("drive.phase_swap", false),
-//       param("motor.p", std::int32_t{11}, {.min = std::int32_t{1}}));
+//   inline constexpr auto phase_swap = param("drive.phase_swap", false);
+//   inline constexpr auto pole_pairs =
+//       param("motor.p", std::int32_t{11}, {.min = std::int32_t{1}});
+//   inline constexpr auto schema = make_schema(phase_swap, pole_pairs);
+//
+// A parameter that is reached only by index, e.g. by a transport, may be
+// declared in the call itself.
 //
 // The program is ill-formed if two parameters have the same name, even with
 // different types, or if two parameters with different names have the same
@@ -135,31 +157,43 @@ template<auto& Schema, std::size_t I>
 using type_at = typelist_at_t<typename schema_t<Schema>::types, I>;
 
 // The class template `parameter` provides the compile-time facts of the
-// parameter named `Name` in the schema `Schema`: its `index`, its `type` as
-// `type_at` gives it, its descriptor `desc` and its `default_value` of type
-// `type`, e.g. `parameter<schema, "motor.p">::default_value`. The program is
-// ill-formed if `Schema` has no parameter named `Name`; the message of the
-// failed `static_assert` contains `Name`.
+// parameter that the declaration `Decl` declares in the schema `Schema`: its
+// `name` as a `fixed_string`, its `index`, its `type` as `type_at` gives it,
+// its descriptor `desc` and its `default_value` of type `type`, e.g.
+// `parameter<schema, pole_pairs>::default_value`. The program is ill-formed
+// unless `Schema` holds `Decl`, i.e. has a parameter of its name whose type
+// and descriptor are those of `Decl`: the declaration `make_schema` was
+// given, or one equal to it. The message of the failed `static_assert`
+// contains the name.
 //
 // `parameter` is a class rather than a set of alias templates so that a
-// signature naming `parameter<Schema, Name>::type` mangles as that name: an
+// signature naming `parameter<Schema, Decl>::type` mangles as that name: an
 // alias would mangle as its expansion, which spells out the types of all
 // parameters of `Schema`.
-template<auto& Schema, fixed_string Name>
+template<auto& Schema, auto& Decl>
+  requires some_declaration<decltype(Decl)>
 struct parameter {
-  static constexpr auto lookup = Schema.index_of(Name.view());
-  static_assert(lookup.has_value(), detail::unknown_parameter_message<Name>());
+  static constexpr auto name = detail::name_of<Decl>;
+
+  static constexpr auto lookup = Schema.index_of(Decl.desc.name);
+  static_assert(lookup.has_value(), detail::unlisted_parameter_message<name>());
 
   // Index of the parameter in `Schema`, or zero if `Schema` has no parameter
-  // named `Name`. In that case `lookup` contains no value and `type`, `desc`
-  // and `default_value` describe the first parameter, so that the failed
-  // `static_assert` is the only error `parameter` causes.
+  // of the name of `Decl`. In that case `lookup` contains no value and
+  // `type`, `desc` and `default_value` describe the first parameter, so that
+  // the failed `static_assert` is the only error `parameter` causes.
   static constexpr std::size_t index = lookup.value_or(0);
 
-  static constexpr auto name = Name;
   using type = type_at<Schema, index>;
 
   static constexpr descriptor const& desc = Schema.parameters[index];
+  static_assert(
+      !lookup.has_value()
+          || (std::same_as<type,
+                           typename std::remove_cvref_t<decltype(Decl)>::type>
+              && desc == Decl.desc),
+      detail::redeclared_parameter_message<name>());
+
   static constexpr type default_value = from_raw<type>(desc.def);
 };
 

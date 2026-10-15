@@ -78,13 +78,18 @@ struct descriptor {
   apply_policy apply;
   // Whether a transport may change the value. If `false`, `image::set_at`
   // and `image::restore_default_at` fail with `error::read_only`, while the
-  // accessors by name still write it.
+  // accessors by declaration still write it.
   bool writable;
   // Whether the parameter is meant to be reached by a transport at all. The
   // `image` does not consult it; a dictionary bound through
   // `can::canopen::od_settings` has a row for each parameter with `expose`
   // and none for the others.
   bool expose;
+
+  // Two descriptors are equal if every field is; `name` compares as the
+  // characters it views.
+  friend constexpr bool operator==(descriptor const&,
+                                   descriptor const&) = default;
 };
 
 namespace detail {
@@ -159,12 +164,39 @@ struct options {
 };
 
 // The class template `declaration` holds a parameter as `param` declares it:
-// its `descriptor`, and its type as `T`, from which `make_schema` builds the
-// typelist of the schema.
+// its `descriptor`, and its type as `T`, which `type` names and from which
+// `make_schema` builds the typelist of the schema. Kept in a `constexpr`
+// variable with static storage duration, a declaration is also what names
+// its parameter to `parameter`, `image` and `section`:
+//
+//   inline constexpr auto pole_pairs = param("motor.p", std::int32_t{11});
+//   ...
+//   values.get<pole_pairs>()
 template<some_parameter_type T>
 struct declaration {
+  using type = T;
+
   descriptor desc;
 };
+
+namespace detail {
+
+template<typename T>
+inline constexpr bool is_declaration = false;
+
+template<typename T>
+inline constexpr bool is_declaration<declaration<T>> = true;
+
+} // namespace detail
+
+// The concept `some_declaration<T>` is satisfied if and only if
+// `std::remove_cvref_t<T>` is a specialization of `declaration`, as is
+// `decltype(Decl)` for a template parameter `auto& Decl` that refers to a
+// declaration. Templates that take a declaration state it as
+// `template<auto& Decl> requires some_declaration<decltype(Decl)>` rather
+// than as `some_declaration auto& Decl`, which Clang does not accept.
+template<typename T>
+concept some_declaration = detail::is_declaration<std::remove_cvref_t<T>>;
 
 // Declares a parameter for `make_schema`: named `name`, with the default value
 // `def` and the rest of the declaration in `opts`.

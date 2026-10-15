@@ -14,36 +14,45 @@ enum class group : std::uint8_t {
   far = 200
 };
 
+inline constexpr auto drive_runout = param("drive.runout",
+                                           std::uint32_t{100},
+                                           {.max = std::uint32_t{1000},
+                                            .group = group::drive,
+                                            .apply = apply_policy::live});
+inline constexpr auto drive_phase_swap =
+    param("drive.phase_swap",
+          false,
+          {.group = group::drive, .apply = apply_policy::on_safe_state});
+inline constexpr auto motor_p = param("motor.p",
+                                      std::int32_t{11},
+                                      {.min = std::int32_t{1},
+                                       .max = std::int32_t{64},
+                                       .group = group::motor,
+                                       .apply = apply_policy::on_restart});
+inline constexpr auto prod_serial =
+    param("prod.serial",
+          std::uint32_t{0},
+          {.group = group::motor, .writable = false});
+inline constexpr auto motor_R = param("motor.R",
+                                      0.0014f,
+                                      {.min = 0.0f,
+                                       .max = 10.0f,
+                                       .group = group::motor,
+                                       .apply = apply_policy::on_safe_state});
+inline constexpr auto far_k =
+    param("far.k",
+          std::uint32_t{1},
+          {.group = group::far, .apply = apply_policy::live});
+
 // Group drive declares its more demanding value after the less demanding
 // one and group motor before it, and a writable value follows the read-only
 // one, so that the order of the cells hides nothing a loop gets wrong.
-inline constexpr auto schema = make_schema(
-    param("drive.runout",
-          std::uint32_t{100},
-          {.max = std::uint32_t{1000},
-           .group = group::drive,
-           .apply = apply_policy::live}),
-    param("drive.phase_swap",
-          false,
-          {.group = group::drive, .apply = apply_policy::on_safe_state}),
-    param("motor.p",
-          std::int32_t{11},
-          {.min = std::int32_t{1},
-           .max = std::int32_t{64},
-           .group = group::motor,
-           .apply = apply_policy::on_restart}),
-    param("prod.serial",
-          std::uint32_t{0},
-          {.group = group::motor, .writable = false}),
-    param("motor.R",
-          0.0014f,
-          {.min = 0.0f,
-           .max = 10.0f,
-           .group = group::motor,
-           .apply = apply_policy::on_safe_state}),
-    param("far.k",
-          std::uint32_t{1},
-          {.group = group::far, .apply = apply_policy::live}));
+inline constexpr auto schema = make_schema(drive_runout,
+                                           drive_phase_swap,
+                                           motor_p,
+                                           prod_serial,
+                                           motor_R,
+                                           far_k);
 
 using fram = test::ram_storage<512>;
 inline constexpr placement fram_placement{.magic = 0x47464354u,
@@ -57,9 +66,9 @@ constexpr group_id drive{group::drive};
 constexpr group_id motor{group::motor};
 constexpr group_id far{group::far};
 
-constexpr auto runout = parameter<schema, "drive.runout">::index;
-constexpr auto pole_pairs = parameter<schema, "motor.p">::index;
-constexpr auto serial = parameter<schema, "prod.serial">::index;
+constexpr auto runout = parameter<schema, drive_runout>::index;
+constexpr auto pole_pairs = parameter<schema, motor_p>::index;
+constexpr auto serial = parameter<schema, prod_serial>::index;
 
 consteval bool test_load_from_an_empty_medium()
 {
@@ -70,7 +79,7 @@ consteval bool test_load_from_an_empty_medium()
 
   if (result.record.valid) return false;
   if (settings.last_load().record.valid) return false;
-  if (settings.get<"motor.p">() != 11) return false;
+  if (settings.get<motor_p>() != 11) return false;
   if (settings.sequence() != 0) return false;
   if (settings.unsaved()) return false;
   if (settings.unapplied()) return false;
@@ -84,8 +93,8 @@ consteval bool test_a_write_is_unapplied_until_taken()
   test_section settings;
   auto _ = settings.load(memory);
 
-  if (!settings.set<"drive.runout">(std::uint32_t{200})) return false;
-  if (settings.get<"drive.runout">() != 200) return false;
+  if (!settings.set<drive_runout>(std::uint32_t{200})) return false;
+  if (settings.get<drive_runout>() != 200) return false;
   if (!settings.unapplied()) return false;
   if (settings.restart_required()) return false;
   if (!settings.unsaved()) return false;
@@ -97,10 +106,10 @@ consteval bool test_a_write_is_unapplied_until_taken()
   if (settings.unapplied()) return false;
   if (!settings.unsaved()) return false;
 
-  if (!settings.set<"drive.runout">(std::uint32_t{200})) return false;
+  if (!settings.set<drive_runout>(std::uint32_t{200})) return false;
   if (settings.unapplied()) return false;
 
-  if (settings.set<"drive.runout">(std::uint32_t{1001})) return false;
+  if (settings.set<drive_runout>(std::uint32_t{1001})) return false;
   if (settings.unapplied()) return false;
 
   return true;
@@ -114,8 +123,8 @@ consteval bool test_a_group_is_taken_whole()
   test_section settings;
   auto _ = settings.load(memory);
 
-  if (!settings.set<"drive.phase_swap">(true)) return false;
-  if (!settings.set<"drive.runout">(std::uint32_t{200})) return false;
+  if (!settings.set<drive_phase_swap>(true)) return false;
+  if (!settings.set<drive_runout>(std::uint32_t{200})) return false;
   if (settings.take(drive, apply_policy::live)) return false;
   if (!settings.unapplied(apply_policy::live)) return false;
   if (!settings.unapplied(apply_policy::on_safe_state)) return false;
@@ -124,8 +133,8 @@ consteval bool test_a_group_is_taken_whole()
   if (settings.unapplied()) return false;
 
   // A value that needs a restart refuses its group to everyone else.
-  if (!settings.set<"motor.p">(std::int32_t{7})) return false;
-  if (!settings.set<"motor.R">(0.5f)) return false;
+  if (!settings.set<motor_p>(std::int32_t{7})) return false;
+  if (!settings.set<motor_R>(0.5f)) return false;
   if (settings.take(motor, apply_policy::on_safe_state)) return false;
   if (!settings.unapplied(apply_policy::on_safe_state)) return false;
 
@@ -142,8 +151,8 @@ consteval bool test_groups_are_independent()
   test_section settings;
   auto _ = settings.load(memory);
 
-  if (!settings.set<"drive.runout">(std::uint32_t{200})) return false;
-  if (!settings.set<"motor.R">(0.5f)) return false;
+  if (!settings.set<drive_runout>(std::uint32_t{200})) return false;
+  if (!settings.set<motor_R>(0.5f)) return false;
 
   if (!settings.take(drive, apply_policy::live)) return false;
   if (!settings.unapplied(apply_policy::on_safe_state)) return false;
@@ -161,7 +170,7 @@ consteval bool test_any_group_id_works()
   test_section settings;
   auto _ = settings.load(memory);
 
-  if (!settings.set<"far.k">(std::uint32_t{2})) return false;
+  if (!settings.set<far_k>(std::uint32_t{2})) return false;
   if (!settings.unapplied()) return false;
   if (!settings.unapplied(apply_policy::live)) return false;
   if (!settings.unsaved()) return false;
@@ -188,15 +197,15 @@ consteval bool test_unapplied_by_policy()
 
   if (!owes(false, false, false)) return false;
 
-  if (!settings.set<"drive.runout">(std::uint32_t{200})) return false;
+  if (!settings.set<drive_runout>(std::uint32_t{200})) return false;
   if (!owes(true, false, false)) return false;
   if (!settings.take(drive, apply_policy::live)) return false;
 
-  if (!settings.set<"motor.R">(0.5f)) return false;
+  if (!settings.set<motor_R>(0.5f)) return false;
   if (!owes(false, true, false)) return false;
   if (!settings.take(motor, apply_policy::on_safe_state)) return false;
 
-  if (!settings.set<"motor.p">(std::int32_t{7})) return false;
+  if (!settings.set<motor_p>(std::int32_t{7})) return false;
   if (!owes(false, false, true)) return false;
   if (!settings.take(motor, apply_policy::on_restart)) return false;
 
@@ -216,7 +225,7 @@ consteval bool test_an_unchanged_write_owes_nothing()
     return !settings.unapplied() && !settings.restart_required();
   };
 
-  if (!settings.set<"motor.p">(std::int32_t{11})) return false;
+  if (!settings.set<motor_p>(std::int32_t{11})) return false;
   if (!owes_nothing()) return false;
   if (!settings.set_at(pole_pairs, value{std::int32_t{11}})) return false;
   if (!owes_nothing()) return false;
@@ -236,19 +245,19 @@ consteval bool test_a_value_put_back_owes_nothing()
   test_section settings;
   auto _ = settings.load(memory);
 
-  if (!settings.set<"motor.p">(std::int32_t{7})) return false;
+  if (!settings.set<motor_p>(std::int32_t{7})) return false;
   if (!settings.restart_required()) return false;
   if (!settings.unapplied()) return false;
   if (!settings.unsaved()) return false;
   if (settings.take(motor, apply_policy::on_safe_state)) return false;
 
-  if (!settings.set<"motor.p">(std::int32_t{11})) return false;
+  if (!settings.set<motor_p>(std::int32_t{11})) return false;
   if (settings.restart_required()) return false;
   if (settings.unapplied()) return false;
   if (settings.unsaved()) return false;
   if (settings.take(motor, apply_policy::on_restart)) return false;
 
-  if (!settings.set<"motor.p">(std::int32_t{7})) return false;
+  if (!settings.set<motor_p>(std::int32_t{7})) return false;
   if (!settings.restart_required()) return false;
   if (!settings.restore_default_at(pole_pairs)) return false;
   if (settings.restart_required()) return false;
@@ -256,7 +265,7 @@ consteval bool test_a_value_put_back_owes_nothing()
   if (settings.unsaved()) return false;
   if (settings.take(motor, apply_policy::on_restart)) return false;
 
-  if (!settings.set<"motor.R">(0.5f)) return false;
+  if (!settings.set<motor_R>(0.5f)) return false;
   if (!settings.take(motor, apply_policy::on_safe_state)) return false;
 
   return true;
@@ -270,14 +279,14 @@ consteval bool test_a_change_put_back_releases_its_group()
   test_section settings;
   auto _ = settings.load(memory);
 
-  if (!settings.set<"drive.phase_swap">(true)) return false;
-  if (!settings.set<"drive.runout">(std::uint32_t{200})) return false;
+  if (!settings.set<drive_phase_swap>(true)) return false;
+  if (!settings.set<drive_runout>(std::uint32_t{200})) return false;
   if (settings.take(drive, apply_policy::live)) return false;
   if (!settings.unapplied(apply_policy::live)) return false;
 
-  if (!settings.set<"drive.phase_swap">(false)) return false;
+  if (!settings.set<drive_phase_swap>(false)) return false;
   if (!settings.take(drive, apply_policy::live)) return false;
-  if (settings.get<"drive.phase_swap">()) return false;
+  if (settings.get<drive_phase_swap>()) return false;
   if (settings.unapplied()) return false;
   if (settings.take(drive, apply_policy::live)) return false;
 
@@ -292,34 +301,34 @@ consteval bool test_adopt_records_as_applied()
   test_section settings;
   auto _ = settings.load(memory);
 
-  if (!settings.adopt<"motor.R">(0.5f)) return false;
-  if (settings.get<"motor.R">() != 0.5f) return false;
+  if (!settings.adopt<motor_R>(0.5f)) return false;
+  if (settings.get<motor_R>() != 0.5f) return false;
   if (settings.unapplied()) return false;
   if (!settings.unsaved()) return false;
   if (settings.take(motor, apply_policy::on_safe_state)) return false;
 
-  if (!settings.set<"motor.R">(0.0014f)) return false;
+  if (!settings.set<motor_R>(0.0014f)) return false;
   if (!settings.unapplied(apply_policy::on_safe_state)) return false;
   if (!settings.take(motor, apply_policy::on_safe_state)) return false;
 
   // Refused, it changes neither the value nor what was applied.
-  if (!settings.set<"motor.R">(0.25f)) return false;
-  auto const refused = settings.adopt<"motor.R">(11.0f);
+  if (!settings.set<motor_R>(0.25f)) return false;
+  auto const refused = settings.adopt<motor_R>(11.0f);
   if (refused || refused.error() != error::out_of_range) return false;
-  if (settings.get<"motor.R">() != 0.25f) return false;
+  if (settings.get<motor_R>() != 0.25f) return false;
   if (!settings.unapplied(apply_policy::on_safe_state)) return false;
-  if (!settings.set<"motor.R">(0.0014f)) return false;
+  if (!settings.set<motor_R>(0.0014f)) return false;
   if (settings.unapplied()) return false;
 
   // It records its own parameter, not the rest of the group.
-  if (!settings.set<"motor.p">(std::int32_t{7})) return false;
-  if (!settings.adopt<"motor.R">(0.5f)) return false;
+  if (!settings.set<motor_p>(std::int32_t{7})) return false;
+  if (!settings.adopt<motor_R>(0.5f)) return false;
   if (settings.unapplied(apply_policy::on_safe_state)) return false;
   if (!settings.restart_required()) return false;
 
   // Like `set`, it writes what a protocol may not.
-  if (!settings.adopt<"prod.serial">(std::uint32_t{7})) return false;
-  if (settings.get<"prod.serial">() != 7) return false;
+  if (!settings.adopt<prod_serial>(std::uint32_t{7})) return false;
+  if (settings.get<prod_serial>() != 7) return false;
 
   return true;
 }
@@ -330,7 +339,7 @@ consteval bool test_save_and_restart()
   {
     test_section settings;
     auto _ = settings.load(memory);
-    if (!settings.set<"motor.p">(std::int32_t{7})) return false;
+    if (!settings.set<motor_p>(std::int32_t{7})) return false;
 
     // Saved is not applied: the restart is still owed.
     if (!settings.save()) return false;
@@ -338,13 +347,13 @@ consteval bool test_save_and_restart()
     if (settings.sequence() != 1) return false;
     if (!settings.restart_required()) return false;
 
-    if (!settings.set<"motor.p">(std::int32_t{8})) return false;
+    if (!settings.set<motor_p>(std::int32_t{8})) return false;
     if (!settings.unsaved()) return false;
-    if (!settings.set<"motor.p">(std::int32_t{7})) return false;
+    if (!settings.set<motor_p>(std::int32_t{7})) return false;
     if (settings.unsaved()) return false;
 
     // Back to the value applied, it owes no restart, but the medium holds 7.
-    if (!settings.set<"motor.p">(std::int32_t{11})) return false;
+    if (!settings.set<motor_p>(std::int32_t{11})) return false;
     if (settings.restart_required()) return false;
     if (settings.unapplied()) return false;
     if (!settings.unsaved()) return false;
@@ -355,7 +364,7 @@ consteval bool test_save_and_restart()
 
   if (!result.record.valid) return false;
   if (restarted.last_load().record.seq != 1) return false;
-  if (restarted.get<"motor.p">() != 7) return false;
+  if (restarted.get<motor_p>() != 7) return false;
   if (restarted.sequence() != 1) return false;
   if (restarted.unsaved()) return false;
   if (restarted.unapplied()) return false;
@@ -371,18 +380,18 @@ consteval bool test_a_load_takes_what_it_restored_as_applied()
   {
     test_section settings;
     auto _ = settings.load(memory);
-    if (!settings.set<"motor.p">(std::int32_t{7})) return false;
+    if (!settings.set<motor_p>(std::int32_t{7})) return false;
     if (!settings.save()) return false;
   }
 
   test_section restarted;
   auto _ = restarted.load(memory);
-  if (restarted.get<"motor.p">() != 7) return false;
+  if (restarted.get<motor_p>() != 7) return false;
   if (restarted.unapplied()) return false;
 
-  if (!restarted.set<"motor.p">(std::int32_t{11})) return false;
+  if (!restarted.set<motor_p>(std::int32_t{11})) return false;
   if (!restarted.restart_required()) return false;
-  if (!restarted.set<"motor.p">(std::int32_t{7})) return false;
+  if (!restarted.set<motor_p>(std::int32_t{7})) return false;
   if (restarted.restart_required()) return false;
   if (!restarted.restore_default_at(pole_pairs)) return false;
   if (!restarted.restart_required()) return false;
@@ -395,7 +404,7 @@ consteval bool test_wipe_leaves_the_image()
   fram memory;
   test_section settings;
   auto _ = settings.load(memory);
-  if (!settings.set<"drive.runout">(std::uint32_t{300})) return false;
+  if (!settings.set<drive_runout>(std::uint32_t{300})) return false;
   if (!settings.save()) return false;
   if (!settings.unapplied()) return false;
 
@@ -407,7 +416,7 @@ consteval bool test_wipe_leaves_the_image()
   memory.set_power_budget(fram::unlimited);
 
   if (!settings.wipe()) return false;
-  if (settings.get<"drive.runout">() != 300) return false;
+  if (settings.get<drive_runout>() != 300) return false;
   if (settings.sequence() != 0) return false;
   if (!settings.unsaved()) return false;
   // What the application is owed stays owed, and what it took stays taken.
@@ -421,7 +430,7 @@ consteval bool test_wipe_leaves_the_image()
 
   test_section restarted;
   if (restarted.load(memory).record.valid) return false;
-  if (restarted.get<"drive.runout">() != 100) return false;
+  if (restarted.get<drive_runout>() != 100) return false;
 
   // A load records what it restored as applied, the defaults included.
   if (!settings.unapplied()) return false;
@@ -452,7 +461,7 @@ consteval bool test_sequence_follows_the_medium()
   if (restarted.last_load().record.seq != 3) return false;
   if (restarted.sequence() != 3) return false;
 
-  if (!restarted.set<"drive.runout">(std::uint32_t{300})) return false;
+  if (!restarted.set<drive_runout>(std::uint32_t{300})) return false;
   memory.set_power_budget(0);
   if (restarted.save()) return false;
   if (restarted.sequence() != 3) return false;
@@ -519,20 +528,20 @@ consteval bool test_restore_all_defaults_spares_the_read_only()
   auto _ = settings.load(memory);
 
   // prod.serial chose no policy, so it waits for a restart.
-  if (!settings.set<"prod.serial">(std::uint32_t{7})) return false;
+  if (!settings.set<prod_serial>(std::uint32_t{7})) return false;
   if (!settings.restart_required()) return false;
-  if (!settings.set<"drive.runout">(std::uint32_t{300})) return false;
-  if (!settings.set<"motor.R">(0.5f)) return false;
-  if (!settings.set<"far.k">(std::uint32_t{2})) return false;
+  if (!settings.set<drive_runout>(std::uint32_t{300})) return false;
+  if (!settings.set<motor_R>(0.5f)) return false;
+  if (!settings.set<far_k>(std::uint32_t{2})) return false;
   if (!settings.take(drive, apply_policy::live)) return false;
   if (!settings.take(motor, apply_policy::on_restart)) return false;
 
   settings.restore_all_defaults();
 
-  if (settings.get<"drive.runout">() != 100) return false;
-  if (settings.get<"prod.serial">() != 7) return false;
-  if (settings.get<"motor.R">() != 0.0014f) return false;
-  if (settings.get<"far.k">() != 1) return false;
+  if (settings.get<drive_runout>() != 100) return false;
+  if (settings.get<prod_serial>() != 7) return false;
+  if (settings.get<motor_R>() != 0.0014f) return false;
+  if (settings.get<far_k>() != 1) return false;
   if (!settings.take(drive, apply_policy::live)) return false;
   if (settings.restart_required()) return false;
 

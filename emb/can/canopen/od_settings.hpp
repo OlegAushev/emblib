@@ -92,17 +92,18 @@ concept od_settings_accessors =
 
 // The class template `od_settings` binds objects to the parameters of the
 // settings schema `Schema`, which it reaches through the application's
-// by-index accessors. A row names its parameter once, as in
-// `od_settings<...>::rw<"motor.p">`: the object's type is the parameter's,
-// its `arg` is the parameter's index, and an `rw` object is restorable
-// through 1011h:04 by `RestoreAt`. `ro` binds a parameter for reading only.
-// Every row carries `catalog`, so `make_dictionary` checks that each exposed
-// parameter has exactly one row and each hidden one none, as soon as the
-// dictionary has one such row.
+// by-index accessors. A row names its parameter once, by its declaration, as
+// in `od_settings<...>::rw<pole_pairs>`: the object's type is the
+// parameter's, its `arg` is the parameter's index, and an `rw` object is
+// restorable through 1011h:04 by `RestoreAt`. `ro` binds a parameter for
+// reading only. Every row carries `catalog`, so `make_dictionary` checks that
+// each exposed parameter has exactly one row and each hidden one none, as
+// soon as the dictionary has one such row.
 //
-// Binding an unknown, hidden or, with `rw`, read-only parameter is reported
-// at the row. A value of a type no parameter can hold is refused with
-// `data_type_mismatch`; the accessors' errors map through `to_sdo_abort`.
+// Binding a declaration that `Schema` does not hold, a hidden parameter or,
+// with `rw`, a read-only one is reported at the row. A value of a type no
+// parameter can hold is refused with `data_type_mismatch`; the accessors'
+// errors map through `to_sdo_abort`.
 template<auto& Schema, auto GetAt, auto SetAt, auto RestoreAt>
   requires od_settings_accessors<GetAt, SetAt, RestoreAt>
 class od_settings {
@@ -125,18 +126,18 @@ class od_settings {
     return out;
   }();
 
-  template<fixed_string Name, od_access Access>
+  template<auto& Decl, od_access Access>
   struct binding {
     template<typename Ctx>
     consteval operator od_binding<Ctx>() const
     {
-      using param = settings::parameter<Schema, Name>;
+      using param = settings::parameter<Schema, Decl>;
       constexpr bool known = param::lookup.has_value();
       constexpr bool shown = !known || param::desc.expose;
       constexpr bool allowed =
           !known || (Access != od_access::rw) || param::desc.writable;
-      static_assert(shown, detail::not_exposed_message<Name>());
-      static_assert(allowed, detail::not_writable_message<Name>());
+      static_assert(shown, detail::not_exposed_message<param::name>());
+      static_assert(allowed, detail::not_writable_message<param::name>());
 
       constexpr bool writes = (Access == od_access::rw);
       return {.access = Access,
@@ -153,11 +154,13 @@ class od_settings {
 public:
   static constexpr od_catalog catalog{"settings parameter", names, exposed};
 
-  template<fixed_string Name>
-  static constexpr binding<Name, od_access::rw> rw{};
+  template<auto& Decl>
+    requires settings::some_declaration<decltype(Decl)>
+  static constexpr binding<Decl, od_access::rw> rw{};
 
-  template<fixed_string Name>
-  static constexpr binding<Name, od_access::ro> ro{};
+  template<auto& Decl>
+    requires settings::some_declaration<decltype(Decl)>
+  static constexpr binding<Decl, od_access::ro> ro{};
 
   template<typename Ctx>
   static constexpr od_read_result read(Ctx&, std::uint16_t index)

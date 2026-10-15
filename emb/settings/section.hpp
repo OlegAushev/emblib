@@ -1,7 +1,6 @@
 #pragma once
 
 #include <emb/assert.hpp>
-#include <emb/meta/fixed_string.hpp>
 #include <emb/nvm/storage.hpp>
 #include <emb/settings/image.hpp>
 #include <emb/settings/param.hpp>
@@ -194,36 +193,41 @@ public:
     return true;
   }
 
-  // -- Access by name --
+  // -- Access by declaration --
 
-  template<fixed_string Name>
-  constexpr typename parameter<Schema, Name>::type get() const
+  // Returns the value of the parameter that `Decl` declares, as
+  // `image::get` does.
+  template<auto& Decl>
+    requires some_declaration<decltype(Decl)>
+  constexpr typename parameter<Schema, Decl>::type get() const
   {
-    return values_.template get<Name>();
+    return values_.template get<Decl>();
   }
 
-  // Writes `v` to the parameter `Name` whether or not it is `writable`, as
-  // `image::set` does.
-  template<fixed_string Name>
+  // Writes `v` to the parameter that `Decl` declares whether or not it is
+  // `writable`, as `image::set` does.
+  template<auto& Decl>
+    requires some_declaration<decltype(Decl)>
   constexpr std::expected<void, error>
-  set(typename parameter<Schema, Name>::type const& v)
+  set(typename parameter<Schema, Decl>::type const& v)
   {
-    return values_.template set<Name>(v);
+    return values_.template set<Decl>(v);
   }
 
-  // Writes `v` to the parameter `Name`, as `set` does, and records it as
-  // applied: for a value that the code owning the parameter has already
-  // applied itself, e.g. a calibration result that a sensor took when it was
-  // computed. A `take` of its group then finds nothing to apply in it, and
-  // `unapplied` does not report it; a `take` that another value of the group
-  // calls for still has the caller rebuild from it, so the owner adopts the
-  // value before it takes the group.
-  template<fixed_string Name>
+  // Writes `v` to the parameter that `Decl` declares, as `set` does, and
+  // records it as applied: for a value that the code owning the parameter
+  // has already applied itself, e.g. a calibration result that a sensor took
+  // when it was computed. A `take` of its group then finds nothing to apply
+  // in it, and `unapplied` does not report it; a `take` that another value of
+  // the group calls for still has the caller rebuild from it, so the owner
+  // adopts the value before it takes the group.
+  template<auto& Decl>
+    requires some_declaration<decltype(Decl)>
   constexpr std::expected<void, error>
-  adopt(typename parameter<Schema, Name>::type const& v)
+  adopt(typename parameter<Schema, Decl>::type const& v)
   {
-    using param_type = parameter<Schema, Name>;
-    return values_.template set<Name>(v).transform([this] {
+    using param_type = parameter<Schema, Decl>;
+    return values_.template set<Decl>(v).transform([this] {
       applied_.assign_cell(param_type::index, values_.cell(param_type::index));
     });
   }

@@ -20,28 +20,30 @@ using emb::test::storage_fault;
 
 inline constexpr std::uint32_t magic = 0x4746434Fu; // "OCFG"
 
+inline constexpr auto motor_p =
+    param("motor.p",
+          std::int32_t{11},
+          {.min = std::int32_t{1}, .max = std::int32_t{64}});
+inline constexpr auto motor_R =
+    param("motor.R", 0.0014f, {.min = 0.0f, .max = 1.0f});
+inline constexpr auto drive_phase_swap = param("drive.phase_swap", false);
+inline constexpr auto drive_runout_speed =
+    param("drive.runout_speed",
+          rpm{100.0f},
+          {.min = rpm{0.0f}, .max = rpm{5000.0f}});
+inline constexpr auto hall_enabled = param("hall.enabled", true);
+inline constexpr auto hall_poll_num = param("hall.poll_num", std::int32_t{4});
+
 inline constexpr auto schema =
-    make_schema(param("motor.p",
-                      std::int32_t{11},
-                      {.min = std::int32_t{1}, .max = std::int32_t{64}}),
-                param("motor.R", 0.0014f, {.min = 0.0f, .max = 1.0f}),
-                param("drive.phase_swap", false),
-                param("drive.runout_speed",
-                      rpm{100.0f},
-                      {.min = rpm{0.0f}, .max = rpm{5000.0f}}));
+    make_schema(motor_p, motor_R, drive_phase_swap, drive_runout_speed);
 
 // A later firmware, two parameters richer.
-inline constexpr auto next_schema =
-    make_schema(param("motor.p",
-                      std::int32_t{11},
-                      {.min = std::int32_t{1}, .max = std::int32_t{64}}),
-                param("motor.R", 0.0014f, {.min = 0.0f, .max = 1.0f}),
-                param("drive.phase_swap", false),
-                param("drive.runout_speed",
-                      rpm{100.0f},
-                      {.min = rpm{0.0f}, .max = rpm{5000.0f}}),
-                param("hall.enabled", true),
-                param("hall.poll_num", std::int32_t{4}));
+inline constexpr auto next_schema = make_schema(motor_p,
+                                                motor_R,
+                                                drive_phase_swap,
+                                                drive_runout_speed,
+                                                hall_enabled,
+                                                hall_poll_num);
 
 // FRAM: byte writes, no erase, two slots.
 using fram = test::ram_storage<512>;
@@ -97,7 +99,7 @@ constexpr bool save_in_a_row(Store& store, std::size_t count)
 {
   image<schema> values;
   for (auto i = 1uz; i <= count; ++i) {
-    if (!values.set<"motor.p">(static_cast<std::int32_t>(i))) return false;
+    if (!values.set<motor_p>(static_cast<std::int32_t>(i))) return false;
     if (!store.save(values)) return false;
   }
   return true;
@@ -149,7 +151,7 @@ consteval bool test_nothing_stored()
   fram memory;
   fram_store store{memory};
   image<schema> values;
-  if (!values.set<"motor.p">(std::int32_t{7})) return false;
+  if (!values.set<motor_p>(std::int32_t{7})) return false;
 
   auto const result = store.load(values);
 
@@ -157,7 +159,7 @@ consteval bool test_nothing_stored()
   if (result.slot) return false;
   if (result.read_failed) return false;
   // Whatever the image held, it comes up defined.
-  if (values.get<"motor.p">() != 11) return false;
+  if (values.get<motor_p>() != 11) return false;
 
   return true;
 }
@@ -168,8 +170,8 @@ consteval bool test_save_and_load()
 {
   fram memory;
   image<schema> values;
-  if (!values.set<"motor.p">(std::int32_t{4})) return false;
-  if (!values.set<"drive.runout_speed">(rpm{250.0f})) return false;
+  if (!values.set<motor_p>(std::int32_t{4})) return false;
+  if (!values.set<drive_runout_speed>(rpm{250.0f})) return false;
 
   {
     fram_store store{memory};
@@ -185,8 +187,8 @@ consteval bool test_save_and_load()
   if (result.slot != 0) return false;
   if (result.record.seq != 1) return false;
   if (result.record.loaded != schema.count) return false;
-  if (restored.get<"motor.p">() != 4) return false;
-  if (restored.get<"drive.runout_speed">() != rpm{250.0f}) return false;
+  if (restored.get<motor_p>() != 4) return false;
+  if (restored.get<drive_runout_speed>() != rpm{250.0f}) return false;
   // The next save goes to the other slot, leaving this record intact.
   if (!saved_as(restarted.save(restored), 1, 2)) return false;
 
@@ -200,7 +202,7 @@ consteval bool test_slots_alternate()
   image<schema> values;
 
   if (!saved_as(store.save(values), 0, 1)) return false;
-  if (!values.set<"motor.p">(std::int32_t{5})) return false;
+  if (!values.set<motor_p>(std::int32_t{5})) return false;
   if (!saved_as(store.save(values), 1, 2)) return false;
 
   fram_store restarted{memory};
@@ -208,7 +210,7 @@ consteval bool test_slots_alternate()
   auto const result = restarted.load(restored);
 
   if (result.slot != 1 || result.record.seq != 2) return false;
-  if (restored.get<"motor.p">() != 5) return false;
+  if (restored.get<motor_p>() != 5) return false;
 
   return true;
 }
@@ -220,7 +222,7 @@ consteval bool test_power_lost_while_writing_the_body()
   fram memory;
   image<schema> first;
   image<schema> second;
-  if (!second.set<"motor.p">(std::int32_t{5})) return false;
+  if (!second.set<motor_p>(std::int32_t{5})) return false;
 
   fram_store store{memory};
   if (!store.save(first)) return false;
@@ -240,7 +242,7 @@ consteval bool test_power_lost_while_writing_the_body()
   // The half-written record is not a record; the first one still stands.
   if (!result.record.valid) return false;
   if (result.slot != 0 || result.record.seq != 1) return false;
-  if (restored.get<"motor.p">() != 11) return false;
+  if (restored.get<motor_p>() != 11) return false;
 
   return true;
 }
@@ -250,7 +252,7 @@ consteval bool test_power_lost_at_the_commit()
   fram memory;
   image<schema> first;
   image<schema> second;
-  if (!second.set<"motor.p">(std::int32_t{5})) return false;
+  if (!second.set<motor_p>(std::int32_t{5})) return false;
 
   fram_store store{memory};
   if (!store.save(first)) return false;
@@ -270,7 +272,7 @@ consteval bool test_power_lost_at_the_commit()
 
   if (!result.record.valid) return false;
   if (result.slot != 0 || result.record.seq != 1) return false;
-  if (restored.get<"motor.p">() != 11) return false;
+  if (restored.get<motor_p>() != 11) return false;
 
   return true;
 }
@@ -282,12 +284,12 @@ consteval bool test_a_second_tear_after_a_restart()
 {
   fram memory;
   image<schema> values;
-  if (!values.set<"motor.p">(std::int32_t{4})) return false;
+  if (!values.set<motor_p>(std::int32_t{4})) return false;
 
   {
     fram_store store{memory};
     if (!store.save(values)) return false; // slot 0, seq 1
-    if (!values.set<"motor.p">(std::int32_t{5})) return false;
+    if (!values.set<motor_p>(std::int32_t{5})) return false;
     memory.set_power_budget(record_body_size(schema.count));
     if (store.save(values)) return false; // slot 1: torn
   }
@@ -300,7 +302,7 @@ consteval bool test_a_second_tear_after_a_restart()
     if (!result.record.valid || result.slot != 0) return false;
 
     // The next save goes over the debris, not over the record restored.
-    if (!restored.set<"motor.p">(std::int32_t{6})) return false;
+    if (!restored.set<motor_p>(std::int32_t{6})) return false;
     memory.set_power_budget(record_body_size(schema.count));
     if (!failed_at(store.save(restored), save_stage::commit)) return false;
   }
@@ -310,7 +312,7 @@ consteval bool test_a_second_tear_after_a_restart()
   image<schema> again;
   auto const result = restarted.load(again);
   if (!result.record.valid || result.slot != 0) return false;
-  if (again.get<"motor.p">() != 4) return false;
+  if (again.get<motor_p>() != 4) return false;
 
   return true;
 }
@@ -322,7 +324,7 @@ consteval bool test_a_corrupted_record_falls_back_to_the_previous_one()
   fram_store store{memory};
 
   if (!store.save(values)) return false; // slot 0, seq 1
-  if (!values.set<"motor.p">(std::int32_t{5})) return false;
+  if (!values.set<motor_p>(std::int32_t{5})) return false;
   if (!store.save(values)) return false; // slot 1, seq 2
 
   // A bit rots in the newest record.
@@ -335,7 +337,7 @@ consteval bool test_a_corrupted_record_falls_back_to_the_previous_one()
 
   if (!result.record.valid) return false;
   if (result.slot != 0 || result.record.seq != 1) return false;
-  if (restored.get<"motor.p">() != 11) return false;
+  if (restored.get<motor_p>() != 11) return false;
   // The next save goes over the corrupt record, not over the one restored.
   if (!saved_as(restarted.save(restored), 1, 2)) return false;
 
@@ -353,7 +355,7 @@ consteval bool test_fram_fills_the_slot_before_writing()
   if (!store.save(values)) return false; // slot 0, seq 1
   if (!store.save(values)) return false; // slot 1, seq 2
 
-  if (!values.set<"motor.p">(std::int32_t{5})) return false;
+  if (!values.set<motor_p>(std::int32_t{5})) return false;
   memory.set_power_budget(5);
   if (!failed_at(store.save(values), save_stage::body)) return false;
   memory.set_power_budget(fram::unlimited);
@@ -402,7 +404,7 @@ consteval bool test_a_write_protected_fram_is_caught()
   if (!saved_as(store.save(values), 0, 1)) return false;
   if (!saved_as(store.save(values), 1, 2)) return false;
 
-  if (!values.set<"motor.p">(std::int32_t{5})) return false;
+  if (!values.set<motor_p>(std::int32_t{5})) return false;
   memory.set_write_sink(true);
   auto const before = memory;
   auto const saved = store.save(values); // slot 0, seq 3
@@ -427,7 +429,7 @@ consteval bool test_a_save_that_landed_but_could_not_be_read_back()
 
   // The record lands, but the medium refuses the read-back after serving
   // the reads of every slot before it.
-  if (!values.set<"motor.p">(std::int32_t{2})) return false;
+  if (!values.set<motor_p>(std::int32_t{2})) return false;
   memory.set_read_faults(flash_placement.slot_count, 1);
   auto const unverified = store.save(values); // slot 1, seq 2
 
@@ -439,7 +441,7 @@ consteval bool test_a_save_that_landed_but_could_not_be_read_back()
 
   // The next save finds the record that landed and goes past it, rather
   // than reusing its slot or its sequence number.
-  if (!values.set<"motor.p">(std::int32_t{3})) return false;
+  if (!values.set<motor_p>(std::int32_t{3})) return false;
   if (!saved_as(store.save(values), 2, 3)) return false;
 
   flash_store restarted{memory};
@@ -448,7 +450,7 @@ consteval bool test_a_save_that_landed_but_could_not_be_read_back()
 
   if (!result.record.valid) return false;
   if (result.slot != 2) return false;
-  if (restored.get<"motor.p">() != 3) return false;
+  if (restored.get<motor_p>() != 3) return false;
 
   // A medium that will not read at all gets no write: the save could not
   // tell where the newest record is.
@@ -475,7 +477,7 @@ consteval bool test_a_read_back_that_differs_is_not_trusted()
   image<schema> values;
   if (!saved_as(store.save(values), 0, 1)) return false;
 
-  if (!values.set<"motor.p">(std::int32_t{5})) return false;
+  if (!values.set<motor_p>(std::int32_t{5})) return false;
   memory.corrupt_read(fram_placement.slot_count,
                       record_header_size + 4,
                       std::byte{0x08});
@@ -495,14 +497,14 @@ consteval bool test_failed_saves_in_a_row_on_two_slots()
 {
   fram memory;
   image<schema> values;
-  if (!values.set<"motor.p">(std::int32_t{4})) return false;
+  if (!values.set<motor_p>(std::int32_t{4})) return false;
 
   {
     fram_store store{memory};
     if (!store.save(values)) return false; // slot 0, seq 1
     auto const kept = memory;
 
-    if (!values.set<"motor.p">(std::int32_t{5})) return false;
+    if (!values.set<motor_p>(std::int32_t{5})) return false;
     for (auto i = 0uz; i < 3; ++i) {
       memory.set_power_budget(20);
       if (store.save(values)) return false; // slot 1: torn
@@ -515,7 +517,7 @@ consteval bool test_failed_saves_in_a_row_on_two_slots()
   image<schema> restored;
   auto const result = restarted.load(restored);
   if (!result.record.valid || result.slot != 0) return false;
-  if (restored.get<"motor.p">() != 4) return false;
+  if (restored.get<motor_p>() != 4) return false;
 
   return true;
 }
@@ -530,7 +532,7 @@ consteval bool test_flash_rolls_over_between_blocks()
 
   // Four saves fill both blocks: slots 0,1 then 2,3.
   for (auto i = 0uz; i < 4; ++i) {
-    if (!values.set<"motor.p">(static_cast<std::int32_t>(i + 1))) return false;
+    if (!values.set<motor_p>(static_cast<std::int32_t>(i + 1))) return false;
     auto const saved = store.save(values);
     if (!saved_as(saved, i, static_cast<std::uint32_t>(i + 1))) return false;
   }
@@ -538,7 +540,7 @@ consteval bool test_flash_rolls_over_between_blocks()
 
   // The fifth wraps to slot 0 and erases the first block, whose records are
   // all older than the one in slot 3.
-  if (!values.set<"motor.p">(std::int32_t{5})) return false;
+  if (!values.set<motor_p>(std::int32_t{5})) return false;
   if (!saved_as(store.save(values), 0, 5)) return false;
   if (memory.erase_calls != 3) return false;
 
@@ -548,7 +550,7 @@ consteval bool test_flash_rolls_over_between_blocks()
 
   if (!result.record.valid) return false;
   if (result.slot != 0 || result.record.seq != 5) return false;
-  if (restored.get<"motor.p">() != 5) return false;
+  if (restored.get<motor_p>() != 5) return false;
 
   return true;
 }
@@ -560,14 +562,14 @@ consteval bool test_flash_erase_never_takes_the_last_good_record()
   image<schema> values;
 
   for (auto i = 0uz; i < 4; ++i) {
-    if (!values.set<"motor.p">(static_cast<std::int32_t>(i + 1))) return false;
+    if (!values.set<motor_p>(static_cast<std::int32_t>(i + 1))) return false;
     if (!store.save(values)) return false;
   }
 
   // The fifth save erases the first block and then loses power one byte
   // into the record.
   memory.set_power_budget(1);
-  if (!values.set<"motor.p">(std::int32_t{5})) return false;
+  if (!values.set<motor_p>(std::int32_t{5})) return false;
   auto const interrupted = store.save(values);
   if (interrupted) return false;
   if (interrupted.error().stage != save_stage::body) return false;
@@ -580,7 +582,7 @@ consteval bool test_flash_erase_never_takes_the_last_good_record()
   // Everything the erase took was older than the record in the other block.
   if (!result.record.valid) return false;
   if (result.slot != 3 || result.record.seq != 4) return false;
-  if (restored.get<"motor.p">() != 4) return false;
+  if (restored.get<motor_p>() != 4) return false;
 
   return true;
 }
@@ -593,7 +595,7 @@ consteval bool test_a_restart_onto_the_debris_of_a_torn_save()
   {
     flash_store store{memory};
     if (!store.save(values)) return false; // slot 0, erasing its block
-    if (!values.set<"motor.p">(std::int32_t{2})) return false;
+    if (!values.set<motor_p>(std::int32_t{2})) return false;
 
     // The body of the next record lands in slot 1; the footer does not.
     memory.set_power_budget(record_body_size(schema.count));
@@ -614,14 +616,14 @@ consteval bool test_a_restart_onto_the_debris_of_a_torn_save()
 
   // The save takes the next block, numbered as the record restored plus the
   // distance to the slot taken.
-  if (!restored.set<"motor.p">(std::int32_t{3})) return false;
+  if (!restored.set<motor_p>(std::int32_t{3})) return false;
   if (!saved_as(store.save(restored), 2, 3)) return false;
 
   flash_store restarted{memory};
   image<schema> again;
   auto const after = restarted.load(again);
   if (!after.record.valid) return false;
-  if (again.get<"motor.p">() != 3) return false;
+  if (again.get<motor_p>() != 3) return false;
 
   return true;
 }
@@ -637,7 +639,7 @@ consteval bool test_a_restart_onto_debris_with_no_header()
   {
     flash_store store{memory};
     if (!store.save(values)) return false; // slot 0, erasing its block
-    if (!values.set<"motor.p">(std::int32_t{2})) return false;
+    if (!values.set<motor_p>(std::int32_t{2})) return false;
 
     // Four bytes into slot 1: the magic landed, nothing after it did.
     memory.set_power_budget(4);
@@ -652,13 +654,13 @@ consteval bool test_a_restart_onto_debris_with_no_header()
   auto const result = store.load(restored);
   if (!result.record.valid || result.slot != 0) return false;
 
-  if (!restored.set<"motor.p">(std::int32_t{3})) return false;
+  if (!restored.set<motor_p>(std::int32_t{3})) return false;
   if (!store.save(restored)) return false;
 
   flash_store restarted{memory};
   image<schema> again;
   if (!restarted.load(again).record.valid) return false;
-  if (again.get<"motor.p">() != 3) return false;
+  if (again.get<motor_p>() != 3) return false;
 
   return true;
 }
@@ -729,7 +731,7 @@ consteval bool test_a_lap_old_header_that_rotted_newer()
     // A lap and one more: slot 0 holds seq 5 in a freshly erased block,
     // block 1 still holds seq 3 and 4.
     for (auto i = 1uz; i <= 5; ++i) {
-      if (!values.set<"motor.p">(static_cast<std::int32_t>(i))) return false;
+      if (!values.set<motor_p>(static_cast<std::int32_t>(i))) return false;
       if (!store.save(values)) return false;
     }
     if (memory.erase_calls != 3) return false;
@@ -742,10 +744,10 @@ consteval bool test_a_lap_old_header_that_rotted_newer()
   image<schema> restored;
   auto const result = store.load(restored);
   if (!result.record.valid || result.slot != 0) return false;
-  if (restored.get<"motor.p">() != 5) return false;
+  if (restored.get<motor_p>() != 5) return false;
 
   // The next save tears one byte in. Nothing may have been erased for it.
-  if (!restored.set<"motor.p">(std::int32_t{6})) return false;
+  if (!restored.set<motor_p>(std::int32_t{6})) return false;
   memory.set_power_budget(1);
   auto const interrupted = store.save(restored);
   if (interrupted) return false;
@@ -757,7 +759,7 @@ consteval bool test_a_lap_old_header_that_rotted_newer()
   image<schema> again;
   auto const after = restarted.load(again);
   if (!after.record.valid || after.slot != 0) return false;
-  if (again.get<"motor.p">() != 5) return false;
+  if (again.get<motor_p>() != 5) return false;
 
   // The save after it steps over the debris into the other block, erasing
   // the rotted header with it.
@@ -779,13 +781,13 @@ consteval bool test_a_save_after_an_erase_that_failed()
 
   // A full lap: slots 0..3, each block erased on entry.
   for (auto i = 1uz; i <= 4; ++i) {
-    if (!values.set<"motor.p">(static_cast<std::int32_t>(i))) return false;
+    if (!values.set<motor_p>(static_cast<std::int32_t>(i))) return false;
     if (!store.save(values)) return false;
   }
 
   // The fifth wraps to slot 0 and cannot erase its block.
   memory.set_power_budget(0);
-  if (!values.set<"motor.p">(std::int32_t{5})) return false;
+  if (!values.set<motor_p>(std::int32_t{5})) return false;
   auto const refused = store.save(values);
   if (refused) return false;
   if (refused.error().stage != save_stage::erase) return false;
@@ -793,7 +795,7 @@ consteval bool test_a_save_after_an_erase_that_failed()
 
   // The sixth erases the block and takes slot 0. The record in slot 3
   // stands throughout.
-  if (!values.set<"motor.p">(std::int32_t{6})) return false;
+  if (!values.set<motor_p>(std::int32_t{6})) return false;
   if (!saved_as(store.save(values), 0, 5)) return false;
   if (memory.erase_calls != 4) return false;
 
@@ -801,7 +803,7 @@ consteval bool test_a_save_after_an_erase_that_failed()
   image<schema> restored;
   auto const result = restarted.load(restored);
   if (!result.record.valid || result.slot != 0) return false;
-  if (restored.get<"motor.p">() != 6) return false;
+  if (restored.get<motor_p>() != 6) return false;
 
   return true;
 }
@@ -817,16 +819,16 @@ consteval bool test_a_torn_save_after_an_erase_that_failed()
   {
     flash_store store{memory};
     for (auto i = 1uz; i <= 4; ++i) {
-      if (!values.set<"motor.p">(static_cast<std::int32_t>(i))) return false;
+      if (!values.set<motor_p>(static_cast<std::int32_t>(i))) return false;
       if (!store.save(values)) return false;
     }
 
     memory.set_power_budget(0);
-    if (!values.set<"motor.p">(std::int32_t{5})) return false;
+    if (!values.set<motor_p>(std::int32_t{5})) return false;
     if (store.save(values)) return false; // erase refused
 
     memory.set_power_budget(1);
-    if (!values.set<"motor.p">(std::int32_t{6})) return false;
+    if (!values.set<motor_p>(std::int32_t{6})) return false;
     auto const interrupted = store.save(values);
     if (interrupted) return false;
     if (interrupted.error().stage != save_stage::body) return false;
@@ -838,7 +840,7 @@ consteval bool test_a_torn_save_after_an_erase_that_failed()
   auto const result = restarted.load(restored);
   if (!result.record.valid) return false;
   if (result.slot != 3 || result.record.seq != 4) return false;
-  if (restored.get<"motor.p">() != 4) return false;
+  if (restored.get<motor_p>() != 4) return false;
 
   return true;
 }
@@ -871,14 +873,14 @@ consteval bool test_a_run_of_torn_saves_spares_the_block_of_the_record()
 {
   flash memory;
   image<schema> values;
-  if (!values.set<"motor.p">(std::int32_t{4})) return false;
+  if (!values.set<motor_p>(std::int32_t{4})) return false;
 
   {
     flash_store store{memory};
     if (!store.save(values)) return false; // slot 0, seq 1
     auto const kept = memory;
 
-    if (!values.set<"motor.p">(std::int32_t{5})) return false;
+    if (!values.set<motor_p>(std::int32_t{5})) return false;
     for (auto i = 0uz; i < 6; ++i) {
       memory.set_power_budget(1);
       // Slots 1, 2, 2, 2, 2, 2.
@@ -894,7 +896,7 @@ consteval bool test_a_run_of_torn_saves_spares_the_block_of_the_record()
   image<schema> restored;
   auto const result = restarted.load(restored);
   if (!result.record.valid || result.slot != 0) return false;
-  if (restored.get<"motor.p">() != 4) return false;
+  if (restored.get<motor_p>() != 4) return false;
 
   return true;
 }
@@ -905,7 +907,7 @@ consteval bool test_torn_saves_on_a_medium_that_will_not_read()
 {
   flash memory;
   image<schema> values;
-  if (!values.set<"motor.p">(std::int32_t{4})) return false;
+  if (!values.set<motor_p>(std::int32_t{4})) return false;
 
   {
     flash_store store{memory};
@@ -913,7 +915,7 @@ consteval bool test_torn_saves_on_a_medium_that_will_not_read()
     auto const writes = memory.write_calls;
     auto const erases = memory.erase_calls;
 
-    if (!values.set<"motor.p">(std::int32_t{5})) return false;
+    if (!values.set<motor_p>(std::int32_t{5})) return false;
     memory.set_read_fault(true);
     for (auto i = 0uz; i < 2; ++i) {
       memory.set_power_budget(1);
@@ -929,7 +931,7 @@ consteval bool test_torn_saves_on_a_medium_that_will_not_read()
   image<schema> restored;
   auto const result = restarted.load(restored);
   if (!result.record.valid || result.slot != 0) return false;
-  if (restored.get<"motor.p">() != 4) return false;
+  if (restored.get<motor_p>() != 4) return false;
 
   return true;
 }
@@ -944,7 +946,7 @@ consteval bool test_the_newest_record_is_never_touched()
   flash memory;
   flash_store store{memory};
   image<schema> values;
-  if (!values.set<"motor.p">(std::int32_t{4})) return false;
+  if (!values.set<motor_p>(std::int32_t{4})) return false;
   if (!store.save(values)) return false; // slot 0, seq 1
   auto const kept = memory;
 
@@ -954,10 +956,10 @@ consteval bool test_the_newest_record_is_never_touched()
     return same_slot(memory, kept, flash_placement, 0)
         && (result.slot == 0)
         && (result.record.seq == 1)
-        && (restored.get<"motor.p">() == 4);
+        && (restored.get<motor_p>() == 4);
   };
 
-  if (!values.set<"motor.p">(std::int32_t{5})) return false;
+  if (!values.set<motor_p>(std::int32_t{5})) return false;
 
   memory.set_power_budget(0);
   if (!failed_at(store.save(values), save_stage::body)) return false;
@@ -1010,7 +1012,7 @@ consteval bool test_flash_round_trip()
 {
   flash memory;
   image<schema> values;
-  if (!values.set<"motor.R">(0.05f)) return false;
+  if (!values.set<motor_R>(0.05f)) return false;
 
   flash_store store{memory};
   if (!store.save(values)) return false;
@@ -1019,7 +1021,7 @@ consteval bool test_flash_round_trip()
   flash_store restarted{memory};
   image<schema> restored;
   if (!restarted.load(restored).record.valid) return false;
-  if (restored.get<"motor.R">() != 0.05f) return false;
+  if (restored.get<motor_R>() != 0.05f) return false;
 
   return true;
 }
@@ -1042,7 +1044,7 @@ consteval bool test_more_slots_than_a_word_has_bits()
   wide memory;
   image<schema> values;
   for (auto seq = std::uint32_t{17}; seq <= 70; ++seq) {
-    if (!values.set<"motor.p">(static_cast<std::int32_t>(seq - 16))) {
+    if (!values.set<motor_p>(static_cast<std::int32_t>(seq - 16))) {
       return false;
     }
     auto const slot =
@@ -1056,7 +1058,7 @@ consteval bool test_more_slots_than_a_word_has_bits()
 
   if (!result.record.valid) return false;
   if (result.slot != 5 || result.record.seq != 70) return false;
-  if (restored.get<"motor.p">() != 54) return false;
+  if (restored.get<motor_p>() != 54) return false;
   if (!saved_as(store.save(restored), 6, 71)) return false;
 
   return true;
@@ -1072,7 +1074,7 @@ consteval bool test_a_run_of_corrupt_records_costs_one_pass()
   image<schema> values;
 
   for (auto i = 1uz; i <= 10; ++i) {
-    if (!values.set<"motor.p">(static_cast<std::int32_t>(i))) return false;
+    if (!values.set<motor_p>(static_cast<std::int32_t>(i))) return false;
     if (!store.save(values)) return false; // slot i - 1, seq i
   }
 
@@ -1091,7 +1093,7 @@ consteval bool test_a_run_of_corrupt_records_costs_one_pass()
 
   if (!result.record.valid) return false;
   if (result.slot != 4 || result.record.seq != 5) return false;
-  if (restored.get<"motor.p">() != 5) return false;
+  if (restored.get<motor_p>() != 5) return false;
   if (memory.read_calls != wide_placement.slot_count + 1) return false;
 
   // The next save steps over the corrupt records to the first erased slot.
@@ -1127,14 +1129,14 @@ consteval bool test_no_whole_record_behind_the_headers()
   auto const result = store.load(restored);
   if (result.record.valid || result.read_failed) return false;
 
-  if (!restored.set<"motor.p">(std::int32_t{7})) return false;
+  if (!restored.set<motor_p>(std::int32_t{7})) return false;
   if (!saved_as(store.save(restored), 0, 1)) return false;
 
   fram_store restarted{memory};
   image<schema> again;
   auto const after = restarted.load(again);
   if (!after.record.valid || after.record.seq != 1) return false;
-  if (again.get<"motor.p">() != 7) return false;
+  if (again.get<motor_p>() != 7) return false;
 
   return true;
 }
@@ -1153,7 +1155,7 @@ consteval bool test_a_load_that_could_not_read()
   {
     fram_store store{memory};
     if (!store.save(values)) return false; // slot 0, seq 1
-    if (!values.set<"motor.p">(std::int32_t{5})) return false;
+    if (!values.set<motor_p>(std::int32_t{5})) return false;
     if (!store.save(values)) return false; // slot 1, seq 2
   }
 
@@ -1163,16 +1165,16 @@ consteval bool test_a_load_that_could_not_read()
   auto const result = store.load(restored);
   memory.set_read_fault(false);
   if (result.record.valid || !result.read_failed) return false;
-  if (restored.get<"motor.p">() != 11) return false;
+  if (restored.get<motor_p>() != 11) return false;
 
-  if (!restored.set<"motor.p">(std::int32_t{6})) return false;
+  if (!restored.set<motor_p>(std::int32_t{6})) return false;
   if (!saved_as(store.save(restored), 0, 3)) return false;
 
   fram_store restarted{memory};
   image<schema> again;
   auto const after = restarted.load(again);
   if (!after.record.valid || after.slot != 0) return false;
-  if (again.get<"motor.p">() != 6) return false;
+  if (again.get<motor_p>() != 6) return false;
 
   return true;
 }
@@ -1224,7 +1226,7 @@ consteval bool test_one_unreadable_slot()
   auto const result = store.load(restored);
   if (!result.record.valid || !result.read_failed) return false;
   if (result.slot != 1 || result.record.seq != 2) return false;
-  if (restored.get<"motor.p">() != 2) return false;
+  if (restored.get<motor_p>() != 2) return false;
 
   auto const refused = store.save(restored);
   if (refused) return false;
@@ -1251,13 +1253,13 @@ consteval bool test_a_second_read_that_fails()
   auto const retried = store.load(restored);
   if (!retried.record.valid || !retried.read_failed) return false;
   if (retried.slot != 2 || retried.record.seq != 3) return false;
-  if (restored.get<"motor.p">() != 3) return false;
+  if (restored.get<motor_p>() != 3) return false;
 
   memory.set_read_faults(flash_placement.slot_count, 2);
   auto const given_up = store.load(restored);
   if (!given_up.record.valid || !given_up.read_failed) return false;
   if (given_up.slot != 1 || given_up.record.seq != 2) return false;
-  if (restored.get<"motor.p">() != 2) return false;
+  if (restored.get<motor_p>() != 2) return false;
 
   return true;
 }
@@ -1278,7 +1280,7 @@ consteval bool test_a_second_read_that_differs()
   auto const result = store.load(restored);
   if (!result.record.valid || result.read_failed) return false;
   if (result.slot != 1 || result.record.seq != 2) return false;
-  if (restored.get<"motor.p">() != 2) return false;
+  if (restored.get<motor_p>() != 2) return false;
 
   return true;
 }
@@ -1449,7 +1451,7 @@ consteval bool test_wipe()
 {
   fram memory;
   image<schema> values;
-  if (!values.set<"motor.p">(std::int32_t{5})) return false;
+  if (!values.set<motor_p>(std::int32_t{5})) return false;
 
   fram_store store{memory};
   if (!store.save(values)) return false;
@@ -1458,7 +1460,7 @@ consteval bool test_wipe()
   fram_store restarted{memory};
   image<schema> restored;
   if (restarted.load(restored).record.valid) return false;
-  if (restored.get<"motor.p">() != 11) return false;
+  if (restored.get<motor_p>() != 11) return false;
 
   return true;
 }
@@ -1548,7 +1550,7 @@ consteval bool test_saving_before_loading_keeps_the_sequence()
   // would put the new record in slot 0 with a sequence number below the one
   // in slot 1, and the next load would restore the older record instead.
   fram_store store{memory};
-  if (!values.set<"motor.p">(std::int32_t{9})) return false;
+  if (!values.set<motor_p>(std::int32_t{9})) return false;
   if (!store.save(values)) return false;
 
   fram_store restarted{memory};
@@ -1557,7 +1559,7 @@ consteval bool test_saving_before_loading_keeps_the_sequence()
 
   if (!result.record.valid) return false;
   if (result.record.seq != 3) return false;
-  if (restored.get<"motor.p">() != 9) return false;
+  if (restored.get<motor_p>() != 9) return false;
 
   return true;
 }
@@ -1570,8 +1572,8 @@ consteval bool test_a_record_written_by_a_richer_firmware_still_loads()
 
   {
     image<next_schema> values;
-    if (!values.set<"motor.p">(std::int32_t{6})) return false;
-    if (!values.set<"hall.poll_num">(std::int32_t{2})) return false;
+    if (!values.set<motor_p>(std::int32_t{6})) return false;
+    if (!values.set<hall_poll_num>(std::int32_t{2})) return false;
 
     store<next_schema, fram, fram_placement> newer{memory};
     if (!newer.save(values)) return false;
@@ -1588,7 +1590,7 @@ consteval bool test_a_record_written_by_a_richer_firmware_still_loads()
   if (result.record.stored != next_schema.count) return false;
   if (result.record.loaded != schema.count) return false;
   if (result.record.unknown != 2) return false;
-  if (restored.get<"motor.p">() != 6) return false;
+  if (restored.get<motor_p>() != 6) return false;
 
   return true;
 }

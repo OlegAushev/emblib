@@ -14,37 +14,37 @@ using rpm = units::rpm_f32;
 
 inline constexpr std::uint32_t magic = 0x53544553u; // "SETS"
 
+inline constexpr auto motor_p =
+    param("motor.p",
+          std::int32_t{11},
+          {.min = std::int32_t{1}, .max = std::int32_t{64}});
+inline constexpr auto motor_R =
+    param("motor.R", 0.0014f, {.min = 0.0f, .max = 1.0f});
+inline constexpr auto drive_phase_swap = param("drive.phase_swap", false);
+inline constexpr auto drive_runout_speed =
+    param("drive.runout_speed",
+          rpm{100.0f},
+          {.min = rpm{0.0f}, .max = rpm{5000.0f}});
+inline constexpr auto hall_enabled = param("hall.enabled", true);
+inline constexpr auto hall_poll_num = param("hall.poll_num", std::int32_t{4});
+
 inline constexpr auto schema =
-    make_schema(param("motor.p",
-                      std::int32_t{11},
-                      {.min = std::int32_t{1}, .max = std::int32_t{64}}),
-                param("motor.R", 0.0014f, {.min = 0.0f, .max = 1.0f}),
-                param("drive.phase_swap", false),
-                param("drive.runout_speed",
-                      rpm{100.0f},
-                      {.min = rpm{0.0f}, .max = rpm{5000.0f}}));
+    make_schema(motor_p, motor_R, drive_phase_swap, drive_runout_speed);
 
 // A later firmware: one parameter added, one retyped, one dropped.
 inline constexpr auto next_schema =
-    make_schema(param("motor.p",
-                      std::int32_t{11},
-                      {.min = std::int32_t{1}, .max = std::int32_t{64}}),
-                param("motor.R", 0.0014f, {.min = 0.0f, .max = 1.0f}),
+    make_schema(motor_p,
+                motor_R,
                 param("drive.phase_swap", std::int32_t{0}),
-                param("hall.enabled", true));
+                hall_enabled);
 
 // A later firmware, two parameters richer.
-inline constexpr auto richer_schema =
-    make_schema(param("motor.p",
-                      std::int32_t{11},
-                      {.min = std::int32_t{1}, .max = std::int32_t{64}}),
-                param("motor.R", 0.0014f, {.min = 0.0f, .max = 1.0f}),
-                param("drive.phase_swap", false),
-                param("drive.runout_speed",
-                      rpm{100.0f},
-                      {.min = rpm{0.0f}, .max = rpm{5000.0f}}),
-                param("hall.enabled", true),
-                param("hall.poll_num", std::int32_t{4}));
+inline constexpr auto richer_schema = make_schema(motor_p,
+                                                  motor_R,
+                                                  drive_phase_swap,
+                                                  drive_runout_speed,
+                                                  hall_enabled,
+                                                  hall_poll_num);
 
 using record_buffer = std::array<std::byte, record_size(schema.count)>;
 // A slot as a store reads it: the record, then erased bytes up to its end.
@@ -90,10 +90,10 @@ static_assert(!seq_newer(0xFFFFFFFFu, 0));
 consteval bool test_round_trip()
 {
   image<schema> written;
-  if (!written.set<"motor.p">(std::int32_t{4})) return false;
-  if (!written.set<"motor.R">(0.05f)) return false;
-  if (!written.set<"drive.phase_swap">(true)) return false;
-  if (!written.set<"drive.runout_speed">(rpm{250.0f})) return false;
+  if (!written.set<motor_p>(std::int32_t{4})) return false;
+  if (!written.set<motor_R>(0.05f)) return false;
+  if (!written.set<drive_phase_swap>(true)) return false;
+  if (!written.set<drive_runout_speed>(rpm{250.0f})) return false;
 
   record_buffer buffer{};
   if (encode_record(buffer, written, magic, 7) != buffer.size()) return false;
@@ -108,10 +108,10 @@ consteval bool test_round_trip()
   if (report.unknown != 0 || report.rejected != 0) return false;
   if (report.missing != 0) return false;
 
-  if (read.get<"motor.p">() != 4) return false;
-  if (read.get<"motor.R">() != 0.05f) return false;
-  if (read.get<"drive.phase_swap">() != true) return false;
-  if (read.get<"drive.runout_speed">() != rpm{250.0f}) return false;
+  if (read.get<motor_p>() != 4) return false;
+  if (read.get<motor_R>() != 0.05f) return false;
+  if (read.get<drive_phase_swap>() != true) return false;
+  if (read.get<drive_runout_speed>() != rpm{250.0f}) return false;
 
   return true;
 }
@@ -181,13 +181,13 @@ consteval bool test_an_interrupted_write_is_not_a_record()
 consteval bool test_a_failed_decode_leaves_the_image_alone()
 {
   image<schema> values;
-  if (!values.set<"motor.p">(std::int32_t{7})) return false;
+  if (!values.set<motor_p>(std::int32_t{7})) return false;
 
   record_buffer buffer{}; // never written: all zeroes, no magic
   auto const report = decode_record(buffer, magic, values);
 
   if (report.valid) return false;
-  if (values.get<"motor.p">() != 7) return false;
+  if (values.get<motor_p>() != 7) return false;
 
   return true;
 }
@@ -337,8 +337,8 @@ consteval bool test_a_richer_record_is_whole_where_it_fits()
 consteval bool test_a_record_from_another_schema()
 {
   image<next_schema> written;
-  if (!written.set<"motor.p">(std::int32_t{4})) return false;
-  if (!written.set<"hall.enabled">(false)) return false;
+  if (!written.set<motor_p>(std::int32_t{4})) return false;
+  if (!written.set<hall_enabled>(false)) return false;
 
   std::array<std::byte, record_size(next_schema.count)> buffer{};
   encode_record(buffer, written, magic, 3);
@@ -359,9 +359,9 @@ consteval bool test_a_record_from_another_schema()
 
   // What the record did not carry keeps the default of this firmware.
   if (report.missing != 2) return false;
-  if (read.get<"motor.p">() != 4) return false;
-  if (read.get<"drive.phase_swap">() != false) return false;
-  if (read.get<"drive.runout_speed">() != rpm{100.0f}) return false;
+  if (read.get<motor_p>() != 4) return false;
+  if (read.get<drive_phase_swap>() != false) return false;
+  if (read.get<drive_runout_speed>() != rpm{100.0f}) return false;
 
   return true;
 }
@@ -396,7 +396,7 @@ consteval bool test_a_value_outside_todays_range_is_refused()
   if (report.missing != 0) return false;
   // Refused, so the parameter comes up with its default rather than with a
   // value the control code was never meant to see.
-  if (read.get<"motor.p">() != 11) return false;
+  if (read.get<motor_p>() != 11) return false;
 
   return true;
 }

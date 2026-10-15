@@ -18,9 +18,10 @@ using emb::test::storage_fault;
 
 inline constexpr std::uint32_t magic = 0x52414554u; // "TEAR"
 
+inline constexpr auto generation_number = param("generation", std::uint32_t{0});
+
 // One parameter: a record of 32 bytes, 24 of body and 8 of footer.
-inline constexpr auto schema =
-    make_schema(param("generation", std::uint32_t{0}));
+inline constexpr auto schema = make_schema(generation_number);
 
 inline constexpr auto body_bytes = record_body_size(schema.count);
 inline constexpr auto record_bytes = record_size(schema.count);
@@ -45,7 +46,7 @@ inline constexpr placement flash_placement{.magic = magic,
 consteval image<schema> generation(std::size_t n)
 {
   image<schema> values;
-  auto _ = values.set<"generation">(static_cast<std::uint32_t>(n));
+  auto _ = values.set<generation_number>(static_cast<std::uint32_t>(n));
   return values;
 }
 
@@ -122,18 +123,18 @@ consteval bool power_lost_at_every_byte(std::size_t phase)
           || (loaded.record.seq != planned->seq)) {
         return false;
       }
-      if (restored.get<"generation">() != phase + 1) return false;
+      if (restored.get<generation_number>() != phase + 1) return false;
     }
     else if (newest) {
       if ((loaded.slot != newest->slot)
           || (loaded.record.seq != newest->seq)) {
         return false;
       }
-      if (restored.get<"generation">() != phase) return false;
+      if (restored.get<generation_number>() != phase) return false;
     }
     else {
       if (loaded.record.valid || loaded.slot) return false;
-      if (restored.get<"generation">() != 0) return false;
+      if (restored.get<generation_number>() != 0) return false;
     }
 
     auto const clean = restarted.save(generation(phase + 2));
@@ -144,7 +145,7 @@ consteval bool power_lost_at_every_byte(std::size_t phase)
     if ((reloaded.slot != clean->slot) || (reloaded.record.seq != clean->seq)) {
       return false;
     }
-    if (again.get<"generation">() != phase + 2) return false;
+    if (again.get<generation_number>() != phase + 2) return false;
   }
   return true;
 }
