@@ -1,15 +1,16 @@
-#include <emb/can/canopen/node_link.hpp>
+#include <emb/can/node_link.hpp>
 
 #include <chrono>
 
 namespace {
 
-using namespace emb::can::canopen;
+using namespace emb::can;
 using namespace std::chrono_literals;
 using ms = std::chrono::milliseconds;
 
-constexpr lost_timing timing{
-    .timeout = 300ms, .to_error = 100ms, .to_critical = 200ms};
+constexpr lost_timing timing{.timeout = 300ms,
+                             .to_error = 100ms,
+                             .to_critical = 200ms};
 
 // Hands frame 1 to the link as a handler would and returns whether it was
 // taken as valid.
@@ -128,10 +129,12 @@ static_assert(test_one_frame_stops());
 // back.
 consteval bool test_worst_frame()
 {
-  constexpr lost_timing tolerant{
-      .timeout = 300ms, .to_error = 1000ms, .to_critical = never};
-  constexpr lost_timing strict{
-      .timeout = 500ms, .to_error = 0ms, .to_critical = 0ms};
+  constexpr lost_timing tolerant{.timeout = 300ms,
+                                 .to_error = 1000ms,
+                                 .to_critical = never};
+  constexpr lost_timing strict{.timeout = 500ms,
+                               .to_error = 0ms,
+                               .to_critical = 0ms};
   node_link<2> link({tolerant, strict}, 0ms);
   link.counter_ok<1>(1u, 100ms);
   link.report_valid<1>(100ms);
@@ -163,8 +166,9 @@ static_assert(test_counter_width());
 
 consteval bool test_never()
 {
-  constexpr lost_timing no_critical{
-      .timeout = 300ms, .to_error = 100ms, .to_critical = never};
+  constexpr lost_timing no_critical{.timeout = 300ms,
+                                    .to_error = 100ms,
+                                    .to_critical = never};
   node_link<1> link({no_critical}, 0ms);
   return link.loss(400ms) == link_loss::error
       && link.loss(1'000'000ms) == link_loss::error;

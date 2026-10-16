@@ -10,7 +10,6 @@
 
 namespace emb {
 namespace can {
-namespace canopen {
 
 // Structure holding when a watched frame is lost and how long it stays lost at
 // each severity: it is a warning once no valid frame has arrived for
@@ -41,11 +40,13 @@ struct from_first_frame_t {
 
 inline constexpr from_first_frame_t from_first_frame{};
 
-// The class template `node_link` supervises the PDOs a remote node sends:
-// `FrameCount` frames, each with its own `lost_timing` and a rolling counter of
-// `CounterBits` bits. The frame handler asks `counter_ok` whether a frame
-// follows the one before it, checks whatever else makes the frame valid, and
-// reports a valid frame with `report_valid`. Only a valid frame keeps its
+// The class template `node_link` supervises the frames a remote node sends,
+// whatever carries them, the PDOs of a CANopen server or the frames of a raw
+// node: `FrameCount` frames, each with its own `lost_timing` and a rolling
+// counter of `CounterBits` bits. The frame handler asks `counter_ok` whether a
+// frame follows the one before it, checks whatever else makes the frame
+// valid, and reports a valid frame with `report_valid`; a frame that carries
+// no counter is reported without asking. Only a valid frame keeps its
 // stream alive; an invalid one is not reported to the link at all, and how it
 // shows is up to the caller. `loss` tells how badly the link is lost: as badly
 // as the worst lost of the watched frames, each judged by its own
@@ -165,6 +166,5 @@ private:
   std::array<std::uint8_t, FrameCount> prev_counter_{};
 };
 
-} // namespace canopen
 } // namespace can
 } // namespace emb

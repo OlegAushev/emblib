@@ -250,7 +250,6 @@ emblib не попал. Такие файлы помечены «песочни�
 - [ ] `emb/can/canopen/detail/sdo_server.hpp`
 - [ ] `emb/can/canopen/detail/sync_producer.hpp`
 - [ ] `emb/can/canopen/detail/tpdo_producer.hpp`
-- [ ] `emb/can/canopen/node_link.hpp`
 - [ ] `emb/can/canopen/od.hpp` — песочница: `od_access`, `od_scalar`
 - [ ] `emb/can/canopen/od_dictionary.hpp`
 - [ ] `emb/can/canopen/od_handlers.hpp`
@@ -260,6 +259,7 @@ emblib не попал. Такие файлы помечены «песочни�
 - [ ] `emb/can/canopen/sdo.hpp`
 - [ ] `emb/can/canopen/server.hpp`
 - [ ] `emb/can/canopen/types.hpp`
+- [ ] `emb/can/node_link.hpp`
 - [ ] `emb/can/raw/node.hpp`
 - [ ] `emb/chrono.hpp`
 - [ ] `emb/concurrent/latched_seqlock.hpp`
