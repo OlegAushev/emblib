@@ -521,6 +521,34 @@ consteval bool test_access_by_index()
   return true;
 }
 
+// The three images part and meet: a write changes the values requested, a
+// take the values applied of its group, a save the values stored.
+consteval bool test_the_images_part_and_meet()
+{
+  fram memory;
+  test_section settings;
+  auto _ = settings.load(memory);
+
+  if (!settings.set<drive_runout>(std::uint32_t{200})) return false;
+  if (settings.values().get<drive_runout>() != 200) return false;
+  if (settings.applied().get<drive_runout>() != 100) return false;
+  if (settings.stored().get<drive_runout>() != 100) return false;
+  if (settings.applied_at(runout) != value{std::uint32_t{100}}) return false;
+  if (settings.stored_at(runout) != value{std::uint32_t{100}}) return false;
+
+  if (!settings.take(drive, apply_policy::live)) return false;
+  if (settings.applied_at(runout) != value{std::uint32_t{200}}) return false;
+  if (settings.stored_at(runout) != value{std::uint32_t{100}}) return false;
+
+  if (!settings.save()) return false;
+  if (settings.stored().get<drive_runout>() != 200) return false;
+
+  auto const unknown = settings.applied_at(image<schema>::count);
+  if (unknown || unknown.error() != error::unknown_parameter) return false;
+  auto const unstored = settings.stored_at(image<schema>::count);
+  return !unstored && (unstored.error() == error::unknown_parameter);
+}
+
 consteval bool test_restore_all_defaults_spares_the_read_only()
 {
   fram memory;
@@ -563,6 +591,7 @@ static_assert(test_a_load_takes_what_it_restored_as_applied());
 static_assert(test_wipe_leaves_the_image());
 static_assert(test_sequence_follows_the_medium());
 static_assert(test_access_by_index());
+static_assert(test_the_images_part_and_meet());
 static_assert(test_restore_all_defaults_spares_the_read_only());
 
 } // namespace

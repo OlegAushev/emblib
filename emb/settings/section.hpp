@@ -27,7 +27,9 @@ namespace settings {
 // applied, and `adopt` writes a value and records it as applied. `unsaved`
 // and `unapplied` compare the image with the other two cell by cell, i.e. by
 // encoding, so a value written and then put back leaves nothing to save or to
-// apply; `-0.0f` does not put back `+0.0f`.
+// apply; `-0.0f` does not put back `+0.0f`. `values`, `applied` and `stored`
+// return the three images, for the application to build its state from the
+// values applied and for a protocol to show each.
 //
 // A section can be constant-initialized and then holds the defaults in all
 // three images. The behavior is undefined if `save` or `wipe` is called
@@ -191,6 +193,42 @@ public:
       if (Schema.parameters[i].group == group)
         applied_.assign_cell(i, values_.cell(i));
     return true;
+  }
+
+  // -- The images --
+
+  // Returns the image, i.e. the values requested, which writes change.
+  constexpr image<Schema> const& values() const
+  {
+    return values_;
+  }
+
+  // Returns the values applied, from which the application last built the
+  // state it derives from the parameters.
+  constexpr image<Schema> const& applied() const
+  {
+    return applied_;
+  }
+
+  // Returns the values the next startup would load, which before `load` are
+  // taken to be the defaults.
+  constexpr image<Schema> const& stored() const
+  {
+    return stored_;
+  }
+
+  // Returns the value applied of the parameter at `index`, as
+  // `image::get_at` does.
+  constexpr std::expected<value, error> applied_at(std::size_t index) const
+  {
+    return applied_.get_at(index);
+  }
+
+  // Returns the value that the next startup would load for the parameter at
+  // `index`, as `image::get_at` does.
+  constexpr std::expected<value, error> stored_at(std::size_t index) const
+  {
+    return stored_.get_at(index);
   }
 
   // -- Access by declaration --
