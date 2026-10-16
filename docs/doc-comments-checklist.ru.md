@@ -143,15 +143,21 @@ emblib не попал. Такие файлы помечены «песочни�
     `detail::get_u32`
   - [x] `detail::crc32`
   - [x] `encode_record`, `decode_header`, `check_record`, `decode_record`
-- [x] `emb/settings/schema.hpp`
+- [ ] `emb/settings/schema.hpp`
   - [x] `detail::duplicate_parameter_name`, `detail::parameter_id_collision`
     (`detail::unknown_parameter_message` без комментария)
   - [x] `basic_schema`
   - [x] `make_schema`
   - [x] `schema_t`, `type_at`
   - [x] `parameter`
-- [x] `emb/settings/section.hpp`
-  - [x] `section`
+  - [ ] `groups_of`, `detail::groups_present` — комментарии написаны вручную
+    2026-10-16
+- [ ] `emb/settings/section.hpp`
+  - [x] `section` — комментарии членов применения, отбрасывания и образов
+    написаны вручную 2026-10-16
+  - [ ] `apply_refusal`, `apply_failure`, `save_refusal`,
+    `section_save_failure` — вручную 2026-10-16
+  - [ ] `some_checker`, `some_applier` — вручную 2026-10-16
 - [x] `emb/settings/store.hpp`
   - [x] `placement`
   - [x] `save_stage`, `save_failure`, `save_result`, `load_result`
