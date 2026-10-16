@@ -13,17 +13,14 @@ namespace emb {
 namespace settings {
 
 // The scoped enumeration `apply_policy` defines when a change to the value of
-// a parameter may take effect. The enumerators are ordered from the least to
-// the most demanding: wherever a change of one policy may take effect, so may
-// a change of any policy before it. `section::take` relies on that order.
+// a parameter may take effect. Whether the application can take a change in
+// its present state is its own business, decided group by group when the
+// change is applied, not the schema's.
 enum class apply_policy : std::uint8_t {
-  // Policy of a parameter that feeds only state the application can
-  // recompute at any time: a change may take effect at once, in any state.
-  live,
-  // Policy of a parameter whose change may take effect only in a state where
-  // the application can reconfigure safely; until then the change stays
-  // pending.
-  on_safe_state,
+  // Policy of a parameter whose change takes effect when the application
+  // applies it on command, `section::apply` and its kin; until then the
+  // change stays pending.
+  on_command,
   // Policy of a parameter that decides which objects exist or how a
   // peripheral is set up, or that is handed to an object only when the object
   // is built: a change takes effect only after a restart.
@@ -157,7 +154,7 @@ struct options {
   group_id group{};
   // Apply policy of the parameter, `apply_policy::on_restart` if left out: a
   // parameter whose policy was never chosen costs a restart rather than
-  // taking effect at once.
+  // taking effect on command.
   apply_policy apply = apply_policy::on_restart;
   bool writable = true;
   bool expose = true;

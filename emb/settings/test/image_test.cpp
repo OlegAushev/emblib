@@ -16,12 +16,13 @@ enum class group : std::uint8_t { drive, model };
 
 inline constexpr auto drive_phase_swap =
     param("drive.phase_swap", false, {.group = group::drive});
-inline constexpr auto drive_runout_speed = param("drive.runout_speed",
-                                                 rpm{100.0f},
-                                                 {.min = rpm{0.0f},
-                                                  .max = rpm{5000.0f},
-                                                  .group = group::drive,
-                                                  .apply = apply_policy::live});
+inline constexpr auto drive_runout_speed =
+    param("drive.runout_speed",
+          rpm{100.0f},
+          {.min = rpm{0.0f},
+           .max = rpm{5000.0f},
+           .group = group::drive,
+           .apply = apply_policy::on_command});
 inline constexpr auto motor_p = param("motor.p",
                                       std::int32_t{11},
                                       {.min = std::int32_t{1},
@@ -31,7 +32,7 @@ inline constexpr auto motor_p = param("motor.p",
 inline constexpr auto model_torque_slope =
     param("model.torque_slope",
           pu{0.5f},
-          {.group = group::model, .apply = apply_policy::on_safe_state});
+          {.group = group::model, .apply = apply_policy::on_command});
 inline constexpr auto prod_serial =
     param("prod.serial",
           std::uint32_t{0},
