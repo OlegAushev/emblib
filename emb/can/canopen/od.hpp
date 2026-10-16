@@ -191,6 +191,21 @@ struct od_catalog {
   std::span<bool const> exposed;
 };
 
+// The class template `od_field` describes a member of a record: its access
+// and type, its handlers, and which argument of the record they get, `arg` or,
+// if `aux` is set, `aux`. A layout, an array of fields indexed by subindex
+// from 00h, describes every member of a record; any number of records may
+// share one, each with arguments of its own. A field obeys the rules of a
+// binding made by hand.
+template<typename Ctx>
+struct od_field {
+  od_access access;
+  od_value_type type;
+  od_read_fn<Ctx> read = nullptr;
+  od_write_fn<Ctx> write = nullptr;
+  bool aux = false;
+};
+
 // The class template `od_binding` describes what serves an object: its access
 // and type, its handlers and the argument passed to them. The builders in
 // od_handlers.hpp and od_settings.hpp make one from typed handlers; one made
@@ -199,6 +214,12 @@ struct od_catalog {
 // type travels as. `catalog` is the index space `arg` selects from, if any.
 // `diagnosed` is set by a builder that has already reported an error, so that
 // `make_dictionary` does not report a second one.
+//
+// A binding with a `layout` serves a record instead: every subindex of the
+// index of its row, which names it with subindex 00h, each through the field
+// of the layout at that subindex. It has no handlers of its own, and its
+// `access` is not used; `type` is what the row states, and `arg` and `aux` are
+// the arguments its fields pass on.
 template<typename Ctx>
 struct od_binding {
   od_access access;
@@ -207,15 +228,18 @@ struct od_binding {
   od_write_fn<Ctx> write = nullptr;
   std::uint16_t arg = 0;
   od_catalog const* catalog = nullptr;
+  std::span<od_field<Ctx> const> layout{};
+  std::uint16_t aux = 0;
   bool diagnosed = false;
 };
 
-// The class template `od_row` is one object as an application writes it: its
-// key, the names a host finds it by, its unit, its type and its binding. The
-// type is stated in the row, although the binding determines it, so that a
-// text parser can generate a host's table from the application's source;
-// `make_dictionary` checks that the two agree. Rows exist only at compile
-// time: `make_dictionary` keeps the key and the binding and drops the rest.
+// The class template `od_row` is one object, or one record, as an application
+// writes it: its key, the names a host finds it by, its unit, its type and its
+// binding. The type is stated in the row, although the binding determines it,
+// so that a text parser can generate a host's table from the application's
+// source; `make_dictionary` checks that the two agree. Rows exist only at
+// compile time: `make_dictionary` keeps the key and the binding and drops the
+// rest.
 template<typename Ctx>
 struct od_row {
   od_key key;
@@ -227,9 +251,9 @@ struct od_row {
   od_binding<Ctx> binding;
 };
 
-// The class template `od_entry` is what the server keeps of a row: the key,
-// the type, the access, the argument and the two handlers. On a 32-bit target
-// it takes 16 bytes.
+// The class template `od_entry` is an object as the server serves it: the key,
+// the type, the access, the argument and the two handlers, kept for a row or
+// made of a field of a record. On a 32-bit target it takes 16 bytes.
 template<typename Ctx>
 struct od_entry {
   std::uint16_t index;
@@ -244,6 +268,17 @@ struct od_entry {
   {
     return {index, subindex};
   }
+};
+
+// The class template `od_record` is what the server keeps of a record: its
+// index, its two arguments and its layout. On a 32-bit target it takes 16
+// bytes.
+template<typename Ctx>
+struct od_record {
+  std::uint16_t index;
+  std::uint16_t arg;
+  std::uint16_t aux;
+  std::span<od_field<Ctx> const> layout;
 };
 
 } // namespace canopen

@@ -104,6 +104,37 @@ constexpr od_write_result raw_write(ctx& c, std::uint16_t, od_value v)
   return {};
 }
 
+constexpr od_read_result read_arg(ctx&, std::uint16_t arg)
+{
+  return od_value{arg};
+}
+
+constexpr od_read_result read_last_subindex(ctx&, std::uint16_t)
+{
+  return od_value{std::uint8_t{3}};
+}
+
+// The members of a record past 00h: a value kept in the context, the
+// record's argument and its second argument.
+inline constexpr od_field<ctx> record_layout[] = {
+    {.access = od_access::const_, .type = uint8, .read = &read_last_subindex},
+    {.access = od_access::rw,
+     .type = float32,
+     .read = &raw_read,
+     .write = &raw_write},
+    {.access = od_access::ro, .type = uint16, .read = &read_arg},
+    {.access = od_access::ro, .type = uint16, .read = &read_arg, .aux = true},
+};
+
+consteval od_binding<ctx> record(std::uint16_t arg, std::uint16_t aux)
+{
+  return {.access = od_access::ro,
+          .type = float32,
+          .arg = arg,
+          .layout = record_layout,
+          .aux = aux};
+}
+
 template<typename T>
 constexpr T zero()
 {
@@ -186,8 +217,9 @@ static_assert(od_key{0x1001, 0x01} < od_key{0x1001, 0x02});
 static_assert(od_key{0x1001, 0x01} == od_key{0x1001, 0x01});
 
 // The index, the subindex, the type, the access and the argument share the
-// first eight bytes.
+// first eight bytes, and so do the index and the two arguments of a record.
 static_assert(sizeof(od_entry<ctx>) == 8 + 2 * sizeof(void*));
+static_assert(sizeof(od_record<ctx>) == 8 + 2 * sizeof(void*));
 
 // -- Handler shapes --
 
@@ -413,22 +445,89 @@ consteval bool test_dictionary()
   if (entries.front().key() != od_key{0x1008, 0x00}) return false;
   if (entries.back().key() != od_key{0x5000, 0x02}) return false;
 
-  if (view.find({0x5000, 0x03}) != nullptr) return false;
-  if (view.find({0x0FFF, 0x00}) != nullptr) return false;
-  if (view.find({0xFFFF, 0xFF}) != nullptr) return false;
+  if (!view.records().empty()) return false;
 
-  auto const* raw = view.find({0x3000, 0x02});
-  if ((raw == nullptr) || (raw->arg != 7)) return false;
+  // An index that rows serve lacks only the subindex; any other, the object.
+  auto const no_subindex = std::unexpected(sdo_abort_code::subindex_not_found);
+  auto const no_object = std::unexpected(sdo_abort_code::object_not_found);
+  if (view.find({0x5000, 0x03}) != no_subindex) return false;
+  if (view.find({0x5000, 0x00}) != no_subindex) return false;
+  if (view.find({0x3000, 0x00}) != no_subindex) return false;
+  if (view.find({0x0FFF, 0x00}) != no_object) return false;
+  if (view.find({0x4000, 0x01}) != no_object) return false;
+  if (view.find({0xFFFF, 0xFF}) != no_object) return false;
+
+  auto const raw = view.find({0x3000, 0x02});
+  if (!raw || (raw->arg != 7)) return false;
 
   ctx c;
-  auto const* freq = view.find({0x3000, 0x01});
-  if (freq->access != od_access::rw) return false;
+  auto const freq = view.find({0x3000, 0x01});
+  if (!freq || (freq->access != od_access::rw)) return false;
   if (!freq->write(c, freq->arg, od_value{4.5f})) return false;
   if (freq->read(c, freq->arg) != od_read_result{4.5f}) return false;
   return raw->read(c, raw->arg) == od_read_result{4.5f};
 }
 
 static_assert(test_dictionary());
+
+// A record serves every subindex of its index through its layout, which
+// records share: each member gets the argument its field names.
+consteval bool test_records()
+{
+  // clang-format off
+  static constexpr od_row<ctx> rows[] = {
+      {{0x4001, 0x00}, "config", "r", "second", "", float32, record(2, 0x4101)},
+      {{0x5000, 0x01}, "watch",  "b", "value",  "", float32, od_ro<read_value>},
+      {{0x4000, 0x00}, "config", "r", "first",  "", float32, record(1, 0x4100)},
+  };
+  // clang-format on
+
+  auto const dictionary = make_dictionary<rows>();
+  od_view<ctx> const view{dictionary};
+
+  if (view.entries().size() != 1) return false;
+  auto const records = view.records();
+  if ((records.size() != 2) || (records[0].index != 0x4000)) return false;
+  if ((records[1].arg != 2) || (records[1].aux != 0x4101)) return false;
+
+  ctx c;
+  auto const last = view.find({0x4000, 0x00});
+  if (!last || (last->access != od_access::const_) || (last->type != uint8)) {
+    return false;
+  }
+  if (last->read(c, last->arg) != od_read_result{std::uint8_t{3}}) return false;
+
+  auto const value = view.find({0x4001, 0x01});
+  if (!value || (value->key() != od_key{0x4001, 0x01})) return false;
+  if (!value->write(c, value->arg, od_value{2.5f})) return false;
+  if (value->read(c, value->arg) != od_read_result{2.5f}) return false;
+
+  auto const read_member = [&](od_key key) {
+    auto const member = view.find(key);
+    return member ? member->read(c, member->arg) : od_read_result{};
+  };
+  if (read_member({0x4000, 0x02}) != od_read_result{std::uint16_t{1}}) {
+    return false;
+  }
+  if (read_member({0x4001, 0x02}) != od_read_result{std::uint16_t{2}}) {
+    return false;
+  }
+  if (read_member({0x4000, 0x03}) != od_read_result{std::uint16_t{0x4100}}) {
+    return false;
+  }
+  if (read_member({0x4001, 0x03}) != od_read_result{std::uint16_t{0x4101}}) {
+    return false;
+  }
+
+  if (view.find({0x4000, 0x04})
+      != std::unexpected(sdo_abort_code::subindex_not_found)) {
+    return false;
+  }
+  return view.find({0x4002, 0x00})
+      == std::unexpected(sdo_abort_code::object_not_found);
+}
+
+static_assert(test_records());
 
 // -- Checks --
 
@@ -536,6 +635,32 @@ consteval od_binding<ctx> item(std::uint16_t arg, od_catalog const& from)
 static_assert(check_one(item(2, catalog))
               == "od: 2000h:01 a/b/c: arg is outside its catalog");
 
+// A record is checked field by field, at the row that names it.
+consteval std::string check_record(od_binding<ctx> binding)
+{
+  od_row<ctx> const rows[] = {
+      {{0x2000, 0x00}, "a", "b", "c", "", binding.type, binding}};
+  return detail::od_check(rows);
+}
+
+inline constexpr od_field<ctx> unread_layout[] = {
+    {.access = od_access::const_, .type = uint8, .read = &read_last_subindex},
+    {.access = od_access::ro, .type = float32},
+};
+
+static_assert(check_record(record(1, 0)).empty());
+static_assert(check_one(record(1, 0))
+              == "od: 2000h:01 a/b/c: a record's row must have subindex 00");
+static_assert(check_record({.access = od_access::ro,
+                            .type = float32,
+                            .read = &raw_read,
+                            .layout = record_layout})
+              == "od: 2000h:00 a/b/c: a record has no handlers of its own");
+static_assert(check_record({.access = od_access::ro,
+                            .type = float32,
+                            .layout = unread_layout})
+              == "od: 2000h:00 a/b/c: member 01h readable but has no reader");
+
 consteval std::string check_two(od_row<ctx> first, od_row<ctx> second)
 {
   od_row<ctx> const rows[] = {first, second};
@@ -550,6 +675,14 @@ static_assert(
     check_two({{0x2000, 0x01}, "a", "b", "c", "", float32, od_ro<read_value>},
               {{0x2000, 0x02}, "a", "b", "c", "", uint8, od_ro<read_u8>})
     == "od: 2000h:01 a/b/c and 2000h:02 a/b/c have the same name");
+static_assert(
+    check_two({{0x2000, 0x00}, "a", "b", "c", "", float32, record(1, 0)},
+              {{0x2000, 0x05}, "a", "b", "d", "", uint8, od_ro<read_u8>})
+    == "od: 2000h:00 a/b/c and 2000h:05 a/b/d share the index of a record");
+static_assert(
+    check_two({{0x2000, 0x00}, "a", "b", "c", "", float32, record(1, 0)},
+              {{0x2001, 0x00}, "a", "b", "d", "", float32, record(1, 0)})
+        .empty());
 // Checks two objects that differ in key and name, 2000h:01 a/b/c and
 // 2000h:02 a/b/d.
 consteval std::string check_pair(od_binding<ctx> first, od_binding<ctx> second)

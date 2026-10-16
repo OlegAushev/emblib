@@ -47,8 +47,8 @@ public:
                         static_cast<std::uint8_t>(rsdo.subindex)};
 
     auto result = [&]() -> std::expected<expedited_sdo, sdo_abort_code> {
-      od_entry<Ctx> const* entry = dictionary_.find(key);
-      if (!entry) return std::unexpected(sdo_abort_code::object_not_found);
+      auto const entry = dictionary_.find(key);
+      if (!entry) return std::unexpected(entry.error());
       if (rsdo.cs == sdo_cs_codes::client_init_read)
         return read_expedited(*entry, rsdo);
       if (rsdo.cs == sdo_cs_codes::client_init_write)

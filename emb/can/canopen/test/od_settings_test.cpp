@@ -167,11 +167,11 @@ consteval bool test_dictionary()
   auto const dictionary = make_dictionary<rows>();
   od_view<ctx> const view{dictionary};
 
-  auto const* pole_pairs = view.find({0x3004, 0x01});
-  if (pole_pairs == nullptr) return false;
+  auto const pole_pairs = view.find({0x3004, 0x01});
+  if (!pole_pairs) return false;
 
-  auto const* serial = view.find({0x3000, 0x01});
-  if (serial == nullptr) return false;
+  auto const serial = view.find({0x3000, 0x01});
+  if (!serial) return false;
 
   ctx c;
   if (pole_pairs->read(c, pole_pairs->arg)

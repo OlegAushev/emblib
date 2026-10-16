@@ -87,8 +87,8 @@ consteval bool test_dictionary()
   od_view<ctx> const view{dictionary};
 
   ctx c;
-  auto const* magic = view.find({0x3000, 0x01});
-  if (magic == nullptr) return false;
+  auto const magic = view.find({0x3000, 0x01});
+  if (!magic) return false;
   return magic->read(c, magic->arg) == od_read_result{flash_placement.magic};
 }
 

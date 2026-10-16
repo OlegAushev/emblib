@@ -89,6 +89,63 @@ constexpr std::string_view type_name(od_value_type type)
   return "?";
 }
 
+// Returns the rule that an object breaks whose access is `access` and type
+// `type`, and that has a reader if `reader` and a writer if `writer`, or an
+// empty view if it breaks none. A row that binds one object and a field of a
+// record obey the same rules.
+constexpr std::string_view
+handler_error(od_access access, od_value_type type, bool reader, bool writer)
+{
+  bool const readable = od_readable(access);
+  bool const writable = od_writable(access);
+
+  if (readable && !reader) return "readable but has no reader";
+  if (!readable && reader) return "write-only but has a reader";
+  if (writable && !writer) return "writable but has no writer";
+  if (!writable && writer) return "read-only but has a writer";
+  if (type == od_value_type::exec && access != od_access::wo) {
+    return "an exec object must be wo";
+  }
+  if (type == od_value_type::string && writable) {
+    return "a string object must not be writable";
+  }
+  return {};
+}
+
+// The rules of a row that binds a record: the row names the record with
+// subindex 00h, the binding has no handlers of its own, the layout fits in the
+// subindices, and each field obeys the rules of one object.
+template<typename Ctx>
+constexpr std::string check_record(od_row<Ctx> const& row)
+{
+  auto const& binding = row.binding;
+
+  if (row.key.subindex != 0) {
+    return row_error(row, "a record's row must have subindex 00");
+  }
+  if (binding.read != nullptr || binding.write != nullptr) {
+    return row_error(row, "a record has no handlers of its own");
+  }
+  if (binding.layout.size() > 0x100) {
+    return row_error(row, "a record has at most 256 members");
+  }
+  for (auto i = 0uz; i < binding.layout.size(); ++i) {
+    auto const& field = binding.layout[i];
+    auto const what = handler_error(field.access,
+                                    field.type,
+                                    field.read != nullptr,
+                                    field.write != nullptr);
+    if (!what.empty()) {
+      std::string out = "member ";
+      append_hex(out, static_cast<unsigned>(i), 2);
+      out += "h ";
+      out += what;
+      return row_error(row, out);
+    }
+  }
+  return {};
+}
+
 template<typename Ctx>
 constexpr std::string check_row(od_row<Ctx> const& row)
 {
@@ -108,26 +165,15 @@ constexpr std::string check_row(od_row<Ctx> const& row)
     return row_error(row, what);
   }
 
-  bool const readable = od_readable(binding.access);
-  bool const writable = od_writable(binding.access);
-
-  if (readable && binding.read == nullptr) {
-    return row_error(row, "readable but has no reader");
+  if (!binding.layout.empty()) {
+    if (auto error = check_record(row); !error.empty()) return error;
   }
-  if (!readable && binding.read != nullptr) {
-    return row_error(row, "write-only but has a reader");
-  }
-  if (writable && binding.write == nullptr) {
-    return row_error(row, "writable but has no writer");
-  }
-  if (!writable && binding.write != nullptr) {
-    return row_error(row, "read-only but has a writer");
-  }
-  if (binding.type == od_value_type::exec && binding.access != od_access::wo) {
-    return row_error(row, "an exec object must be wo");
-  }
-  if (binding.type == od_value_type::string && writable) {
-    return row_error(row, "a string object must not be writable");
+  else if (auto const what = handler_error(binding.access,
+                                           binding.type,
+                                           binding.read != nullptr,
+                                           binding.write != nullptr);
+           !what.empty()) {
+    return row_error(row, what);
   }
   if (binding.catalog != nullptr
       && binding.arg >= binding.catalog->names.size()) {
@@ -146,6 +192,10 @@ constexpr std::string check_pairs(od_row<Ctx> const (&rows)[N])
       auto const& a = first.binding;
       auto const& b = second.binding;
 
+      bool const record = !a.layout.empty() || !b.layout.empty();
+      if (record && (first.key.index == second.key.index)) {
+        return pair_error(first, second, "share the index of a record");
+      }
       if (first.key == second.key) {
         return pair_error(first, second, "have the same key");
       }
