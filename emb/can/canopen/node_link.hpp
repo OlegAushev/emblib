@@ -12,11 +12,13 @@ namespace emb {
 namespace can {
 namespace canopen {
 
-// Structure holding how long a lost link stays at each severity: it is a
-// warning from the moment a watched frame misses its timeout, an error once
-// it has stayed lost for `to_error`, and critical once it has stayed lost for
-// `to_critical`. `never` keeps a link from reaching that severity.
+// Structure holding when a watched frame is lost and how long it stays lost at
+// each severity: it is a warning once no valid frame has arrived for
+// `timeout`, an error once it has stayed lost for `to_error`, and critical
+// once it has stayed lost for `to_critical`. `never` as `to_error` or
+// `to_critical` keeps a frame from reaching that severity.
 struct lost_timing {
+  std::chrono::milliseconds timeout;
   std::chrono::milliseconds to_error;
   std::chrono::milliseconds to_critical;
 };
@@ -40,14 +42,15 @@ struct from_first_frame_t {
 inline constexpr from_first_frame_t from_first_frame{};
 
 // The class template `node_link` supervises the PDOs a remote node sends:
-// `FrameCount` frames, each with its own timeout and a rolling counter of
+// `FrameCount` frames, each with its own `lost_timing` and a rolling counter of
 // `CounterBits` bits. The frame handler asks `counter_ok` whether a frame
 // follows the one before it, checks whatever else makes the frame valid, and
 // reports a valid frame with `report_valid`. Only a valid frame keeps its
 // stream alive; an invalid one is not reported to the link at all, and how it
-// shows is up to the caller. `loss` tells how badly the link is lost, from the
-// earliest deadline among the watched frames and `lost_timing`. The link
-// raises nothing itself: the caller turns its answer into whatever it reports.
+// shows is up to the caller. `loss` tells how badly the link is lost: as badly
+// as the worst lost of the watched frames, each judged by its own
+// `lost_timing`. The link raises nothing itself: the caller turns its answer
+// into whatever it reports.
 //
 // Every member takes the time it is called at, as the caller's clock counts
 // it, and all of them must be called from one context.
@@ -58,12 +61,10 @@ class node_link {
                 "a counter takes one to eight bits");
 
 public:
-  using timeout_table = std::array<std::chrono::milliseconds, FrameCount>;
+  using timing_table = std::array<lost_timing, FrameCount>;
 
-  constexpr node_link(lost_timing timing,
-                      timeout_table timeouts,
-                      std::chrono::milliseconds now)
-      : timing_(timing), timeouts_(timeouts)
+  constexpr node_link(timing_table timings, std::chrono::milliseconds now)
+      : timings_(timings)
   {
     last_good_.fill(now);
     watched_.set();
@@ -74,10 +75,8 @@ public:
   // watched from its first valid arrival, and a frame nobody sends is never
   // missed. Once heard, a frame is watched like any other, and falling silent
   // again is a loss, not an end: only a restart stops the watch.
-  constexpr node_link(from_first_frame_t,
-                      lost_timing timing,
-                      timeout_table timeouts)
-      : timing_(timing), timeouts_(timeouts)
+  constexpr node_link(from_first_frame_t, timing_table timings)
+      : timings_(timings)
   {
   }
 
@@ -99,20 +98,17 @@ public:
     watched_.set(Frame - 1);
   }
 
+  // A frame not watched yet is not lost; with none watched at all the link
+  // counts as connected.
   constexpr link_loss loss(std::chrono::milliseconds now) const
   {
-    auto const deadline = connected_until();
-    if (now < deadline) {
-      return link_loss::none;
+    auto worst = link_loss::none;
+    for (auto i = 0uz; i < FrameCount; ++i) {
+      if (watched_.test(i)) {
+        worst = std::max(worst, frame_loss(i, now));
+      }
     }
-    auto const down_for = now - deadline;
-    if (down_for >= timing_.to_critical) {
-      return link_loss::critical;
-    }
-    if (down_for >= timing_.to_error) {
-      return link_loss::error;
-    }
-    return link_loss::warning;
+    return worst;
   }
 
 private:
@@ -135,28 +131,32 @@ private:
     // way, whatever arrived before it.
     bool const resumed = !watched_.test(i)
                       || !counter_seen_.test(i)
-                      || (now - last_seen_[i]) >= timeouts_[i];
+                      || (now - last_seen_[i]) >= timings_[i].timeout;
     prev_counter_[i] = seen;
     last_seen_[i] = now;
     counter_seen_.set(i);
     return resumed || seen == expected;
   }
 
-  // A frame not watched yet sets no deadline; with none watched at all the
-  // link counts as connected.
-  constexpr std::chrono::milliseconds connected_until() const
+  constexpr link_loss frame_loss(std::size_t i,
+                                 std::chrono::milliseconds now) const
   {
-    auto earliest = std::chrono::milliseconds::max();
-    for (auto i = 0uz; i < FrameCount; ++i) {
-      if (watched_.test(i)) {
-        earliest = std::min(earliest, last_good_[i] + timeouts_[i]);
-      }
+    auto const& timing = timings_[i];
+    auto const deadline = last_good_[i] + timing.timeout;
+    if (now < deadline) {
+      return link_loss::none;
     }
-    return earliest;
+    auto const down_for = now - deadline;
+    if (down_for >= timing.to_critical) {
+      return link_loss::critical;
+    }
+    if (down_for >= timing.to_error) {
+      return link_loss::error;
+    }
+    return link_loss::warning;
   }
 
-  lost_timing timing_;
-  timeout_table timeouts_;
+  timing_table timings_;
 
   std::array<std::chrono::milliseconds, FrameCount> last_good_{};
   std::array<std::chrono::milliseconds, FrameCount> last_seen_{};
