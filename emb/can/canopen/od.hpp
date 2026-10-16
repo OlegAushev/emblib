@@ -219,7 +219,9 @@ struct od_field {
 // index of its row, which names it with subindex 00h, each through the field
 // of the layout at that subindex. It has no handlers of its own, and its
 // `access` is not used; `type` is what the row states, and `arg` and `aux` are
-// the arguments its fields pass on.
+// the arguments its fields pass on. A record with a `link` gets as its `aux`
+// the index of the row that serves item `link_item` of the catalog `link`,
+// e.g. of the record of the group a parameter belongs to.
 template<typename Ctx>
 struct od_binding {
   od_access access;
@@ -230,6 +232,8 @@ struct od_binding {
   od_catalog const* catalog = nullptr;
   std::span<od_field<Ctx> const> layout{};
   std::uint16_t aux = 0;
+  od_catalog const* link = nullptr;
+  std::uint16_t link_item = 0;
   bool diagnosed = false;
 };
 

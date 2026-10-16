@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <initializer_list>
 #include <string>
 #include <string_view>
 
@@ -179,6 +180,22 @@ constexpr std::string check_row(od_row<Ctx> const& row)
       && binding.arg >= binding.catalog->names.size()) {
     return row_error(row, "arg is outside its catalog");
   }
+  if (binding.link != nullptr) {
+    if (binding.layout.empty()) {
+      return row_error(row, "only a record links to another row");
+    }
+    if (binding.link_item >= binding.link->names.size()) {
+      return row_error(row, "link_item is outside its catalog");
+    }
+    if (!binding.link->exposed[binding.link_item]) {
+      std::string what = "links to ";
+      what += binding.link->what;
+      what += " '";
+      what += binding.link->names[binding.link_item];
+      what += "', which is not exposed";
+      return row_error(row, what);
+    }
+  }
   return {};
 }
 
@@ -219,48 +236,65 @@ constexpr std::string check_pairs(od_row<Ctx> const (&rows)[N])
   return {};
 }
 
+// Checks that each exposed item of `catalog` has exactly one row and each
+// hidden one none.
+template<typename Ctx, std::size_t N>
+constexpr std::string check_coverage(od_row<Ctx> const (&rows)[N],
+                                     od_catalog const& catalog)
+{
+  for (auto item = 0uz; item < catalog.names.size(); ++item) {
+    od_row<Ctx> const* first = nullptr;
+    od_row<Ctx> const* second = nullptr;
+    for (auto const& row : rows) {
+      if (row.binding.catalog != &catalog || row.binding.arg != item) {
+        continue;
+      }
+      if (first == nullptr) {
+        first = &row;
+      }
+      else if (second == nullptr) {
+        second = &row;
+      }
+    }
+
+    if (catalog.exposed[item] && first == nullptr) {
+      return item_error(catalog, item, "has no row");
+    }
+    if (catalog.exposed[item] && second != nullptr) {
+      auto out = item_error(catalog, item, "has two rows: ");
+      append_row(out, *first);
+      out += " and ";
+      append_row(out, *second);
+      return out;
+    }
+    if (!catalog.exposed[item] && first != nullptr) {
+      auto out = item_error(catalog, item, "is not exposed but has a row: ");
+      append_row(out, *first);
+      return out;
+    }
+  }
+  return {};
+}
+
+// Checks the coverage of every catalog that a row serves an item of or
+// links to, once each.
 template<typename Ctx, std::size_t N>
 constexpr std::string check_catalogs(od_row<Ctx> const (&rows)[N])
 {
-  for (auto r = 0uz; r < N; ++r) {
-    od_catalog const* const catalog = rows[r].binding.catalog;
-    if (catalog == nullptr) continue;
-
-    bool checked = false;
+  auto const named_before = [&rows](std::size_t r, od_catalog const* catalog) {
     for (auto p = 0uz; p < r; ++p) {
-      if (rows[p].binding.catalog == catalog) checked = true;
+      auto const& binding = rows[p].binding;
+      if (binding.catalog == catalog || binding.link == catalog) return true;
     }
-    if (checked) continue;
+    return false;
+  };
 
-    for (auto item = 0uz; item < catalog->names.size(); ++item) {
-      od_row<Ctx> const* first = nullptr;
-      od_row<Ctx> const* second = nullptr;
-      for (auto const& row : rows) {
-        if (row.binding.catalog != catalog || row.binding.arg != item) {
-          continue;
-        }
-        if (first == nullptr) {
-          first = &row;
-        }
-        else if (second == nullptr) {
-          second = &row;
-        }
-      }
-
-      if (catalog->exposed[item] && first == nullptr) {
-        return item_error(*catalog, item, "has no row");
-      }
-      if (catalog->exposed[item] && second != nullptr) {
-        auto out = item_error(*catalog, item, "has two rows: ");
-        append_row(out, *first);
-        out += " and ";
-        append_row(out, *second);
-        return out;
-      }
-      if (!catalog->exposed[item] && first != nullptr) {
-        auto out = item_error(*catalog, item, "is not exposed but has a row: ");
-        append_row(out, *first);
-        return out;
+  for (auto r = 0uz; r < N; ++r) {
+    for (od_catalog const* catalog :
+         {rows[r].binding.catalog, rows[r].binding.link}) {
+      if (catalog == nullptr || named_before(r, catalog)) continue;
+      if (auto error = check_coverage(rows, *catalog); !error.empty()) {
+        return error;
       }
     }
   }

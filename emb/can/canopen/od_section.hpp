@@ -5,7 +5,7 @@
 #include <expected>
 #include <type_traits>
 
-#include "od_settings.hpp"
+#include "od.hpp"
 
 #include <emb/settings/image.hpp>
 #include <emb/settings/section.hpp>
@@ -20,35 +20,12 @@ namespace detail {
 template<auto& Section>
 using section_t = std::remove_cvref_t<decltype(Section)>;
 
-template<auto& Section>
-std::expected<settings::value, settings::error>
-section_get_at(std::size_t index)
-{
-  return Section.get_at(index);
-}
-
-template<auto& Section>
-std::expected<void, settings::error>
-section_set_at(std::size_t index, settings::value const& value)
-{
-  return Section.set_at(index, value);
-}
-
 } // namespace detail
-
-// The alias template `od_settings_for` is the `od_settings` bridge to the
-// parameters of `Section`, a `settings::section`, through the by-index
-// accessors of `Section`.
-template<auto& Section>
-using od_settings_for =
-    od_settings<detail::section_t<Section>::schema,
-                &detail::section_get_at<Section>,
-                &detail::section_set_at<Section>>;
 
 // The class template `od_section_status` provides readers, for `od_ro`, of
 // the state of `Section`, a `settings::section`: where its records are kept,
 // how far its saves have advanced around the slots, what the last load found,
-// and whether values wait to be applied or for a restart.
+// and whether values wait to be applied, to be saved or for a restart.
 template<auto& Section>
 class od_section_status {
   using section_type = detail::section_t<Section>;
@@ -160,6 +137,11 @@ public:
   static bool unapplied()
   {
     return Section.unapplied();
+  }
+
+  static bool unsaved()
+  {
+    return Section.unsaved();
   }
 };
 

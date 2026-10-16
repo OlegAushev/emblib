@@ -36,19 +36,7 @@ inline constexpr settings::placement flash_placement{.magic = 0x47464354u,
 
 constinit settings::section<schema, flash, flash_placement> config;
 
-using bridge = od_settings_for<config>;
 using status = od_section_status<config>;
-
-template<auto Binding>
-consteval od_binding<ctx> bind()
-{
-  return Binding;
-}
-
-static_assert(bridge::catalog.names.size() == schema.count);
-static_assert(bind<bridge::rw<motor_p>>().type == int32);
-static_assert(bind<bridge::rw<motor_p>>().arg == 1);
-static_assert(bind<bridge::ro<prod_serial>>().write == nullptr);
 
 static_assert(status::magic() == flash_placement.magic);
 static_assert(status::slot_count() == 4);
@@ -77,9 +65,7 @@ consteval bool test_dictionary()
       {{0x3000, 0x10}, "config", "nvm",   "missing",          "", uint32,  od_ro<status::missing>},
       {{0x3000, 0x11}, "config", "nvm",   "restart_required", "", boolean, od_ro<status::restart_required>},
       {{0x3000, 0x12}, "config", "nvm",   "unapplied",        "", boolean, od_ro<status::unapplied>},
-      {{0x3002, 0x01}, "config", "drive", "phase_swap",       "", boolean, bridge::rw<drive_phase_swap>},
-      {{0x3004, 0x01}, "config", "motor", "pole_pairs",       "", int32,   bridge::rw<motor_p>},
-      {{0x3009, 0x01}, "config", "prod",  "serial",           "", uint32,  bridge::ro<prod_serial>},
+      {{0x3000, 0x13}, "config", "nvm",   "unsaved",          "", boolean, od_ro<status::unsaved>},
   };
   // clang-format on
 

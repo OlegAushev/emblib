@@ -6,7 +6,8 @@
 #include <emb/can/canopen/od_dictionary.hpp>
 #include <emb/can/canopen/od_handlers.hpp>
 #include <emb/can/canopen/od_settings.hpp>
-#include <emb/settings/image.hpp>
+#include <emb/settings/section.hpp>
+#include <emb/test/mock/ram_storage.hpp>
 #include <emb/units.hpp>
 
 namespace {
@@ -15,48 +16,106 @@ using namespace emb::can::canopen;
 using enum od_value_type;
 namespace settings = emb::settings;
 
-struct ctx {};
+enum class group : std::uint8_t {
+  drive,
+  motor,
+  prod
+};
 
-inline constexpr auto drive_phase_swap =
-    settings::param("drive.phase_swap", false);
-inline constexpr auto motor_p =
-    settings::param("motor.p",
-                    std::int32_t{11},
-                    {.min = std::int32_t{1}, .max = std::int32_t{64}});
-inline constexpr auto prot_timeout =
-    settings::param("prot.timeout", std::uint32_t{1000});
-inline constexpr auto prot_uvp = settings::param("prot.uvp", 35.0f);
+inline constexpr auto drive_phase_swap = settings::param(
+    "drive.phase_swap",
+    false,
+    {.group = group::drive, .apply = settings::apply_policy::on_command});
+inline constexpr auto motor_p = settings::param(
+    "motor.p",
+    std::int32_t{11},
+    {.min = std::int32_t{1}, .max = std::int32_t{64}, .group = group::motor});
 inline constexpr auto drive_freq =
-    settings::param("drive.freq", emb::units::hz_f32{10000.0f});
+    settings::param("drive.freq",
+                    emb::units::hz_f32{10000.0f},
+                    {.min = emb::units::hz_f32{1000.0f},
+                     .max = emb::units::hz_f32{20000.0f},
+                     .group = group::drive,
+                     .apply = settings::apply_policy::on_command});
 inline constexpr auto prod_serial =
-    settings::param("prod.serial", std::uint32_t{0}, {.writable = false});
+    settings::param("prod.serial",
+                    std::uint32_t{0},
+                    {.group = group::prod, .writable = false});
 inline constexpr auto prod_secret =
-    settings::param("prod.secret", std::uint32_t{0}, {.expose = false});
+    settings::param("prod.secret",
+                    std::uint32_t{0},
+                    {.group = group::prod, .expose = false});
 
 inline constexpr auto schema = settings::make_schema(drive_phase_swap,
                                                      motor_p,
-                                                     prot_timeout,
-                                                     prot_uvp,
                                                      drive_freq,
                                                      prod_serial,
                                                      prod_secret);
 
-// The accessors of a fresh image: every call starts from the defaults, which
-// is enough to see what the bridge makes of their answers.
-constexpr std::expected<settings::value, settings::error>
-get_at(std::size_t index)
+using fram = emb::test::ram_storage<512>;
+inline constexpr settings::placement fram_placement{.magic = 0x47464354u,
+                                                    .base = 0,
+                                                    .slot_capacity = 128,
+                                                    .slot_count = 2};
+
+using test_section = settings::section<schema, fram, fram_placement>;
+
+// An applier that checks nothing and admits every change unless `busy`.
+struct test_applier {
+  bool busy = false;
+
+  struct guard {};
+
+  constexpr bool check(settings::group_id, settings::image<schema> const&)
+  {
+    return true;
+  }
+
+  constexpr guard lock()
+  {
+    return {};
+  }
+
+  constexpr bool admit(settings::group_id)
+  {
+    return !busy;
+  }
+
+  constexpr void configure(settings::group_id, settings::image<schema> const&)
+  {
+  }
+};
+
+// The context of the dictionary holds the section, so that the bridge can
+// be followed through in constant evaluation.
+struct ctx {
+  fram memory;
+  test_section section;
+  bool busy = false;
+  float actual = 9500.0f;
+};
+
+constexpr test_section& section_of(ctx& c)
 {
-  return settings::image<schema>{}.get_at(index);
+  return c.section;
 }
 
-constexpr std::expected<void, settings::error>
-set_at(std::size_t index, settings::value const& value)
+constexpr test_applier make_applier(ctx& c)
 {
-  settings::image<schema> values;
-  return values.set_at(index, value);
+  return test_applier{c.busy};
 }
 
-using bridge = od_settings<schema, get_at, set_at>;
+constexpr float actual_freq(ctx const& c)
+{
+  return c.actual;
+}
+
+constexpr std::int32_t actual_pole_pairs()
+{
+  return 11;
+}
+
+using bridge = od_settings<section_of, make_applier>;
 
 // -- Error mapping --
 
@@ -69,26 +128,50 @@ static_assert(to_sdo_abort(settings::error::type_mismatch)
 static_assert(to_sdo_abort(settings::error::out_of_range)
               == sdo_abort_code::value_range_exceeded);
 
+static_assert(to_sdo_abort(settings::apply_failure{
+                  settings::apply_refusal::not_applicable,
+                  {}})
+              == sdo_abort_code::unsupported_access);
+static_assert(
+    to_sdo_abort(settings::apply_failure{settings::apply_refusal::invalid, {}})
+    == sdo_abort_code::parameter_incompatibility);
+static_assert(to_sdo_abort(settings::apply_failure{
+                  settings::apply_refusal::not_admitted,
+                  {}})
+              == sdo_abort_code::state_error);
+
+static_assert(to_sdo_abort(settings::save_refusal::unapplied)
+              == sdo_abort_code::state_error);
+static_assert(to_sdo_abort(settings::save_refusal::invalid)
+              == sdo_abort_code::parameter_incompatibility);
+static_assert(to_sdo_abort(settings::save_refusal::medium)
+              == sdo_abort_code::data_store_error);
+
 static_assert(detail::to_settings_value(od_value{1.5f})
               == settings::value{1.5f});
-static_assert(detail::to_settings_value(od_value{std::uint32_t{7}})
-              == settings::value{std::uint32_t{7}});
 static_assert(!detail::to_settings_value(od_value{std::int8_t{7}}));
-static_assert(!detail::to_settings_value(od_value{std::uint16_t{7}}));
 
 static_assert(detail::not_exposed_message<"prod.secret">().view()
               == "od: settings parameter 'prod.secret' is not exposed");
-static_assert(detail::not_writable_message<"prod.serial">().view()
-              == "od: settings parameter 'prod.serial' is not writable; bind "
-                 "it with ro");
+static_assert(detail::actual_type_message<"drive.freq">().view()
+              == "od: the actual value of settings parameter 'drive.freq' is "
+                 "not read as its type");
 
-// -- Catalog --
+// -- Catalogs --
 
 static_assert(bridge::catalog.what == "settings parameter");
-static_assert(bridge::catalog.names.size() == 7);
+static_assert(bridge::catalog.names.size() == 5);
 static_assert(bridge::catalog.names[1] == "motor.p");
-static_assert(bridge::catalog.exposed[5]);
-static_assert(!bridge::catalog.exposed[6]);
+static_assert(bridge::catalog.exposed[3]);
+static_assert(!bridge::catalog.exposed[4]);
+
+// A group shows a record if a parameter of it is exposed, by number.
+static_assert(bridge::group_catalog.what == "settings group");
+static_assert(bridge::group_catalog.names.size() == 256);
+static_assert(bridge::group_catalog.names[2] == "2");
+static_assert(bridge::group_catalog.names[200] == "200");
+static_assert(bridge::group_catalog.exposed[2]);
+static_assert(!bridge::group_catalog.exposed[3]);
 
 // -- Bindings --
 
@@ -98,93 +181,215 @@ consteval od_binding<ctx> bind()
   return Binding;
 }
 
-static_assert(bind<bridge::rw<drive_phase_swap>>().type
-              == od_value_type::boolean);
-static_assert(bind<bridge::rw<motor_p>>().type == od_value_type::int32);
-static_assert(bind<bridge::rw<prot_timeout>>().type == od_value_type::uint32);
-static_assert(bind<bridge::rw<prot_uvp>>().type == od_value_type::float32);
-static_assert(bind<bridge::rw<drive_freq>>().type == od_value_type::float32);
+static_assert(bind<bridge::param<drive_phase_swap>>().type == boolean);
+static_assert(bind<bridge::param<motor_p>>().type == int32);
+static_assert(bind<bridge::param<drive_freq>>().type == float32);
+static_assert(bind<bridge::param<motor_p>>().arg == 1);
+static_assert(bind<bridge::param<motor_p>>().catalog == &bridge::catalog);
+static_assert(bind<bridge::param<motor_p>>().link == &bridge::group_catalog);
+static_assert(bind<bridge::param<motor_p>>().link_item == 1);
+static_assert(bind<bridge::param<motor_p>>().read == nullptr);
+static_assert(bind<bridge::param<motor_p>>().layout.size() == 11);
+static_assert(bind<bridge::param<drive_freq, actual_freq>>().layout.size()
+              == 12);
+static_assert(bind<bridge::param<motor_p, actual_pole_pairs>>().layout.size()
+              == 12);
+static_assert(!bind<bridge::param<motor_p>>().diagnosed);
 
-static_assert(bind<bridge::rw<motor_p>>().access == od_access::rw);
-static_assert(bind<bridge::rw<motor_p>>().arg == 1);
-static_assert(bind<bridge::rw<motor_p>>().read == &bridge::read<ctx>);
-static_assert(bind<bridge::rw<motor_p>>().write == &bridge::write<ctx>);
-static_assert(bind<bridge::rw<motor_p>>().catalog == &bridge::catalog);
-static_assert(!bind<bridge::rw<motor_p>>().diagnosed);
+// A parameter a protocol may not write shows its value read-only.
+static_assert(bind<bridge::param<prod_serial>>().layout[1].access
+              == od_access::ro);
+static_assert(bind<bridge::param<prod_serial>>().layout[1].write == nullptr);
+static_assert(bind<bridge::param<motor_p>>().layout[1].access == od_access::rw);
 
-static_assert(bind<bridge::ro<prod_serial>>().access == od_access::ro);
-static_assert(bind<bridge::ro<prod_serial>>().arg == 5);
-static_assert(bind<bridge::ro<prod_serial>>().write == nullptr);
+static_assert(bind<bridge::group<group::motor>>().type == exec);
+static_assert(bind<bridge::group<group::motor>>().arg == 1);
+static_assert(bind<bridge::group<group::motor>>().catalog
+              == &bridge::group_catalog);
+static_assert(bind<bridge::group<group::motor>>().layout.size() == 5);
 
-// -- Access --
+// -- Records --
 
-consteval bool test_access()
+// clang-format off
+inline constexpr od_row<ctx> records[] = {
+    {{0x3100, 0x00}, "config", "drive",    "phase_swap",         "",   boolean, bridge::param<drive_phase_swap>},
+    {{0x3101, 0x00}, "config", "motor",    "pole_pairs",         "",   int32,   bridge::param<motor_p>},
+    {{0x3102, 0x00}, "config", "drive",    "freq",               "Hz", float32, bridge::param<drive_freq, actual_freq>},
+    {{0x3103, 0x00}, "config", "prod",     "serial",             "",   uint32,  bridge::param<prod_serial>},
+    {{0x3010, 0x00}, "config", "groups",   "drive",              "",   exec,    bridge::group<group::drive>},
+    {{0x3011, 0x00}, "config", "groups",   "motor",              "",   exec,    bridge::group<group::motor>},
+    {{0x3012, 0x00}, "config", "groups",   "prod",               "",   exec,    bridge::group<group::prod>},
+    {{0x3001, 0x01}, "ctl",    "settings", "apply_all",          "",   exec,    od_exec<bridge::apply_all>},
+    {{0x3001, 0x02}, "ctl",    "settings", "discard_all",        "",   exec,    od_exec<bridge::discard_all>},
+    {{0x3001, 0x03}, "ctl",    "settings", "last_failure",       "",   uint32,  od_ro<bridge::last_failure>},
+    {{0x3001, 0x04}, "ctl",    "settings", "last_failure_group", "",   uint8,   od_ro<bridge::last_failure_group>},
+};
+// clang-format on
+
+inline constexpr auto dictionary = make_dictionary<records>();
+
+// Reads and writes the dictionary as a server would, through `c`.
+struct client {
+  od_view<ctx> view;
+  ctx& c;
+
+  constexpr od_read_result read(od_key key)
+  {
+    auto const member = view.find(key);
+    if (!member) return std::unexpected(member.error());
+    return member->read(c, member->arg);
+  }
+
+  constexpr od_write_result write(od_key key, od_value value)
+  {
+    auto const member = view.find(key);
+    if (!member) return std::unexpected(member.error());
+    return member->write(c, member->arg, value);
+  }
+
+  constexpr od_write_result exec(od_key key)
+  {
+    return write(key, od_value{std::uint32_t{0}});
+  }
+};
+
+// A record shows a parameter whole: its value, applied and stored, its
+// default and bounds, its policy, the record of its group, and its actual
+// value if it has one.
+consteval bool test_a_record_shows_its_parameter()
 {
   ctx c;
-  if (bridge::read(c, 1) != od_read_result{std::int32_t{11}}) return false;
-  if (bridge::read(c, 4) != od_read_result{10000.0f}) return false;
-  auto const unknown = bridge::read(c, 99);
-  if (unknown || unknown.error() != sdo_abort_code::object_not_found) {
-    return false;
-  }
+  auto _ = c.section.load(c.memory);
+  client od{dictionary, c};
 
-  if (!bridge::write(c, 1, od_value{std::int32_t{12}})) return false;
+  if (od.read({0x3101, 0x00}) != od_read_result{std::uint8_t{0x0A}}) {
+    return false;
+  }
+  if (od.read({0x3102, 0x00}) != od_read_result{std::uint8_t{0x0B}}) {
+    return false;
+  }
+  if (od.read({0x3101, 0x01}) != od_read_result{std::int32_t{11}}) return false;
+  if (od.read({0x3101, 0x02}) != od_read_result{std::int32_t{11}}) return false;
+  if (od.read({0x3101, 0x03}) != od_read_result{std::int32_t{11}}) return false;
+  if (od.read({0x3101, 0x04}) != od_read_result{std::int32_t{11}}) return false;
+  if (od.read({0x3101, 0x05}) != od_read_result{std::int32_t{1}}) return false;
+  if (od.read({0x3101, 0x06}) != od_read_result{std::int32_t{64}}) return false;
+  if (od.read({0x3102, 0x05}) != od_read_result{1000.0f}) return false;
+  if (od.read({0x3100, 0x07}) != od_read_result{std::uint8_t{0}}) return false;
+  if (od.read({0x3101, 0x07}) != od_read_result{std::uint8_t{1}}) return false;
+  if (od.read({0x3100, 0x08}) != od_read_result{std::uint16_t{0x3010}}) {
+    return false;
+  }
+  if (od.read({0x3101, 0x08}) != od_read_result{std::uint16_t{0x3011}}) {
+    return false;
+  }
+  if (od.read({0x3102, 0x0B}) != od_read_result{9500.0f}) return false;
 
-  auto const out_of_range = bridge::write(c, 1, od_value{std::int32_t{65}});
-  if (out_of_range
-      || out_of_range.error() != sdo_abort_code::value_range_exceeded) {
-    return false;
-  }
-  auto const narrow = bridge::write(c, 1, od_value{std::int8_t{12}});
-  if (narrow || narrow.error() != sdo_abort_code::data_type_mismatch) {
-    return false;
-  }
-  auto const retyped = bridge::write(c, 1, od_value{std::uint32_t{12}});
-  if (retyped || retyped.error() != sdo_abort_code::data_type_mismatch) {
-    return false;
-  }
-  auto const read_only = bridge::write(c, 5, od_value{std::uint32_t{1}});
-  return !read_only && (read_only.error() == sdo_abort_code::write_to_read_only);
+  auto const no_subindex = std::unexpected(sdo_abort_code::subindex_not_found);
+  if (od.read({0x3101, 0x0B}) != no_subindex) return false;
+  if (od.read({0x3102, 0x0C}) != no_subindex) return false;
+
+  // A parameter a protocol may not write shows its value read-only.
+  auto const serial = od.view.find({0x3103, 0x01});
+  return serial
+      && (serial->access == od_access::ro)
+      && (serial->write == nullptr);
 }
 
-static_assert(test_access());
-
-// -- Dictionary --
-
-consteval bool test_dictionary()
+// A value written waits until applied: the record applies it, or discards
+// it, and a refusal answers with its abort and is kept as the last failure.
+consteval bool test_a_record_applies_its_parameter()
 {
-  // clang-format off
-  static constexpr od_row<ctx> rows[] = {
-      {{0x3002, 0x01}, "config", "drive", "phase_swap", "",   boolean, bridge::rw<drive_phase_swap>},
-      {{0x3004, 0x01}, "config", "motor", "pole_pairs", "",   int32,   bridge::rw<motor_p>},
-      {{0x3003, 0x0B}, "config", "prot",  "timeout",    "ms", uint32,  bridge::rw<prot_timeout>},
-      {{0x3003, 0x01}, "config", "prot",  "uvp",        "V",  float32, bridge::rw<prot_uvp>},
-      {{0x3002, 0x08}, "config", "drive", "freq",       "Hz", float32, bridge::rw<drive_freq>},
-      {{0x3000, 0x01}, "config", "prod",  "serial",     "",   uint32,  bridge::ro<prod_serial>},
-  };
-  // clang-format on
-
-  auto const dictionary = make_dictionary<rows>();
-  od_view<ctx> const view{dictionary};
-
-  auto const pole_pairs = view.find({0x3004, 0x01});
-  if (!pole_pairs) return false;
-
-  auto const serial = view.find({0x3000, 0x01});
-  if (!serial) return false;
-
   ctx c;
-  if (pole_pairs->read(c, pole_pairs->arg)
-      != od_read_result{std::int32_t{11}}) {
+  auto _ = c.section.load(c.memory);
+  client od{dictionary, c};
+
+  if (!od.write({0x3102, 0x01}, od_value{12000.0f})) return false;
+  if (od.read({0x3102, 0x01}) != od_read_result{12000.0f}) return false;
+  if (od.read({0x3102, 0x02}) != od_read_result{10000.0f}) return false;
+  if (od.read({0x3010, 0x03}) != od_read_result{true}) return false;
+
+  auto const out_of_range = od.write({0x3102, 0x01}, od_value{30000.0f});
+  if (out_of_range != std::unexpected(sdo_abort_code::value_range_exceeded)) {
     return false;
   }
-  if (!pole_pairs->write(c, pole_pairs->arg, od_value{std::int32_t{3}})) {
+  auto const narrow = od.write({0x3102, 0x01}, od_value{std::int8_t{1}});
+  if (narrow != std::unexpected(sdo_abort_code::data_type_mismatch)) {
     return false;
   }
-  return serial->read(c, serial->arg) == od_read_result{std::uint32_t{0}};
+
+  c.busy = true;
+  if (od.exec({0x3102, 0x09}) != std::unexpected(sdo_abort_code::state_error)) {
+    return false;
+  }
+  if (od.read({0x3001, 0x03}) != od_read_result{std::uint32_t{0x08000022}}) {
+    return false;
+  }
+  if (od.read({0x3001, 0x04}) != od_read_result{std::uint8_t{0}}) return false;
+
+  c.busy = false;
+  if (!od.exec({0x3102, 0x09})) return false;
+  if (od.read({0x3102, 0x02}) != od_read_result{12000.0f}) return false;
+  if (od.read({0x3010, 0x03}) != od_read_result{false}) return false;
+
+  // A parameter applied after a restart is not applied on command.
+  if (!od.write({0x3101, 0x01}, od_value{std::int32_t{7}})) return false;
+  auto const not_applicable = od.exec({0x3101, 0x09});
+  if (not_applicable != std::unexpected(sdo_abort_code::unsupported_access)) {
+    return false;
+  }
+  if (od.read({0x3001, 0x04}) != od_read_result{std::uint8_t{1}}) return false;
+  if (!od.exec({0x3101, 0x0A})) return false;
+  if (od.read({0x3101, 0x01}) != od_read_result{std::int32_t{11}}) return false;
+
+  // Nor is one a protocol may not write put back.
+  return od.exec({0x3103, 0x0A})
+      == std::unexpected(sdo_abort_code::write_to_read_only);
 }
 
-static_assert(test_dictionary());
+// A group applies and discards its own values, and the commands of the
+// bridge all of them.
+consteval bool test_groups_and_commands()
+{
+  ctx c;
+  auto _ = c.section.load(c.memory);
+  client od{dictionary, c};
+
+  if (od.read({0x3011, 0x00}) != od_read_result{std::uint8_t{4}}) return false;
+  if (od.read({0x3012, 0x04}) != od_read_result{std::uint8_t{2}}) return false;
+
+  // Nothing waits in group drive: applying it succeeds and does nothing.
+  if (!od.exec({0x3010, 0x01})) return false;
+
+  if (!od.write({0x3100, 0x01}, od_value{true})) return false;
+  if (!od.write({0x3101, 0x01}, od_value{std::int32_t{7}})) return false;
+  if (od.read({0x3010, 0x03}) != od_read_result{true}) return false;
+  if (od.read({0x3011, 0x03}) != od_read_result{false}) return false;
+
+  // Groups motor and prod have nothing applied on command.
+  auto const not_applicable =
+      std::unexpected(sdo_abort_code::unsupported_access);
+  if (od.exec({0x3011, 0x01}) != not_applicable) return false;
+  if (od.exec({0x3012, 0x01}) != not_applicable) return false;
+  if (od.read({0x3101, 0x02}) != od_read_result{std::int32_t{11}}) return false;
+
+  if (!od.exec({0x3010, 0x02})) return false;
+  if (od.read({0x3100, 0x01}) != od_read_result{false}) return false;
+  if (od.read({0x3101, 0x01}) != od_read_result{std::int32_t{7}}) return false;
+
+  if (!od.write({0x3100, 0x01}, od_value{true})) return false;
+  if (!od.exec({0x3001, 0x01})) return false;
+  if (od.read({0x3100, 0x02}) != od_read_result{true}) return false;
+
+  if (!od.write({0x3102, 0x01}, od_value{15000.0f})) return false;
+  if (!od.exec({0x3001, 0x02})) return false;
+  if (od.read({0x3102, 0x01}) != od_read_result{10000.0f}) return false;
+  return od.read({0x3101, 0x01}) == od_read_result{std::int32_t{11}};
+}
+
+static_assert(test_a_record_shows_its_parameter());
+static_assert(test_a_record_applies_its_parameter());
+static_assert(test_groups_and_commands());
 
 // -- Coverage --
 
@@ -192,7 +397,7 @@ consteval std::string check_missing()
 {
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x3002, 0x01}, "config", "drive", "phase_swap", "", boolean, bridge::rw<drive_phase_swap>},
+      {{0x3100, 0x00}, "config", "drive", "phase_swap", "", boolean, bridge::param<drive_phase_swap>},
   };
   // clang-format on
   return detail::od_check(rows);
@@ -200,44 +405,59 @@ consteval std::string check_missing()
 
 static_assert(check_missing() == "od: settings parameter 'motor.p' has no row");
 
-consteval std::string check_twice()
+consteval std::string check_group_missing()
 {
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x3002, 0x01}, "config", "drive", "phase_swap", "",   boolean, bridge::rw<drive_phase_swap>},
-      {{0x3004, 0x01}, "config", "motor", "pole_pairs", "",   int32,   bridge::rw<motor_p>},
-      {{0x3003, 0x0B}, "config", "prot",  "timeout",    "ms", uint32,  bridge::rw<prot_timeout>},
-      {{0x3003, 0x01}, "config", "prot",  "uvp",        "V",  float32, bridge::rw<prot_uvp>},
-      {{0x3002, 0x08}, "config", "drive", "freq",       "Hz", float32, bridge::rw<drive_freq>},
-      {{0x3000, 0x01}, "config", "prod",  "serial",     "",   uint32,  bridge::ro<prod_serial>},
-      {{0x3002, 0x09}, "config", "drive", "swap",       "",   boolean, bridge::ro<drive_phase_swap>},
+      {{0x3100, 0x00}, "config", "drive",  "phase_swap", "",   boolean, bridge::param<drive_phase_swap>},
+      {{0x3101, 0x00}, "config", "motor",  "pole_pairs", "",   int32,   bridge::param<motor_p>},
+      {{0x3102, 0x00}, "config", "drive",  "freq",       "Hz", float32, bridge::param<drive_freq>},
+      {{0x3103, 0x00}, "config", "prod",   "serial",     "",   uint32,  bridge::param<prod_serial>},
+      {{0x3010, 0x00}, "config", "groups", "drive",      "",   exec,    bridge::group<group::drive>},
   };
   // clang-format on
   return detail::od_check(rows);
 }
 
-static_assert(check_twice()
-              == "od: settings parameter 'drive.phase_swap' has two rows: "
-                 "3002h:01 config/drive/phase_swap and 3002h:09 "
-                 "config/drive/swap");
+static_assert(check_group_missing() == "od: settings group '1' has no row");
+
+consteval std::string check_group_unexposed()
+{
+  // clang-format off
+  static constexpr od_row<ctx> rows[] = {
+      {{0x3100, 0x00}, "config", "drive",  "phase_swap", "",   boolean, bridge::param<drive_phase_swap>},
+      {{0x3101, 0x00}, "config", "motor",  "pole_pairs", "",   int32,   bridge::param<motor_p>},
+      {{0x3102, 0x00}, "config", "drive",  "freq",       "Hz", float32, bridge::param<drive_freq>},
+      {{0x3103, 0x00}, "config", "prod",   "serial",     "",   uint32,  bridge::param<prod_serial>},
+      {{0x3010, 0x00}, "config", "groups", "drive",      "",   exec,    bridge::group<group::drive>},
+      {{0x3011, 0x00}, "config", "groups", "motor",      "",   exec,    bridge::group<group::motor>},
+      {{0x3012, 0x00}, "config", "groups", "prod",       "",   exec,    bridge::group<group::prod>},
+      {{0x3017, 0x00}, "config", "groups", "seven",      "",   exec,    bridge::group<settings::group_id{7}>},
+  };
+  // clang-format on
+  return detail::od_check(rows);
+}
+
+static_assert(check_group_unexposed()
+              == "od: settings group '7' is not exposed but has a row: "
+                 "3017h:00 config/groups/seven");
 
 // A row built by hand around the builder's back.
 consteval std::string check_hidden()
 {
-  static constexpr od_binding<ctx> secret{.access = od_access::ro,
-                                          .type = od_value_type::uint32,
-                                          .read = &bridge::read<ctx>,
-                                          .arg = 6,
-                                          .catalog = &bridge::catalog};
+  static constexpr od_binding<ctx> secret{
+      .access = od_access::ro,
+      .type = uint32,
+      .arg = 4,
+      .catalog = &bridge::catalog,
+      .layout = bind<bridge::param<prod_serial>>().layout};
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x3002, 0x01}, "config", "drive", "phase_swap", "",   boolean, bridge::rw<drive_phase_swap>},
-      {{0x3004, 0x01}, "config", "motor", "pole_pairs", "",   int32,   bridge::rw<motor_p>},
-      {{0x3003, 0x0B}, "config", "prot",  "timeout",    "ms", uint32,  bridge::rw<prot_timeout>},
-      {{0x3003, 0x01}, "config", "prot",  "uvp",        "V",  float32, bridge::rw<prot_uvp>},
-      {{0x3002, 0x08}, "config", "drive", "freq",       "Hz", float32, bridge::rw<drive_freq>},
-      {{0x3000, 0x01}, "config", "prod",  "serial",     "",   uint32,  bridge::ro<prod_serial>},
-      {{0x3000, 0x02}, "config", "prod",  "secret",     "",   uint32,  secret},
+      {{0x3100, 0x00}, "config", "drive",  "phase_swap", "",   boolean, bridge::param<drive_phase_swap>},
+      {{0x3101, 0x00}, "config", "motor",  "pole_pairs", "",   int32,   bridge::param<motor_p>},
+      {{0x3102, 0x00}, "config", "drive",  "freq",       "Hz", float32, bridge::param<drive_freq>},
+      {{0x3103, 0x00}, "config", "prod",   "serial",     "",   uint32,  bridge::param<prod_serial>},
+      {{0x3104, 0x00}, "config", "prod",   "secret",     "",   uint32,  secret},
   };
   // clang-format on
   return detail::od_check(rows);
@@ -245,21 +465,21 @@ consteval std::string check_hidden()
 
 static_assert(check_hidden()
               == "od: settings parameter 'prod.secret' is not exposed but has "
-                 "a row: 3000h:02 config/prod/secret");
+                 "a row: 3104h:00 config/prod/secret");
 
 // A row states the parameter's type; a wrong one is reported at the row.
 consteval std::string check_declared()
 {
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x3004, 0x01}, "config", "motor", "pole_pairs", "", float32, bridge::rw<motor_p>},
+      {{0x3101, 0x00}, "config", "motor", "pole_pairs", "", float32, bridge::param<motor_p>},
   };
   // clang-format on
   return detail::od_check(rows);
 }
 
 static_assert(check_declared()
-              == "od: 3004h:01 config/motor/pole_pairs: declared float32, "
+              == "od: 3101h:00 config/motor/pole_pairs: declared float32, "
                  "bound as int32");
 
 } // namespace

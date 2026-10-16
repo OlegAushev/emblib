@@ -75,10 +75,11 @@ private:
 // Returns the dictionary made of `Rows`, a C array of `od_row<Ctx> const`
 // that must be an `inline constexpr` variable of a named namespace: GCC at
 // -O0 emits any other table, the names of its objects included. A row whose
-// binding has a layout becomes a record, any other an entry. The program is
-// ill-formed if the rows break a rule of `detail::od_check`; the diagnostic
-// names the rule and the rows that break it, and points at the caller's line.
-// Checking takes time quadratic in the number of rows.
+// binding has a layout becomes a record, any other an entry; a record's link
+// resolves to the index of the row it names. The program is ill-formed if
+// the rows break a rule of `detail::od_check`; the diagnostic names the rule
+// and the rows that break it, and points at the caller's line. Checking takes
+// time quadratic in the number of rows.
 template<auto const& Rows>
   requires some_od_rows<std::remove_reference_t<decltype(Rows)>>
 consteval auto make_dictionary()
@@ -109,9 +110,18 @@ consteval auto make_dictionary()
                   .write = binding.write};
     }
     else {
+      auto aux = binding.aux;
+      if (binding.link != nullptr) {
+        for (auto const& target : Rows) {
+          if ((target.binding.catalog == binding.link)
+              && (target.binding.arg == binding.link_item)) {
+            aux = target.key.index;
+          }
+        }
+      }
       *record++ = {.index = row.key.index,
                    .arg = binding.arg,
-                   .aux = binding.aux,
+                   .aux = aux,
                    .layout = binding.layout};
     }
   }
