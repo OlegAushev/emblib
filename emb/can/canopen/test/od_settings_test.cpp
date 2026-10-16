@@ -56,13 +56,7 @@ set_at(std::size_t index, settings::value const& value)
   return values.set_at(index, value);
 }
 
-constexpr std::expected<void, settings::error> restore_at(std::size_t index)
-{
-  settings::image<schema> values;
-  return values.restore_default_at(index);
-}
-
-using bridge = od_settings<schema, get_at, set_at, restore_at>;
+using bridge = od_settings<schema, get_at, set_at>;
 
 // -- Error mapping --
 
@@ -115,14 +109,12 @@ static_assert(bind<bridge::rw<motor_p>>().access == od_access::rw);
 static_assert(bind<bridge::rw<motor_p>>().arg == 1);
 static_assert(bind<bridge::rw<motor_p>>().read == &bridge::read<ctx>);
 static_assert(bind<bridge::rw<motor_p>>().write == &bridge::write<ctx>);
-static_assert(bind<bridge::rw<motor_p>>().restore == &bridge::restore<ctx>);
 static_assert(bind<bridge::rw<motor_p>>().catalog == &bridge::catalog);
 static_assert(!bind<bridge::rw<motor_p>>().diagnosed);
 
 static_assert(bind<bridge::ro<prod_serial>>().access == od_access::ro);
 static_assert(bind<bridge::ro<prod_serial>>().arg == 5);
 static_assert(bind<bridge::ro<prod_serial>>().write == nullptr);
-static_assert(bind<bridge::ro<prod_serial>>().restore == nullptr);
 
 // -- Access --
 
@@ -152,14 +144,7 @@ consteval bool test_access()
     return false;
   }
   auto const read_only = bridge::write(c, 5, od_value{std::uint32_t{1}});
-  if (read_only || read_only.error() != sdo_abort_code::write_to_read_only) {
-    return false;
-  }
-
-  if (!bridge::restore(c, 1)) return false;
-  auto const not_restored = bridge::restore(c, 5);
-  return !not_restored
-      && (not_restored.error() == sdo_abort_code::write_to_read_only);
+  return !read_only && (read_only.error() == sdo_abort_code::write_to_read_only);
 }
 
 static_assert(test_access());
@@ -176,20 +161,17 @@ consteval bool test_dictionary()
       {{0x3003, 0x01}, "config", "prot",  "uvp",        "V",  float32, bridge::rw<prot_uvp>},
       {{0x3002, 0x08}, "config", "drive", "freq",       "Hz", float32, bridge::rw<drive_freq>},
       {{0x3000, 0x01}, "config", "prod",  "serial",     "",   uint32,  bridge::ro<prod_serial>},
-      {{0x1011, 0x04}, "ctl",    "sys",   "restore",    "",   exec,    od_restore_default},
   };
   // clang-format on
 
   auto const dictionary = make_dictionary<rows>();
   od_view<ctx> const view{dictionary};
 
-  if (view.restore() != &bridge::restore<ctx>) return false;
-
   auto const* pole_pairs = view.find({0x3004, 0x01});
-  if ((pole_pairs == nullptr) || !pole_pairs->restorable) return false;
+  if (pole_pairs == nullptr) return false;
 
   auto const* serial = view.find({0x3000, 0x01});
-  if ((serial == nullptr) || serial->restorable) return false;
+  if (serial == nullptr) return false;
 
   ctx c;
   if (pole_pairs->read(c, pole_pairs->arg)
@@ -199,7 +181,6 @@ consteval bool test_dictionary()
   if (!pole_pairs->write(c, pole_pairs->arg, od_value{std::int32_t{3}})) {
     return false;
   }
-  if (!view.restore()(c, pole_pairs->arg)) return false;
   return serial->read(c, serial->arg) == od_read_result{std::uint32_t{0}};
 }
 

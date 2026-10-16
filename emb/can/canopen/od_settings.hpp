@@ -75,37 +75,35 @@ consteval auto not_writable_message()
 
 } // namespace detail
 
-// The concept `od_settings_accessors<GetAt, SetAt, RestoreAt>` is satisfied if
-// and only if the three are the by-index accessors of a settings image: taking
-// a parameter index, `GetAt` returns `std::expected<settings::value,
-// settings::error>`, and `SetAt`, which also takes the value, and `RestoreAt`
-// return `std::expected` of anything with `settings::error`.
-template<auto GetAt, auto SetAt, auto RestoreAt>
+// The concept `od_settings_accessors<GetAt, SetAt>` is satisfied if and only
+// if the two are the by-index accessors of a settings image: taking a
+// parameter index, `GetAt` returns `std::expected<settings::value,
+// settings::error>`, and `SetAt`, which also takes the value, returns
+// `std::expected` of anything with `settings::error`.
+template<auto GetAt, auto SetAt>
 concept od_settings_accessors =
     requires(std::size_t index, settings::value const& value) {
       {
         GetAt(index)
       } -> std::same_as<std::expected<settings::value, settings::error>>;
       { SetAt(index, value) } -> detail::settings_outcome;
-      { RestoreAt(index) } -> detail::settings_outcome;
     };
 
 // The class template `od_settings` binds objects to the parameters of the
 // settings schema `Schema`, which it reaches through the application's
 // by-index accessors. A row names its parameter once, by its declaration, as
 // in `od_settings<...>::rw<pole_pairs>`: the object's type is the
-// parameter's, its `arg` is the parameter's index, and an `rw` object is
-// restorable through 1011h:04 by `RestoreAt`. `ro` binds a parameter for
-// reading only. Every row carries `catalog`, so `make_dictionary` checks that
-// each exposed parameter has exactly one row and each hidden one none, as
+// parameter's and its `arg` is the parameter's index. `ro` binds a parameter
+// for reading only. Every row carries `catalog`, so `make_dictionary` checks
+// that each exposed parameter has exactly one row and each hidden one none, as
 // soon as the dictionary has one such row.
 //
 // Binding a declaration that `Schema` does not hold, a hidden parameter or,
 // with `rw`, a read-only one is reported at the row. A value of a type no
 // parameter can hold is refused with `data_type_mismatch`; the accessors'
 // errors map through `to_sdo_abort`.
-template<auto& Schema, auto GetAt, auto SetAt, auto RestoreAt>
-  requires od_settings_accessors<GetAt, SetAt, RestoreAt>
+template<auto& Schema, auto GetAt, auto SetAt>
+  requires od_settings_accessors<GetAt, SetAt>
 class od_settings {
   static constexpr std::size_t count = settings::schema_t<Schema>::count;
   static_assert(count <= 0xFFFF, "od: a parameter index must fit in arg");
@@ -145,7 +143,6 @@ class od_settings {
               .read = &od_settings::read<Ctx>,
               .write = writes ? &od_settings::write<Ctx> : nullptr,
               .arg = static_cast<std::uint16_t>(param::index),
-              .restore = writes ? &od_settings::restore<Ctx> : nullptr,
               .catalog = &catalog,
               .diagnosed = !(known && shown && allowed)};
     }
@@ -179,15 +176,6 @@ public:
     if (!setting) return std::unexpected(sdo_abort_code::data_type_mismatch);
     if (auto const written = SetAt(index, *setting); !written) {
       return std::unexpected(to_sdo_abort(written.error()));
-    }
-    return {};
-  }
-
-  template<typename Ctx>
-  static constexpr od_write_result restore(Ctx&, std::uint16_t index)
-  {
-    if (auto const restored = RestoreAt(index); !restored) {
-      return std::unexpected(to_sdo_abort(restored.error()));
     }
     return {};
   }

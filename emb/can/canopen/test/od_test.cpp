@@ -104,17 +104,6 @@ constexpr od_write_result raw_write(ctx& c, std::uint16_t, od_value v)
   return {};
 }
 
-constexpr od_write_result restore_value(ctx& c, std::uint16_t arg)
-{
-  c.value = static_cast<float>(arg);
-  return {};
-}
-
-constexpr od_write_result restore_other(ctx&, std::uint16_t)
-{
-  return {};
-}
-
 template<typename T>
 constexpr T zero()
 {
@@ -196,7 +185,8 @@ static_assert(od_key{0x1000, 0x02} < od_key{0x1001, 0x01});
 static_assert(od_key{0x1001, 0x01} < od_key{0x1001, 0x02});
 static_assert(od_key{0x1001, 0x01} == od_key{0x1001, 0x01});
 
-// Two indices, a subindex and four one-byte fields share the first word.
+// The index, the subindex, the type, the access and the argument share the
+// first eight bytes.
 static_assert(sizeof(od_entry<ctx>) == 8 + 2 * sizeof(void*));
 
 // -- Handler shapes --
@@ -297,13 +287,7 @@ static_assert(bind<od_exec<command>>().type == od_value_type::exec);
 static_assert(bind<od_text<text>>().access == od_access::const_);
 static_assert(bind<od_text<text>>().type == od_value_type::string);
 
-static_assert(bind<od_restore_default>().access == od_access::wo);
-static_assert(bind<od_restore_default>().type == od_value_type::exec);
-static_assert(bind<od_restore_default>().read == nullptr);
-static_assert(bind<od_restore_default>().write == nullptr);
-
 static_assert(!bind<od_ro<read_value>>().diagnosed);
-static_assert(bind<od_ro<read_value>>().restore == nullptr);
 static_assert(bind<od_ro<read_value>>().catalog == nullptr);
 
 // -- Calling through bindings --
@@ -402,12 +386,11 @@ static_assert(test_text());
 
 consteval bool test_dictionary()
 {
-  static constexpr od_binding<ctx> restorable{.access = od_access::rw,
-                                              .type = od_value_type::float32,
-                                              .read = &raw_read,
-                                              .write = &raw_write,
-                                              .arg = 7,
-                                              .restore = &restore_value};
+  static constexpr od_binding<ctx> by_hand{.access = od_access::rw,
+                                           .type = od_value_type::float32,
+                                           .read = &raw_read,
+                                           .write = &raw_write,
+                                           .arg = 7};
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
       {{0x5000, 0x02}, "watch",  "b", "value",   "",   float32, od_ro<read_value>},
@@ -415,8 +398,7 @@ consteval bool test_dictionary()
       {{0x5000, 0x01}, "watch",  "b", "checked", "",   float32, od_ro<read_checked>},
       {{0x1008, 0x00}, "info",   "a", "text",    "",   string,  od_text<text>},
       {{0x3000, 0x01}, "config", "a", "freq",    "Hz", float32, od_rw<read_freq, write_value>},
-      {{0x3000, 0x02}, "config", "a", "raw",     "",   float32, restorable},
-      {{0x1011, 0x04}, "ctl",    "a", "restore", "",   exec,    od_restore_default},
+      {{0x3000, 0x02}, "config", "a", "raw",     "",   float32, by_hand},
   };
   // clang-format on
 
@@ -424,7 +406,7 @@ consteval bool test_dictionary()
   od_view<ctx> const view{dictionary};
 
   auto const entries = view.entries();
-  if (entries.size() != 7) return false;
+  if (entries.size() != 6) return false;
   for (auto i = 1uz; i < entries.size(); ++i) {
     if (!(entries[i - 1].key() < entries[i].key())) return false;
   }
@@ -436,24 +418,14 @@ consteval bool test_dictionary()
   if (view.find({0xFFFF, 0xFF}) != nullptr) return false;
 
   auto const* raw = view.find({0x3000, 0x02});
-  if ((raw == nullptr) || !raw->restorable || (raw->arg != 7)) return false;
-  if (view.find({0x3000, 0x01})->restorable) return false;
-  if (view.restore() != &restore_value) return false;
+  if ((raw == nullptr) || (raw->arg != 7)) return false;
 
   ctx c;
   auto const* freq = view.find({0x3000, 0x01});
   if (freq->access != od_access::rw) return false;
   if (!freq->write(c, freq->arg, od_value{4.5f})) return false;
   if (freq->read(c, freq->arg) != od_read_result{4.5f}) return false;
-
-  if (!view.restore()(c, raw->arg)) return false;
-  if (c.value != 7.f) return false;
-
-  auto const* restore = view.find(od_restore_default_key);
-  return (restore != nullptr)
-      && (restore->access == od_access::wo)
-      && (restore->read == nullptr)
-      && (restore->write == nullptr);
+  return raw->read(c, raw->arg) == od_read_result{4.5f};
 }
 
 static_assert(test_dictionary());
@@ -474,7 +446,6 @@ consteval std::string check_valid()
 {
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x1011, 0x04}, "ctl",   "a", "restore", "", exec,    od_restore_default},
       {{0x2000, 0x01}, "ctl",   "a", "command", "", exec,    od_exec<command>},
       {{0x5000, 0x01}, "watch", "a", "value",   "", float32, od_ro<read_value>},
   };
@@ -531,25 +502,6 @@ static_assert(check_one(raw(od_access::rw, od_value_type::exec, true, true))
               == "od: 2000h:01 a/b/c: an exec object must be wo");
 static_assert(check_one(raw(od_access::rw, od_value_type::string, true, true))
               == "od: 2000h:01 a/b/c: a string object must not be writable");
-static_assert(check_one({.access = od_access::ro,
-                         .type = od_value_type::float32,
-                         .read = &raw_read,
-                         .restore = &restore_value})
-              == "od: 2000h:01 a/b/c: restorable but not writable");
-
-consteval std::string check_restore_key()
-{
-  // clang-format off
-  static constexpr od_row<ctx> rows[] = {
-      {{0x1011, 0x04}, "a", "b", "c", "", exec, od_exec<command>},
-  };
-  // clang-format on
-  return detail::od_check(rows);
-}
-
-static_assert(check_restore_key()
-              == "od: 1011h:04 a/b/c: the server serves this key; bind it "
-                 "with od_restore_default");
 
 // The type a row states must be the type its binding serves.
 consteval std::string check_declared(od_value_type declared,
@@ -606,17 +558,6 @@ consteval std::string check_pair(od_binding<ctx> first, od_binding<ctx> second)
                    {{0x2000, 0x02}, "a", "b", "d", "", second.type, second});
 }
 
-consteval od_binding<ctx> restoring(od_restore_fn<ctx> restore,
-                                    std::uint16_t arg)
-{
-  return {.access = od_access::rw,
-          .type = od_value_type::float32,
-          .read = &raw_read,
-          .write = &raw_write,
-          .arg = arg,
-          .restore = restore};
-}
-
 consteval od_binding<ctx> reading(std::uint16_t arg)
 {
   return {.access = od_access::ro,
@@ -625,10 +566,6 @@ consteval od_binding<ctx> reading(std::uint16_t arg)
           .arg = arg};
 }
 
-static_assert(check_pair(restoring(&restore_value, 0),
-                         restoring(&restore_other, 1))
-              == "od: 2000h:01 a/b/c and 2000h:02 a/b/d restore through "
-                 "different functions");
 static_assert(check_pair(od_ro<read_value>, od_ro<read_value>)
               == "od: 2000h:01 a/b/c and 2000h:02 a/b/d are read by the same "
                  "handler");

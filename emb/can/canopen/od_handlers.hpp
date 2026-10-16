@@ -341,14 +341,6 @@ struct text_binding {
   }
 };
 
-struct restore_default_binding {
-  template<typename Ctx>
-  consteval operator od_binding<Ctx>() const
-  {
-    return {.access = od_access::wo, .type = od_value_type::exec};
-  }
-};
-
 } // namespace detail
 
 // The variable templates below bind an object in an `od_row` to typed
@@ -361,7 +353,6 @@ struct restore_default_binding {
 // scalar (`od_rw_pair`), `od_exec<F>` a command (`od_command`), which gets
 // no value, and `od_text<F>` a text (`od_text_reader`), which a client reads
 // 4 bytes at a time up to and including its terminating NUL.
-// `od_restore_default` binds 1011h:04, the key the server serves itself.
 template<auto F>
 inline constexpr detail::read_binding<F, od_access::ro> od_ro{};
 
@@ -379,8 +370,6 @@ inline constexpr detail::command_binding<F> od_exec{};
 
 template<auto F>
 inline constexpr detail::text_binding<F> od_text{};
-
-inline constexpr detail::restore_default_binding od_restore_default{};
 
 } // namespace canopen
 } // namespace can

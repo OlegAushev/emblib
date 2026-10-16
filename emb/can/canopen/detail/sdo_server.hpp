@@ -47,13 +47,6 @@ public:
                         static_cast<std::uint8_t>(rsdo.subindex)};
 
     auto result = [&]() -> std::expected<expedited_sdo, sdo_abort_code> {
-      // A write to 1011h:04 is a restore-default request: the SDO data
-      // carries the key of the object to restore, not a value. Handled here
-      // entirely; the dictionary need not have an entry for it.
-      if (rsdo.cs == sdo_cs_codes::client_init_write
-          && key == od_restore_default_key) {
-        return write_restore_default(rsdo);
-      }
       od_entry<Ctx> const* entry = dictionary_.find(key);
       if (!entry) return std::unexpected(sdo_abort_code::object_not_found);
       if (rsdo.cs == sdo_cs_codes::client_init_read)
@@ -161,38 +154,6 @@ private:
     tsdo.subindex = rsdo.subindex;
     tsdo.cs = sdo_cs_codes::server_init_write;
     return tsdo;
-  }
-
-  std::expected<expedited_sdo, sdo_abort_code>
-  write_restore_default(expedited_sdo const& rsdo)
-  {
-    od_key const target = {
-        static_cast<std::uint16_t>(rsdo.data[0] | (rsdo.data[1] << 8)),
-        rsdo.data[2]};
-    if (auto r = restore_default(target); !r) {
-      return std::unexpected(r.error());
-    }
-
-    expedited_sdo tsdo;
-    tsdo.index = rsdo.index;
-    tsdo.subindex = rsdo.subindex;
-    tsdo.cs = sdo_cs_codes::server_init_write;
-    return tsdo;
-  }
-
-  od_write_result restore_default(od_key key)
-  {
-    od_entry<Ctx> const* entry = dictionary_.find(key);
-    if (entry == nullptr) {
-      return std::unexpected(sdo_abort_code::object_not_found);
-    }
-    if (!od_writable(entry->access)) {
-      return std::unexpected(sdo_abort_code::write_to_read_only);
-    }
-    if (!entry->restorable) {
-      return std::unexpected(sdo_abort_code::no_data_available);
-    }
-    return dictionary_.restore()(ctx_, entry->arg);
   }
 
   transport& bus_;

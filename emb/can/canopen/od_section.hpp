@@ -34,13 +34,6 @@ section_set_at(std::size_t index, settings::value const& value)
   return Section.set_at(index, value);
 }
 
-template<auto& Section>
-std::expected<void, settings::error>
-section_restore_default_at(std::size_t index)
-{
-  return Section.restore_default_at(index);
-}
-
 } // namespace detail
 
 // The alias template `od_settings_for` is the `od_settings` bridge to the
@@ -50,8 +43,7 @@ template<auto& Section>
 using od_settings_for =
     od_settings<detail::section_t<Section>::schema,
                 &detail::section_get_at<Section>,
-                &detail::section_set_at<Section>,
-                &detail::section_restore_default_at<Section>>;
+                &detail::section_set_at<Section>>;
 
 // The class template `od_section_status` provides readers, for `od_ro`, of
 // the state of `Section`, a `settings::section`: where its records are kept,

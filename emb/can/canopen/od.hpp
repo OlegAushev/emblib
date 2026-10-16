@@ -171,11 +171,6 @@ struct od_key {
   friend constexpr auto operator<=>(od_key, od_key) = default;
 };
 
-// The key the server serves itself: a write to 1011h:04 restores the default
-// of one object. Its data carries the key of that object, the index in bytes
-// 0-1 (little-endian) and the subindex in byte 2; byte 3 is not read.
-inline constexpr od_key od_restore_default_key{0x1011, 0x04};
-
 // An object's handlers. `arg` is the argument its row binds, e.g. the index
 // of a settings parameter; a reader of a string object gets the number of
 // the 4-byte word to return instead.
@@ -184,9 +179,6 @@ using od_read_fn = od_read_result (*)(Ctx&, std::uint16_t arg);
 
 template<typename Ctx>
 using od_write_fn = od_write_result (*)(Ctx&, std::uint16_t arg, od_value);
-
-template<typename Ctx>
-using od_restore_fn = od_write_result (*)(Ctx&, std::uint16_t arg);
 
 // The struct `od_catalog` names the items of an index space outside the
 // dictionary, e.g. the parameters of a settings schema, that rows serve
@@ -200,14 +192,13 @@ struct od_catalog {
 };
 
 // The class template `od_binding` describes what serves an object: its access
-// and type, its handlers, the argument passed to them, and, for an object
-// whose default 1011h:04 may restore, the handler that restores it. The
-// builders in od_handlers.hpp and od_settings.hpp make one from typed
-// handlers; one made by hand must have a reader exactly if the access is
-// readable and a writer exactly if it is writable, and its reader must return
-// the alternative its type travels as. `catalog` is the index space `arg`
-// selects from, if any. `diagnosed` is set by a builder that has already
-// reported an error, so that `make_dictionary` does not report a second one.
+// and type, its handlers and the argument passed to them. The builders in
+// od_handlers.hpp and od_settings.hpp make one from typed handlers; one made
+// by hand must have a reader exactly if the access is readable and a writer
+// exactly if it is writable, and its reader must return the alternative its
+// type travels as. `catalog` is the index space `arg` selects from, if any.
+// `diagnosed` is set by a builder that has already reported an error, so that
+// `make_dictionary` does not report a second one.
 template<typename Ctx>
 struct od_binding {
   od_access access;
@@ -215,7 +206,6 @@ struct od_binding {
   od_read_fn<Ctx> read = nullptr;
   od_write_fn<Ctx> write = nullptr;
   std::uint16_t arg = 0;
-  od_restore_fn<Ctx> restore = nullptr;
   od_catalog const* catalog = nullptr;
   bool diagnosed = false;
 };
@@ -238,15 +228,14 @@ struct od_row {
 };
 
 // The class template `od_entry` is what the server keeps of a row: the key,
-// the type, the access, whether 1011h:04 may restore the object, the argument
-// and the two handlers. On a 32-bit target it takes 16 bytes.
+// the type, the access, the argument and the two handlers. On a 32-bit target
+// it takes 16 bytes.
 template<typename Ctx>
 struct od_entry {
   std::uint16_t index;
   std::uint8_t subindex;
   od_value_type type;
   od_access access;
-  bool restorable;
   std::uint16_t arg;
   od_read_fn<Ctx> read;
   od_write_fn<Ctx> write;

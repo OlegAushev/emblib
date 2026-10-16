@@ -40,10 +40,9 @@ template<auto const& Rows>
 consteval auto make_dictionary();
 
 // The class template `od_dictionary` holds the entries of a dictionary sorted
-// by key, and the one handler that restores the default of the objects that
-// have one. Only `make_dictionary` creates a dictionary, after checking the
-// rows it is made of, so every dictionary, and every `od_view` of one, meets
-// the server's preconditions: keys are unique and sorted, and an entry has a
+// by key. Only `make_dictionary` creates a dictionary, after checking the rows
+// it is made of, so every dictionary, and every `od_view` of one, meets the
+// server's preconditions: keys are unique and sorted, and an entry has a
 // reader exactly if its access is readable and a writer exactly if it is
 // writable.
 template<typename Ctx, std::size_t N>
@@ -54,11 +53,6 @@ public:
     return entries_;
   }
 
-  constexpr od_restore_fn<Ctx> restore() const
-  {
-    return restore_;
-  }
-
 private:
   consteval od_dictionary() = default;
 
@@ -67,7 +61,6 @@ private:
   friend consteval auto make_dictionary();
 
   std::array<od_entry<Ctx>, N> entries_{};
-  od_restore_fn<Ctx> restore_ = nullptr;
 };
 
 // Returns the dictionary made of `Rows`, a C array of `od_row<Ctx> const`
@@ -94,13 +87,9 @@ consteval auto make_dictionary()
                               .subindex = row.key.subindex,
                               .type = binding.type,
                               .access = binding.access,
-                              .restorable = binding.restore != nullptr,
                               .arg = binding.arg,
                               .read = binding.read,
                               .write = binding.write};
-    if (binding.restore != nullptr) {
-      dictionary.restore_ = binding.restore;
-    }
   }
   std::ranges::sort(dictionary.entries_, {}, &od_entry<context_type>::key);
   return dictionary;
@@ -115,7 +104,7 @@ class od_view {
 public:
   template<std::size_t N>
   constexpr od_view(od_dictionary<Ctx, N> const& dictionary)
-      : entries_(dictionary.entries()), restore_(dictionary.restore())
+      : entries_(dictionary.entries())
   {
   }
 
@@ -131,11 +120,6 @@ public:
     return &*it;
   }
 
-  constexpr od_restore_fn<Ctx> restore() const
-  {
-    return restore_;
-  }
-
   constexpr std::span<od_entry<Ctx> const> entries() const
   {
     return entries_;
@@ -143,7 +127,6 @@ public:
 
 private:
   std::span<od_entry<Ctx> const> entries_;
-  od_restore_fn<Ctx> restore_;
 };
 
 } // namespace canopen

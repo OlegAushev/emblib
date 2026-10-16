@@ -90,17 +90,6 @@ constexpr std::string_view type_name(od_value_type type)
 }
 
 template<typename Ctx>
-constexpr bool serves_restore_default(od_binding<Ctx> const& binding)
-{
-  return binding.access == od_access::wo
-      && binding.type == od_value_type::exec
-      && binding.read == nullptr
-      && binding.write == nullptr
-      && binding.restore == nullptr
-      && binding.catalog == nullptr;
-}
-
-template<typename Ctx>
 constexpr std::string check_row(od_row<Ctx> const& row)
 {
   auto const& binding = row.binding;
@@ -117,15 +106,6 @@ constexpr std::string check_row(od_row<Ctx> const& row)
     what += ", bound as ";
     what += type_name(binding.type);
     return row_error(row, what);
-  }
-
-  if (row.key == od_restore_default_key) {
-    if (!serves_restore_default(binding)) {
-      return row_error(
-          row,
-          "the server serves this key; bind it with od_restore_default");
-    }
-    return {};
   }
 
   bool const readable = od_readable(binding.access);
@@ -148,9 +128,6 @@ constexpr std::string check_row(od_row<Ctx> const& row)
   }
   if (binding.type == od_value_type::string && writable) {
     return row_error(row, "a string object must not be writable");
-  }
-  if (binding.restore != nullptr && !writable) {
-    return row_error(row, "restorable but not writable");
   }
   if (binding.catalog != nullptr
       && binding.arg >= binding.catalog->names.size()) {
@@ -176,11 +153,6 @@ constexpr std::string check_pairs(od_row<Ctx> const (&rows)[N])
           && first.subcategory == second.subcategory
           && first.name == second.name) {
         return pair_error(first, second, "have the same name");
-      }
-      if (a.restore != nullptr
-          && b.restore != nullptr
-          && a.restore != b.restore) {
-        return pair_error(first, second, "restore through different functions");
       }
       // Rows of a catalog share their handlers by design; a duplicate
       // among them is reported per item below.
