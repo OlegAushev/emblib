@@ -192,18 +192,16 @@ struct od_catalog {
 };
 
 // The class template `od_field` describes a member of a record: its access
-// and type, its handlers, and which argument of the record they get, `arg` or,
-// if `aux` is set, `aux`. A layout, an array of fields indexed by subindex
-// from 00h, describes every member of a record; any number of records may
-// share one, each with arguments of its own. A field obeys the rules of a
-// binding made by hand.
+// and type, and its handlers, which get the argument of the record. A layout,
+// an array of fields indexed by subindex from 00h, describes every member of a
+// record; any number of records may share one, each with an argument of its
+// own. A field obeys the rules of a binding made by hand.
 template<typename Ctx>
 struct od_field {
   od_access access;
   od_value_type type;
   od_read_fn<Ctx> read = nullptr;
   od_write_fn<Ctx> write = nullptr;
-  bool aux = false;
 };
 
 // The class template `od_binding` describes what serves an object: its access
@@ -218,10 +216,8 @@ struct od_field {
 // A binding with a `layout` serves a record instead: every subindex of the
 // index of its row, which names it with subindex 00h, each through the field
 // of the layout at that subindex. It has no handlers of its own, and its
-// `access` is not used; `type` is what the row states, and `arg` and `aux` are
-// the arguments its fields pass on. A record with a `link` gets as its `aux`
-// the index of the row that serves item `link_item` of the catalog `link`,
-// e.g. of the record of the group a parameter belongs to.
+// `access` is not used; `type` is what the row states, and `arg` the argument
+// its fields pass on.
 template<typename Ctx>
 struct od_binding {
   od_access access;
@@ -231,9 +227,6 @@ struct od_binding {
   std::uint16_t arg = 0;
   od_catalog const* catalog = nullptr;
   std::span<od_field<Ctx> const> layout{};
-  std::uint16_t aux = 0;
-  od_catalog const* link = nullptr;
-  std::uint16_t link_item = 0;
   bool diagnosed = false;
 };
 
@@ -275,13 +268,11 @@ struct od_entry {
 };
 
 // The class template `od_record` is what the server keeps of a record: its
-// index, its two arguments and its layout. On a 32-bit target it takes 16
-// bytes.
+// index, its argument and its layout. On a 32-bit target it takes 12 bytes.
 template<typename Ctx>
 struct od_record {
   std::uint16_t index;
   std::uint16_t arg;
-  std::uint16_t aux;
   std::span<od_field<Ctx> const> layout;
 };
 

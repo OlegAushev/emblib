@@ -165,14 +165,6 @@ static_assert(bridge::catalog.names[1] == "motor.p");
 static_assert(bridge::catalog.exposed[3]);
 static_assert(!bridge::catalog.exposed[4]);
 
-// A group shows a record if a parameter of it is exposed, by number.
-static_assert(bridge::group_catalog.what == "settings group");
-static_assert(bridge::group_catalog.names.size() == 256);
-static_assert(bridge::group_catalog.names[2] == "2");
-static_assert(bridge::group_catalog.names[200] == "200");
-static_assert(bridge::group_catalog.exposed[2]);
-static_assert(!bridge::group_catalog.exposed[3]);
-
 // -- Bindings --
 
 template<auto Binding>
@@ -186,14 +178,12 @@ static_assert(bind<bridge::param<motor_p>>().type == int32);
 static_assert(bind<bridge::param<drive_freq>>().type == float32);
 static_assert(bind<bridge::param<motor_p>>().arg == 1);
 static_assert(bind<bridge::param<motor_p>>().catalog == &bridge::catalog);
-static_assert(bind<bridge::param<motor_p>>().link == &bridge::group_catalog);
-static_assert(bind<bridge::param<motor_p>>().link_item == 1);
 static_assert(bind<bridge::param<motor_p>>().read == nullptr);
-static_assert(bind<bridge::param<motor_p>>().layout.size() == 11);
+static_assert(bind<bridge::param<motor_p>>().layout.size() == 10);
 static_assert(bind<bridge::param<drive_freq, actual_freq>>().layout.size()
-              == 12);
+              == 11);
 static_assert(bind<bridge::param<motor_p, actual_pole_pairs>>().layout.size()
-              == 12);
+              == 11);
 static_assert(!bind<bridge::param<motor_p>>().diagnosed);
 
 // A parameter a protocol may not write shows its value read-only.
@@ -202,27 +192,17 @@ static_assert(bind<bridge::param<prod_serial>>().layout[1].access
 static_assert(bind<bridge::param<prod_serial>>().layout[1].write == nullptr);
 static_assert(bind<bridge::param<motor_p>>().layout[1].access == od_access::rw);
 
-static_assert(bind<bridge::group<group::motor>>().type == exec);
-static_assert(bind<bridge::group<group::motor>>().arg == 1);
-static_assert(bind<bridge::group<group::motor>>().catalog
-              == &bridge::group_catalog);
-static_assert(bind<bridge::group<group::motor>>().layout.size() == 5);
-
 // -- Records --
 
 // clang-format off
 inline constexpr od_row<ctx> records[] = {
-    {{0x3100, 0x00}, "config", "drive",    "phase_swap",         "",   boolean, bridge::param<drive_phase_swap>},
-    {{0x3101, 0x00}, "config", "motor",    "pole_pairs",         "",   int32,   bridge::param<motor_p>},
-    {{0x3102, 0x00}, "config", "drive",    "freq",               "Hz", float32, bridge::param<drive_freq, actual_freq>},
-    {{0x3103, 0x00}, "config", "prod",     "serial",             "",   uint32,  bridge::param<prod_serial>},
-    {{0x3010, 0x00}, "config", "groups",   "drive",              "",   exec,    bridge::group<group::drive>},
-    {{0x3011, 0x00}, "config", "groups",   "motor",              "",   exec,    bridge::group<group::motor>},
-    {{0x3012, 0x00}, "config", "groups",   "prod",               "",   exec,    bridge::group<group::prod>},
-    {{0x3001, 0x01}, "ctl",    "settings", "apply_all",          "",   exec,    od_exec<bridge::apply_all>},
-    {{0x3001, 0x02}, "ctl",    "settings", "discard_all",        "",   exec,    od_exec<bridge::discard_all>},
-    {{0x3001, 0x03}, "ctl",    "settings", "last_failure",       "",   uint32,  od_ro<bridge::last_failure>},
-    {{0x3001, 0x04}, "ctl",    "settings", "last_failure_group", "",   uint8,   od_ro<bridge::last_failure_group>},
+    {{0x3100, 0x00}, "config", "drive",    "phase_swap",   "",   boolean, bridge::param<drive_phase_swap>},
+    {{0x3101, 0x00}, "config", "motor",    "pole_pairs",   "",   int32,   bridge::param<motor_p>},
+    {{0x3102, 0x00}, "config", "drive",    "freq",         "Hz", float32, bridge::param<drive_freq, actual_freq>},
+    {{0x3103, 0x00}, "config", "prod",     "serial",       "",   uint32,  bridge::param<prod_serial>},
+    {{0x3001, 0x01}, "ctl",    "settings", "apply_all",    "",   exec,    od_exec<bridge::apply_all>},
+    {{0x3001, 0x02}, "ctl",    "settings", "discard_all",  "",   exec,    od_exec<bridge::discard_all>},
+    {{0x3001, 0x03}, "ctl",    "settings", "last_failure", "",   uint32,  od_ro<bridge::last_failure>},
 };
 // clang-format on
 
@@ -254,18 +234,17 @@ struct client {
 };
 
 // A record shows a parameter whole: its value, applied and stored, its
-// default and bounds, its policy, the record of its group, and its actual
-// value if it has one.
+// default and bounds, its policy, and its actual value if it has one.
 consteval bool test_a_record_shows_its_parameter()
 {
   ctx c;
   auto _ = c.section.load(c.memory);
   client od{dictionary, c};
 
-  if (od.read({0x3101, 0x00}) != od_read_result{std::uint8_t{0x0A}}) {
+  if (od.read({0x3101, 0x00}) != od_read_result{std::uint8_t{0x09}}) {
     return false;
   }
-  if (od.read({0x3102, 0x00}) != od_read_result{std::uint8_t{0x0B}}) {
+  if (od.read({0x3102, 0x00}) != od_read_result{std::uint8_t{0x0A}}) {
     return false;
   }
   if (od.read({0x3101, 0x01}) != od_read_result{std::int32_t{11}}) return false;
@@ -277,17 +256,11 @@ consteval bool test_a_record_shows_its_parameter()
   if (od.read({0x3102, 0x05}) != od_read_result{1000.0f}) return false;
   if (od.read({0x3100, 0x07}) != od_read_result{std::uint8_t{0}}) return false;
   if (od.read({0x3101, 0x07}) != od_read_result{std::uint8_t{1}}) return false;
-  if (od.read({0x3100, 0x08}) != od_read_result{std::uint16_t{0x3010}}) {
-    return false;
-  }
-  if (od.read({0x3101, 0x08}) != od_read_result{std::uint16_t{0x3011}}) {
-    return false;
-  }
-  if (od.read({0x3102, 0x0B}) != od_read_result{9500.0f}) return false;
+  if (od.read({0x3102, 0x0A}) != od_read_result{9500.0f}) return false;
 
   auto const no_subindex = std::unexpected(sdo_abort_code::subindex_not_found);
-  if (od.read({0x3101, 0x0B}) != no_subindex) return false;
-  if (od.read({0x3102, 0x0C}) != no_subindex) return false;
+  if (od.read({0x3101, 0x0A}) != no_subindex) return false;
+  if (od.read({0x3102, 0x0B}) != no_subindex) return false;
 
   // A parameter a protocol may not write shows its value read-only.
   auto const serial = od.view.find({0x3103, 0x01});
@@ -307,7 +280,7 @@ consteval bool test_a_record_applies_its_parameter()
   if (!od.write({0x3102, 0x01}, od_value{12000.0f})) return false;
   if (od.read({0x3102, 0x01}) != od_read_result{12000.0f}) return false;
   if (od.read({0x3102, 0x02}) != od_read_result{10000.0f}) return false;
-  if (od.read({0x3010, 0x03}) != od_read_result{true}) return false;
+  if (!c.section.unapplied()) return false;
 
   auto const out_of_range = od.write({0x3102, 0x01}, od_value{30000.0f});
   if (out_of_range != std::unexpected(sdo_abort_code::value_range_exceeded)) {
@@ -319,67 +292,48 @@ consteval bool test_a_record_applies_its_parameter()
   }
 
   c.busy = true;
-  if (od.exec({0x3102, 0x09}) != std::unexpected(sdo_abort_code::state_error)) {
+  if (od.exec({0x3102, 0x08}) != std::unexpected(sdo_abort_code::state_error)) {
     return false;
   }
   if (od.read({0x3001, 0x03}) != od_read_result{std::uint32_t{0x08000022}}) {
     return false;
   }
-  if (od.read({0x3001, 0x04}) != od_read_result{std::uint8_t{0}}) return false;
 
   c.busy = false;
-  if (!od.exec({0x3102, 0x09})) return false;
+  if (!od.exec({0x3102, 0x08})) return false;
   if (od.read({0x3102, 0x02}) != od_read_result{12000.0f}) return false;
-  if (od.read({0x3010, 0x03}) != od_read_result{false}) return false;
+  if (c.section.unapplied()) return false;
 
   // A parameter applied after a restart is not applied on command.
   if (!od.write({0x3101, 0x01}, od_value{std::int32_t{7}})) return false;
-  auto const not_applicable = od.exec({0x3101, 0x09});
+  auto const not_applicable = od.exec({0x3101, 0x08});
   if (not_applicable != std::unexpected(sdo_abort_code::unsupported_access)) {
     return false;
   }
-  if (od.read({0x3001, 0x04}) != od_read_result{std::uint8_t{1}}) return false;
-  if (!od.exec({0x3101, 0x0A})) return false;
+  if (od.read({0x3001, 0x03}) != od_read_result{std::uint32_t{0x06010000}}) {
+    return false;
+  }
+  if (!od.exec({0x3101, 0x09})) return false;
   if (od.read({0x3101, 0x01}) != od_read_result{std::int32_t{11}}) return false;
 
   // Nor is one a protocol may not write put back.
-  return od.exec({0x3103, 0x0A})
+  return od.exec({0x3103, 0x09})
       == std::unexpected(sdo_abort_code::write_to_read_only);
 }
 
-// A group applies and discards its own values, and the commands of the
-// bridge all of them.
-consteval bool test_groups_and_commands()
+// The commands of the bridge apply and discard every value.
+consteval bool test_commands()
 {
   ctx c;
   auto _ = c.section.load(c.memory);
   client od{dictionary, c};
 
-  if (od.read({0x3011, 0x00}) != od_read_result{std::uint8_t{4}}) return false;
-  if (od.read({0x3012, 0x04}) != od_read_result{std::uint8_t{2}}) return false;
-
-  // Nothing waits in group drive: applying it succeeds and does nothing.
-  if (!od.exec({0x3010, 0x01})) return false;
-
   if (!od.write({0x3100, 0x01}, od_value{true})) return false;
   if (!od.write({0x3101, 0x01}, od_value{std::int32_t{7}})) return false;
-  if (od.read({0x3010, 0x03}) != od_read_result{true}) return false;
-  if (od.read({0x3011, 0x03}) != od_read_result{false}) return false;
-
-  // Groups motor and prod have nothing applied on command.
-  auto const not_applicable =
-      std::unexpected(sdo_abort_code::unsupported_access);
-  if (od.exec({0x3011, 0x01}) != not_applicable) return false;
-  if (od.exec({0x3012, 0x01}) != not_applicable) return false;
-  if (od.read({0x3101, 0x02}) != od_read_result{std::int32_t{11}}) return false;
-
-  if (!od.exec({0x3010, 0x02})) return false;
-  if (od.read({0x3100, 0x01}) != od_read_result{false}) return false;
-  if (od.read({0x3101, 0x01}) != od_read_result{std::int32_t{7}}) return false;
-
-  if (!od.write({0x3100, 0x01}, od_value{true})) return false;
   if (!od.exec({0x3001, 0x01})) return false;
   if (od.read({0x3100, 0x02}) != od_read_result{true}) return false;
+  // A parameter applied after a restart keeps waiting for it.
+  if (od.read({0x3101, 0x02}) != od_read_result{std::int32_t{11}}) return false;
 
   if (!od.write({0x3102, 0x01}, od_value{15000.0f})) return false;
   if (!od.exec({0x3001, 0x02})) return false;
@@ -389,7 +343,7 @@ consteval bool test_groups_and_commands()
 
 static_assert(test_a_record_shows_its_parameter());
 static_assert(test_a_record_applies_its_parameter());
-static_assert(test_groups_and_commands());
+static_assert(test_commands());
 
 // -- Coverage --
 
@@ -404,43 +358,6 @@ consteval std::string check_missing()
 }
 
 static_assert(check_missing() == "od: settings parameter 'motor.p' has no row");
-
-consteval std::string check_group_missing()
-{
-  // clang-format off
-  static constexpr od_row<ctx> rows[] = {
-      {{0x3100, 0x00}, "config", "drive",  "phase_swap", "",   boolean, bridge::param<drive_phase_swap>},
-      {{0x3101, 0x00}, "config", "motor",  "pole_pairs", "",   int32,   bridge::param<motor_p>},
-      {{0x3102, 0x00}, "config", "drive",  "freq",       "Hz", float32, bridge::param<drive_freq>},
-      {{0x3103, 0x00}, "config", "prod",   "serial",     "",   uint32,  bridge::param<prod_serial>},
-      {{0x3010, 0x00}, "config", "groups", "drive",      "",   exec,    bridge::group<group::drive>},
-  };
-  // clang-format on
-  return detail::od_check(rows);
-}
-
-static_assert(check_group_missing() == "od: settings group '1' has no row");
-
-consteval std::string check_group_unexposed()
-{
-  // clang-format off
-  static constexpr od_row<ctx> rows[] = {
-      {{0x3100, 0x00}, "config", "drive",  "phase_swap", "",   boolean, bridge::param<drive_phase_swap>},
-      {{0x3101, 0x00}, "config", "motor",  "pole_pairs", "",   int32,   bridge::param<motor_p>},
-      {{0x3102, 0x00}, "config", "drive",  "freq",       "Hz", float32, bridge::param<drive_freq>},
-      {{0x3103, 0x00}, "config", "prod",   "serial",     "",   uint32,  bridge::param<prod_serial>},
-      {{0x3010, 0x00}, "config", "groups", "drive",      "",   exec,    bridge::group<group::drive>},
-      {{0x3011, 0x00}, "config", "groups", "motor",      "",   exec,    bridge::group<group::motor>},
-      {{0x3012, 0x00}, "config", "groups", "prod",       "",   exec,    bridge::group<group::prod>},
-      {{0x3017, 0x00}, "config", "groups", "seven",      "",   exec,    bridge::group<settings::group_id{7}>},
-  };
-  // clang-format on
-  return detail::od_check(rows);
-}
-
-static_assert(check_group_unexposed()
-              == "od: settings group '7' is not exposed but has a row: "
-                 "3017h:00 config/groups/seven");
 
 // A row built by hand around the builder's back.
 consteval std::string check_hidden()

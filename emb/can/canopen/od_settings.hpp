@@ -42,9 +42,9 @@ constexpr sdo_abort_code to_sdo_abort(settings::error error)
 }
 
 // Returns the abort code that answers a refusal to apply settings: a
-// parameter or group that nothing applies on command is not accessed so, a
-// check that fails is a parameter incompatibility, and a change the
-// application does not admit now waits for another device state.
+// parameter that nothing applies on command is not accessed so, a check that
+// fails is a parameter incompatibility, and a change the application does not
+// admit now waits for another device state.
 constexpr sdo_abort_code to_sdo_abort(settings::apply_failure failure)
 {
   switch (failure.reason) {
@@ -118,28 +118,6 @@ consteval auto actual_type_message()
        + "' is not read as its type";
 }
 
-// The numbers 0 to 255 as text, which name the groups of a schema in
-// diagnostics: "settings group '3'".
-inline constexpr auto group_numbers = [] {
-  std::array<std::array<char, 4>, 256> numbers{};
-  for (auto g = 0uz; g < numbers.size(); ++g) {
-    auto& text = numbers[g];
-    auto n = 0uz;
-    if (g >= 100) text[n++] = static_cast<char>('0' + g / 100);
-    if (g >= 10) text[n++] = static_cast<char>('0' + g / 10 % 10);
-    text[n] = static_cast<char>('0' + g % 10);
-  }
-  return numbers;
-}();
-
-inline constexpr auto group_names = [] {
-  std::array<std::string_view, 256> names{};
-  for (auto g = 0uz; g < names.size(); ++g) {
-    names[g] = std::string_view{group_numbers[g].data()};
-  }
-  return names;
-}();
-
 } // namespace detail
 
 // The concept `od_settings_access<SectionOf, MakeApplier>` is satisfied if
@@ -158,18 +136,17 @@ concept od_settings_access =
         std::remove_reference_t<detail::od_result_t<SectionOf>>::schema>;
 
 // The class template `od_settings` binds records of a dictionary to the
-// parameters of a `settings::section` and to the groups of its schema, and
-// serves commands that apply and discard them all. It reaches the section
-// through `SectionOf` and an applier through `MakeApplier`, both called with
-// the context of the dictionary, so a section and an applier may live
-// wherever the context finds them.
+// parameters of a `settings::section`, and serves commands that apply and
+// discard them all. It reaches the section through `SectionOf` and an applier
+// through `MakeApplier`, both called with the context of the dictionary, so a
+// section and an applier may live wherever the context finds them.
 //
 // `param<Decl>` binds the record of the parameter that `Decl` declares, and
 // `param<Decl, Actual>` one that also shows its actual value, as the reader
 // `Actual` reads it in the type of the parameter. The record's type, stated
 // by the row, is the parameter's; its members, by subindex:
 //
-//   00h  const u8   the last subindex, 0Ah, or 0Bh with `Actual`
+//   00h  const u8   the last subindex, 09h, or 0Ah with `Actual`
 //   01h  rw         the value requested; ro if the parameter is not writable
 //   02h  ro         the value applied
 //   03h  ro         the value stored, which the next startup loads
@@ -177,32 +154,19 @@ concept od_settings_access =
 //   05h  const      the lower bound
 //   06h  const      the upper bound
 //   07h  const u8   the apply policy: 0 on command, 1 on restart
-//   08h  const u16  the index of the record of the parameter's group
-//   09h  wo exec    applies the parameter, as `section::apply` does
-//   0Ah  wo exec    discards its value requested, as `section::discard` does
-//   0Bh  ro         the actual value, with `Actual` only
+//   08h  wo exec    applies the parameter, as `section::apply` does
+//   09h  wo exec    discards its value requested, as `section::discard` does
+//   0Ah  ro         the actual value, with `Actual` only
 //
-// `group<G>` binds the record of the group `G`, of type `exec`:
+// `apply_all` and `discard_all` are commands for `od_exec`, `last_failure` a
+// reader for `od_ro`: the abort that answered the last refusal of an
+// application, or of a save by a check, zero if there was none. A refusal
+// answers a command with the abort of `to_sdo_abort`.
 //
-//   00h  const u8   the last subindex, 04h
-//   01h  wo exec    applies the group, as `section::apply_group` does
-//   02h  wo exec    discards its values requested
-//   03h  ro bool    whether a value of the group waits to be applied
-//   04h  const u8   the number of the group
-//
-// `apply_all` and `discard_all` are commands for `od_exec`, `last_failure`
-// and `last_failure_group` readers for `od_ro`: the abort that answered the
-// last refusal of an application, or of a save by a check, and its group,
-// zero if there was none. A refusal answers a command with the abort of
-// `to_sdo_abort`.
-//
-// A record of a parameter carries `catalog` and links to the record of its
-// group, and a record of a group carries `group_catalog`, so
-// `make_dictionary` checks that each exposed parameter has exactly one
-// record and each hidden one none, and that each group with an exposed
-// parameter has exactly one record and each other none. Binding a
-// declaration that the schema does not hold, a hidden parameter, or an
-// `Actual` of another type is reported at the row. A value of a type no
+// A record of a parameter carries `catalog`, so `make_dictionary` checks that
+// each exposed parameter has exactly one record and each hidden one none.
+// Binding a declaration that the schema does not hold, a hidden parameter, or
+// an `Actual` of another type is reported at the row. A value of a type no
 // parameter can hold is refused with `data_type_mismatch`.
 template<auto SectionOf, auto MakeApplier>
   requires od_settings_access<SectionOf, MakeApplier>
@@ -227,15 +191,6 @@ class od_settings {
     std::array<bool, count> out{};
     for (auto i = 0uz; i < count; ++i) {
       out[i] = schema.parameters[i].expose;
-    }
-    return out;
-  }();
-
-  // Whether each of the 256 groups has an exposed parameter.
-  static constexpr std::array<bool, 256> groups_exposed = [] {
-    std::array<bool, 256> out{};
-    for (auto const& desc : schema.parameters) {
-      if (desc.expose) out[desc.group.value] = true;
     }
     return out;
   }();
@@ -312,14 +267,6 @@ class od_settings {
     return od_value{std::to_underlying(desc(index).apply)};
   }
 
-  // Reads the record's aux, which `make_dictionary` set to the index of the
-  // record of the parameter's group.
-  static constexpr od_read_result read_group_record(context_type&,
-                                                    std::uint16_t aux)
-  {
-    return od_value{aux};
-  }
-
   static constexpr od_write_result apply_parameter(context_type& ctx,
                                                    std::uint16_t index,
                                                    od_value)
@@ -342,15 +289,15 @@ class od_settings {
   }
 
   // The members of the record of a parameter of type `Type`, with 01h
-  // writable if `Writable` and with 0Bh read by `Actual` unless it is
+  // writable if `Writable` and with 0Ah read by `Actual` unless it is
   // nullptr.
   template<od_value_type Type, bool Writable, auto Actual>
   static constexpr auto param_layout = [] {
     constexpr bool actual = !std::is_null_pointer_v<decltype(Actual)>;
-    std::array<field, actual ? 12 : 11> fields{{
+    std::array<field, actual ? 11 : 10> fields{{
         {.access = od_access::const_,
          .type = od_value_type::uint8,
-         .read = &last_subindex < actual ? 0x0B : 0x0A > },
+         .read = &last_subindex < actual ? 0x0A : 0x09 > },
         {.access = Writable ? od_access::rw : od_access::ro,
          .type = Type,
          .read = &read_value,
@@ -363,10 +310,6 @@ class od_settings {
         {.access = od_access::const_,
          .type = od_value_type::uint8,
          .read = &read_policy},
-        {.access = od_access::const_,
-         .type = od_value_type::uint16,
-         .read = &read_group_record,
-         .aux = true},
         {.access = od_access::wo,
          .type = od_value_type::exec,
          .write = &apply_parameter},
@@ -375,7 +318,7 @@ class od_settings {
          .write = &discard_parameter},
     }};
     if constexpr (actual) {
-      fields[0x0B] = {.access = od_access::ro,
+      fields[0x0A] = {.access = od_access::ro,
                       .type = Type,
                       .read = &detail::od_read_thunk<Actual, context_type>};
     }
@@ -418,91 +361,16 @@ class od_settings {
               .arg = static_cast<std::uint16_t>(param::index),
               .catalog = &catalog,
               .layout = param_layout<type, param::desc.writable, Actual>,
-              .link = &group_catalog,
-              .link_item = param::desc.group.value,
               .diagnosed = !(known && shown && fits)};
-    }
-  };
-
-  // -- Members of the record of a group, whose arg is its number --
-
-  static constexpr settings::group_id group_of(std::uint16_t number)
-  {
-    return settings::group_id{static_cast<std::uint8_t>(number)};
-  }
-
-  static constexpr od_write_result apply_group(context_type& ctx,
-                                               std::uint16_t number,
-                                               od_value)
-  {
-    auto applier = MakeApplier(ctx);
-    auto const applied = SectionOf(ctx).apply_group(group_of(number), applier);
-    if (!applied) return std::unexpected(to_sdo_abort(applied.error()));
-    return {};
-  }
-
-  static constexpr od_write_result discard_group(context_type& ctx,
-                                                 std::uint16_t number,
-                                                 od_value)
-  {
-    SectionOf(ctx).discard_group(group_of(number));
-    return {};
-  }
-
-  static constexpr od_read_result read_unapplied(context_type& ctx,
-                                                 std::uint16_t number)
-  {
-    return od_value{SectionOf(ctx).unapplied(group_of(number))};
-  }
-
-  static constexpr od_read_result read_number(context_type&,
-                                              std::uint16_t number)
-  {
-    return od_value{static_cast<std::uint8_t>(number)};
-  }
-
-  static constexpr std::array<field, 5> group_layout{{
-      {.access = od_access::const_,
-       .type = od_value_type::uint8,
-       .read = &last_subindex<0x04>},
-      {.access = od_access::wo,
-       .type = od_value_type::exec,
-       .write = &apply_group},
-      {.access = od_access::wo,
-       .type = od_value_type::exec,
-       .write = &discard_group},
-      {.access = od_access::ro,
-       .type = od_value_type::boolean,
-       .read = &read_unapplied},
-      {.access = od_access::const_,
-       .type = od_value_type::uint8,
-       .read = &read_number},
-  }};
-
-  template<settings::group_id Group>
-  struct group_binding {
-    consteval operator od_binding<context_type>() const
-    {
-      return {.access = od_access::ro,
-              .type = od_value_type::exec,
-              .arg = Group.value,
-              .catalog = &group_catalog,
-              .layout = group_layout};
     }
   };
 
 public:
   static constexpr od_catalog catalog{"settings parameter", names, exposed};
-  static constexpr od_catalog group_catalog{"settings group",
-                                            detail::group_names,
-                                            groups_exposed};
 
   template<auto& Decl, auto Actual = nullptr>
     requires settings::some_declaration<decltype(Decl)>
   static constexpr param_binding<Decl, Actual> param{};
-
-  template<settings::group_id Group>
-  static constexpr group_binding<Group> group{};
 
   static constexpr od_write_result apply_all(context_type& ctx)
   {
@@ -522,12 +390,6 @@ public:
   {
     auto const failure = SectionOf(ctx).last_failure();
     return failure ? std::to_underlying(to_sdo_abort(*failure)) : 0;
-  }
-
-  static constexpr std::uint8_t last_failure_group(context_type& ctx)
-  {
-    auto const failure = SectionOf(ctx).last_failure();
-    return failure ? failure->group.value : std::uint8_t{0};
   }
 };
 
