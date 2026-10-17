@@ -149,37 +149,6 @@ make_schema(declaration<Ts> const&... params)
 template<auto& Schema>
 using schema_t = std::remove_cvref_t<decltype(Schema)>;
 
-namespace detail {
-
-// Returns which of the 256 groups the parameters of `Schema` belong to.
-template<auto& Schema>
-consteval std::array<bool, 256> groups_present()
-{
-  std::array<bool, 256> present{};
-  for (auto const& desc : Schema.parameters) {
-    present[desc.group.value] = true;
-  }
-  return present;
-}
-
-} // namespace detail
-
-// The groups of the schema `Schema`: those its parameters belong to, each
-// once, in ascending order of identifier, the order in which a section
-// applies them.
-template<auto& Schema>
-inline constexpr auto groups_of = [] {
-  constexpr auto present = detail::groups_present<Schema>();
-  std::array<group_id,
-             static_cast<std::size_t>(std::ranges::count(present, true))>
-      groups{};
-  auto next = groups.begin();
-  for (auto g = 0uz; g < present.size(); ++g) {
-    if (present[g]) *next++ = group_id{static_cast<std::uint8_t>(g)};
-  }
-  return groups;
-}();
-
 // Type of the parameter at index `I` of the schema `Schema`, i.e. the type of
 // the default passed to `param`, e.g. `units::rpm_f32` rather than its scalar
 // `float`. The program is ill-formed if `I` is not less than

@@ -12,31 +12,22 @@ using namespace emb::settings;
 using rpm = units::rpm_f32;
 using pu = unsigned_pu_f32;
 
-enum class group : std::uint8_t { drive, model };
-
-inline constexpr auto drive_phase_swap =
-    param("drive.phase_swap", false, {.group = group::drive});
+inline constexpr auto drive_phase_swap = param("drive.phase_swap", false);
 inline constexpr auto drive_runout_speed =
     param("drive.runout_speed",
           rpm{100.0f},
           {.min = rpm{0.0f},
            .max = rpm{5000.0f},
-           .group = group::drive,
            .apply = apply_policy::on_command});
 inline constexpr auto motor_p = param("motor.p",
                                       std::int32_t{11},
                                       {.min = std::int32_t{1},
                                        .max = std::int32_t{64},
-                                       .group = group::model,
                                        .apply = apply_policy::on_restart});
 inline constexpr auto model_torque_slope =
-    param("model.torque_slope",
-          pu{0.5f},
-          {.group = group::model, .apply = apply_policy::on_command});
+    param("model.torque_slope", pu{0.5f}, {.apply = apply_policy::on_command});
 inline constexpr auto prod_serial =
-    param("prod.serial",
-          std::uint32_t{0},
-          {.group = group::drive, .writable = false});
+    param("prod.serial", std::uint32_t{0}, {.writable = false});
 
 inline constexpr auto schema = make_schema(drive_phase_swap,
                                            drive_runout_speed,

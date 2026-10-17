@@ -13,31 +13,26 @@ using namespace emb::settings;
 using rpm = units::rpm_f32;
 using pu = unsigned_pu_f32;
 
-enum class group : std::uint8_t { drive, model };
-
-inline constexpr auto drive_phase_swap =
-    param("drive.phase_swap", false, {.group = group::drive});
+inline constexpr auto drive_phase_swap = param("drive.phase_swap", false);
 inline constexpr auto drive_runout_speed =
     param("drive.runout_speed",
           rpm{100.0f},
           {.min = rpm{0.0f},
            .max = rpm{5000.0f},
-           .group = group::drive,
            .apply = apply_policy::on_command});
-inline constexpr auto motor_p = param(
-    "motor.p",
-    std::int32_t{11},
-    {.min = std::int32_t{1}, .max = std::int32_t{64}, .group = group::model});
+inline constexpr auto motor_p =
+    param("motor.p",
+          std::int32_t{11},
+          {.min = std::int32_t{1}, .max = std::int32_t{64}});
 // A clamped brings its own bounds: nothing to spell out.
 inline constexpr auto drive_stopping_torque =
     param("drive.stopping_torque",
           pu{0.05f},
-          {.group = group::drive, .apply = apply_policy::on_command});
+          {.apply = apply_policy::on_command});
 inline constexpr auto prot_watchdog_timeout =
     param("prot.watchdog_timeout",
           std::uint32_t{1000},
           {.max = std::uint32_t{60000},
-           .group = group::drive,
            .writable = false,
            .expose = false});
 
@@ -82,17 +77,11 @@ static_assert(schema.parameters[1].type == value_type::float32);
 static_assert(schema.parameters[1].min == to_raw(0.0f));
 static_assert(schema.parameters[1].max == to_raw(5000.0f));
 static_assert(schema.parameters[1].apply == apply_policy::on_command);
-static_assert(schema.parameters[1].group == group_id{group::drive});
 static_assert(schema.parameters[1].writable);
 static_assert(schema.parameters[1].expose);
 
 static_assert(schema.parameters[2].type == value_type::int32);
-static_assert(schema.parameters[2].group == group_id{group::model});
 static_assert(schema.parameters[2].apply == apply_policy::on_restart);
-
-// The groups of a schema, each once, in ascending order.
-static_assert(groups_of<schema>
-              == std::array{group_id{group::drive}, group_id{group::model}});
 
 // A wrapper's own limits become the parameter's bounds.
 static_assert(schema.parameters[3].min == to_raw(0.0f));

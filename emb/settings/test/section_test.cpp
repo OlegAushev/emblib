@@ -1,7 +1,9 @@
+#include <array>
 #include <cstdint>
-#include <optional>
 #include <string>
 
+#include <emb/meta/typelist.hpp>
+#include <emb/settings/rule.hpp>
 #include <emb/settings/section.hpp>
 #include <emb/test/mock/ram_storage.hpp>
 
@@ -10,49 +12,31 @@ namespace {
 using namespace emb;
 using namespace emb::settings;
 
-enum class group : std::uint8_t {
-  drive,
-  motor,
-  boot,
-  far = 200
-};
-
 inline constexpr auto drive_runout =
     param("drive.runout",
           std::uint32_t{100},
-          {.max = std::uint32_t{1000},
-           .group = group::drive,
-           .apply = apply_policy::on_command});
+          {.max = std::uint32_t{1000}, .apply = apply_policy::on_command});
 inline constexpr auto drive_phase_swap =
-    param("drive.phase_swap",
-          false,
-          {.group = group::drive, .apply = apply_policy::on_command});
+    param("drive.phase_swap", false, {.apply = apply_policy::on_command});
 inline constexpr auto motor_p = param("motor.p",
                                       std::int32_t{11},
                                       {.min = std::int32_t{1},
                                        .max = std::int32_t{64},
-                                       .group = group::motor,
                                        .apply = apply_policy::on_restart});
 inline constexpr auto prod_serial =
-    param("prod.serial",
-          std::uint32_t{0},
-          {.group = group::motor, .writable = false});
+    param("prod.serial", std::uint32_t{0}, {.writable = false});
 inline constexpr auto motor_R =
     param("motor.R",
           0.0014f,
-          {.min = 0.0f,
-           .max = 10.0f,
-           .group = group::motor,
-           .apply = apply_policy::on_command});
-inline constexpr auto far_k =
-    param("far.k",
-          std::uint32_t{1},
-          {.group = group::far, .apply = apply_policy::on_command});
-// A group with nothing applied on command.
-inline constexpr auto boot_mode =
-    param("boot.mode", std::uint32_t{0}, {.group = group::boot});
+          {.min = 0.0f, .max = 10.0f, .apply = apply_policy::on_command});
+inline constexpr auto limit_low =
+    param("limit.low", std::uint32_t{10}, {.apply = apply_policy::on_command});
+inline constexpr auto limit_high =
+    param("limit.high", std::uint32_t{20}, {.apply = apply_policy::on_command});
+inline constexpr auto limit_top =
+    param("limit.top", std::uint32_t{30}, {.apply = apply_policy::on_command});
 
-// Group motor declares a value applied on command after two applied after a
+// motor.R, applied on command, follows two parameters applied after a
 // restart, one of them read-only, so that the order of the cells hides
 // nothing a loop gets wrong.
 inline constexpr auto schema = make_schema(drive_runout,
@@ -60,8 +44,9 @@ inline constexpr auto schema = make_schema(drive_runout,
                                            motor_p,
                                            prod_serial,
                                            motor_R,
-                                           far_k,
-                                           boot_mode);
+                                           limit_low,
+                                           limit_high,
+                                           limit_top);
 
 using fram = test::ram_storage<512>;
 inline constexpr placement fram_placement{.magic = 0x47464354u,
@@ -71,25 +56,55 @@ inline constexpr placement fram_placement{.magic = 0x47464354u,
 
 using test_section = section<schema, fram, fram_placement>;
 
-constexpr group_id drive{group::drive};
-constexpr group_id motor{group::motor};
-constexpr group_id boot{group::boot};
-constexpr group_id far{group::far};
-
 constexpr auto runout = parameter<schema, drive_runout>::index;
 constexpr auto pole_pairs = parameter<schema, motor_p>::index;
 constexpr auto serial = parameter<schema, prod_serial>::index;
+constexpr auto lower = parameter<schema, limit_low>::index;
+constexpr auto upper = parameter<schema, limit_high>::index;
 
-// An applier that writes down what a section asks of it: "c0 l a0 f0 u "
-// for a check, the lock, an admission and a configure of group 0, and the
-// end of the lock. It refuses the check of the group `invalid` and the
-// admission of the group `busy`, and keeps what it configured drive.runout
-// to.
+// limit.low lies below limit.high.
+struct ordered {
+  using in = inputs<schema, limit_low, limit_high>;
+
+  static constexpr bool holds(in v)
+  {
+    return v.get<limit_low>() < v.get<limit_high>();
+  }
+};
+
+// limit.high does not exceed limit.top: it shares limit.high with `ordered`.
+struct capped {
+  using in = inputs<schema, limit_high, limit_top>;
+
+  static constexpr bool holds(in v)
+  {
+    return v.get<limit_high>() <= v.get<limit_top>();
+  }
+};
+
+// A rule over a parameter applied after a restart.
+struct not_thirteen {
+  using in = inputs<schema, motor_p>;
+
+  static constexpr bool holds(in v)
+  {
+    return v.get<motor_p>() != 13;
+  }
+};
+
+using rules = typelist<ordered, capped, not_thirteen>;
+
+// An applier that writes down what a section asks of it: "c l a f u " for a
+// check, the lock, an admission, a configure and the end of the lock. Its
+// check holds the values to the rules and refuses them all while `invalid`,
+// it admits nothing while `busy`, and it keeps what drive.runout was and
+// became in the last change it configured.
 struct journal {
   std::string calls;
-  std::optional<std::uint8_t> invalid;
-  std::optional<std::uint8_t> busy;
-  std::uint32_t runout = 0;
+  bool invalid = false;
+  bool busy = false;
+  std::uint32_t runout_before = 0;
+  std::uint32_t runout_after = 0;
 
   struct guard {
     journal* owner;
@@ -100,23 +115,10 @@ struct journal {
     }
   };
 
-  constexpr void note(char what, group_id group)
+  constexpr bool check(image<schema> const& values)
   {
-    calls += what;
-    if (group.value >= 100) {
-      calls += static_cast<char>('0' + group.value / 100);
-    }
-    if (group.value >= 10) {
-      calls += static_cast<char>('0' + group.value / 10 % 10);
-    }
-    calls += static_cast<char>('0' + group.value % 10);
-    calls += ' ';
-  }
-
-  constexpr bool check(group_id group, image<schema> const&)
-  {
-    note('c', group);
-    return invalid != group.value;
+    calls += "c ";
+    return !invalid && all_hold(rules{}, values);
   }
 
   constexpr guard lock()
@@ -125,34 +127,75 @@ struct journal {
     return guard{this};
   }
 
-  constexpr bool admit(group_id group)
+  constexpr bool admit(image<schema> const&, image<schema> const&)
   {
-    note('a', group);
-    return busy != group.value;
+    calls += "a ";
+    return !busy;
   }
 
-  constexpr void configure(group_id group, image<schema> const& applied)
+  constexpr void configure(image<schema> const& before,
+                           image<schema> const& after)
   {
-    note('f', group);
-    if (group == drive) {
-      runout = applied.get<drive_runout>();
-    }
+    calls += "f ";
+    runout_before = before.get<drive_runout>();
+    runout_after = after.get<drive_runout>();
   }
 };
 
-// A checker that accepts all values but those of `refused`.
-struct refusing {
-  std::optional<group_id> refused;
+// An applier that takes any change, the rules notwithstanding.
+struct anything {
+  struct guard {};
 
-  constexpr bool check(group_id group, image<schema> const&)
+  constexpr bool check(image<schema> const&)
   {
-    return refused != group;
+    return true;
+  }
+
+  constexpr guard lock()
+  {
+    return {};
+  }
+
+  constexpr bool admit(image<schema> const&, image<schema> const&)
+  {
+    return true;
+  }
+
+  constexpr void configure(image<schema> const&, image<schema> const&) {}
+};
+
+// A checker that accepts all values, or none if `refuses`.
+struct refusing {
+  bool refuses = false;
+
+  constexpr bool check(image<schema> const&)
+  {
+    return !refuses;
   }
 };
 
 static_assert(some_applier<journal, schema>);
+static_assert(some_applier<anything, schema>);
 static_assert(some_checker<refusing, schema>);
 static_assert(!some_applier<refusing, schema>);
+
+// Writes `low`, `high` and `top` to the limits, applies them and saves them
+// on `memory`, whatever the rules say.
+consteval bool store_limits(fram& memory,
+                            std::uint32_t low,
+                            std::uint32_t high,
+                            std::uint32_t top)
+{
+  test_section settings;
+  auto _ = settings.load(memory);
+  anything applier;
+  refusing accepts;
+  return settings.set<limit_low>(low)
+      && settings.set<limit_high>(high)
+      && settings.set<limit_top>(top)
+      && settings.apply_all(applier)
+      && settings.save(accepts);
+}
 
 consteval bool test_load_from_an_empty_medium()
 {
@@ -174,8 +217,9 @@ consteval bool test_load_from_an_empty_medium()
 }
 
 // A write waits until it is applied. Applied, it takes effect through the
-// applier, which checks its group, then admits and configures it under the
-// lock; with nothing left to apply, the applier is not called.
+// applier, which checks the values it would bring about, then admits and
+// configures the change under the lock, given the values applied before and
+// after; with nothing left to apply, the applier is not called.
 consteval bool test_a_write_waits_until_applied()
 {
   fram memory;
@@ -185,21 +229,20 @@ consteval bool test_a_write_waits_until_applied()
 
   if (!settings.set<drive_runout>(std::uint32_t{200})) return false;
   if (!settings.unapplied()) return false;
-  if (!settings.unapplied(drive)) return false;
-  if (settings.unapplied(motor)) return false;
   if (settings.restart_required()) return false;
   if (settings.applied().get<drive_runout>() != 100) return false;
 
   if (!settings.apply(runout, applier)) return false;
-  if (applier.calls != "c0 l a0 f0 u ") return false;
-  if (applier.runout != 200) return false;
+  if (applier.calls != "c l a f u ") return false;
+  if ((applier.runout_before != 100) || (applier.runout_after != 200)) {
+    return false;
+  }
   if (settings.applied().get<drive_runout>() != 200) return false;
   if (settings.unapplied()) return false;
   if (!settings.unsaved()) return false;
 
   applier.calls.clear();
   if (!settings.apply(runout, applier)) return false;
-  if (!settings.apply_group(drive, applier)) return false;
   if (!settings.apply_all(applier)) return false;
   if (!applier.calls.empty()) return false;
 
@@ -211,10 +254,10 @@ consteval bool test_a_write_waits_until_applied()
   return true;
 }
 
-// Applying is all or nothing: every group of a change is checked before the
-// lock, and admitted under it, before any value is recorded as applied. A
-// group that refuses leaves every value where it was, and is kept as the
-// last failure, which a success does not clear.
+// Applying is all or nothing: the values a change would bring about are
+// checked before the lock, and the change is admitted under it, before any
+// value is recorded as applied. A refusal leaves every value where it was
+// and is kept as the last failure, which a success does not clear.
 consteval bool test_applying_is_all_or_nothing()
 {
   fram memory;
@@ -223,44 +266,40 @@ consteval bool test_applying_is_all_or_nothing()
 
   if (!settings.set<drive_runout>(std::uint32_t{200})) return false;
   if (!settings.set<motor_R>(0.5f)) return false;
-  if (!settings.set<far_k>(std::uint32_t{2})) return false;
 
   journal invalid;
-  invalid.invalid = 1;
-  if (settings.apply_all(invalid)
-      != std::unexpected(apply_failure{apply_refusal::invalid, motor})) {
+  invalid.invalid = true;
+  if (settings.apply_all(invalid) != std::unexpected(apply_refusal::invalid)) {
     return false;
   }
-  if (invalid.calls != "c0 c1 ") return false;
-  if (settings.last_failure() != apply_failure{apply_refusal::invalid, motor}) {
-    return false;
-  }
+  if (invalid.calls != "c ") return false;
+  if (settings.last_failure() != apply_refusal::invalid) return false;
   if (settings.applied().get<drive_runout>() != 100) return false;
 
   journal busy;
-  busy.busy = 200;
+  busy.busy = true;
   if (settings.apply_all(busy)
-      != std::unexpected(apply_failure{apply_refusal::not_admitted, far})) {
+      != std::unexpected(apply_refusal::not_admitted)) {
     return false;
   }
-  if (busy.calls != "c0 c1 c200 l a0 a1 a200 u ") return false;
+  if (busy.calls != "c l a u ") return false;
   if (settings.applied().get<drive_runout>() != 100) return false;
-  if (!settings.unapplied(far)) return false;
+  if (!settings.unapplied()) return false;
 
   journal willing;
   if (!settings.apply_all(willing)) return false;
-  if (willing.calls != "c0 c1 c200 l a0 a1 a200 f0 f1 f200 u ") return false;
-  if (willing.runout != 200) return false;
+  if (willing.calls != "c l a f u ") return false;
+  if (willing.runout_after != 200) return false;
   if (settings.applied().get<motor_R>() != 0.5f) return false;
   if (settings.unapplied()) return false;
 
-  return settings.last_failure()
-      == apply_failure{apply_refusal::not_admitted, far};
+  return settings.last_failure() == apply_refusal::not_admitted;
 }
 
-// A group applies its own values: those of other groups keep waiting, and
-// the check sees the values applied of the rest.
-consteval bool test_a_group_applies_its_own()
+// A parameter applies alone: the others keep waiting, and the check sees the
+// values applied with this one taken in. A step that breaks a rule is
+// refused and changes nothing; taken in the right order, both steps pass.
+consteval bool test_a_parameter_applies_alone()
 {
   fram memory;
   test_section settings;
@@ -269,27 +308,27 @@ consteval bool test_a_group_applies_its_own()
 
   if (!settings.set<drive_runout>(std::uint32_t{200})) return false;
   if (!settings.set<drive_phase_swap>(true)) return false;
-  if (!settings.set<motor_R>(0.5f)) return false;
-
-  if (!settings.apply_group(drive, applier)) return false;
-  if (applier.calls != "c0 l a0 f0 u ") return false;
-  if (!settings.applied().get<drive_phase_swap>()) return false;
-  if (settings.unapplied(drive)) return false;
-  if (!settings.unapplied(motor)) return false;
-
-  // A parameter applies itself alone.
-  if (!settings.set<drive_runout>(std::uint32_t{300})) return false;
-  if (!settings.set<drive_phase_swap>(false)) return false;
   if (!settings.apply(runout, applier)) return false;
-  if (!settings.applied().get<drive_phase_swap>()) return false;
-  if (!settings.unapplied(drive)) return false;
+  if (settings.applied().get<drive_phase_swap>()) return false;
+  if (!settings.unapplied()) return false;
 
-  return true;
+  // Both limits rise: limit.low first would pass limit.high.
+  if (!settings.set<limit_low>(std::uint32_t{25})) return false;
+  if (!settings.set<limit_high>(std::uint32_t{28})) return false;
+  if (settings.apply(lower, applier)
+      != std::unexpected(apply_refusal::invalid)) {
+    return false;
+  }
+  if (settings.applied().get<limit_low>() != 10) return false;
+  if (!settings.apply(upper, applier)) return false;
+  if (!settings.apply(lower, applier)) return false;
+
+  return settings.applied().get<limit_low>() == 25;
 }
 
-// The schema decides first: a parameter applied after a restart, or a
-// group with nothing applied on command, is refused whatever its values. A
-// group whose values applied on command are all applied succeeds without
+// The schema decides first: a parameter applied after a restart is refused
+// whatever its value, and so is an index that names no parameter. With
+// nothing applied on command left to apply, applying all succeeds without
 // the applier, and a value waiting for a restart keeps waiting.
 consteval bool test_the_schema_refuses_first()
 {
@@ -299,50 +338,22 @@ consteval bool test_the_schema_refuses_first()
   journal applier;
 
   if (settings.apply(pole_pairs, applier)
-      != std::unexpected(apply_failure{apply_refusal::not_applicable, motor})) {
+      != std::unexpected(apply_refusal::not_applicable)) {
     return false;
   }
-  if (settings.apply_group(boot, applier)
-      != std::unexpected(apply_failure{apply_refusal::not_applicable, boot})) {
-    return false;
-  }
-  if (settings.apply_group(group_id{7}, applier)) return false;
+  if (settings.last_failure() != apply_refusal::not_applicable) return false;
   if (settings.apply(image<schema>::count, applier)
-      != std::unexpected(
-          apply_failure{apply_refusal::unknown_parameter, group_id{}})) {
+      != std::unexpected(apply_refusal::unknown_parameter)) {
     return false;
   }
 
   if (!settings.set<motor_p>(std::int32_t{7})) return false;
   if (!settings.restart_required()) return false;
   if (settings.unapplied()) return false;
-  if (settings.unapplied(motor)) return false;
-  if (!settings.apply_group(motor, applier)) return false;
   if (!settings.apply_all(applier)) return false;
   if (!applier.calls.empty()) return false;
   if (settings.applied().get<motor_p>() != 11) return false;
   if (!settings.restart_required()) return false;
-
-  return true;
-}
-
-// A group is not a bit of a mask: any one-byte identifier works, and none
-// stands for another.
-consteval bool test_any_group_id_works()
-{
-  fram memory;
-  test_section settings;
-  auto _ = settings.load(memory);
-  journal applier;
-
-  if (!settings.set<far_k>(std::uint32_t{2})) return false;
-  if (!settings.unapplied(far)) return false;
-  if (settings.unapplied(group_id{200 % 32})) return false;
-  if (settings.apply_group(group_id{200 % 32}, applier)) return false;
-  if (!settings.unapplied()) return false;
-  if (!settings.apply_group(far, applier)) return false;
-  if (applier.calls != "c200 l a200 f200 u ") return false;
-  if (settings.unapplied()) return false;
 
   return true;
 }
@@ -359,23 +370,18 @@ consteval bool test_discard_puts_back_what_is_applied()
   if (!settings.set<motor_p>(std::int32_t{7})) return false;
   if (!settings.set<motor_R>(0.5f)) return false;
   if (!settings.set<prod_serial>(std::uint32_t{5})) return false;
-  if (!settings.set<far_k>(std::uint32_t{2})) return false;
 
   if (!settings.discard(runout)) return false;
   if (settings.get<drive_runout>() != 100) return false;
+  if (settings.get<motor_R>() != 0.5f) return false;
   auto const read_only = settings.discard(serial);
   if (read_only || (read_only.error() != error::read_only)) return false;
   auto const unknown = settings.discard(image<schema>::count);
   if (unknown || (unknown.error() != error::unknown_parameter)) return false;
 
-  settings.discard_group(motor);
+  settings.discard_all();
   if (settings.get<motor_p>() != 11) return false;
   if (settings.get<motor_R>() != 0.0014f) return false;
-  if (settings.get<prod_serial>() != 5) return false;
-  if (!settings.unapplied(far)) return false;
-
-  settings.discard_all();
-  if (settings.get<far_k>() != 1) return false;
   if (settings.get<prod_serial>() != 5) return false;
   if (settings.unapplied()) return false;
 
@@ -432,17 +438,18 @@ consteval bool test_an_unchanged_write_owes_nothing()
 }
 
 // A save keeps what the machine runs on: it waits until the values applied
-// on command are applied, and checks the values that wait for a restart.
+// on command are applied, and checks the image, which holds the values that
+// wait for a restart too.
 consteval bool test_a_save_keeps_what_runs()
 {
   fram memory;
   test_section settings;
   auto _ = settings.load(memory);
   journal applier;
-  refusing refuses_motor{motor};
+  refusing refuses{true};
 
   if (!settings.set<drive_runout>(std::uint32_t{200})) return false;
-  auto const unapplied = settings.save(refuses_motor);
+  auto const unapplied = settings.save(refuses);
   if (unapplied || (unapplied.error().reason != save_refusal::unapplied)) {
     return false;
   }
@@ -450,16 +457,17 @@ consteval bool test_a_save_keeps_what_runs()
 
   if (!settings.apply_all(applier)) return false;
   if (!settings.set<motor_p>(std::int32_t{7})) return false;
-  auto const invalid = settings.save(refuses_motor);
-  if (invalid
-      || (invalid.error().reason != save_refusal::invalid)
-      || (invalid.error().group != motor)) {
+  auto const invalid = settings.save(refuses);
+  if (invalid || (invalid.error().reason != save_refusal::invalid)) {
     return false;
   }
-  if (settings.last_failure() != apply_failure{apply_refusal::invalid, motor}) {
-    return false;
-  }
+  if (settings.last_failure() != apply_refusal::invalid) return false;
   if (settings.sequence() != 0) return false;
+
+  // The rules see a value that waits for a restart.
+  if (!settings.set<motor_p>(std::int32_t{13})) return false;
+  if (settings.save(applier)) return false;
+  if (!settings.set<motor_p>(std::int32_t{7})) return false;
 
   refusing accepts;
   if (!settings.save(accepts)) return false;
@@ -567,37 +575,122 @@ consteval bool test_a_load_takes_what_it_restored_as_applied()
   return true;
 }
 
-// A group found invalid at startup is built from its defaults: they become
-// its values applied, while the values loaded wait to be corrected or
-// discarded, and a save waits with them.
-consteval bool test_a_group_falls_back_to_its_defaults()
+// A rule that the values loaded break falls back: the defaults of its inputs
+// become their values applied, while the values loaded stay requested, to be
+// corrected or discarded, and a save waits with them. A rule that holds
+// keeps its values, and so does every parameter that no broken rule reads.
+consteval bool test_a_broken_rule_falls_back()
 {
   fram memory;
+  if (!store_limits(memory, 25, 22, 40)) return false;
+
+  test_section restarted;
+  auto _ = restarted.load(memory);
+  if (restarted.fall_back_to_defaults(rules{})
+      != std::array{true, false, false}) {
+    return false;
+  }
+  auto const& applied = restarted.applied();
+  if (applied.get<limit_low>() != 10) return false;
+  if (applied.get<limit_high>() != 20) return false;
+  if (applied.get<limit_top>() != 40) return false;
+  if (restarted.get<limit_low>() != 25) return false;
+  if (restarted.stored().get<limit_low>() != 25) return false;
+  if (!restarted.unapplied()) return false;
   refusing accepts;
+  if (restarted.save(accepts)) return false;
+
+  restarted.discard_all();
+  if (restarted.get<limit_low>() != 10) return false;
+  return restarted.save(accepts).has_value();
+}
+
+// A fallback that moves an input another rule shares can break that rule,
+// which then falls back in a pass of its own.
+consteval bool test_a_fallback_can_break_another_rule()
+{
+  fram memory;
+  if (!store_limits(memory, 25, 15, 17)) return false;
+
+  test_section restarted;
+  auto _ = restarted.load(memory);
+  if (restarted.fall_back_to_defaults(rules{})
+      != std::array{true, true, false}) {
+    return false;
+  }
+  return restarted.applied().get<limit_top>() == 30;
+}
+
+// A pass checks every rule before it falls back any, so the order of the
+// rules does not matter: here `ordered` falling back first would mend
+// `capped`, and both fall back either way.
+consteval bool test_the_order_of_the_rules_does_not_matter()
+{
+  fram memory;
+  if (!store_limits(memory, 50, 40, 35)) return false;
+
+  test_section first;
+  auto _ = first.load(memory);
+  if (first.fall_back_to_defaults(typelist<ordered, capped>{})
+      != std::array{true, true}) {
+    return false;
+  }
+  test_section second;
+  auto _ = second.load(memory);
+  if (second.fall_back_to_defaults(typelist<capped, ordered>{})
+      != std::array{true, true}) {
+    return false;
+  }
+  for (auto i = 0uz; i < image<schema>::count; ++i) {
+    if (first.applied().cell(i) != second.applied().cell(i)) return false;
+  }
+  return first.applied().get<limit_top>() == 30;
+}
+
+// A rule over a parameter applied after a restart falls back as well: what
+// derives from it is built from the default, and the value loaded owes the
+// restart that would load it.
+consteval bool test_a_restart_input_falls_back()
+{
+  fram memory;
   {
     test_section settings;
     auto _ = settings.load(memory);
-    journal applier;
-    if (!settings.set<drive_runout>(std::uint32_t{300})) return false;
-    if (!settings.apply_all(applier)) return false;
+    refusing accepts;
+    if (!settings.set<motor_p>(std::int32_t{13})) return false;
     if (!settings.save(accepts)) return false;
   }
 
   test_section restarted;
   auto _ = restarted.load(memory);
-  restarted.fall_back_to_defaults(drive);
-  if (restarted.applied().get<drive_runout>() != 100) return false;
-  if (restarted.get<drive_runout>() != 300) return false;
-  if (restarted.stored().get<drive_runout>() != 300) return false;
-  if (!restarted.unapplied(drive)) return false;
-  if (restarted.unapplied(motor)) return false;
-  if (restarted.save(accepts)) return false;
+  if (restarted.fall_back_to_defaults(rules{})
+      != std::array{false, false, true}) {
+    return false;
+  }
+  if (restarted.applied().get<motor_p>() != 11) return false;
+  if (restarted.get<motor_p>() != 13) return false;
+  if (restarted.unapplied()) return false;
+  return restarted.restart_required();
+}
 
-  restarted.discard_group(drive);
-  if (restarted.get<drive_runout>() != 100) return false;
-  if (!restarted.save(accepts)) return false;
+// Without the fallback, values loaded that break a rule hold every change
+// back: an application checks the values applied with the change taken in,
+// and a save the image.
+consteval bool test_a_broken_rule_holds_back_without_the_fallback()
+{
+  fram memory;
+  if (!store_limits(memory, 25, 22, 40)) return false;
 
-  return true;
+  test_section restarted;
+  auto _ = restarted.load(memory);
+  journal applier;
+  if (!restarted.set<drive_runout>(std::uint32_t{200})) return false;
+  if (restarted.apply_all(applier) != std::unexpected(apply_refusal::invalid)) {
+    return false;
+  }
+  if (!restarted.discard(runout)) return false;
+  auto const saved = restarted.save(applier);
+  return !saved && (saved.error().reason == save_refusal::invalid);
 }
 
 consteval bool test_wipe_leaves_the_image()
@@ -759,7 +852,7 @@ consteval bool test_restore_all_defaults_spares_the_read_only()
   if (!settings.restart_required()) return false;
   if (!settings.set<drive_runout>(std::uint32_t{300})) return false;
   if (!settings.set<motor_R>(0.5f)) return false;
-  if (!settings.set<far_k>(std::uint32_t{2})) return false;
+  if (!settings.set<limit_top>(std::uint32_t{40})) return false;
   if (!settings.apply_all(applier)) return false;
 
   settings.restore_all_defaults();
@@ -767,7 +860,7 @@ consteval bool test_restore_all_defaults_spares_the_read_only()
   if (settings.get<drive_runout>() != 100) return false;
   if (settings.get<prod_serial>() != 7) return false;
   if (settings.get<motor_R>() != 0.0014f) return false;
-  if (settings.get<far_k>() != 1) return false;
+  if (settings.get<limit_top>() != 30) return false;
   // The defaults are requested, not applied.
   if (!settings.unapplied()) return false;
   if (settings.applied().get<drive_runout>() != 300) return false;
@@ -779,9 +872,8 @@ consteval bool test_restore_all_defaults_spares_the_read_only()
 static_assert(test_load_from_an_empty_medium());
 static_assert(test_a_write_waits_until_applied());
 static_assert(test_applying_is_all_or_nothing());
-static_assert(test_a_group_applies_its_own());
+static_assert(test_a_parameter_applies_alone());
 static_assert(test_the_schema_refuses_first());
-static_assert(test_any_group_id_works());
 static_assert(test_discard_puts_back_what_is_applied());
 static_assert(test_unapplied_and_restart_required_split());
 static_assert(test_an_unchanged_write_owes_nothing());
@@ -789,7 +881,11 @@ static_assert(test_a_save_keeps_what_runs());
 static_assert(test_a_saved_restart_stays_owed());
 static_assert(test_save_and_restart());
 static_assert(test_a_load_takes_what_it_restored_as_applied());
-static_assert(test_a_group_falls_back_to_its_defaults());
+static_assert(test_a_broken_rule_falls_back());
+static_assert(test_a_fallback_can_break_another_rule());
+static_assert(test_the_order_of_the_rules_does_not_matter());
+static_assert(test_a_restart_input_falls_back());
+static_assert(test_a_broken_rule_holds_back_without_the_fallback());
 static_assert(test_wipe_leaves_the_image());
 static_assert(test_sequence_follows_the_medium());
 static_assert(test_access_by_index());

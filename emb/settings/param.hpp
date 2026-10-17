@@ -14,7 +14,7 @@ namespace settings {
 
 // The scoped enumeration `apply_policy` defines when a change to the value of
 // a parameter may take effect. Whether the application can take a change in
-// its present state is its own business, decided group by group when the
+// its present state is its own business, decided by its applier when the
 // change is applied, not the schema's.
 enum class apply_policy : std::uint8_t {
   // Policy of a parameter whose change takes effect when the application
@@ -25,35 +25,6 @@ enum class apply_policy : std::uint8_t {
   // peripheral is set up, or that is handed to an object only when the object
   // is built: a change takes effect only after a restart.
   on_restart,
-};
-
-// The class `group_id` identifies a group, i.e. the configuration a parameter
-// feeds and the unit in which the application applies changes. The
-// application names its groups with a scoped enumeration, which converts to
-// `group_id` implicitly:
-//
-//   enum class group : std::uint8_t { drive, model, ... };
-//   param("model.speed_Kp", 0.8f, {.group = group::model, ...})
-struct group_id {
-  std::uint8_t value = 0;
-
-  constexpr group_id() = default;
-
-  constexpr explicit group_id(std::uint8_t v) : value(v) {}
-
-  // Constructs the identifier of the group `e`, holding the underlying value
-  // of `e` as a `std::uint8_t`. Takes only a scoped enumeration whose
-  // underlying type is one byte wide: a wider one fails to compile rather
-  // than being truncated.
-  template<typename E>
-    requires std::is_scoped_enum_v<E>
-          && (sizeof(std::underlying_type_t<E>) == 1)
-  constexpr group_id(E e)
-      : value(static_cast<std::uint8_t>(std::to_underlying(e)))
-  {
-  }
-
-  friend constexpr bool operator==(group_id, group_id) = default;
 };
 
 // Type-erased description of one parameter, the same structure whatever the
@@ -71,7 +42,6 @@ struct descriptor {
   raw_value def;
   raw_value min;
   raw_value max;
-  group_id group;
   apply_policy apply;
   // Whether a transport may change the value. If `false`, `image::set_at`
   // and `image::restore_default_at` fail with `error::read_only`, while the
@@ -119,10 +89,10 @@ constexpr T highest()
 // Returns the identifier of the parameter named `name` of type `type`: the
 // 32-bit FNV-1a hash of the bytes of `name` followed by the byte
 // `std::to_underlying(type)`. Nothing else enters it, so a stored value still
-// matches its parameter after a change of default, bounds, group, apply
-// policy, flags or position in the schema, and no longer does after a change
-// of name or type. Records hold these identifiers: a change to the
-// computation leaves every stored value unmatched.
+// matches its parameter after a change of default, bounds, apply policy,
+// flags or position in the schema, and no longer does after a change of name
+// or type. Records hold these identifiers: a change to the computation leaves
+// every stored value unmatched.
 constexpr std::uint32_t identify(std::string_view name, value_type type)
 {
   std::uint32_t h = 0x811C9DC5u;
@@ -151,7 +121,6 @@ struct options {
   // parameter rejects infinities.
   T min = detail::lowest<T>();
   T max = detail::highest<T>();
-  group_id group{};
   // Apply policy of the parameter, `apply_policy::on_restart` if left out: a
   // parameter whose policy was never chosen costs a restart rather than
   // taking effect on command.
@@ -198,7 +167,7 @@ concept some_declaration = detail::is_declaration<std::remove_cvref_t<T>>;
 // Declares a parameter for `make_schema`: named `name`, with the default value
 // `def` and the rest of the declaration in `opts`.
 //
-//   param("motor.p", std::int32_t{11}, {.min = 1, .max = 64, .group = ...})
+//   param("motor.p", std::int32_t{11}, {.min = 1, .max = 64, .apply = ...})
 //
 // The type of the parameter is that of `def`, so a literal must have that
 // type exactly: `0.05f`, not `0.05`, and `std::int32_t{1}`, not `1`, an `int`,
@@ -227,7 +196,6 @@ consteval declaration<T> param(std::string_view name,
                      .def = to_raw(def),
                      .min = min,
                      .max = max,
-                     .group = opts.group,
                      .apply = opts.apply,
                      .writable = opts.writable,
                      .expose = opts.expose}};

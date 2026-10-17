@@ -1,9 +1,12 @@
 #pragma once
 
 #include <emb/assert.hpp>
+#include <emb/meta/typelist.hpp>
+#include <emb/meta/unroll.hpp>
 #include <emb/nvm/storage.hpp>
 #include <emb/settings/image.hpp>
 #include <emb/settings/param.hpp>
+#include <emb/settings/rule.hpp>
 #include <emb/settings/schema.hpp>
 #include <emb/settings/store.hpp>
 
@@ -12,6 +15,7 @@
 #include <bitset>
 #include <concepts>
 #include <expected>
+#include <functional>
 #include <optional>
 #include <utility>
 
@@ -21,28 +25,18 @@
 namespace emb {
 namespace settings {
 
-// The scoped enumeration `apply_refusal` defines why `section::apply`,
-// `section::apply_group` or `section::apply_all` applied nothing.
+// The scoped enumeration `apply_refusal` defines why `section::apply` or
+// `section::apply_all` applied nothing.
 enum class apply_refusal : std::uint8_t {
   // Index that names no parameter, returned by `section::apply`.
   unknown_parameter,
-  // A parameter whose apply policy is `apply_policy::on_restart`, or a group
-  // in which the schema declares no parameter applied on command: nothing
-  // applies it on command, whatever its values.
+  // A parameter whose apply policy is `apply_policy::on_restart`, returned
+  // by `section::apply`: nothing applies it on command, whatever its value.
   not_applicable,
-  // The checker refused the values that a group would take.
+  // The checker refused the values that the change would bring about.
   invalid,
-  // The applier did not admit a change to a group in its present state.
+  // The applier did not admit the change in its present state.
   not_admitted,
-};
-
-// The struct `apply_failure` tells why a section applied nothing, and for
-// which group: the group refused, or that of what is not applicable.
-struct apply_failure {
-  apply_refusal reason;
-  group_id group;
-
-  friend constexpr bool operator==(apply_failure, apply_failure) = default;
 };
 
 // The scoped enumeration `save_refusal` defines why `section::save` wrote
@@ -51,53 +45,52 @@ enum class save_refusal : std::uint8_t {
   // A parameter applied on command holds a value other than the one applied:
   // a save keeps what the machine runs on, not what waits to be applied.
   unapplied,
-  // The checker refused the values that a group, waiting for a restart,
-  // would take at the next startup.
+  // The checker refused the values that the next startup would load.
   invalid,
   // The store failed to write the record.
   medium,
 };
 
 // The class template `section_save_failure` tells why `section::save` wrote
-// nothing or failed to: the `reason`, the `group` that the checker refused,
-// and for `save_refusal::medium` what the store reported, `store`.
+// nothing or failed to: the `reason`, and for `save_refusal::medium` what the
+// store reported, `store`.
 template<typename Error>
 struct section_save_failure {
   save_refusal reason;
-  group_id group{};
   std::optional<save_failure<Error>> store{};
 };
 
 // The concept `some_checker<C, Schema>` is satisfied if and only if `C`
-// checks the values of a group as a whole: `checker.check(group, values)`
-// returns whether the parameters of `group` may take their values in
-// `values`, an image of `Schema`, together, which the bounds of each alone
-// cannot tell. A check depends on the values alone, so its answer holds
-// wherever it is asked: before a section applies the values, before it saves
-// them, and when the application builds its state after a load.
+// checks values together: `checker.check(values)` returns whether the
+// parameters may take their values in `values`, an image of `Schema`,
+// together, which the bounds of each alone cannot tell. A check depends on
+// the values alone, so its answer holds wherever it is asked: before a
+// section applies the values, before it saves them, and when the application
+// builds its state after a load.
 template<typename C, auto& Schema>
-concept some_checker =
-    requires(C& checker, group_id group, image<Schema> const& values) {
-      { checker.check(group, values) } -> std::same_as<bool>;
-    };
+concept some_checker = requires(C& checker, image<Schema> const& values) {
+  { checker.check(values) } -> std::same_as<bool>;
+};
 
 // The concept `some_applier<A, Schema>` is satisfied if and only if `A` is a
 // checker that also brings the state the application derives from the
 // parameters to the values applied: `applier.lock()` returns a guard, an
 // object that holds that state still for as long as it lives, whether or not
-// it can be copied or moved; `applier.admit(group)` returns whether a change
-// to `group` may take effect in the present state; and
-// `applier.configure(group, applied)` rebuilds what derives from `group` out
-// of `applied`, the values applied, and cannot fail: whatever may refuse is
-// asked before, by `check` or `admit`.
+// it can be copied or moved; `applier.admit(before, after)` returns whether
+// the values applied may change from `before` to `after` in the present
+// state; and `applier.configure(before, after)` rebuilds what derives from
+// the parameters that differ between `before`, the values applied until
+// then, and `after`, the values applied now, and cannot fail: whatever may
+// refuse is asked before, by `check` or `admit`.
 template<typename A, auto& Schema>
-concept some_applier =
-    some_checker<A, Schema>
-    && requires(A& applier, group_id group, image<Schema> const& applied) {
-         applier.lock();
-         { applier.admit(group) } -> std::same_as<bool>;
-         applier.configure(group, applied);
-       };
+concept some_applier = some_checker<A, Schema>
+                    && requires(A& applier,
+                                image<Schema> const& before,
+                                image<Schema> const& after) {
+                         applier.lock();
+                         { applier.admit(before, after) } -> std::same_as<bool>;
+                         applier.configure(before, after);
+                       };
 
 // The class template `section` binds the schema `Schema` to the place
 // `Placement` on a medium of type `Storage`. It holds the image of the
@@ -106,14 +99,19 @@ concept some_applier =
 // and the values applied, out of which the application builds the state it
 // derives from the parameters. A write through `set`, `set_at` or
 // `restore_all_defaults` changes the values requested only. `load` sets all
-// three images; `apply`, `apply_group` and `apply_all` record values
-// requested as applied, once an applier has checked them, admitted them and
-// rebuilt its state from them; `discard`, `discard_group` and `discard_all`
-// put the values applied back into the values requested. `unsaved`,
-// `unapplied` and `restart_required` compare the images cell by cell, i.e. by
-// encoding, so a value written and then put back leaves nothing to save or to
-// apply; `-0.0f` does not put back `+0.0f`. `values`, `applied` and `stored`
-// return the three images.
+// three images; `apply` and `apply_all` record values requested as applied,
+// once an applier has checked them, admitted them and rebuilt its state from
+// them; `discard` and `discard_all` put the values applied back into the
+// values requested. `unsaved`, `unapplied` and `restart_required` compare the
+// images cell by cell, i.e. by encoding, so a value written and then put back
+// leaves nothing to save or to apply; `-0.0f` does not put back `+0.0f`.
+// `values`, `applied` and `stored` return the three images.
+//
+// A checker refuses every change and every save while the values applied
+// break it, since `apply` checks the values applied with the change taken in
+// and `save` the image: an application that checks the values loaded calls
+// `fall_back_to_defaults` right after `load`, before it builds anything from
+// the values applied.
 //
 // A section can be constant-initialized and then holds the defaults in all
 // three images. The behavior is undefined if `save` or `wipe` is called
@@ -128,28 +126,16 @@ class section {
   using error_type = typename Storage::error_type;
 
   static constexpr std::size_t count = image<Schema>::count;
-  static constexpr auto& groups = groups_of<Schema>;
 
   // Cells, by index, that a call applies.
   using selection = std::bitset<count>;
-  // Groups, by position in `groups`, that a call checks.
-  using group_set = std::bitset<groups.size()>;
-
-  // The position in `groups` of the group of each parameter.
-  static constexpr auto group_slots = [] {
-    std::array<std::size_t, count> slots{};
-    for (auto i = 0uz; i < count; ++i) {
-      while (groups[slots[i]] != Schema.parameters[i].group) ++slots[i];
-    }
-    return slots;
-  }();
 
   image<Schema> values_;
   image<Schema> stored_;
   image<Schema> applied_;
   load_result last_load_;
   std::uint32_t sequence_ = 0;
-  std::optional<apply_failure> last_failure_;
+  std::optional<apply_refusal> last_failure_;
   std::optional<store_type> store_;
 
 public:
@@ -182,12 +168,11 @@ public:
 
   // Writes the image to the medium as the next record, as `store::save`
   // does, if every parameter applied on command holds its value applied and
-  // `checker` accepts the values of every group with a parameter that waits
-  // for a restart: the next startup then loads what the machine runs on, and
-  // what was checked for the restart. A group the checker refuses is kept as
-  // `last_failure()`. After a successful write, `unsaved()` is `false` until
-  // a value changes, and `sequence()` returns the number of the record
-  // written. The values applied are left as they are.
+  // `checker` accepts the image: the next startup then loads what the machine
+  // runs on, and the values waiting for a restart as checked. A refusal of
+  // the checker is kept as `last_failure()`. After a successful write,
+  // `unsaved()` is `false` until a value changes, and `sequence()` returns the
+  // number of the record written. The values applied are left as they are.
   template<some_checker<Schema> C>
   constexpr std::expected<void, section_save_failure<error_type>>
   save(C& checker)
@@ -196,18 +181,9 @@ public:
     using failure = section_save_failure<error_type>;
 
     if (unapplied()) return std::unexpected(failure{save_refusal::unapplied});
-
-    group_set waiting;
-    for (auto i = 0uz; i < count; ++i) {
-      if (restarts_with(i) && differs(values_, applied_, i)) {
-        waiting.set(group_slots[i]);
-      }
-    }
-    for (auto g = 0uz; g < groups.size(); ++g) {
-      if (waiting.test(g) && !checker.check(groups[g], values_)) {
-        last_failure_ = apply_failure{apply_refusal::invalid, groups[g]};
-        return std::unexpected(failure{save_refusal::invalid, groups[g]});
-      }
+    if (!checker.check(values_)) {
+      last_failure_ = apply_refusal::invalid;
+      return std::unexpected(failure{save_refusal::invalid});
     }
 
     return store_->save(values_)
@@ -216,7 +192,7 @@ public:
           sequence_ = saved.seq;
         })
         .transform_error([](save_failure<error_type> const& cause) {
-          return failure{save_refusal::medium, {}, cause};
+          return failure{save_refusal::medium, cause};
         });
   }
 
@@ -274,20 +250,6 @@ public:
     return false;
   }
 
-  // Checks whether a parameter of `group` applied on command holds a value
-  // other than the one applied.
-  constexpr bool unapplied(group_id group) const
-  {
-    for (auto i = 0uz; i < count; ++i) {
-      if ((Schema.parameters[i].group == group)
-          && !restarts_with(i)
-          && differs(values_, applied_, i)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   // Checks whether a restart would change a parameter applied only after a
   // restart: whether one holds a value other than the one applied, or the
   // next startup would load such a value. A value saved and then put back
@@ -306,69 +268,40 @@ public:
   // -- Applying --
 
   // Applies the value requested of the parameter at `index`, as `apply_all`
-  // applies all of them, if it differs from the one applied. Refused with
+  // applies all of them, if it differs from the one applied: the checker sees
+  // the values applied with this one taken in. Refused with
   // `apply_refusal::unknown_parameter` if `index >= count`, and with
   // `apply_refusal::not_applicable` if the parameter is applied only after a
   // restart, whatever its value.
   template<some_applier<Schema> A>
-  constexpr std::expected<void, apply_failure> apply(std::size_t index,
+  constexpr std::expected<void, apply_refusal> apply(std::size_t index,
                                                      A& applier)
   {
-    if (index >= count) {
-      return std::unexpected(
-          apply_failure{apply_refusal::unknown_parameter, {}});
-    }
-    if (restarts_with(index)) {
-      return refuse(apply_refusal::not_applicable,
-                    Schema.parameters[index].group);
-    }
+    if (index >= count) return refuse(apply_refusal::unknown_parameter);
+    if (restarts_with(index)) return refuse(apply_refusal::not_applicable);
     selection chosen;
     chosen.set(index, differs(values_, applied_, index));
     return commit(chosen, applier);
   }
 
-  // Applies the values requested of the parameters of `group`, as
-  // `apply_all` applies all of them. Refused with
-  // `apply_refusal::not_applicable` if the schema declares no parameter of
-  // `group` applied on command, whatever the values.
-  template<some_applier<Schema> A>
-  constexpr std::expected<void, apply_failure> apply_group(group_id group,
-                                                           A& applier)
-  {
-    bool const applicable = std::ranges::any_of(
-        Schema.parameters,
-        [group](descriptor const& desc) {
-          return (desc.group == group)
-              && (desc.apply == apply_policy::on_command);
-        });
-    if (!applicable) {
-      return refuse(apply_refusal::not_applicable, group);
-    }
-    return commit(pending([group](descriptor const& desc) {
-                    return desc.group == group;
-                  }),
-                  applier);
-  }
-
   // Applies the value requested of every parameter applied on command that
   // differs from the one applied, all of them or none; a parameter applied
   // only after a restart keeps waiting for it. `applier` checks the values
-  // that each group of a change would take, every group before anything
-  // changes; then, under its lock, admits a change to each group; only then
-  // are the values recorded as applied and every group configured out of
-  // them, in the order of `groups_of`. A group that fails the check or is not
-  // admitted refuses the whole, and is kept as `last_failure()`. With nothing
-  // to apply, succeeds without calling `applier`.
+  // applied with those taken in, before anything changes; then, under its
+  // lock, admits the change; only then are the values recorded as applied,
+  // and `applier` configures what derives from them, given the values applied
+  // before and after. A refusal of the check or of the admission refuses the
+  // whole and is kept as `last_failure()`. With nothing to apply, succeeds
+  // without calling `applier`.
   template<some_applier<Schema> A>
-  constexpr std::expected<void, apply_failure> apply_all(A& applier)
+  constexpr std::expected<void, apply_refusal> apply_all(A& applier)
   {
-    return commit(pending([](descriptor const&) { return true; }), applier);
+    return commit(pending(), applier);
   }
 
-  // Returns the last refusal of `apply`, `apply_group` or `apply_all` that
-  // names a group, or that of `save` by the checker, or nothing if there was
-  // none. A success leaves it as it was.
-  constexpr std::optional<apply_failure> last_failure() const
+  // Returns the last refusal of `apply` or `apply_all`, or that of `save` by
+  // the checker, or nothing if there was none. A success leaves it as it was.
+  constexpr std::optional<apply_refusal> last_failure() const
   {
     return last_failure_;
   }
@@ -391,33 +324,50 @@ public:
     return {};
   }
 
-  // Puts the values applied of the `writable` parameters of `group` back into
-  // the values requested; the others keep theirs.
-  constexpr void discard_group(group_id group)
-  {
-    put_back([group](descriptor const& desc) { return desc.group == group; });
-  }
-
   // Puts the values applied of the `writable` parameters back into the
   // values requested; the others keep theirs.
   constexpr void discard_all()
   {
-    put_back([](descriptor const&) { return true; });
-  }
-
-  // Records the defaults of `group` as its values applied and leaves its
-  // values requested as they are: for an application that finds the values
-  // loaded for `group` invalid and builds what derives from it out of the
-  // defaults instead. The values loaded then wait, to be applied once
-  // corrected, or discarded.
-  constexpr void fall_back_to_defaults(group_id group)
-  {
     for (auto i = 0uz; i < count; ++i) {
-      auto const& desc = Schema.parameters[i];
-      if (desc.group == group) {
-        applied_.assign_cell(i, desc.def);
+      if (Schema.parameters[i].writable) {
+        values_.assign_cell(i, applied_.cell(i));
       }
     }
+  }
+
+  // Records the defaults of the inputs of every rule of `R...` that the
+  // values applied break as their values applied, pass after pass until
+  // every rule holds, and leaves the values requested as they are: for an
+  // application that finds the values loaded invalid and builds what derives
+  // from them out of the defaults instead. The values loaded then wait, to be
+  // applied once corrected, or discarded. Returns, for each rule, whether its
+  // inputs fell back. A pass checks every rule before it falls back any, so
+  // the order of the rules does not matter, and a rule that fell back holds
+  // from then on, its inputs staying at their defaults: there is at most one
+  // pass per rule. The program is ill-formed if a rule breaks on the
+  // defaults.
+  template<typename... R>
+    requires(some_rule<R, Schema> && ...)
+  constexpr std::array<bool, sizeof...(R)> fall_back_to_defaults(typelist<R...>)
+  {
+    static_assert(all_hold(typelist<R...>{}, image<Schema>{}),
+                  "a rule must hold on the defaults");
+
+    std::array<bool, sizeof...(R)> fell_back{};
+    for (auto pass = 0uz; pass <= sizeof...(R); ++pass) {
+      std::array<bool, sizeof...(R)> const broken{!R::holds(applied_)...};
+      if (std::ranges::none_of(broken, std::identity{})) break;
+
+      unroll<sizeof...(R)>([&]<std::size_t I>() {
+        if (!broken[I]) return;
+        using rule = typelist_at_t<typelist<R...>, I>;
+        for (auto const i : rule::in::indices) {
+          applied_.assign_cell(i, Schema.parameters[i].def);
+        }
+        fell_back[I] = true;
+      });
+    }
+    return fell_back;
   }
 
   // -- The images --
@@ -514,77 +464,45 @@ private:
     return a.cell(index) != b.cell(index);
   }
 
-  // Returns the parameters applied on command whose descriptor satisfies
-  // `pred` and whose value requested differs from the one applied.
-  template<typename Pred>
-  constexpr selection pending(Pred pred) const
+  // Returns the parameters applied on command whose value requested differs
+  // from the one applied.
+  constexpr selection pending() const
   {
     selection chosen;
     for (auto i = 0uz; i < count; ++i) {
-      chosen.set(i,
-                 !restarts_with(i)
-                     && pred(Schema.parameters[i])
-                     && differs(values_, applied_, i));
+      chosen.set(i, !restarts_with(i) && differs(values_, applied_, i));
     }
     return chosen;
   }
 
-  // Puts the values applied of the `writable` parameters whose descriptor
-  // satisfies `pred` back into the values requested.
-  template<typename Pred>
-  constexpr void put_back(Pred pred)
+  // Keeps the refusal for `reason` as `last_failure()` and returns it.
+  constexpr std::unexpected<apply_refusal> refuse(apply_refusal reason)
   {
-    for (auto i = 0uz; i < count; ++i) {
-      auto const& desc = Schema.parameters[i];
-      if (desc.writable && pred(desc)) {
-        values_.assign_cell(i, applied_.cell(i));
-      }
-    }
-  }
-
-  // Keeps the refusal of `group` for `reason` as `last_failure()` and returns
-  // it.
-  constexpr std::unexpected<apply_failure> refuse(apply_refusal reason,
-                                                  group_id group)
-  {
-    last_failure_ = apply_failure{reason, group};
-    return std::unexpected(*last_failure_);
+    last_failure_ = reason;
+    return std::unexpected(reason);
   }
 
   // Applies the parameters `chosen`, as `apply_all` describes.
   template<typename A>
-  constexpr std::expected<void, apply_failure>
-  commit(selection const& chosen, A& applier)
+  constexpr std::expected<void, apply_refusal> commit(selection const& chosen,
+                                                      A& applier)
   {
     if (chosen.none()) return {};
 
-    group_set touched;
     image<Schema> candidate = applied_;
     for (auto i = 0uz; i < count; ++i) {
-      if (chosen.test(i)) {
-        touched.set(group_slots[i]);
-        candidate.assign_cell(i, values_.cell(i));
-      }
+      if (chosen.test(i)) candidate.assign_cell(i, values_.cell(i));
     }
-
-    for (auto g = 0uz; g < groups.size(); ++g) {
-      if (touched.test(g) && !applier.check(groups[g], candidate)) {
-        return refuse(apply_refusal::invalid, groups[g]);
-      }
+    if (!applier.check(std::as_const(candidate))) {
+      return refuse(apply_refusal::invalid);
     }
 
     [[maybe_unused]] auto const guard = applier.lock();
-    for (auto g = 0uz; g < groups.size(); ++g) {
-      if (touched.test(g) && !applier.admit(groups[g])) {
-        return refuse(apply_refusal::not_admitted, groups[g]);
-      }
+    if (!applier.admit(std::as_const(applied_), std::as_const(candidate))) {
+      return refuse(apply_refusal::not_admitted);
     }
-    applied_ = candidate;
-    for (auto g = 0uz; g < groups.size(); ++g) {
-      if (touched.test(g)) {
-        applier.configure(groups[g], std::as_const(applied_));
-      }
-    }
+    auto const before = std::exchange(applied_, candidate);
+    applier.configure(before, std::as_const(applied_));
     return {};
   }
 };

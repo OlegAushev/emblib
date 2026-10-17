@@ -45,9 +45,9 @@ constexpr sdo_abort_code to_sdo_abort(settings::error error)
 // parameter that nothing applies on command is not accessed so, a check that
 // fails is a parameter incompatibility, and a change the application does not
 // admit now waits for another device state.
-constexpr sdo_abort_code to_sdo_abort(settings::apply_failure failure)
+constexpr sdo_abort_code to_sdo_abort(settings::apply_refusal refusal)
 {
-  switch (failure.reason) {
+  switch (refusal) {
   case settings::apply_refusal::unknown_parameter:
     return sdo_abort_code::object_not_found;
   case settings::apply_refusal::not_applicable:

@@ -16,35 +16,24 @@ using namespace emb::can::canopen;
 using enum od_value_type;
 namespace settings = emb::settings;
 
-enum class group : std::uint8_t {
-  drive,
-  motor,
-  prod
-};
-
-inline constexpr auto drive_phase_swap = settings::param(
-    "drive.phase_swap",
-    false,
-    {.group = group::drive, .apply = settings::apply_policy::on_command});
-inline constexpr auto motor_p = settings::param(
-    "motor.p",
-    std::int32_t{11},
-    {.min = std::int32_t{1}, .max = std::int32_t{64}, .group = group::motor});
+inline constexpr auto drive_phase_swap =
+    settings::param("drive.phase_swap",
+                    false,
+                    {.apply = settings::apply_policy::on_command});
+inline constexpr auto motor_p =
+    settings::param("motor.p",
+                    std::int32_t{11},
+                    {.min = std::int32_t{1}, .max = std::int32_t{64}});
 inline constexpr auto drive_freq =
     settings::param("drive.freq",
                     emb::units::hz_f32{10000.0f},
                     {.min = emb::units::hz_f32{1000.0f},
                      .max = emb::units::hz_f32{20000.0f},
-                     .group = group::drive,
                      .apply = settings::apply_policy::on_command});
 inline constexpr auto prod_serial =
-    settings::param("prod.serial",
-                    std::uint32_t{0},
-                    {.group = group::prod, .writable = false});
+    settings::param("prod.serial", std::uint32_t{0}, {.writable = false});
 inline constexpr auto prod_secret =
-    settings::param("prod.secret",
-                    std::uint32_t{0},
-                    {.group = group::prod, .expose = false});
+    settings::param("prod.secret", std::uint32_t{0}, {.expose = false});
 
 inline constexpr auto schema = settings::make_schema(drive_phase_swap,
                                                      motor_p,
@@ -66,7 +55,7 @@ struct test_applier {
 
   struct guard {};
 
-  constexpr bool check(settings::group_id, settings::image<schema> const&)
+  constexpr bool check(settings::image<schema> const&)
   {
     return true;
   }
@@ -76,12 +65,14 @@ struct test_applier {
     return {};
   }
 
-  constexpr bool admit(settings::group_id)
+  constexpr bool admit(settings::image<schema> const&,
+                       settings::image<schema> const&)
   {
     return !busy;
   }
 
-  constexpr void configure(settings::group_id, settings::image<schema> const&)
+  constexpr void configure(settings::image<schema> const&,
+                           settings::image<schema> const&)
   {
   }
 };
@@ -128,16 +119,13 @@ static_assert(to_sdo_abort(settings::error::type_mismatch)
 static_assert(to_sdo_abort(settings::error::out_of_range)
               == sdo_abort_code::value_range_exceeded);
 
-static_assert(to_sdo_abort(settings::apply_failure{
-                  settings::apply_refusal::not_applicable,
-                  {}})
+static_assert(to_sdo_abort(settings::apply_refusal::unknown_parameter)
+              == sdo_abort_code::object_not_found);
+static_assert(to_sdo_abort(settings::apply_refusal::not_applicable)
               == sdo_abort_code::unsupported_access);
-static_assert(
-    to_sdo_abort(settings::apply_failure{settings::apply_refusal::invalid, {}})
-    == sdo_abort_code::parameter_incompatibility);
-static_assert(to_sdo_abort(settings::apply_failure{
-                  settings::apply_refusal::not_admitted,
-                  {}})
+static_assert(to_sdo_abort(settings::apply_refusal::invalid)
+              == sdo_abort_code::parameter_incompatibility);
+static_assert(to_sdo_abort(settings::apply_refusal::not_admitted)
               == sdo_abort_code::state_error);
 
 static_assert(to_sdo_abort(settings::save_refusal::unapplied)
