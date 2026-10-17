@@ -65,4 +65,11 @@ static_assert(refused_as_invalid_calibration(with_fwd(sector::a, deg{30.0f})));
 static_assert(refused_as_invalid_calibration(with_rev(sector::ca, deg{30.0f})));
 static_assert(accepts(calibration_result{fwd, fwd}));
 
+// Two calibrations are equal if every angle of both directions is, compared
+// as a number: -0 equals +0.
+static_assert(calibration_result{fwd, rev} == calibration_result{fwd, rev});
+static_assert(calibration_result{fwd, rev} != with_fwd(sector::a, deg{0.0f}));
+static_assert(calibration_result{fwd, rev} != with_rev(sector::ca, deg{0.0f}));
+static_assert(with_fwd(sector::a, deg{-0.0f}) == with_fwd(sector::a, deg{0.0f}));
+
 } // namespace

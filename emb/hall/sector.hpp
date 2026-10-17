@@ -74,6 +74,9 @@ public:
   {
     return values_;
   }
+
+  friend constexpr bool operator==(sector_map const&,
+                                   sector_map const&) = default;
 private:
   container values_;
 };

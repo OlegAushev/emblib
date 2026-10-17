@@ -38,6 +38,9 @@ concept some_capture_timer = requires(T const t) {
 struct angle_sensor_config {
   emb::units::sec_f32 speed_timeconstant;
   calibration_result cal_result;
+
+  friend constexpr bool operator==(angle_sensor_config const&,
+                                   angle_sensor_config const&) = default;
 };
 
 constexpr std::expected<void, error> validate(angle_sensor_config const& conf)

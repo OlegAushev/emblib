@@ -11,6 +11,9 @@ namespace emb::hall {
 struct calibration_result {
   sector_map<emb::units::edeg_f32> fwd_sector_angles;
   sector_map<emb::units::edeg_f32> rev_sector_angles;
+
+  friend constexpr bool operator==(calibration_result const&,
+                                   calibration_result const&) = default;
 };
 
 // A calibrated angle lies in [`min_calibration_angle`,
