@@ -1,9 +1,13 @@
 #pragma once
 
+#include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <string>
 #include <string_view>
+#include <tuple>
+#include <vector>
 
 #include "../od.hpp"
 
@@ -182,37 +186,93 @@ constexpr std::string check_row(od_row<Ctx> const& row)
   return {};
 }
 
-template<typename Ctx, std::size_t N>
-constexpr std::string check_pairs(od_row<Ctx> const (&rows)[N])
+// Returns the positions of `rows` in the order that `less` puts the rows in,
+// rows that `less` does not tell apart in the order of `rows`.
+template<typename Ctx, std::size_t N, typename Less>
+constexpr std::array<std::size_t, N>
+sorted_positions(od_row<Ctx> const (&rows)[N], Less less)
 {
+  std::array<std::size_t, N> order{};
   for (auto i = 0uz; i < N; ++i) {
-    for (auto j = i + 1; j < N; ++j) {
-      auto const& first = rows[i];
-      auto const& second = rows[j];
+    order[i] = i;
+  }
+  std::ranges::sort(order, [&](std::size_t a, std::size_t b) {
+    return less(rows[a], rows[b]) || (!less(rows[b], rows[a]) && a < b);
+  });
+  return order;
+}
+
+// Checks, over the rows sorted by key, that keys are unique and that a record
+// has its index to itself. A record's row has subindex 00h, so it comes first
+// among the rows of its index, next to any other.
+template<typename Ctx, std::size_t N>
+constexpr std::string check_keys(od_row<Ctx> const (&rows)[N])
+{
+  auto const order = sorted_positions(rows, [](auto const& a, auto const& b) {
+    return a.key < b.key;
+  });
+  for (auto k = 1uz; k < N; ++k) {
+    auto const& first = rows[std::min(order[k - 1], order[k])];
+    auto const& second = rows[std::max(order[k - 1], order[k])];
+    if (first.key.index != second.key.index) continue;
+
+    if (!first.binding.layout.empty() || !second.binding.layout.empty()) {
+      return pair_error(first, second, "share the index of a record");
+    }
+    if (first.key == second.key) {
+      return pair_error(first, second, "have the same key");
+    }
+  }
+  return {};
+}
+
+// Checks, over the rows sorted by name, that no two rows share category,
+// subcategory and name.
+template<typename Ctx, std::size_t N>
+constexpr std::string check_names(od_row<Ctx> const (&rows)[N])
+{
+  auto const name_of = [](od_row<Ctx> const& row) {
+    return std::tuple{row.category, row.subcategory, row.name};
+  };
+  auto const order = sorted_positions(rows, [&](auto const& a, auto const& b) {
+    return name_of(a) < name_of(b);
+  });
+  for (auto k = 1uz; k < N; ++k) {
+    auto const& first = rows[std::min(order[k - 1], order[k])];
+    auto const& second = rows[std::max(order[k - 1], order[k])];
+    if (name_of(first) == name_of(second)) {
+      return pair_error(first, second, "have the same name");
+    }
+  }
+  return {};
+}
+
+// Checks that no two rows outside a catalog are served by the same handler
+// with the same argument, which a copied row would be. Rows of a catalog share
+// their handlers by design; a duplicate among them is reported per item. The
+// handlers are compared in pairs: pointers to different functions have no
+// order in constant evaluation, so they cannot be sorted.
+template<typename Ctx, std::size_t N>
+constexpr std::string check_handlers(od_row<Ctx> const (&rows)[N])
+{
+  std::array<std::size_t, N> plain{};
+  auto count = 0uz;
+  for (auto i = 0uz; i < N; ++i) {
+    if (rows[i].binding.catalog == nullptr) plain[count++] = i;
+  }
+
+  for (auto p = 0uz; p < count; ++p) {
+    for (auto q = p + 1; q < count; ++q) {
+      auto const& first = rows[plain[p]];
+      auto const& second = rows[plain[q]];
       auto const& a = first.binding;
       auto const& b = second.binding;
-
-      bool const record = !a.layout.empty() || !b.layout.empty();
-      if (record && (first.key.index == second.key.index)) {
-        return pair_error(first, second, "share the index of a record");
+      if (a.arg != b.arg) continue;
+      if (a.read != nullptr && a.read == b.read) {
+        return pair_error(first, second, "are read by the same handler");
       }
-      if (first.key == second.key) {
-        return pair_error(first, second, "have the same key");
-      }
-      if (first.category == second.category
-          && first.subcategory == second.subcategory
-          && first.name == second.name) {
-        return pair_error(first, second, "have the same name");
-      }
-      // Rows of a catalog share their handlers by design; a duplicate
-      // among them is reported per item below.
-      if (a.catalog == nullptr && b.catalog == nullptr && a.arg == b.arg) {
-        if (a.read != nullptr && a.read == b.read) {
-          return pair_error(first, second, "are read by the same handler");
-        }
-        if (a.write != nullptr && a.write == b.write) {
-          return pair_error(first, second, "are written by the same handler");
-        }
+      if (a.write != nullptr && a.write == b.write) {
+        return pair_error(first, second, "are written by the same handler");
       }
     }
   }
@@ -225,34 +285,34 @@ template<typename Ctx, std::size_t N>
 constexpr std::string check_coverage(od_row<Ctx> const (&rows)[N],
                                      od_catalog const& catalog)
 {
-  for (auto item = 0uz; item < catalog.names.size(); ++item) {
-    od_row<Ctx> const* first = nullptr;
-    od_row<Ctx> const* second = nullptr;
-    for (auto const& row : rows) {
-      if (row.binding.catalog != &catalog || row.binding.arg != item) {
-        continue;
-      }
-      if (first == nullptr) {
-        first = &row;
-      }
-      else if (second == nullptr) {
-        second = &row;
-      }
+  // The first two rows of each item; `check_row` keeps `arg` in the catalog.
+  std::vector<od_row<Ctx> const*> first(catalog.names.size(), nullptr);
+  std::vector<od_row<Ctx> const*> second(catalog.names.size(), nullptr);
+  for (auto const& row : rows) {
+    if (row.binding.catalog != &catalog) continue;
+    auto const item = std::size_t{row.binding.arg};
+    if (first[item] == nullptr) {
+      first[item] = &row;
     }
+    else if (second[item] == nullptr) {
+      second[item] = &row;
+    }
+  }
 
-    if (catalog.exposed[item] && first == nullptr) {
+  for (auto item = 0uz; item < catalog.names.size(); ++item) {
+    if (catalog.exposed[item] && first[item] == nullptr) {
       return item_error(catalog, item, "has no row");
     }
-    if (catalog.exposed[item] && second != nullptr) {
+    if (catalog.exposed[item] && second[item] != nullptr) {
       auto out = item_error(catalog, item, "has two rows: ");
-      append_row(out, *first);
+      append_row(out, *first[item]);
       out += " and ";
-      append_row(out, *second);
+      append_row(out, *second[item]);
       return out;
     }
-    if (!catalog.exposed[item] && first != nullptr) {
+    if (!catalog.exposed[item] && first[item] != nullptr) {
       auto out = item_error(catalog, item, "is not exposed but has a row: ");
-      append_row(out, *first);
+      append_row(out, *first[item]);
       return out;
     }
   }
@@ -260,20 +320,17 @@ constexpr std::string check_coverage(od_row<Ctx> const (&rows)[N],
 }
 
 // Checks the coverage of every catalog that a row serves an item of, once
-// each.
+// each, in the order of their first rows.
 template<typename Ctx, std::size_t N>
 constexpr std::string check_catalogs(od_row<Ctx> const (&rows)[N])
 {
-  for (auto r = 0uz; r < N; ++r) {
-    od_catalog const* const catalog = rows[r].binding.catalog;
-    if (catalog == nullptr) continue;
-
-    bool checked = false;
-    for (auto p = 0uz; p < r; ++p) {
-      if (rows[p].binding.catalog == catalog) checked = true;
+  std::vector<od_catalog const*> checked;
+  for (auto const& row : rows) {
+    od_catalog const* const catalog = row.binding.catalog;
+    if (catalog == nullptr || std::ranges::contains(checked, catalog)) {
+      continue;
     }
-    if (checked) continue;
-
+    checked.push_back(catalog);
     if (auto error = check_coverage(rows, *catalog); !error.empty()) {
       return error;
     }
@@ -283,8 +340,10 @@ constexpr std::string check_catalogs(od_row<Ctx> const (&rows)[N])
 
 // Returns an empty string if the rows make a valid dictionary, or else the
 // first rule they break: rules of a single row in source order, then those of
-// two rows, then catalog coverage. Returns an empty string as well if a
-// builder has already reported an error in some row.
+// two rows, keys before names before handlers, then catalog coverage. Returns
+// an empty string as well if a builder has already reported an error in some
+// row. Keys and names are checked over sorted rows, catalogs in one pass each;
+// only the rows outside a catalog are compared in pairs, for their handlers.
 template<typename Ctx, std::size_t N>
 constexpr std::string od_check(od_row<Ctx> const (&rows)[N])
 {
@@ -294,7 +353,9 @@ constexpr std::string od_check(od_row<Ctx> const (&rows)[N])
   for (auto const& row : rows) {
     if (auto error = check_row(row); !error.empty()) return error;
   }
-  if (auto error = check_pairs(rows); !error.empty()) return error;
+  if (auto error = check_keys(rows); !error.empty()) return error;
+  if (auto error = check_names(rows); !error.empty()) return error;
+  if (auto error = check_handlers(rows); !error.empty()) return error;
   return check_catalogs(rows);
 }
 

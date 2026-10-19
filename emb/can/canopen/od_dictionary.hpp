@@ -78,7 +78,8 @@ private:
 // binding has a layout becomes a record, any other an entry. The program is
 // ill-formed if the rows break a rule of `detail::od_check`; the diagnostic
 // names the rule and the rows that break it, and points at the caller's line.
-// Checking takes time quadratic in the number of rows.
+// Checking sorts the rows by key and by name; only the rows outside a catalog
+// are compared in pairs, for a handler they share.
 template<auto const& Rows>
   requires some_od_rows<std::remove_reference_t<decltype(Rows)>>
 consteval auto make_dictionary()
