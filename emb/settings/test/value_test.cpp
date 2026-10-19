@@ -34,7 +34,7 @@ static_assert(!some_parameter_type<std::int64_t>);
 static_assert(!some_parameter_type<char const*>);
 
 // The type-erased value is not itself a parameter type — which is what
-// keeps to_raw(value) from being shadowed by the typed template.
+// keeps to_cell(value) from being shadowed by the typed template.
 static_assert(!some_parameter_type<value>);
 
 struct wraps_a_double {
@@ -98,17 +98,17 @@ static_assert(std::same_as<scalar_t<float>, float>);
 static_assert(std::same_as<scalar_t<rpm>, float>);
 static_assert(std::same_as<scalar_t<pu>, float>);
 
-static_assert(type_of<bool> == value_type::boolean);
-static_assert(type_of<std::int32_t> == value_type::int32);
-static_assert(type_of<std::uint32_t> == value_type::uint32);
-static_assert(type_of<float> == value_type::float32);
-static_assert(type_of<rpm> == value_type::float32);
-static_assert(type_of<pu> == value_type::float32);
+static_assert(kind_of<bool> == scalar_kind::boolean);
+static_assert(kind_of<std::int32_t> == scalar_kind::int32);
+static_assert(kind_of<std::uint32_t> == scalar_kind::uint32);
+static_assert(kind_of<float> == scalar_kind::float32);
+static_assert(kind_of<rpm> == scalar_kind::float32);
+static_assert(kind_of<pu> == scalar_kind::float32);
 
-static_assert(held_type(value{true}) == value_type::boolean);
-static_assert(held_type(value{std::int32_t{-1}}) == value_type::int32);
-static_assert(held_type(value{std::uint32_t{1}}) == value_type::uint32);
-static_assert(held_type(value{1.0f}) == value_type::float32);
+static_assert(held_kind(value{true}) == scalar_kind::boolean);
+static_assert(held_kind(value{std::int32_t{-1}}) == scalar_kind::int32);
+static_assert(held_kind(value{std::uint32_t{1}}) == scalar_kind::uint32);
+static_assert(held_kind(value{1.0f}) == scalar_kind::float32);
 
 // -- Typed value <-> type-erased value --
 
@@ -142,43 +142,45 @@ consteval bool test_value_type_mismatch()
 
 consteval bool test_raw_round_trip()
 {
-  if (from_raw<bool>(to_raw(true)) != true) return false;
-  if (from_raw<bool>(to_raw(false)) != false) return false;
-  if (from_raw<std::int32_t>(to_raw(std::int32_t{-7})) != -7) return false;
-  if (from_raw<std::uint32_t>(to_raw(std::uint32_t{0xDEADBEEF})) != 0xDEADBEEF)
+  if (from_cell<bool>(to_cell(true)) != true) return false;
+  if (from_cell<bool>(to_cell(false)) != false) return false;
+  if (from_cell<std::int32_t>(to_cell(std::int32_t{-7})) != -7) return false;
+  if (from_cell<std::uint32_t>(to_cell(std::uint32_t{0xDEADBEEF}))
+      != 0xDEADBEEF)
     return false;
-  if (from_raw<float>(to_raw(-2.5f)) != -2.5f) return false;
-  if (from_raw<rpm>(to_raw(rpm{1500.0f})) != rpm{1500.0f}) return false;
-  if (from_raw<pu>(to_raw(pu{0.25f})) != pu{0.25f}) return false;
-  if (to_raw(public_field{-2.5f}) != to_raw(-2.5f)) return false;
+  if (from_cell<float>(to_cell(-2.5f)) != -2.5f) return false;
+  if (from_cell<rpm>(to_cell(rpm{1500.0f})) != rpm{1500.0f}) return false;
+  if (from_cell<pu>(to_cell(pu{0.25f})) != pu{0.25f}) return false;
+  if (to_cell(public_field{-2.5f}) != to_cell(-2.5f)) return false;
   return true;
 }
 
 consteval bool test_raw_bool_is_not_a_bit_cast()
 {
-  if (to_raw(true) != 1u) return false;
-  if (to_raw(false) != 0u) return false;
+  if (to_cell(true) != 1u) return false;
+  if (to_cell(false) != 0u) return false;
   // Any non-zero cell reads as true: a corrupted cell cannot produce a bool
   // that is neither true nor false.
-  if (from_raw<bool>(0xFFFFFFFFu) != true) return false;
-  if (from_raw<bool>(2u) != true) return false;
+  if (from_cell<bool>(0xFFFFFFFFu) != true) return false;
+  if (from_cell<bool>(2u) != true) return false;
   return true;
 }
 
 consteval bool test_erased_raw_conversions()
 {
-  if (to_raw(value{std::int32_t{-1}}) != 0xFFFFFFFFu) return false;
-  if (to_raw(value{true}) != 1u) return false;
+  if (to_cell(value{std::int32_t{-1}}) != 0xFFFFFFFFu) return false;
+  if (to_cell(value{true}) != 1u) return false;
 
-  if (to_value(value_type::int32, 0xFFFFFFFFu) != value{std::int32_t{-1}})
+  if (to_value(scalar_kind::int32, 0xFFFFFFFFu) != value{std::int32_t{-1}})
     return false;
-  if (to_value(value_type::uint32, 0xFFFFFFFFu) != value{0xFFFFFFFFu})
+  if (to_value(scalar_kind::uint32, 0xFFFFFFFFu) != value{0xFFFFFFFFu})
     return false;
-  if (to_value(value_type::boolean, 5u) != value{true}) return false;
-  if (to_value(value_type::float32, to_raw(1.5f)) != value{1.5f}) return false;
+  if (to_value(scalar_kind::boolean, 5u) != value{true}) return false;
+  if (to_value(scalar_kind::float32, to_cell(1.5f)) != value{1.5f})
+    return false;
 
   // A cell survives the round trip through the erased form.
-  auto const v = to_value(value_type::float32, to_raw(rpm{750.0f}));
+  auto const v = to_value(scalar_kind::float32, to_cell(rpm{750.0f}));
   if (from_value<rpm>(v) != rpm{750.0f}) return false;
 
   return true;
@@ -188,45 +190,48 @@ consteval bool test_erased_raw_conversions()
 
 consteval bool test_in_range()
 {
-  constexpr raw_value quiet_nan = 0x7FC00000u;
+  constexpr cell quiet_nan = 0x7FC00000u;
 
   // As a raw word, -5 is above any positive bound; as int32 it is not.
-  auto const lo = to_raw(std::int32_t{-10});
-  auto const hi = to_raw(std::int32_t{10});
-  if (!in_range(value_type::int32, to_raw(std::int32_t{-5}), lo, hi))
+  auto const lo = to_cell(std::int32_t{-10});
+  auto const hi = to_cell(std::int32_t{10});
+  if (!in_range(scalar_kind::int32, to_cell(std::int32_t{-5}), lo, hi))
     return false;
-  if (in_range(value_type::int32, to_raw(std::int32_t{-11}), lo, hi))
+  if (in_range(scalar_kind::int32, to_cell(std::int32_t{-11}), lo, hi))
     return false;
-  if (in_range(value_type::int32, to_raw(std::int32_t{11}), lo, hi))
+  if (in_range(scalar_kind::int32, to_cell(std::int32_t{11}), lo, hi))
     return false;
 
-  if (!in_range(value_type::uint32, 5u, 1u, 10u)) return false;
-  if (in_range(value_type::uint32, 11u, 1u, 10u)) return false;
+  if (!in_range(scalar_kind::uint32, 5u, 1u, 10u)) return false;
+  if (in_range(scalar_kind::uint32, 11u, 1u, 10u)) return false;
 
-  auto const flo = to_raw(-1.0f);
-  auto const fhi = to_raw(1.0f);
-  if (!in_range(value_type::float32, to_raw(0.5f), flo, fhi)) return false;
-  if (!in_range(value_type::float32, to_raw(-1.0f), flo, fhi)) return false;
-  if (in_range(value_type::float32, to_raw(1.5f), flo, fhi)) return false;
+  auto const flo = to_cell(-1.0f);
+  auto const fhi = to_cell(1.0f);
+  if (!in_range(scalar_kind::float32, to_cell(0.5f), flo, fhi)) return false;
+  if (!in_range(scalar_kind::float32, to_cell(-1.0f), flo, fhi)) return false;
+  if (in_range(scalar_kind::float32, to_cell(1.5f), flo, fhi)) return false;
 
   // A NaN restored from a corrupted cell is out of range whatever the
   // bounds are.
-  if (in_range(value_type::float32, quiet_nan, flo, fhi)) return false;
+  if (in_range(scalar_kind::float32, quiet_nan, flo, fhi)) return false;
 
   // A bool cell holds 0 or 1; the default bounds admit both.
-  if (!in_range(value_type::boolean, to_raw(true), to_raw(false), to_raw(true)))
+  if (!in_range(scalar_kind::boolean,
+                to_cell(true),
+                to_cell(false),
+                to_cell(true)))
     return false;
-  // Any other word in a bool cell is corruption, even though from_raw
+  // Any other word in a bool cell is corruption, even though from_cell
   // would read it as true.
-  if (in_range(value_type::boolean, 0xFFu, to_raw(false), to_raw(true)))
+  if (in_range(scalar_kind::boolean, 0xFFu, to_cell(false), to_cell(true)))
     return false;
 
   // less_equal is the primitive in_range is built from.
-  if (!less_equal(value_type::int32, to_raw(std::int32_t{-5}), to_raw(5)))
+  if (!less_equal(scalar_kind::int32, to_cell(std::int32_t{-5}), to_cell(5)))
     return false;
-  if (less_equal(value_type::uint32, 6u, 5u)) return false;
-  if (less_equal(value_type::float32, quiet_nan, to_raw(0.0f))) return false;
-  if (less_equal(value_type::float32, to_raw(0.0f), quiet_nan)) return false;
+  if (less_equal(scalar_kind::uint32, 6u, 5u)) return false;
+  if (less_equal(scalar_kind::float32, quiet_nan, to_cell(0.0f))) return false;
+  if (less_equal(scalar_kind::float32, to_cell(0.0f), quiet_nan)) return false;
 
   return true;
 }

@@ -134,18 +134,18 @@ consteval bool test_unchanged_write()
 {
   img values;
   constexpr auto speed = *schema.index_of("drive.runout_speed");
-  constexpr auto held = to_raw(rpm{100.0f});
+  constexpr auto held = to_cell(rpm{100.0f});
 
   // Writing what a cell already holds is accepted and leaves the cell as it
   // was, whichever path the write takes.
   if (!values.set<drive_runout_speed>(rpm{100.0f})) return false;
-  if (values.cell(speed) != held) return false;
+  if (values.cell_at(speed) != held) return false;
   if (!values.set_at(speed, value{100.0f})) return false;
-  if (values.cell(speed) != held) return false;
+  if (values.cell_at(speed) != held) return false;
   if (!values.restore_default<drive_runout_speed>()) return false;
-  if (values.cell(speed) != held) return false;
+  if (values.cell_at(speed) != held) return false;
   if (!values.restore_default_at(speed)) return false;
-  if (values.cell(speed) != held) return false;
+  if (values.cell_at(speed) != held) return false;
 
   // A value that differs is written; the same value again is accepted.
   if (!values.set<motor_p>(std::int32_t{4})) return false;
@@ -168,14 +168,14 @@ consteval bool test_cells()
   img values;
   constexpr auto p = *schema.index_of("motor.p");
 
-  if (values.cell(p) != to_raw(std::int32_t{11})) return false;
+  if (values.cell_at(p) != to_cell(std::int32_t{11})) return false;
 
   // A loader assigns without validation.
-  values.assign_cell(p, to_raw(std::int32_t{4}));
+  values.assign_cell(p, to_cell(std::int32_t{4}));
   if (values.get<motor_p>() != 4) return false;
 
   if (!values.set<motor_p>(std::int32_t{8})) return false;
-  values.restore_defaults();
+  values.assign_defaults();
   if (values.get<motor_p>() != 11) return false;
 
   return true;

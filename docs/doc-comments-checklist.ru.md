@@ -168,14 +168,14 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `detail::slot_ring`
   - [x] `store`
 - [x] `emb/settings/value.hpp`
-  - [x] `value_type`
-  - [x] `value`, `raw_value`
+  - [x] `scalar_kind`
+  - [x] `value`, `cell`
   - [x] `some_value`, `some_wrapped_value`, `some_parameter_type`
-  - [x] `scalar_t`, `type_of` (`detail::scalar_of` и `detail::tag_of` без
-    комментариев: их покрывают псевдоним и переменная)
-  - [x] `held_type`
-  - [x] `to_value`, `from_value`, `to_raw`, `from_raw` (у `to_value` и
-    `to_raw` по две перегрузки, у каждой свой комментарий)
+  - [x] `scalar_t`, `kind_of` (`detail::scalar_of` без комментария: его
+    покрывает псевдоним)
+  - [x] `held_kind`
+  - [x] `to_value`, `from_value`, `to_cell`, `from_cell` (у `to_value` и
+    `to_cell` по две перегрузки, у каждой свой комментарий)
   - [x] `less_equal`, `in_range`
 - [x] `emb/signal.hpp` — только подключает заголовки `emb/signal/`, сущностей нет
 - [x] `emb/signal/affine.hpp`

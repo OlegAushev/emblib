@@ -194,7 +194,7 @@ struct parameter {
               && desc == Decl.desc),
       detail::redeclared_parameter_message<name>());
 
-  static constexpr type default_value = from_raw<type>(desc.def);
+  static constexpr type default_value = from_cell<type>(desc.def);
 };
 
 } // namespace settings

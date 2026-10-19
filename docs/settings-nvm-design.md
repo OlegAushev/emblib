@@ -80,9 +80,9 @@ itself:
 ```cpp
 struct descriptor {
   std::string_view name;
-  std::uint32_t    id;        // hash of name mixed with the type code
-  value_type       type;
-  raw_value        def, min, max;  // cells, ordered under `type`
+  std::uint32_t    id;        // hash of name mixed with `kind`
+  scalar_kind      kind;
+  cell             def, min, max;  // ordered under `kind`
   apply_policy     apply;     // on_command / on_restart
   bool             writable;  // may ever change at run time
   bool             expose;    // meant for external access at all
@@ -122,7 +122,7 @@ in `make_schema`.
 
 No offset and no size: every value occupies one four-byte cell, so a
 parameter's index *is* its position in the RAM image, and the image is a
-plain `std::array<raw_value, N>`. A bool costs three bytes of padding and
+plain `std::array<cell, N>`. A bool costs three bytes of padding and
 buys an image with no layout arithmetic and a record whose cells need no
 per-entry size.
 
@@ -309,11 +309,14 @@ or another one.
 - Cell order is irrelevant: loading is a lookup by `id`. Adding, removing or
   reordering parameters is not a breaking change, and no schema version is
   needed in the record — the directory *is* the migration mechanism.
-- `id = fnv1a32_continue(fnv1a32(name), type_code)`. Retyping a parameter
-  under the same name would otherwise pass unnoticed — same four bytes, same
-  id, garbage in the control loop. Mixing the type in makes the old cell
-  simply not match, and the parameter comes up with its default. Uniqueness
-  of `id` within a section is a compile-time assert.
+- `id = fnv1a32_continue(fnv1a32(name), kind)`, `kind` being the
+  parameter's `scalar_kind`. A new scalar under the same name would
+  otherwise pass unnoticed — same four bytes, same id, garbage in the control
+  loop. Mixing the kind in makes the old cell simply not match, and the
+  parameter comes up with its default. A new type of the same kind, e.g. a
+  new unit, keeps the id, and the old number is read in the new unit: such a
+  change renames the parameter. Uniqueness of `id` within a section is a
+  compile-time assert.
 - `seq` is compared modulo 2^32 (`int32_t(a - b) > 0`), so wrap is safe.
 
 ### Slots
@@ -565,7 +568,7 @@ take effect when applied.
 external/emblib/emb/
   meta/fixed_string.hpp        [done] structural string for NTTP names
   nvm/storage.hpp              [done] block storage concept + is_erased
-  settings/value.hpp           [done] value_type, value, cell conversions
+  settings/value.hpp           [done] scalar_kind, value, cell, conversions
   settings/param.hpp           [done] param(): def/min/max, writable,
                                       apply_policy, expose
   settings/schema.hpp          [done] make_schema, `parameter` by
@@ -736,7 +739,7 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   function rather than a `value()` member makes wrapping an explicit opt-in
   and lets a wrapper keep its number in a public field, as a structural
   type must.
-- **`from_raw` is total, `from_value` is not.** A cell read back from
+- **`from_cell` is total, `from_value` is not.** A cell read back from
   storage may hold any bit pattern and must yield a value rather than a
   trap: a bool is any-non-zero rather than a `bit_cast`, and a float may
   come back NaN — which the range check then rejects, since NaN compares
@@ -763,7 +766,7 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   through a control cycle.
 - **A bool cell holds 0 or 1.** `less_equal` compares bool cells as words,
   so a cell holding anything else is out of range and falls back to the
-  default — even though `from_raw` would read it as true. Totality and
+  default — even though `from_cell` would read it as true. Totality and
   range checking are separate mechanisms and both are wanted.
 - **The image holds no atomics.** It is plain data with typed and erased
   access, which keeps it usable in constant expressions — and therefore
@@ -838,7 +841,7 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   leaves the image saying the old calibration while the sensor keeps the
   new one, and once nothing else differs, no flag says so.
 - **The erased accessors are spelled apart from the typed ones** —
-  `get_at`/`set_at` by index, `get`/`set` by declaration, `cell`/
+  `get_at`/`set_at` by index, `get`/`set` by declaration, `cell_at`/
   `assign_cell` for raw cells. Not merely different addressing: the
   by-index path enforces `writable` and the typed path does not, and one
   name for two promises
@@ -1233,6 +1236,19 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   applies one through `apply_calibration`. `hall.speed_tc` may change while
   the drive runs, like the filters of the temperatures, and the rule and the
   drive read the calibration with one reader.
+- **The scalar of a parameter is its `scalar_kind`, its encoding a `cell`**
+  (2026-10-19). The tag was `value_type`, while the same header named a
+  wrapper's scalar `T::value_type`; the descriptor's `type` named the scalar
+  while `declaration<T>::type` and `parameter::type` named the C++ type; and
+  the four-byte encoding was `raw_value`, converted by `to_raw` and
+  `from_raw`, while every comment called it a cell. `scalar_kind`,
+  `kind_of`, `held_kind` and `descriptor::kind` now name the scalar, and
+  `cell`, `to_cell`, `from_cell` and `image::cell_at` the encoding, so
+  "type" in `emb::settings` is the C++ type alone. The section's image of
+  the values requested is `requested()`, beside `applied()` and `stored()`,
+  and `image::assign_defaults` writes without checks, as `assign_cell` does.
+  Records keep matching: the identifier hashes the value of the enumerator,
+  not its name.
 
 ## 10a. What changed for an operator
 

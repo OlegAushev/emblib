@@ -33,8 +33,8 @@ namespace settings {
 // matched to parameters by identifier, not by position: adding, removing or
 // reordering parameters leaves the format as it is, and a record written
 // with another schema still loads cell by cell. The identifier is derived
-// from the name and the `value_type` of the parameter, so a parameter that
-// is renamed or changes its `value_type` no longer matches its old cell and
+// from the name and the `scalar_kind` of the parameter, so a parameter that
+// is renamed or changes its `scalar_kind` no longer matches its old cell and
 // loads with its default value.
 //
 // The body, i.e. the header and the cells (`record_body_size` bytes), and
@@ -206,7 +206,7 @@ constexpr std::size_t encode_record(std::span<std::byte> dest,
   for (auto i = 0uz; i < count; ++i) {
     auto const at = record_header_size + (i * record_cell_size);
     detail::put_u32(dest, at, Schema.parameters[i].id);
-    detail::put_u32(dest, at + 4, values.cell(i));
+    detail::put_u32(dest, at + 4, values.cell_at(i));
   }
 
   detail::put_u32(dest, size - 8, magic);
@@ -287,12 +287,12 @@ constexpr load_report decode_record(std::span<std::byte const> src,
   report.stored = header->count;
   report.schema_matched = (header->schema_id == schema_id<Schema>());
 
-  values.restore_defaults();
+  values.assign_defaults();
 
   for (auto i = 0uz; i < header->count; ++i) {
     auto const at = record_header_size + (i * record_cell_size);
     auto const id = detail::get_u32(src, at);
-    auto const cell = detail::get_u32(src, at + 4);
+    auto const c = detail::get_u32(src, at + 4);
 
     auto const index = Schema.find(id);
     if (!index) {
@@ -301,12 +301,12 @@ constexpr load_report decode_record(std::span<std::byte const> src,
     }
 
     auto const& desc = Schema.parameters[*index];
-    if (!in_range(desc.type, cell, desc.min, desc.max)) {
+    if (!in_range(desc.kind, c, desc.min, desc.max)) {
       ++report.rejected;
       continue;
     }
 
-    values.assign_cell(*index, cell);
+    values.assign_cell(*index, c);
     ++report.loaded;
   }
 

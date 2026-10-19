@@ -73,23 +73,23 @@ static_assert(parameter<schema, drive_stopping_torque>::default_value
 
 // -- Descriptor contents --
 
-static_assert(schema.parameters[1].type == value_type::float32);
-static_assert(schema.parameters[1].min == to_raw(0.0f));
-static_assert(schema.parameters[1].max == to_raw(5000.0f));
+static_assert(schema.parameters[1].kind == scalar_kind::float32);
+static_assert(schema.parameters[1].min == to_cell(0.0f));
+static_assert(schema.parameters[1].max == to_cell(5000.0f));
 static_assert(schema.parameters[1].apply == apply_policy::on_command);
 static_assert(schema.parameters[1].writable);
 static_assert(schema.parameters[1].expose);
 
-static_assert(schema.parameters[2].type == value_type::int32);
+static_assert(schema.parameters[2].kind == scalar_kind::int32);
 static_assert(schema.parameters[2].apply == apply_policy::on_restart);
 
 // A wrapper's own limits become the parameter's bounds.
-static_assert(schema.parameters[3].min == to_raw(0.0f));
-static_assert(schema.parameters[3].max == to_raw(1.0f));
+static_assert(schema.parameters[3].min == to_cell(0.0f));
+static_assert(schema.parameters[3].max == to_cell(1.0f));
 
 // Bounds left out are the widest the type admits.
-static_assert(schema.parameters[4].min == to_raw(std::uint32_t{0}));
-static_assert(schema.parameters[4].max == to_raw(std::uint32_t{60000}));
+static_assert(schema.parameters[4].min == to_cell(std::uint32_t{0}));
+static_assert(schema.parameters[4].max == to_cell(std::uint32_t{60000}));
 static_assert(!schema.parameters[4].writable);
 static_assert(!schema.parameters[4].expose);
 

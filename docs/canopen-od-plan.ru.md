@@ -328,7 +328,7 @@ struct od_settings {
 };
 ```
 
-- Тип объекта берётся из схемы (`od_type_of(settings::value_type)`).
+- Тип объекта берётся из типа параметра (`od_type_of<settings::scalar_t<T>>`).
 - Ошибки аксессоров маппятся так же, как в нынешнем `write_parameter`:
   `unknown_parameter` → `object_not_found`, `read_only` →
   `write_to_read_only`, `type_mismatch` → `data_type_mismatch`,

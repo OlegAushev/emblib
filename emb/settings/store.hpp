@@ -309,7 +309,7 @@ public:
       seen.whole.reset(*slot);
     }
 
-    values.restore_defaults();
+    values.assign_defaults();
     return result;
   }
 

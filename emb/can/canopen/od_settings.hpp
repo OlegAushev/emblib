@@ -248,17 +248,17 @@ class od_settings {
   static constexpr od_read_result read_default(context_type&,
                                                std::uint16_t index)
   {
-    return as_od(settings::to_value(desc(index).type, desc(index).def));
+    return as_od(settings::to_value(desc(index).kind, desc(index).def));
   }
 
   static constexpr od_read_result read_min(context_type&, std::uint16_t index)
   {
-    return as_od(settings::to_value(desc(index).type, desc(index).min));
+    return as_od(settings::to_value(desc(index).kind, desc(index).min));
   }
 
   static constexpr od_read_result read_max(context_type&, std::uint16_t index)
   {
-    return as_od(settings::to_value(desc(index).type, desc(index).max));
+    return as_od(settings::to_value(desc(index).kind, desc(index).max));
   }
 
   static constexpr od_read_result read_policy(context_type&,

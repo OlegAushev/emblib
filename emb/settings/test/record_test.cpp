@@ -380,7 +380,7 @@ consteval bool test_a_value_outside_todays_range_is_refused()
   // Qualified: emb::detail and emb::settings::detail are both in scope
   // through the using-directives above.
   namespace bytes = settings::detail;
-  bytes::put_u32(buffer, at + 4, to_raw(std::int32_t{1000}));
+  bytes::put_u32(buffer, at + 4, to_cell(std::int32_t{1000}));
   bytes::put_u32(buffer,
                  buffer.size() - 4,
                  bytes::crc32(std::span<std::byte const>{buffer}.first(

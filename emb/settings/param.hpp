@@ -29,19 +29,22 @@ enum class apply_policy : std::uint8_t {
 
 // Type-erased description of one parameter, the same structure whatever the
 // type of the parameter. `def`, `min` and `max` are cells encoded under
-// `type`: the default value and the bounds, inclusive, of the values the
+// `kind`: the default value and the bounds, inclusive, of the values the
 // parameter accepts.
 struct descriptor {
   std::string_view name;
   // Identifier that matches a stored cell to the parameter, unique within a
-  // schema. It depends on `name` and `type` only: renaming or retyping the
-  // parameter changes it, and a value stored before no longer matches, so
-  // the parameter is loaded with its default.
+  // schema. It depends on `name` and `kind` only: renaming the parameter or
+  // changing its scalar kind changes it, and a value stored before no longer
+  // matches, so the parameter is loaded with its default. Changing its type
+  // within the kind, e.g. its unit, keeps it, and the value stored before is
+  // read as the new type: a parameter whose stored values would mean
+  // something else is renamed.
   std::uint32_t id;
-  value_type type;
-  raw_value def;
-  raw_value min;
-  raw_value max;
+  scalar_kind kind;
+  cell def;
+  cell min;
+  cell max;
   apply_policy apply;
   // Whether a transport may change the value. If `false`, `image::set_at`
   // and `image::restore_default_at` fail with `error::read_only`, while the
@@ -86,14 +89,14 @@ constexpr T highest()
   return T(std::numeric_limits<scalar_t<T>>::max());
 }
 
-// Returns the identifier of the parameter named `name` of type `type`: the
-// 32-bit FNV-1a hash of the bytes of `name` followed by the byte
-// `std::to_underlying(type)`. Nothing else enters it, so a stored value still
+// Returns the identifier of the parameter named `name` of the scalar kind
+// `kind`: the 32-bit FNV-1a hash of the bytes of `name` followed by the byte
+// `std::to_underlying(kind)`. Nothing else enters it, so a stored value still
 // matches its parameter after a change of default, bounds, apply policy,
-// flags or position in the schema, and no longer does after a change of name
-// or type. Records hold these identifiers: a change to the computation leaves
-// every stored value unmatched.
-constexpr std::uint32_t identify(std::string_view name, value_type type)
+// flags, position in the schema or type within the kind, and no longer does
+// after a change of name or kind. Records hold these identifiers: a change to
+// the computation leaves every stored value unmatched.
+constexpr std::uint32_t identify(std::string_view name, scalar_kind kind)
 {
   std::uint32_t h = 0x811C9DC5u;
   auto const mix = [&h](std::uint8_t byte) {
@@ -103,7 +106,7 @@ constexpr std::uint32_t identify(std::string_view name, value_type type)
   for (char c : name) {
     mix(static_cast<std::uint8_t>(c));
   }
-  mix(std::to_underlying(type));
+  mix(std::to_underlying(kind));
   return h;
 }
 
@@ -179,21 +182,21 @@ consteval declaration<T> param(std::string_view name,
                                T def,
                                options<T> opts = {})
 {
-  constexpr value_type type = type_of<T>;
-  auto const min = to_raw(opts.min);
-  auto const max = to_raw(opts.max);
+  constexpr scalar_kind kind = kind_of<T>;
+  auto const min = to_cell(opts.min);
+  auto const max = to_cell(opts.max);
 
-  if (!less_equal(type, min, max)) {
+  if (!less_equal(kind, min, max)) {
     detail::parameter_min_above_max();
   }
-  if (!in_range(type, to_raw(def), min, max)) {
+  if (!in_range(kind, to_cell(def), min, max)) {
     detail::parameter_default_outside_range();
   }
 
   return {descriptor{.name = name,
-                     .id = detail::identify(name, type),
-                     .type = type,
-                     .def = to_raw(def),
+                     .id = detail::identify(name, kind),
+                     .kind = kind,
+                     .def = to_cell(def),
                      .min = min,
                      .max = max,
                      .apply = opts.apply,

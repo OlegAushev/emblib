@@ -6,6 +6,7 @@
 #include <concepts>
 #include <optional>
 #include <type_traits>
+#include <utility>
 #include <variant>
 
 #include <cstdint>
@@ -13,13 +14,13 @@
 namespace emb {
 namespace settings {
 
-// The scoped enumeration `value_type` names the scalar types a parameter may
+// The scoped enumeration `scalar_kind` names the scalar types a parameter may
 // have: `bool`, `std::int32_t`, `std::uint32_t` and `float`. The value of
 // each enumerator is the index of its type among the alternatives of `value`.
 // Changing the value of an enumerator changes the identifier of every
-// parameter of its type, so the cells stored before no longer match and those
+// parameter of its kind, so the cells stored before no longer match and those
 // parameters load their defaults.
-enum class value_type : std::uint8_t {
+enum class scalar_kind : std::uint8_t {
   boolean,
   int32,
   uint32,
@@ -31,8 +32,8 @@ enum class value_type : std::uint8_t {
 using value = std::variant<bool, std::int32_t, std::uint32_t, float>;
 
 // Type of a cell, i.e. the four-byte encoding of the value of one parameter,
-// whatever the type of the parameter. `to_raw` defines the encoding.
-using raw_value = std::uint32_t;
+// whatever the type of the parameter. `to_cell` defines the encoding.
+using cell = std::uint32_t;
 
 // The concept `some_value<T>` is satisfied if and only if `T` is exactly one
 // of the alternatives of `value`: `bool`, `std::int32_t`, `std::uint32_t` or
@@ -40,14 +41,16 @@ using raw_value = std::uint32_t;
 template<typename T>
 concept some_value = alternative_of<T, value>;
 
-// value_type's codes are the variant's alternative indices; held_type()
-// below is a cast, and the two cannot silently drift apart.
+// The enumerators of `scalar_kind` are the alternative indices of `value`, so
+// `kind_of` and `held_kind` below are casts of an index and the two cannot
+// silently drift apart.
 static_assert(std::variant_size_v<value> == 4);
 static_assert(std::same_as<std::variant_alternative_t<0, value>, bool>);
 static_assert(std::same_as<std::variant_alternative_t<1, value>, std::int32_t>);
 static_assert(
     std::same_as<std::variant_alternative_t<2, value>, std::uint32_t>);
 static_assert(std::same_as<std::variant_alternative_t<3, value>, float>);
+static_assert(std::to_underlying(scalar_kind::float32) == 3);
 
 // The concept `some_wrapped_value<T>` is satisfied if and only if `T` wraps
 // one scalar that satisfies `some_value` and can be rebuilt from it:
@@ -89,23 +92,6 @@ struct scalar_of<T> {
   using type = typename T::value_type;
 };
 
-template<some_value T>
-consteval value_type tag_of()
-{
-  if constexpr (std::same_as<T, bool>) {
-    return value_type::boolean;
-  }
-  else if constexpr (std::same_as<T, std::int32_t>) {
-    return value_type::int32;
-  }
-  else if constexpr (std::same_as<T, std::uint32_t>) {
-    return value_type::uint32;
-  }
-  else {
-    return value_type::float32;
-  }
-}
-
 } // namespace detail
 
 // Scalar type in which a parameter of type `T` is stored and transported:
@@ -113,15 +99,16 @@ consteval value_type tag_of()
 template<some_parameter_type T>
 using scalar_t = typename detail::scalar_of<T>::type;
 
-// The `value_type` of a parameter of type `T`, i.e. the enumerator that
+// The `scalar_kind` of a parameter of type `T`, i.e. the enumerator that
 // names `scalar_t<T>`.
 template<some_parameter_type T>
-inline constexpr value_type type_of = detail::tag_of<scalar_t<T>>();
+inline constexpr scalar_kind kind_of =
+    static_cast<scalar_kind>(value(std::in_place_type<scalar_t<T>>).index());
 
-// Returns the `value_type` of the alternative that `v` holds.
-constexpr value_type held_type(value const& v)
+// Returns the `scalar_kind` of the alternative that `v` holds.
+constexpr scalar_kind held_kind(value const& v)
 {
-  return static_cast<value_type>(v.index());
+  return static_cast<scalar_kind>(v.index());
 }
 
 // -- Typed value <-> type-erased value --
@@ -155,10 +142,10 @@ constexpr std::optional<T> from_value(value const& v)
 // -- Typed value <-> storage cell --
 
 // Returns the cell that encodes `v`: `false` and `true` as 0 and 1, any other
-// scalar as its bit pattern, as if by `std::bit_cast<raw_value>`. A wrapper
-// is encoded as its scalar, `value_of(v)`.
+// scalar as its bit pattern, as if by `std::bit_cast<cell>`. A wrapper is
+// encoded as its scalar, `value_of(v)`.
 template<some_parameter_type T>
-constexpr raw_value to_raw(T const& v)
+constexpr cell to_cell(T const& v)
 {
   using scalar = scalar_t<T>;
   scalar const s = [&] {
@@ -171,34 +158,28 @@ constexpr raw_value to_raw(T const& v)
   }();
 
   if constexpr (std::same_as<scalar, bool>) {
-    return s ? raw_value{1} : raw_value{0};
-  }
-  else if constexpr (std::same_as<scalar, raw_value>) {
-    return s;
+    return s ? cell{1} : cell{0};
   }
   else {
-    return std::bit_cast<raw_value>(s);
+    return std::bit_cast<cell>(s);
   }
 }
 
-// Decodes the cell `r` as a value of the parameter type `T`, i.e. the inverse
-// of `to_raw`. Every bit pattern decodes to a scalar: for `bool`, any non-zero
-// `r` decodes as `true`; for any other scalar, `r` is its bit pattern, so a
-// `float` may decode as NaN. If `T` is a wrapper, returns `T` constructed
-// from that scalar.
+// Decodes the cell `c` as a value of the parameter type `T`, i.e. the inverse
+// of `to_cell`. Every bit pattern decodes to a scalar: for `bool`, any
+// non-zero `c` decodes as `true`; for any other scalar, `c` is its bit
+// pattern, so a `float` may decode as NaN. If `T` is a wrapper, returns `T`
+// constructed from that scalar.
 template<some_parameter_type T>
-constexpr T from_raw(raw_value r)
+constexpr T from_cell(cell c)
 {
   using scalar = scalar_t<T>;
-  scalar const s = [r] {
+  scalar const s = [c] {
     if constexpr (std::same_as<scalar, bool>) {
-      return r != 0;
-    }
-    else if constexpr (std::same_as<scalar, raw_value>) {
-      return r;
+      return c != 0;
     }
     else {
-      return std::bit_cast<scalar>(r);
+      return std::bit_cast<scalar>(c);
     }
   }();
   return T(s);
@@ -206,58 +187,57 @@ constexpr T from_raw(raw_value r)
 
 // -- Type-erased value <-> storage cell --
 
-// Returns the cell that encodes `v`, i.e. `to_raw` applied to the scalar that
-// `v` holds.
-constexpr raw_value to_raw(value const& v)
+// Returns the cell that encodes `v`, i.e. `to_cell` applied to the scalar
+// that `v` holds.
+constexpr cell to_cell(value const& v)
 {
-  return v.visit([](auto const& x) { return to_raw(x); });
+  return v.visit([](auto const& x) { return to_cell(x); });
 }
 
-// Decodes the cell `r` as a value of the scalar type that `type` names, as
-// `from_raw` does, and returns it in type-erased form.
-constexpr value to_value(value_type type, raw_value r)
+// Decodes the cell `c` as a value of the scalar type that `kind` names, as
+// `from_cell` does, and returns it in type-erased form.
+constexpr value to_value(scalar_kind kind, cell c)
 {
-  switch (type) {
-  case value_type::boolean: return from_raw<bool>(r);
-  case value_type::int32: return from_raw<std::int32_t>(r);
-  case value_type::uint32: return from_raw<std::uint32_t>(r);
-  case value_type::float32: return from_raw<float>(r);
+  switch (kind) {
+  case scalar_kind::boolean: return from_cell<bool>(c);
+  case scalar_kind::int32: return from_cell<std::int32_t>(c);
+  case scalar_kind::uint32: return from_cell<std::uint32_t>(c);
+  case scalar_kind::float32: return from_cell<float>(c);
   }
-  return from_raw<std::uint32_t>(r);
+  return from_cell<std::uint32_t>(c);
 }
 
 // Checks whether the cell `a` is less than or equal to the cell `b`, both
-// holding values of the scalar type that `type` names. Cells of
-// `value_type::int32` and `value_type::float32` are compared as the numbers
-// they encode, e.g. as `value_type::int32` the cell `0xFFFFFFFB` encodes -5
-// and compares below the cell of 10; cells of `value_type::boolean` and
-// `value_type::uint32` are compared as unsigned words.
+// holding values of the scalar type that `kind` names. Cells of
+// `scalar_kind::int32` and `scalar_kind::float32` are compared as the numbers
+// they encode, e.g. as `scalar_kind::int32` the cell `0xFFFFFFFB` encodes -5
+// and compares below the cell of 10; cells of `scalar_kind::boolean` and
+// `scalar_kind::uint32` are compared as unsigned words.
 //
-// Returns `false` if `type` is `value_type::float32` and either cell holds a
-// NaN. A `value_type::boolean` cell other than 0 and 1 compares above the
-// cell of `true`, although `from_raw` decodes it as `true`.
-constexpr bool less_equal(value_type type, raw_value a, raw_value b)
+// Returns `false` if `kind` is `scalar_kind::float32` and either cell holds a
+// NaN. A `scalar_kind::boolean` cell other than 0 and 1 compares above the
+// cell of `true`, although `from_cell` decodes it as `true`.
+constexpr bool less_equal(scalar_kind kind, cell a, cell b)
 {
-  switch (type) {
-  case value_type::boolean:
-  case value_type::uint32: return a <= b;
-  case value_type::int32: {
+  switch (kind) {
+  case scalar_kind::boolean:
+  case scalar_kind::uint32: return a <= b;
+  case scalar_kind::int32: {
     using i32 = std::int32_t;
-    return from_raw<i32>(a) <= from_raw<i32>(b);
+    return from_cell<i32>(a) <= from_cell<i32>(b);
   }
-  case value_type::float32: return from_raw<float>(a) <= from_raw<float>(b);
+  case scalar_kind::float32: return from_cell<float>(a) <= from_cell<float>(b);
   }
   return false;
 }
 
 // Checks whether the cell `v` lies in [`lo`, `hi`], with the cells compared
-// as `less_equal` compares them under `type`. Hence a `value_type::float32`
-// cell that holds a NaN is in no range, and a `value_type::boolean` cell
+// as `less_equal` compares them under `kind`. Hence a `scalar_kind::float32`
+// cell that holds a NaN is in no range, and a `scalar_kind::boolean` cell
 // other than 0 and 1 is in no range whose bounds encode `bool` values.
-constexpr bool
-in_range(value_type type, raw_value v, raw_value lo, raw_value hi)
+constexpr bool in_range(scalar_kind kind, cell v, cell lo, cell hi)
 {
-  return less_equal(type, lo, v) && less_equal(type, v, hi);
+  return less_equal(kind, lo, v) && less_equal(kind, v, hi);
 }
 
 } // namespace settings

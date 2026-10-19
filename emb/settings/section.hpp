@@ -93,11 +93,11 @@ concept some_applier = some_checker<A, Schema>
                        };
 
 // The class template `section` binds the schema `Schema` to the place
-// `Placement` on a medium of type `Storage`. It holds the image of the
-// parameters, the values requested, loads it from the medium and saves it
-// there, and keeps two more images: the values the next startup would load,
-// and the values applied, out of which the application builds the state it
-// derives from the parameters. A write through `set`, `set_at` or
+// `Placement` on a medium of type `Storage`. It holds the values requested,
+// an image of the parameters that it loads from the medium and saves there,
+// and keeps two more images: the values the next startup would load, and the
+// values applied, out of which the application builds the state it derives
+// from the parameters. A write through `set`, `set_at` or
 // `restore_all_defaults` changes the values requested only. `load` sets all
 // three images; `apply` and `apply_all` record values requested as applied,
 // once an applier has checked them, admitted them and rebuilt its state from
@@ -105,13 +105,13 @@ concept some_applier = some_checker<A, Schema>
 // values requested. `unsaved`, `unapplied` and `restart_required` compare the
 // images cell by cell, i.e. by encoding, so a value written and then put back
 // leaves nothing to save or to apply; `-0.0f` does not put back `+0.0f`.
-// `values`, `applied` and `stored` return the three images.
+// `requested`, `applied` and `stored` return the three images.
 //
 // A checker refuses every change and every save while the values applied
 // break it, since `apply` checks the values applied with the change taken in
-// and `save` the image: an application that checks the values loaded calls
-// `fall_back_to_defaults` right after `load`, before it builds anything from
-// the values applied.
+// and `save` the values requested: an application that checks the values
+// loaded calls `fall_back_to_defaults` right after `load`, before it builds
+// anything from the values applied.
 //
 // A section can be constant-initialized and then holds the defaults in all
 // three images. The behavior is undefined if `save` or `wipe` is called
@@ -130,7 +130,7 @@ class section {
   // Cells, by index, that a call applies.
   using selection = std::bitset<count>;
 
-  image<Schema> values_;
+  image<Schema> requested_;
   image<Schema> stored_;
   image<Schema> applied_;
   load_result last_load_;
@@ -144,8 +144,8 @@ public:
   static constexpr auto& schema = Schema;
   static constexpr auto& placement = Placement;
 
-  // Binds the section to `medium` and restores the image from the newest
-  // whole record there, or from the defaults if there is none, as
+  // Binds the section to `medium` and restores the values requested from the
+  // newest whole record there, or from the defaults if there is none, as
   // `store::load` does, and takes what it restored as applied: the
   // application builds the state it derives from the parameters after the
   // load. Returns what the load found, which `last_load()` keeps. The section
@@ -154,9 +154,9 @@ public:
   constexpr load_result load(Storage& medium)
   {
     store_.emplace(medium);
-    last_load_ = store_->load(values_);
-    stored_ = values_;
-    applied_ = values_;
+    last_load_ = store_->load(requested_);
+    stored_ = requested_;
+    applied_ = requested_;
     sequence_ = last_load_.record.seq;
     return last_load_;
   }
@@ -166,13 +166,14 @@ public:
     return last_load_;
   }
 
-  // Writes the image to the medium as the next record, as `store::save`
-  // does, if every parameter applied on command holds its value applied and
-  // `checker` accepts the image: the next startup then loads what the machine
-  // runs on, and the values waiting for a restart as checked. A refusal of
-  // the checker is kept as `last_failure()`. After a successful write,
-  // `unsaved()` is `false` until a value changes, and `sequence()` returns the
-  // number of the record written. The values applied are left as they are.
+  // Writes the values requested to the medium as the next record, as
+  // `store::save` does, if every parameter applied on command holds its value
+  // applied and `checker` accepts them: the next startup then loads what the
+  // machine runs on, and the values waiting for a restart as checked. A
+  // refusal of the checker is kept as `last_failure()`. After a successful
+  // write, `unsaved()` is `false` until a value changes, and `sequence()`
+  // returns the number of the record written. The values applied are left as
+  // they are.
   template<some_checker<Schema> C>
   constexpr std::expected<void, section_save_failure<error_type>>
   save(C& checker)
@@ -181,14 +182,14 @@ public:
     using failure = section_save_failure<error_type>;
 
     if (unapplied()) return std::unexpected(failure{save_refusal::unapplied});
-    if (!checker.check(values_)) {
+    if (!checker.check(requested_)) {
       last_failure_ = apply_refusal::invalid;
       return std::unexpected(failure{save_refusal::invalid});
     }
 
-    return store_->save(values_)
+    return store_->save(requested_)
         .transform([this](save_result const& saved) {
-          stored_ = values_;
+          stored_ = requested_;
           sequence_ = saved.seq;
         })
         .transform_error([](save_failure<error_type> const& cause) {
@@ -197,10 +198,10 @@ public:
   }
 
   // Brings every slot of the section on the medium to the erased state, as
-  // `store::wipe` does. The image and the values applied are left as they
-  // are; after a successful wipe, `unsaved()` compares the image with the
-  // defaults, which the next startup would load, and `sequence()` returns
-  // zero.
+  // `store::wipe` does. The values requested and applied are left as they
+  // are; after a successful wipe, `unsaved()` compares the values requested
+  // with the defaults, which the next startup would load, and `sequence()`
+  // returns zero.
   constexpr std::expected<void, error_type> wipe()
   {
     ASSUME(store_.has_value());
@@ -230,14 +231,14 @@ public:
     return sequence_;
   }
 
-  // Checks whether the image differs from what the next startup would load,
-  // which before `load` is taken to be the defaults. A failed `save` or
-  // `wipe` does not change what the image is compared with, even if it
+  // Checks whether the values requested differ from what the next startup
+  // would load, which before `load` is taken to be the defaults. A failed
+  // `save` or `wipe` does not change what they are compared with, even if it
   // changed the medium.
   constexpr bool unsaved() const
   {
     for (auto i = 0uz; i < count; ++i)
-      if (differs(values_, stored_, i)) return true;
+      if (differs(requested_, stored_, i)) return true;
     return false;
   }
 
@@ -245,9 +246,7 @@ public:
   // the one applied.
   constexpr bool unapplied() const
   {
-    for (auto i = 0uz; i < count; ++i)
-      if (!restarts_with(i) && differs(values_, applied_, i)) return true;
-    return false;
+    return pending().any();
   }
 
   // Checks whether a restart would change a parameter applied only after a
@@ -257,8 +256,9 @@ public:
   constexpr bool restart_required() const
   {
     for (auto i = 0uz; i < count; ++i) {
-      if (restarts_with(i)
-          && (differs(values_, applied_, i) || differs(stored_, applied_, i))) {
+      if (applies_on_restart(i)
+          && (differs(requested_, applied_, i)
+              || differs(stored_, applied_, i))) {
         return true;
       }
     }
@@ -278,9 +278,9 @@ public:
                                                      A& applier)
   {
     if (index >= count) return refuse(apply_refusal::unknown_parameter);
-    if (restarts_with(index)) return refuse(apply_refusal::not_applicable);
+    if (applies_on_restart(index)) return refuse(apply_refusal::not_applicable);
     selection chosen;
-    chosen.set(index, differs(values_, applied_, index));
+    chosen.set(index, differs(requested_, applied_, index));
     return commit(chosen, applier);
   }
 
@@ -320,7 +320,7 @@ public:
     if (!Schema.parameters[index].writable) {
       return std::unexpected(error::read_only);
     }
-    values_.assign_cell(index, applied_.cell(index));
+    requested_.assign_cell(index, applied_.cell_at(index));
     return {};
   }
 
@@ -330,7 +330,7 @@ public:
   {
     for (auto i = 0uz; i < count; ++i) {
       if (Schema.parameters[i].writable) {
-        values_.assign_cell(i, applied_.cell(i));
+        requested_.assign_cell(i, applied_.cell_at(i));
       }
     }
   }
@@ -372,10 +372,10 @@ public:
 
   // -- The images --
 
-  // Returns the image, i.e. the values requested, which writes change.
-  constexpr image<Schema> const& values() const
+  // Returns the values requested, which writes change.
+  constexpr image<Schema> const& requested() const
   {
-    return values_;
+    return requested_;
   }
 
   // Returns the values applied, out of which the application builds the
@@ -414,7 +414,7 @@ public:
     requires some_declaration<decltype(Decl)>
   constexpr typename parameter<Schema, Decl>::type get() const
   {
-    return values_.template get<Decl>();
+    return requested_.template get<Decl>();
   }
 
   // Writes `v` to the parameter that `Decl` declares whether or not it is
@@ -424,21 +424,21 @@ public:
   constexpr std::expected<void, error>
   set(typename parameter<Schema, Decl>::type const& v)
   {
-    return values_.template set<Decl>(v);
+    return requested_.template set<Decl>(v);
   }
 
   // -- Access by index --
 
   constexpr std::expected<value, error> get_at(std::size_t index) const
   {
-    return values_.get_at(index);
+    return requested_.get_at(index);
   }
 
   // Writes `v` to the parameter at `index`, as `image::set_at` does; unlike
   // `set`, refuses a parameter that is not `writable`.
   constexpr std::expected<void, error> set_at(std::size_t index, value const& v)
   {
-    return values_.set_at(index, v);
+    return requested_.set_at(index, v);
   }
 
   // Restores the default of every parameter whose `writable` is `true`, as
@@ -446,12 +446,12 @@ public:
   constexpr void restore_all_defaults()
   {
     for (auto i = 0uz; i < count; ++i) {
-      auto _ = values_.restore_default_at(i);
+      auto _ = requested_.restore_default_at(i);
     }
   }
 
 private:
-  static constexpr bool restarts_with(std::size_t index)
+  static constexpr bool applies_on_restart(std::size_t index)
   {
     return Schema.parameters[index].apply == apply_policy::on_restart;
   }
@@ -461,7 +461,7 @@ private:
   static constexpr bool
   differs(image<Schema> const& a, image<Schema> const& b, std::size_t index)
   {
-    return a.cell(index) != b.cell(index);
+    return a.cell_at(index) != b.cell_at(index);
   }
 
   // Returns the parameters applied on command whose value requested differs
@@ -470,7 +470,7 @@ private:
   {
     selection chosen;
     for (auto i = 0uz; i < count; ++i) {
-      chosen.set(i, !restarts_with(i) && differs(values_, applied_, i));
+      chosen.set(i, !applies_on_restart(i) && differs(requested_, applied_, i));
     }
     return chosen;
   }
@@ -491,7 +491,7 @@ private:
 
     image<Schema> candidate = applied_;
     for (auto i = 0uz; i < count; ++i) {
-      if (chosen.test(i)) candidate.assign_cell(i, values_.cell(i));
+      if (chosen.test(i)) candidate.assign_cell(i, requested_.cell_at(i));
     }
     if (!applier.check(std::as_const(candidate))) {
       return refuse(apply_refusal::invalid);

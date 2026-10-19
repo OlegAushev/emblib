@@ -45,14 +45,14 @@ template<auto& Schema>
 class image {
   using schema_type = schema_t<Schema>;
 
-  std::array<raw_value, schema_type::count> cells_{};
+  std::array<cell, schema_type::count> cells_{};
 
 public:
   static constexpr std::size_t count = schema_type::count;
 
   constexpr image()
   {
-    restore_defaults();
+    assign_defaults();
   }
 
   // -- Access by declaration --
@@ -64,7 +64,7 @@ public:
   constexpr typename parameter<Schema, Decl>::type get() const
   {
     using param_type = parameter<Schema, Decl>;
-    return from_raw<typename param_type::type>(cells_[param_type::index]);
+    return from_cell<typename param_type::type>(cells_[param_type::index]);
   }
 
   // Writes `v` to the parameter that `Decl` declares whether or not it is
@@ -78,7 +78,7 @@ public:
   set(typename parameter<Schema, Decl>::type const& v)
   {
     using param_type = parameter<Schema, Decl>;
-    return write(param_type::index, to_raw(v));
+    return write(param_type::index, to_cell(v));
   }
 
   // Writes the default of the parameter that `Decl` declares, as `set` does.
@@ -99,7 +99,7 @@ public:
     if (index >= count) {
       return std::unexpected(error::unknown_parameter);
     }
-    return to_value(Schema.parameters[index].type, cells_[index]);
+    return to_value(Schema.parameters[index].kind, cells_[index]);
   }
 
   // Writes `v` to the parameter at `index`. Returns
@@ -118,11 +118,11 @@ public:
     if (!desc.writable) {
       return std::unexpected(error::read_only);
     }
-    if (held_type(v) != desc.type) {
+    if (held_kind(v) != desc.kind) {
       return std::unexpected(error::type_mismatch);
     }
 
-    return write(index, to_raw(v));
+    return write(index, to_cell(v));
   }
 
   // Writes the default of the parameter at `index`. Returns
@@ -144,7 +144,7 @@ public:
   }
 
   // Assigns every parameter its default, whether or not it is `writable`.
-  constexpr void restore_defaults()
+  constexpr void assign_defaults()
   {
     for (auto i = 0uz; i < count; ++i)
       cells_[i] = Schema.parameters[i].def;
@@ -154,30 +154,30 @@ public:
 
   // Returns the cell of the parameter at `index`. The behavior is undefined
   // if `index >= count`.
-  constexpr raw_value cell(std::size_t index) const
+  constexpr cell cell_at(std::size_t index) const
   {
     return cells_[index];
   }
 
-  // Assigns `cell` to the parameter at `index` as it is, i.e. without
-  // checking it against the bounds of the parameter. The behavior is
-  // undefined if `index >= count`.
-  constexpr void assign_cell(std::size_t index, raw_value cell)
+  // Assigns `c` to the parameter at `index` as it is, i.e. without checking
+  // it against the bounds of the parameter. The behavior is undefined if
+  // `index >= count`.
+  constexpr void assign_cell(std::size_t index, cell c)
   {
-    cells_[index] = cell;
+    cells_[index] = c;
   }
 
 private:
-  // Returns `error::out_of_range` if `cell` is outside the bounds of the
+  // Returns `error::out_of_range` if `c` is outside the bounds of the
   // parameter at `index`; otherwise writes it there. The behavior is
   // undefined if `index >= count`.
-  constexpr std::expected<void, error> write(std::size_t index, raw_value cell)
+  constexpr std::expected<void, error> write(std::size_t index, cell c)
   {
     auto const& desc = Schema.parameters[index];
-    if (!in_range(desc.type, cell, desc.min, desc.max)) {
+    if (!in_range(desc.kind, c, desc.min, desc.max)) {
       return std::unexpected(error::out_of_range);
     }
-    cells_[index] = cell;
+    cells_[index] = c;
     return {};
   }
 };

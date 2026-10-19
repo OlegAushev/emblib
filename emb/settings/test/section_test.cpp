@@ -642,7 +642,7 @@ consteval bool test_the_order_of_the_rules_does_not_matter()
     return false;
   }
   for (auto i = 0uz; i < image<schema>::count; ++i) {
-    if (first.applied().cell(i) != second.applied().cell(i)) return false;
+    if (first.applied().cell_at(i) != second.applied().cell_at(i)) return false;
   }
   return first.applied().get<limit_top>() == 30;
 }
@@ -821,7 +821,7 @@ consteval bool test_the_images_part_and_meet()
   refusing accepts;
 
   if (!settings.set<drive_runout>(std::uint32_t{200})) return false;
-  if (settings.values().get<drive_runout>() != 200) return false;
+  if (settings.requested().get<drive_runout>() != 200) return false;
   if (settings.applied().get<drive_runout>() != 100) return false;
   if (settings.stored().get<drive_runout>() != 100) return false;
   if (settings.applied_at(runout) != value{std::uint32_t{100}}) return false;
