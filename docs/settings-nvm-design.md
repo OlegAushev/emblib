@@ -168,9 +168,9 @@ the values applied before the change and after it, and asks for a safe
 state only where something that needs one differs. In the inverter
 `change_between` tells which configs differ, and whether the change
 touches the phase order, the machine, whether the current controllers are
-tuned, or the hall sensor: `drive.phase_swap` and the protection thresholds
-feed one `drive_config`, yet only a change of the phase order waits for
-the drive to stand.
+tuned, or the calibration of the hall sensor: `drive.phase_swap` and the
+protection thresholds feed one `drive_config`, yet only a change of the
+phase order waits for the drive to stand.
 
 Mechanism: **a command applies, through the application's applier, all or
 nothing.**
@@ -209,12 +209,12 @@ parameters that differ, in an order the application keeps, hands each
 config to its owner and cannot fail, which is why whatever can refuse is
 asked before. Each is asked once per change. In the inverter
 `settings::applier` masks the timebase and below; admits a change to the
-phase order, the machine, autotune or the hall sensor only while the drive
-stands with its bridge off, in a safe state with the model idle and the
-PWM stopped, since the bridge stops a step after stopping hands over to
-ready; and has the drive rebuild the hall sensor's sector maps with the
-PWM update and the hall capture masked too, since a rotor that stands may
-still turn.
+phase order, the machine, autotune or the calibration of the hall sensor
+only while the drive stands with its bridge off, in a safe state with the
+model idle and the PWM stopped, since the bridge stops a step after
+stopping hands over to ready; and has the drive rebuild the hall sensor's
+sector maps with the PWM update and the hall capture masked too, since a
+rotor that stands may still turn.
 
 The inverter's configs compare with `==`, i.e. as numbers: a cell that
 changes from `+0.0` to `-0.0` is recorded as applied and rebuilds nothing,
@@ -1223,6 +1223,16 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   before they compare. Rejected: copying them over from one config to the
   other, which leaves a float to compare with itself, which the compiler
   keeps for the sake of NaN — 678 bytes of flash more.
+- **The calibration of the hall sensor is a config of its own**
+  (2026-10-19). `emb::hall::angle_sensor_config` held the time constant of
+  the speed filter beside the calibration, so the time constant waited for
+  the drive to stand only because it shared a struct with the angles, and
+  the rule of the angles had to be handed a calibration built apart from
+  the config. The config keeps the time constant alone, a place for the
+  sensor's tuning to come; the sensor takes the calibration beside it and
+  applies one through `apply_calibration`. `hall.speed_tc` may change while
+  the drive runs, like the filters of the temperatures, and the rule and the
+  drive read the calibration with one reader.
 
 ## 10a. What changed for an operator
 
@@ -1348,6 +1358,12 @@ Dropping the groups, on 2026-10-17 (§4, §7), changed:
   `hall.speed_tc` with the angles.
 - **A cell changed from `+0.0` to `-0.0` is applied without a rebuild**, as
   no number changes; it needs no standstill either.
+
+Cutting the calibration out of the hall sensor's config, on 2026-10-19
+(§4), changed:
+
+- **`hall.speed_tc` applies while the drive runs.** Only the twelve angles
+  of the calibration wait for the drive to stand with its bridge off.
 
 ## 10b. What applying taught us
 
