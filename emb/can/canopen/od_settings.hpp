@@ -91,19 +91,6 @@ to_settings_value(od_value const& value)
   });
 }
 
-// The concept `od_context_function<F>` is satisfied if and only if `F` is a
-// function, or a lambda without captures, that takes a reference to a
-// context and nothing else.
-template<auto F>
-concept od_context_function =
-    od_function<F>
-    && (od_args_t<F>::size == 1)
-    && std::is_lvalue_reference_v<typelist_at_t<od_args_t<F>, 0>>;
-
-// The context that the function `F` takes.
-template<auto F>
-using od_context_of = std::remove_reference_t<typelist_at_t<od_args_t<F>, 0>>;
-
 template<fixed_string Name>
 consteval auto not_exposed_message()
 {
@@ -158,10 +145,10 @@ concept od_settings_access =
 //   09h  wo exec    discards its value requested, as `section::discard` does
 //   0Ah  ro         the actual value, with `Actual` only
 //
-// `apply_all` and `discard_all` are commands for `od_exec`, `last_failure` a
+// `apply_all` and `discard_all` are commands for `od_exec`, `last_refusal` a
 // reader for `od_ro`: the abort that answered the last refusal of an
-// application, or of a save by a check, zero if there was none. A refusal
-// answers a command with the abort of `to_sdo_abort`.
+// application or of a save, zero if there was none. A refusal answers a
+// command with the abort of `to_sdo_abort`.
 //
 // A record of a parameter carries `catalog`, so `make_dictionary` checks that
 // each exposed parameter has exactly one record and each hidden one none.
@@ -386,10 +373,12 @@ public:
     SectionOf(ctx).discard_all();
   }
 
-  static constexpr std::uint32_t last_failure(context_type& ctx)
+  static constexpr std::uint32_t last_refusal(context_type& ctx)
   {
-    auto const failure = SectionOf(ctx).last_failure();
-    return failure ? std::to_underlying(to_sdo_abort(*failure)) : 0;
+    auto const refused = SectionOf(ctx).last_refusal();
+    if (!refused) return 0;
+    return std::to_underlying(
+        refused->visit([](auto reason) { return to_sdo_abort(reason); }));
   }
 };
 

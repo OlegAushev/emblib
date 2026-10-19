@@ -18,6 +18,7 @@
 #include <functional>
 #include <optional>
 #include <utility>
+#include <variant>
 
 #include <cstddef>
 #include <cstdint>
@@ -59,6 +60,10 @@ struct section_save_failure {
   save_refusal reason;
   std::optional<save_failure<Error>> store{};
 };
+
+// A refusal of `section::apply` or `section::apply_all`, or of
+// `section::save`: what `section::last_refusal` keeps of the last one.
+using refusal = std::variant<apply_refusal, save_refusal>;
 
 // The concept `some_checker<C, Schema>` is satisfied if and only if `C`
 // checks values together: `checker.check(values)` returns whether the
@@ -135,7 +140,7 @@ class section {
   image<Schema> applied_;
   load_result last_load_;
   std::uint32_t sequence_ = 0;
-  std::optional<apply_refusal> last_failure_;
+  std::optional<refusal> last_refusal_;
   std::optional<store_type> store_;
 
 public:
@@ -169,11 +174,11 @@ public:
   // Writes the values requested to the medium as the next record, as
   // `store::save` does, if every parameter applied on command holds its value
   // applied and `checker` accepts them: the next startup then loads what the
-  // machine runs on, and the values waiting for a restart as checked. A
-  // refusal of the checker is kept as `last_failure()`. After a successful
-  // write, `unsaved()` is `false` until a value changes, and `sequence()`
-  // returns the number of the record written. The values applied are left as
-  // they are.
+  // machine runs on, and the values waiting for a restart as checked. Every
+  // refusal, the medium's included, is kept as `last_refusal()`. After a
+  // successful write, `unsaved()` is `false` until a value changes, and
+  // `sequence()` returns the number of the record written. The values applied
+  // are left as they are.
   template<some_checker<Schema> C>
   constexpr std::expected<void, section_save_failure<error_type>>
   save(C& checker)
@@ -181,20 +186,16 @@ public:
     ASSUME(store_.has_value());
     using failure = section_save_failure<error_type>;
 
-    if (unapplied()) return std::unexpected(failure{save_refusal::unapplied});
+    if (unapplied()) return refuse(failure{save_refusal::unapplied});
     if (!checker.check(requested_)) {
-      last_failure_ = apply_refusal::invalid;
-      return std::unexpected(failure{save_refusal::invalid});
+      return refuse(failure{save_refusal::invalid});
     }
 
-    return store_->save(requested_)
-        .transform([this](save_result const& saved) {
-          stored_ = requested_;
-          sequence_ = saved.seq;
-        })
-        .transform_error([](save_failure<error_type> const& cause) {
-          return failure{save_refusal::medium, cause};
-        });
+    auto const saved = store_->save(requested_);
+    if (!saved) return refuse(failure{save_refusal::medium, saved.error()});
+    stored_ = requested_;
+    sequence_ = saved->seq;
+    return {};
   }
 
   // Brings every slot of the section on the medium to the erased state, as
@@ -291,7 +292,7 @@ public:
   // lock, admits the change; only then are the values recorded as applied,
   // and `applier` configures what derives from them, given the values applied
   // before and after. A refusal of the check or of the admission refuses the
-  // whole and is kept as `last_failure()`. With nothing to apply, succeeds
+  // whole and is kept as `last_refusal()`. With nothing to apply, succeeds
   // without calling `applier`.
   template<some_applier<Schema> A>
   constexpr std::expected<void, apply_refusal> apply_all(A& applier)
@@ -299,11 +300,11 @@ public:
     return commit(pending(), applier);
   }
 
-  // Returns the last refusal of `apply` or `apply_all`, or that of `save` by
-  // the checker, or nothing if there was none. A success leaves it as it was.
-  constexpr std::optional<apply_refusal> last_failure() const
+  // Returns the last refusal of `apply`, `apply_all` or `save`, or nothing if
+  // there was none. A success leaves it as it was.
+  constexpr std::optional<refusal> last_refusal() const
   {
-    return last_failure_;
+    return last_refusal_;
   }
 
   // -- Discarding --
@@ -475,11 +476,20 @@ private:
     return chosen;
   }
 
-  // Keeps the refusal for `reason` as `last_failure()` and returns it.
+  // Keeps the refusal for `reason` as `last_refusal()` and returns it.
   constexpr std::unexpected<apply_refusal> refuse(apply_refusal reason)
   {
-    last_failure_ = reason;
+    last_refusal_ = reason;
     return std::unexpected(reason);
+  }
+
+  // Keeps the refusal of the save that `failure` tells of as `last_refusal()`
+  // and returns it.
+  constexpr std::unexpected<section_save_failure<error_type>>
+  refuse(section_save_failure<error_type> const& failure)
+  {
+    last_refusal_ = failure.reason;
+    return std::unexpected(failure);
   }
 
   // Applies the parameters `chosen`, as `apply_all` describes.

@@ -211,7 +211,7 @@ consteval bool test_load_from_an_empty_medium()
   if (settings.unsaved()) return false;
   if (settings.unapplied()) return false;
   if (settings.restart_required()) return false;
-  if (settings.last_failure()) return false;
+  if (settings.last_refusal()) return false;
 
   return true;
 }
@@ -273,7 +273,7 @@ consteval bool test_applying_is_all_or_nothing()
     return false;
   }
   if (invalid.calls != "c ") return false;
-  if (settings.last_failure() != apply_refusal::invalid) return false;
+  if (settings.last_refusal() != refusal{apply_refusal::invalid}) return false;
   if (settings.applied().get<drive_runout>() != 100) return false;
 
   journal busy;
@@ -293,7 +293,7 @@ consteval bool test_applying_is_all_or_nothing()
   if (settings.applied().get<motor_R>() != 0.5f) return false;
   if (settings.unapplied()) return false;
 
-  return settings.last_failure() == apply_refusal::not_admitted;
+  return settings.last_refusal() == refusal{apply_refusal::not_admitted};
 }
 
 // A parameter applies alone: the others keep waiting, and the check sees the
@@ -341,7 +341,9 @@ consteval bool test_the_schema_refuses_first()
       != std::unexpected(apply_refusal::not_applicable)) {
     return false;
   }
-  if (settings.last_failure() != apply_refusal::not_applicable) return false;
+  if (settings.last_refusal() != refusal{apply_refusal::not_applicable}) {
+    return false;
+  }
   if (settings.apply(image<schema>::count, applier)
       != std::unexpected(apply_refusal::unknown_parameter)) {
     return false;
@@ -453,6 +455,9 @@ consteval bool test_a_save_keeps_what_runs()
   if (unapplied || (unapplied.error().reason != save_refusal::unapplied)) {
     return false;
   }
+  if (settings.last_refusal() != refusal{save_refusal::unapplied}) {
+    return false;
+  }
   if (settings.sequence() != 0) return false;
 
   if (!settings.apply_all(applier)) return false;
@@ -461,7 +466,7 @@ consteval bool test_a_save_keeps_what_runs()
   if (invalid || (invalid.error().reason != save_refusal::invalid)) {
     return false;
   }
-  if (settings.last_failure() != apply_refusal::invalid) return false;
+  if (settings.last_refusal() != refusal{save_refusal::invalid}) return false;
   if (settings.sequence() != 0) return false;
 
   // The rules see a value that waits for a restart.
@@ -482,6 +487,7 @@ consteval bool test_a_save_keeps_what_runs()
       || !failed.error().store) {
     return false;
   }
+  if (settings.last_refusal() != refusal{save_refusal::medium}) return false;
   memory.set_power_budget(fram::unlimited);
 
   return true;

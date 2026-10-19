@@ -183,7 +183,8 @@ nothing.**
 - `apply(index, applier)` and `apply_all(applier)` choose the values of
   parameters applied on command that differ from the values applied — one
   or all — and apply them as one transaction, below. A check or an
-  admission that refuses applies nothing and is kept as `last_failure()`.
+  admission that refuses applies nothing and is kept as `last_refusal()`,
+  as is every refusal of a save.
   `apply` refuses an `on_restart` parameter whatever its value; a choice
   with nothing in it succeeds without calling the applier.
 - `discard` and `discard_all` put the values applied back into the values
@@ -537,7 +538,10 @@ a parameter:
 | 09h | wo exec | discards its value requested |
 | 0Ah | ro | the actual value, with `param<Decl, Actual>` only |
 
-`apply_all`, `discard_all` and `last_failure` serve `od_exec` and `od_ro`.
+`apply_all`, `discard_all` and `last_refusal` serve `od_exec` and `od_ro`;
+`last_refusal`, 3001h:03, shows the abort of the last refusal of an
+application or a save. `od_section_status` reads the state of the section,
+3000h, through the same function of the context as the bridge.
 A refusal answers with `to_sdo_abort`: what nothing applies on
 command with `unsupported_access`, a failed check with
 `parameter_incompatibility`, a change not admitted or values that wait to
@@ -1393,6 +1397,11 @@ Checking what a client writes, on 2026-10-19 (§7), changed:
   tells another size than the object's answers 06070010h; a download that
   is not expedited, which would carry the size of a segmented transfer,
   answers 06010000h.
+- **3001h:03 is `last_refusal`** and shows the abort of the last refusal of
+  a save as well as of an application: 08000022h while values wait to be
+  applied, 06040043h when they fail their rules, 08000020h when the medium
+  fails. It showed only the refusals of applications, and of a save only
+  the one of its check, under the name `last_failure`.
 
 ## 10b. What applying taught us
 

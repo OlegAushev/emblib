@@ -6,6 +6,7 @@
 #include <type_traits>
 
 #include "od.hpp"
+#include "od_handlers.hpp"
 
 #include <emb/settings/image.hpp>
 #include <emb/settings/section.hpp>
@@ -15,20 +16,19 @@ namespace emb {
 namespace can {
 namespace canopen {
 
-namespace detail {
-
-template<auto& Section>
-using section_t = std::remove_cvref_t<decltype(Section)>;
-
-} // namespace detail
-
 // The class template `od_section_status` provides readers, for `od_ro`, of
-// the state of `Section`, a `settings::section`: where its records are kept,
-// how far its saves have advanced around the slots, what the last load found,
-// and whether values wait to be applied, to be saved or for a restart.
-template<auto& Section>
+// the state of the `settings::section` that `SectionOf` returns from a
+// reference to the context of the dictionary, as `od_settings` reaches it:
+// where its records are kept, how far its saves have advanced around the
+// slots, what the last load found, and whether values wait to be applied, to
+// be saved or for a restart. The readers of where the records are kept take
+// no context, since the type of the section tells.
+template<auto SectionOf>
+  requires detail::od_context_function<SectionOf>
+        && std::is_lvalue_reference_v<detail::od_result_t<SectionOf>>
 class od_section_status {
-  using section_type = detail::section_t<Section>;
+  using context_type = detail::od_context_of<SectionOf>;
+  using section_type = std::remove_cvref_t<detail::od_result_t<SectionOf>>;
 
   static constexpr auto const& placement = section_type::placement;
 
@@ -58,18 +58,18 @@ public:
     return as_u32(placement.slots_per_block);
   }
 
-  static std::uint32_t sequence()
+  static constexpr std::uint32_t sequence(context_type& ctx)
   {
-    return Section.sequence();
+    return SectionOf(ctx).sequence();
   }
 
   // Returns the number of blocks that the saves since the section was last
   // empty have filled, i.e. `sequence() / slots_per_block()`, or zero if the
   // medium needs no erasing.
-  static std::uint32_t erase_cycles()
+  static constexpr std::uint32_t erase_cycles(context_type& ctx)
   {
     if constexpr (section_type::storage_type::needs_erase) {
-      return Section.sequence() / slots_per_block();
+      return SectionOf(ctx).sequence() / slots_per_block();
     }
     else {
       return 0;
@@ -78,70 +78,70 @@ public:
 
   // Returns the slot of the record the last load restored, or `0xFFFFFFFF`
   // if it restored none.
-  static std::uint32_t loaded_slot()
+  static constexpr std::uint32_t loaded_slot(context_type& ctx)
   {
-    auto const& loaded = Section.last_load();
+    auto const& loaded = SectionOf(ctx).last_load();
     return loaded.slot ? as_u32(*loaded.slot) : ~std::uint32_t{0};
   }
 
-  static std::uint32_t loaded_sequence()
+  static constexpr std::uint32_t loaded_sequence(context_type& ctx)
   {
-    return Section.last_load().record.seq;
+    return SectionOf(ctx).last_load().record.seq;
   }
 
-  static bool valid()
+  static constexpr bool valid(context_type& ctx)
   {
-    return Section.last_load().record.valid;
+    return SectionOf(ctx).last_load().record.valid;
   }
 
-  static bool schema_matched()
+  static constexpr bool schema_matched(context_type& ctx)
   {
-    return Section.last_load().record.schema_matched;
+    return SectionOf(ctx).last_load().record.schema_matched;
   }
 
-  static bool read_failed()
+  static constexpr bool read_failed(context_type& ctx)
   {
-    return Section.last_load().read_failed;
+    return SectionOf(ctx).last_load().read_failed;
   }
 
-  static std::uint32_t stored()
+  static constexpr std::uint32_t stored(context_type& ctx)
   {
-    return Section.last_load().record.stored;
+    return SectionOf(ctx).last_load().record.stored;
   }
 
-  static std::uint32_t loaded()
+  static constexpr std::uint32_t loaded(context_type& ctx)
   {
-    return Section.last_load().record.loaded;
+    return SectionOf(ctx).last_load().record.loaded;
   }
 
-  static std::uint32_t unknown()
+  static constexpr std::uint32_t unknown(context_type& ctx)
   {
-    return Section.last_load().record.unknown;
+    return SectionOf(ctx).last_load().record.unknown;
   }
 
-  static std::uint32_t rejected()
+  static constexpr std::uint32_t rejected(context_type& ctx)
   {
-    return Section.last_load().record.rejected;
+    return SectionOf(ctx).last_load().record.rejected;
   }
 
-  static std::uint32_t missing()
+  static constexpr std::uint32_t missing(context_type& ctx)
   {
-    return Section.last_load().record.missing;
+    return SectionOf(ctx).last_load().record.missing;
   }
 
-  static bool restart_required()
+  static constexpr bool restart_required(context_type& ctx)
   {
-    return Section.restart_required();
+    return SectionOf(ctx).restart_required();
   }
 
-  static bool unapplied()
+  static constexpr bool unapplied(context_type& ctx)
   {
-    return Section.unapplied();
+    return SectionOf(ctx).unapplied();
   }
 
-  static bool unsaved()
+  static constexpr bool unsaved(context_type& ctx)
   {
-    return Section.unsaved();
+    return SectionOf(ctx).unsaved();
   }
 };
 

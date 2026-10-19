@@ -85,6 +85,19 @@ template<typename R>
 concept od_write_outcome =
     std::same_as<R, void> || std::same_as<R, od_write_result>;
 
+// The concept `od_context_function<F>` is satisfied if and only if `F` is a
+// function, or a lambda without captures, that takes a reference to a
+// context and nothing else.
+template<auto F>
+concept od_context_function =
+    od_function<F>
+    && (od_args_t<F>::size == 1)
+    && std::is_lvalue_reference_v<typelist_at_t<od_args_t<F>, 0>>;
+
+// The context that the function `F` takes.
+template<auto F>
+using od_context_of = std::remove_reference_t<typelist_at_t<od_args_t<F>, 0>>;
+
 } // namespace detail
 
 // The concept `od_reader<F, Ctx>` is satisfied if and only if `F` is a
