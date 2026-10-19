@@ -218,8 +218,11 @@ still turn.
 
 The inverter's configs compare with `==`, i.e. as numbers: a cell that
 changes from `+0.0` to `-0.0` is recorded as applied and rebuilds nothing,
-as no number changes. Static assertions pin what a change of each kind of
-parameter rebuilds and whether it waits for the drive to stand.
+as no number changes. Whether a change waits for the drive to stand, each
+config says in its `needs_standstill` by listing what may change while the
+drive runs: anything else waits, so a field added later waits until it is
+listed, and a config without a `needs_standstill` does not compile into
+`change_between`.
 
 Command, not pull. The seam used to be the drive's periodic task, which
 took what it could every 33 ms: a value written while the drive ran took
@@ -1206,6 +1209,20 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   to stand stays requested. Each step is checked as the values applied with
   that one value taken in, so values a rule relates may need an order, and
   the twelve hall angles of a calibration go together through 3001h:01.
+- **What may change while the drive runs is listed; anything else waits**
+  (2026-10-19). The inverter named what needed the drive to stand — the
+  phase order, the machine, autotune, the hall sensor — and static
+  assertions pinned that list, but only for the parameters they named: a
+  field added to `drive_config` that needed the drive to stand would have
+  taken effect on the run. Each config now lists its live fields in
+  `needs_standstill`, and `change_between` reads every config through it, so
+  a new field waits until it is listed and a new config does not compile
+  until it says. A mistake now refuses a change on the run, which the client
+  sees, rather than letting one through, and the static assertions went with
+  the risk they guarded against. The live fields are blanked in both configs
+  before they compare. Rejected: copying them over from one config to the
+  other, which leaves a float to compare with itself, which the compiler
+  keeps for the sake of NaN — 678 bytes of flash more.
 
 ## 10a. What changed for an operator
 
