@@ -141,8 +141,8 @@ concept od_settings_access =
 //   05h  const      the lower bound
 //   06h  const      the upper bound
 //   07h  const u8   the apply policy: 0 on command, 1 on restart
-//   08h  wo exec    applies the parameter, as `section::apply` does
-//   09h  wo exec    discards its value requested, as `section::discard` does
+//   08h  wo u32     applies the parameter, as `section::apply` does
+//   09h  wo u32     discards its value requested, as `section::discard` does
 //   0Ah  ro         the actual value, with `Actual` only
 //
 // `apply_all` and `discard_all` are commands for `od_exec`, `last_refusal` a
@@ -298,10 +298,10 @@ class od_settings {
          .type = od_data_type::uint8,
          .read = &read_policy},
         {.access = od_access::wo,
-         .type = od_data_type::exec,
+         .type = od_data_type::uint32,
          .write = &apply_parameter},
         {.access = od_access::wo,
-         .type = od_data_type::exec,
+         .type = od_data_type::uint32,
          .write = &discard_parameter},
     }};
     if constexpr (actual) {

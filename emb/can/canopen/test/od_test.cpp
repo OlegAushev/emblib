@@ -198,7 +198,6 @@ static_assert(od_type_of<float> == od_data_type::float32);
 
 static_assert(od_alternative_of(od_data_type::boolean) == 0);
 static_assert(od_alternative_of(od_data_type::float32) == 7);
-static_assert(od_alternative_of(od_data_type::exec) == 6);
 static_assert(od_alternative_of(od_data_type::string) == 6);
 
 static_assert(od_readable(od_access::ro)
@@ -314,7 +313,7 @@ static_assert(bind<od_rw<read_freq, write_value>>().write
               == &detail::od_write_thunk<write_value, ctx>);
 
 static_assert(bind<od_exec<command>>().access == od_access::wo);
-static_assert(bind<od_exec<command>>().type == od_data_type::exec);
+static_assert(bind<od_exec<command>>().type == od_data_type::uint32);
 static_assert(bind<od_text<text>>().access == od_access::const_);
 static_assert(bind<od_text<text>>().type == od_data_type::string);
 
@@ -399,7 +398,7 @@ static_assert(test_commands());
 static_assert(bind<od_exec<command, od_save_signature>>().access
               == od_access::wo);
 static_assert(bind<od_exec<command, od_save_signature>>().type
-              == od_data_type::exec);
+              == od_data_type::uint32);
 
 consteval bool test_signed_commands()
 {
@@ -459,7 +458,7 @@ consteval bool test_dictionary()
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
       {{0x5000, 0x02}, "watch",  "b", "value",   "",   float32, od_ro<read_value>},
-      {{0x2000, 0x01}, "ctl",    "a", "command", "",   exec,    od_exec<command>},
+      {{0x2000, 0x01}, "ctl",    "a", "command", "",   uint32,  od_exec<command>},
       {{0x5000, 0x01}, "watch",  "b", "checked", "",   float32, od_ro<read_checked>},
       {{0x1008, 0x00}, "info",   "a", "text",    "",   string,  od_text<text>},
       {{0x3000, 0x01}, "config", "a", "freq",    "Hz", float32, od_rw<read_freq, write_value>},
@@ -572,7 +571,7 @@ consteval std::string check_valid()
 {
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x2000, 0x01}, "ctl",   "a", "command", "", exec,    od_exec<command>},
+      {{0x2000, 0x01}, "ctl",   "a", "command", "", uint32,  od_exec<command>},
       {{0x5000, 0x01}, "watch", "a", "value",   "", float32, od_ro<read_value>},
   };
   // clang-format on
@@ -623,8 +622,6 @@ static_assert(check_one(raw(od_access::rw, od_data_type::float32, true, false))
               == "od: 2000h:01 a/b/c: writable but has no writer");
 static_assert(check_one(raw(od_access::ro, od_data_type::float32, true, true))
               == "od: 2000h:01 a/b/c: read-only but has a writer");
-static_assert(check_one(raw(od_access::rw, od_data_type::exec, true, true))
-              == "od: 2000h:01 a/b/c: an exec object must be wo");
 static_assert(check_one(raw(od_access::rw, od_data_type::string, true, true))
               == "od: 2000h:01 a/b/c: a string object must not be writable");
 
@@ -640,8 +637,8 @@ consteval std::string check_declared(od_data_type declared,
 static_assert(check_declared(float32, od_ro<read_freq>).empty());
 static_assert(check_declared(float32, od_ro<read_u8>)
               == "od: 2000h:01 a/b/c: declared float32, bound as uint8");
-static_assert(check_declared(exec, od_text<text>)
-              == "od: 2000h:01 a/b/c: declared exec, bound as string");
+static_assert(check_declared(uint32, od_text<text>)
+              == "od: 2000h:01 a/b/c: declared uint32, bound as string");
 
 inline constexpr std::string_view items[] = {"x", "y"};
 inline constexpr bool all_exposed[] = {true, true};

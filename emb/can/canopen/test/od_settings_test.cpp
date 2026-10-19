@@ -188,8 +188,8 @@ inline constexpr od_row<ctx> records[] = {
     {{0x3101, 0x00}, "config", "motor",    "pole_pairs",   "",   int32,   bridge::param<motor_p>},
     {{0x3102, 0x00}, "config", "drive",    "freq",         "Hz", float32, bridge::param<drive_freq, actual_freq>},
     {{0x3103, 0x00}, "config", "prod",     "serial",       "",   uint32,  bridge::param<prod_serial>},
-    {{0x3001, 0x01}, "ctl",    "settings", "apply_all",    "",   exec,    od_exec<bridge::apply_all>},
-    {{0x3001, 0x02}, "ctl",    "settings", "discard_all",  "",   exec,    od_exec<bridge::discard_all>},
+    {{0x3001, 0x01}, "ctl",    "settings", "apply_all",    "",   uint32,  od_exec<bridge::apply_all>},
+    {{0x3001, 0x02}, "ctl",    "settings", "discard_all",  "",   uint32,  od_exec<bridge::discard_all>},
     {{0x3001, 0x03}, "ctl",    "settings", "last_refusal", "",   uint32,  od_ro<bridge::last_refusal>},
 };
 // clang-format on

@@ -326,12 +326,12 @@ struct command_binding {
     static_assert(od_command<F, Ctx>, od_command_shape);
     if constexpr (od_command<F, Ctx>) {
       return {.access = od_access::wo,
-              .type = od_data_type::exec,
+              .type = od_data_type::uint32,
               .write = &od_command_thunk<F, Ctx, Signature...>};
     }
     else {
       return {.access = od_access::wo,
-              .type = od_data_type::exec,
+              .type = od_data_type::uint32,
               .diagnosed = true};
     }
   }
@@ -365,9 +365,10 @@ struct text_binding {
 //
 // `od_ro<F>` and `od_const<F>` bind a reader (`od_reader`), `od_wo<S>` a
 // writer (`od_writer`), `od_rw<G, S>` a reader and a writer of the same
-// scalar (`od_rw_pair`), `od_exec<F>` a command (`od_command`), which gets
-// no value, and `od_text<F>` a text (`od_text_reader`), which a client reads
-// 4 bytes at a time up to and including its terminating NUL.
+// scalar (`od_rw_pair`), `od_exec<F>` a command (`od_command`), a `uint32`
+// object written to run it, whose value the command does not get, and
+// `od_text<F>` a text (`od_text_reader`), which a client reads 4 bytes at a
+// time up to and including its terminating NUL.
 // `od_exec<F, Signature>` binds a command that runs only if the value written
 // is `Signature`, and answers any other with `data_store_error`, 0800 0020h,
 // as CiA 301 asks of the objects that store parameters and restore their

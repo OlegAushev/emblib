@@ -45,7 +45,6 @@ enum class od_data_type : std::uint8_t {
   uint16,
   uint32,
   float32,
-  exec,
   string
 };
 
@@ -74,11 +73,10 @@ inline constexpr od_data_type od_type_of =
     static_cast<od_data_type>(od_value(std::in_place_type<T>).index());
 
 // Returns the index of the od_value alternative an object of type `type`
-// travels as: its own for a scalar type, uint32's for exec and string.
+// travels as: its own for a scalar type, uint32's for a string.
 constexpr std::size_t od_alternative_of(od_data_type type)
 {
   switch (type) {
-  case od_data_type::exec:
   case od_data_type::string: return std::to_underlying(od_data_type::uint32);
   default: return std::to_underlying(type);
   }
@@ -102,9 +100,8 @@ using od_write_result = std::expected<void, sdo_abort_code>;
 
 // Returns the value that `bytes`, the data of an expedited SDO, carries for
 // an object of type `type`: the scalar of that type in its leading bytes,
-// whatever the bytes after it hold. An `exec` object reads as `uint32`, which
-// a command ignores unless it takes a signature. A `string` object is never
-// written, and reads as `uint32{0}`.
+// whatever the bytes after it hold. A `string` object is never written, and
+// reads as `uint32{0}`.
 inline od_value from_sdo_data(expedited_sdo_data bytes, od_data_type type)
 {
   switch (type) {
@@ -126,8 +123,7 @@ inline od_value from_sdo_data(expedited_sdo_data bytes, od_data_type type)
     std::memcpy(&v, bytes.data(), sizeof(v));
     return v;
   }
-  case od_data_type::uint32:
-  case od_data_type::exec: {
+  case od_data_type::uint32: {
     std::uint32_t v;
     std::memcpy(&v, bytes.data(), sizeof(v));
     return v;
@@ -151,8 +147,8 @@ inline expedited_sdo_data to_sdo_data(od_value v)
 }
 
 // Returns the size, in bytes, of an object of type `type` in the data of an
-// expedited SDO: that of its scalar, and 4 for `exec` and `string`, which
-// travel as `uint32`.
+// expedited SDO: that of its scalar, and 4 for a `string`, which travels as
+// `uint32` words.
 constexpr std::size_t od_size_of(od_data_type type)
 {
   switch (type) {
@@ -164,7 +160,6 @@ constexpr std::size_t od_size_of(od_data_type type)
   case od_data_type::int32:
   case od_data_type::uint32:
   case od_data_type::float32:
-  case od_data_type::exec:
   case od_data_type::string: return 4;
   }
   return 4;

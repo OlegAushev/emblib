@@ -87,7 +87,6 @@ constexpr std::string_view type_name(od_data_type type)
   case od_data_type::uint16: return "uint16";
   case od_data_type::uint32: return "uint32";
   case od_data_type::float32: return "float32";
-  case od_data_type::exec: return "exec";
   case od_data_type::string: return "string";
   }
   return "?";
@@ -107,9 +106,6 @@ handler_error(od_access access, od_data_type type, bool reader, bool writer)
   if (!readable && reader) return "write-only but has a reader";
   if (writable && !writer) return "writable but has no writer";
   if (!writable && writer) return "read-only but has a writer";
-  if (type == od_data_type::exec && access != od_access::wo) {
-    return "an exec object must be wo";
-  }
   if (type == od_data_type::string && writable) {
     return "a string object must not be writable";
   }

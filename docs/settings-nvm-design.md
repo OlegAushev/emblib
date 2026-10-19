@@ -534,8 +534,8 @@ a parameter:
 | 03h | ro | the value stored |
 | 04h–06h | const | the default, the lower and the upper bound |
 | 07h | const u8 | the policy: 0 on command, 1 on restart |
-| 08h | wo exec | applies the parameter |
-| 09h | wo exec | discards its value requested |
+| 08h | wo u32 | applies the parameter |
+| 09h | wo u32 | discards its value requested |
 | 0Ah | ro | the actual value, with `param<Decl, Actual>` only |
 
 `apply_all`, `discard_all` and `last_refusal` serve `od_exec` and `od_ro`;
@@ -1253,6 +1253,15 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   and `image::assign_defaults` writes without checks, as `assign_cell` does.
   Records keep matching: the identifier hashes the value of the enumerator,
   not its name.
+- **A command is a write-only `uint32`** (2026-10-19). The dictionary had a
+  type code of its own for commands, `exec`, which CiA 301 does not know,
+  and which travelled as a `uint32` anyway; 1010h and 1011h, which now take
+  a signature, carry a `uint32` value outright. `od_exec` makes a
+  write-only `uint32` object, the members 08h and 09h of a parameter's
+  record are such objects, and the rule that an `exec` object be
+  write-only went with the type: the builder makes it so. `string` stays:
+  it is a type of CiA 301, and the server reads it otherwise than a
+  scalar, four bytes at a time.
 
 ## 10a. What changed for an operator
 
@@ -1393,6 +1402,11 @@ Checking what a client writes, on 2026-10-19 (§7), changed:
   "load", 0x64616F6C. Any other word answers 08000020h, and nothing is
   saved or erased. A client that writes zeros to these objects is refused
   until it writes the signatures.
+- **A command is a write-only UNSIGNED32**, as in CiA 301: the dictionary
+  has no type `exec` any more, and the type of every command, 1010h,
+  1011h, 2000h, 2001h:01, 3001h:01 and :02 and the members 08h and 09h of
+  a parameter's record, reads `uint32`. A host that told commands by the
+  type `exec` tells them by their write-only access.
 - **A write must carry the object's size.** An expedited download that
   tells another size than the object's answers 06070010h; a download that
   is not expedited, which would carry the size of a segmented transfer,
