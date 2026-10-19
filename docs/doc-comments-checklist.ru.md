@@ -273,6 +273,7 @@ emblib не попал. Такие файлы помечены «песочни�
 - [ ] `emb/can/canopen/types.hpp`
 - [ ] `emb/can/node_link.hpp`
 - [ ] `emb/can/raw/node.hpp`
+- [ ] `emb/can/rolling_counter.hpp`
 - [ ] `emb/chrono.hpp`
 - [ ] `emb/concurrent/latched_seqlock.hpp`
 - [ ] `emb/concurrent/memory_scope.hpp`

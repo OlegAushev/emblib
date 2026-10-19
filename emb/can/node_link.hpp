@@ -1,5 +1,7 @@
 #pragma once
 
+#include <emb/can/rolling_counter.hpp>
+
 #include <algorithm>
 #include <array>
 #include <bitset>
@@ -43,7 +45,8 @@ inline constexpr from_first_frame_t from_first_frame{};
 // The class template `node_link` supervises the frames a remote node sends,
 // whatever carries them, the PDOs of a CANopen server or the frames of a raw
 // node: `FrameCount` frames, each with its own `lost_timing` and a rolling
-// counter of `CounterBits` bits. The frame handler asks `counter_ok` whether a
+// counter of `CounterBits` bits, the one the sender's `rolling_counter` of the
+// same width stamps. The frame handler asks `counter_ok` whether a
 // frame follows the one before it, checks whatever else makes the frame
 // valid, and reports a valid frame with `report_valid`; a frame that carries
 // no counter is reported without asking. Only a valid frame keeps its
@@ -114,7 +117,7 @@ public:
 
 private:
   static constexpr std::uint8_t counter_mask =
-      static_cast<std::uint8_t>((1u << CounterBits) - 1);
+      rolling_counter<CounterBits>::mask;
 
   constexpr bool counter_ok_at(std::size_t i,
                                std::uint8_t seen,
