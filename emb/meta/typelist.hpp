@@ -1,5 +1,7 @@
 #pragma once
 
+#include <emb/meta/nth_type.hpp>
+
 #include <concepts>
 #include <type_traits>
 
@@ -75,7 +77,7 @@ struct typelist_at;
 
 template<typename... Ts, std::size_t I>
 struct typelist_at<typelist<Ts...>, I> {
-  using type = Ts...[I];
+  using type = nth_type_t<I, Ts...>;
 };
 
 // Helper alias template for `typelist_at`.
