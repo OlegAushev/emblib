@@ -1381,6 +1381,19 @@ Cutting the calibration out of the hall sensor's config, on 2026-10-19
 - **`hall.speed_tc` applies while the drive runs.** Only the twelve angles
   of the calibration wait for the drive to stand with its bridge off.
 
+Checking what a client writes, on 2026-10-19 (§7), changed:
+
+- **1010h and 1011h ask for their signatures**, as CiA 301 does: a save
+  (1010h:01, :03) runs only when the word written is "save", 0x65766173,
+  and restoring the defaults or erasing (1011h:01, :03) only when it is
+  "load", 0x64616F6C. Any other word answers 08000020h, and nothing is
+  saved or erased. A client that writes zeros to these objects is refused
+  until it writes the signatures.
+- **A write must carry the object's size.** An expedited download that
+  tells another size than the object's answers 06070010h; a download that
+  is not expedited, which would carry the size of a segmented transfer,
+  answers 06010000h.
+
 ## 10b. What applying taught us
 
 The first two lessons concern `take()`, which applying on command replaced

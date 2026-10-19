@@ -394,6 +394,40 @@ consteval bool test_commands()
 
 static_assert(test_commands());
 
+// A command that takes a signature runs on it alone; any other value is
+// refused, and the command does not run.
+static_assert(bind<od_exec<command, od_save_signature>>().access
+              == od_access::wo);
+static_assert(bind<od_exec<command, od_save_signature>>().type
+              == od_data_type::exec);
+
+consteval bool test_signed_commands()
+{
+  ctx c;
+  auto const save = bind<od_exec<command, od_save_signature>>();
+  auto const zero = save.write(c, 0, od_value{std::uint32_t{0}});
+  if (zero || zero.error() != sdo_abort_code::data_store_error) return false;
+  auto const load = save.write(c, 0, od_value{od_load_signature});
+  if (load || load.error() != sdo_abort_code::data_store_error) return false;
+  if (c.commands != 0) return false;
+  if (!save.write(c, 0, od_value{od_save_signature})) return false;
+  return c.commands == 1;
+}
+
+static_assert(test_signed_commands());
+
+// The signatures are the ASCII of their words, first character lowest.
+static_assert(od_save_signature
+              == (std::uint32_t{'s'}
+                  | std::uint32_t{'a'} << 8
+                  | std::uint32_t{'v'} << 16
+                  | std::uint32_t{'e'} << 24));
+static_assert(od_load_signature
+              == (std::uint32_t{'l'}
+                  | std::uint32_t{'o'} << 8
+                  | std::uint32_t{'a'} << 16
+                  | std::uint32_t{'d'} << 24));
+
 // A text is read 4 bytes at a time, little-endian, with zeros past its end;
 // the word that holds the terminating NUL is the last.
 consteval bool test_text()

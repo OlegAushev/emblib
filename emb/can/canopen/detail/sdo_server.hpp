@@ -142,6 +142,11 @@ private:
   {
     if (!od_writable(entry.access))
       return std::unexpected(sdo_abort_code::write_to_read_only);
+    if (!rsdo.expedited_transfer)
+      return std::unexpected(sdo_abort_code::unsupported_access);
+    if (rsdo.data_size_indicated
+        && (4 - std::size_t{rsdo.data_empty_bytes}) != od_size_of(entry.type))
+      return std::unexpected(sdo_abort_code::data_type_mismatch);
 
     od_value value = from_sdo_data(rsdo.data, entry.type);
     if (auto r = entry.write(ctx_, entry.arg, value); !r) {

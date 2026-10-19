@@ -6,6 +6,7 @@
 #include <expected>
 #include <string_view>
 #include <type_traits>
+#include <variant>
 
 #include "od.hpp"
 #include "od_value_cast.hpp"
@@ -180,9 +181,20 @@ constexpr od_write_result od_write_thunk(Ctx& ctx,
   }
 }
 
-template<auto F, typename Ctx>
-constexpr od_write_result od_command_thunk(Ctx& ctx, std::uint16_t, od_value)
+// Runs the command `F`, if the value written is `Signature`, when it takes
+// one.
+template<auto F, typename Ctx, std::uint32_t... Signature>
+constexpr od_write_result od_command_thunk(Ctx& ctx,
+                                           std::uint16_t,
+                                           [[maybe_unused]] od_value value)
 {
+  if constexpr (sizeof...(Signature) != 0) {
+    auto const* const word = std::get_if<std::uint32_t>(&value);
+    if (word == nullptr || ((*word != Signature) || ...)) {
+      return std::unexpected(sdo_abort_code::data_store_error);
+    }
+  }
+
   if constexpr (std::same_as<od_result_t<F>, void>) {
     od_call<F>(ctx);
     return {};
@@ -290,8 +302,11 @@ struct rw_binding {
   }
 };
 
-template<auto F>
+template<auto F, std::uint32_t... Signature>
 struct command_binding {
+  static_assert(sizeof...(Signature) <= 1,
+                "od: a command takes at most one signature");
+
   template<typename Ctx>
   consteval operator od_binding<Ctx>() const
   {
@@ -299,7 +314,7 @@ struct command_binding {
     if constexpr (od_command<F, Ctx>) {
       return {.access = od_access::wo,
               .type = od_data_type::exec,
-              .write = &od_command_thunk<F, Ctx>};
+              .write = &od_command_thunk<F, Ctx, Signature...>};
     }
     else {
       return {.access = od_access::wo,
@@ -340,6 +355,10 @@ struct text_binding {
 // scalar (`od_rw_pair`), `od_exec<F>` a command (`od_command`), which gets
 // no value, and `od_text<F>` a text (`od_text_reader`), which a client reads
 // 4 bytes at a time up to and including its terminating NUL.
+// `od_exec<F, Signature>` binds a command that runs only if the value written
+// is `Signature`, and answers any other with `data_store_error`, 0800 0020h,
+// as CiA 301 asks of the objects that store parameters and restore their
+// defaults (`od_save_signature`, `od_load_signature`).
 template<auto F>
 inline constexpr detail::read_binding<F, od_access::ro> od_ro{};
 
@@ -352,8 +371,14 @@ inline constexpr detail::write_binding<S> od_wo{};
 template<auto G, auto S>
 inline constexpr detail::rw_binding<G, S> od_rw{};
 
-template<auto F>
-inline constexpr detail::command_binding<F> od_exec{};
+template<auto F, std::uint32_t... Signature>
+inline constexpr detail::command_binding<F, Signature...> od_exec{};
+
+// The signatures that CiA 301 asks of a write to 1010h, which stores the
+// parameters ("save"), and to 1011h, which restores their defaults ("load"):
+// the ASCII of the word, first character in the lowest byte.
+inline constexpr std::uint32_t od_save_signature = 0x65766173;
+inline constexpr std::uint32_t od_load_signature = 0x64616F6C;
 
 template<auto F>
 inline constexpr detail::text_binding<F> od_text{};

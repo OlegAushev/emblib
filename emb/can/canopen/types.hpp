@@ -109,6 +109,16 @@ constexpr id_t cob_id_of()
        + NodeId;
 }
 
+// Error codes of CiA 301 that the server sends in an EMCY.
+namespace emcy_code {
+inline constexpr std::uint16_t rpdo_timeout = 0x8250;
+} // namespace emcy_code
+
+// Bits of the error register, 1001h, that the server sends in an EMCY.
+namespace error_register {
+inline constexpr std::uint8_t communication = 0x10;
+} // namespace error_register
+
 struct pdo_id {
   id_t value = 0;
   bool is_custom = false;

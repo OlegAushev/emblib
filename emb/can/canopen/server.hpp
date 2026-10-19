@@ -92,7 +92,7 @@ public:
 
     std::size_t timed_out = rpdo_.tick(now, nmt_.state());
     for (std::size_t i = 0; i < timed_out; ++i) {
-      emcy_.emit(0x8250, 0x10);
+      emcy_.emit(emcy_code::rpdo_timeout, error_register::communication);
     }
 
     tpdo_.tick(now, nmt_.state());
