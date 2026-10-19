@@ -37,7 +37,6 @@ concept some_capture_timer = requires(T const t) {
 
 struct angle_sensor_config {
   emb::units::sec_f32 speed_timeconstant;
-  calibration_result cal_result;
 
   friend constexpr bool operator==(angle_sensor_config const&,
                                    angle_sensor_config const&) = default;
@@ -45,9 +44,6 @@ struct angle_sensor_config {
 
 constexpr std::expected<void, error> validate(angle_sensor_config const& conf)
 {
-  if (auto const calibration = validate(conf.cal_result); !calibration) {
-    return calibration;
-  }
   if (!(conf.speed_timeconstant.value > 0)) {
     return std::unexpected(error::invalid_config);
   }
@@ -84,7 +80,8 @@ private:
 public:
   angle_sensor(some_timebase auto const& timebase,
                Timer& capture_timer,
-               angle_sensor_config const& sensor_conf)
+               angle_sensor_config const& sensor_conf,
+               calibration_result const& calibration)
       : conf_(sensor_conf),
         timestep_(timebase.period()),
         capture_timer_(capture_timer),
@@ -92,7 +89,7 @@ public:
             speed_median_type{},
             speed_smoother_type{timestep_, sensor_conf.speed_timeconstant})
   {
-    geometry_ = make_geometry(sensor_conf.cal_result);
+    geometry_ = make_geometry(calibration);
 
     sector_history_.push_back(capture_sector().value_or(sector::a));
     sector_span_ = geometry_.fwd[sector_history_.back()];
@@ -187,7 +184,6 @@ public:
     conf_ = conf;
     std::get<speed_smoother_type>(speedfilter_.stages)
         .set_smoothing(timestep_, conf.speed_timeconstant);
-    geometry_ = make_geometry(conf.cal_result);
     return {};
   }
 
@@ -197,7 +193,6 @@ public:
     if (auto const checked = validate(data); !checked) {
       return checked;
     }
-    conf_.cal_result = data;
     geometry_ = make_geometry(data);
     return {};
   }

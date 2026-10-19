@@ -1,39 +1,24 @@
 #include <emb/hall/angle_sensor.hpp>
 
+#include <expected>
+#include <limits>
+
 namespace {
 
 using namespace emb::hall;
-using deg = emb::units::edeg_f32;
 using sec = emb::units::sec_f32;
 
-inline constexpr calibration_result calibration{
-    sector_map<deg>{{deg{330.0f},
-                     deg{30.0f},
-                     deg{90.0f},
-                     deg{150.0f},
-                     deg{210.0f},
-                     deg{270.0f}}},
-    sector_map<deg>{{deg{30.0f},
-                     deg{90.0f},
-                     deg{150.0f},
-                     deg{210.0f},
-                     deg{270.0f},
-                     deg{330.0f}}}};
+// Two configs are equal if their time constants are.
+static_assert(angle_sensor_config{sec{0.002f}}
+              == angle_sensor_config{sec{0.002f}});
+static_assert(angle_sensor_config{sec{0.002f}}
+              != angle_sensor_config{sec{0.004f}});
 
-consteval calibration_result with_fwd(sector s, deg v)
-{
-  calibration_result data = calibration;
-  data.fwd_sector_angles[s] = v;
-  return data;
-}
-
-// Two configs are equal if the time constant and the calibration are.
-static_assert(angle_sensor_config{sec{0.002f}, calibration}
-              == angle_sensor_config{sec{0.002f}, calibration});
-static_assert(angle_sensor_config{sec{0.002f}, calibration}
-              != angle_sensor_config{sec{0.004f}, calibration});
-static_assert(angle_sensor_config{sec{0.002f}, calibration}
-              != angle_sensor_config{sec{0.002f},
-                                     with_fwd(sector::b, deg{100.0f})});
+// The time constant of the speed filter is positive, and NaN is not.
+static_assert(validate(angle_sensor_config{sec{0.002f}}).has_value());
+static_assert(validate(angle_sensor_config{sec{0.0f}})
+              == std::unexpected(error::invalid_config));
+static_assert(!validate(angle_sensor_config{
+    sec{std::numeric_limits<float>::quiet_NaN()}}));
 
 } // namespace
