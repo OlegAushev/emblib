@@ -274,7 +274,7 @@ is checked as the values applied with that one value taken in, so values a
 rule relates may have to be applied in an order: raising both bounds of a
 window, the upper first. A calibration of the hall sensor goes from the
 timebase interrupt into a mailbox of the drive; the main loop requests its
-twelve angles, and an operator applies them with 3001h:01, the twelve
+twelve angles, and an operator applies them with 2100h:01, the twelve
 together: one at a time, a step either breaks the rule of the angles or
 leaves a geometry that belongs to neither the old calibration nor the new.
 
@@ -539,7 +539,7 @@ a parameter:
 | 0Ah | ro | the actual value, with `param<Decl, Actual>` only |
 
 `apply_all`, `discard_all` and `last_refusal` serve `od_exec` and `od_ro`;
-`last_refusal`, 3001h:03, shows the abort of the last refusal of an
+`last_refusal`, 2100h:03, shows the abort of the last refusal of an
 application or a save. `od_section_status` reads the state of the section,
 3000h, through the same function of the context as the bridge.
 A refusal answers with `to_sdo_abort`: what nothing applies on
@@ -563,7 +563,7 @@ Completeness is checked at compile time, without coupling:
   actual value must be read in that type.
 
 1011h:04, which restored one default, is gone: a client reads 04h and
-writes it to 01h. Restoring all defaults (1011h:01) requests them; they
+writes it to 01h. Restoring all defaults (2102h:01) requests them; they
 take effect when applied.
 
 ## 8. File layout
@@ -1262,6 +1262,18 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   write-only went with the type: the builder makes it so. `string` stays:
   it is a type of CiA 301, and the server reads it otherwise than a
   scalar, four bytes at a time.
+- **The inverter's objects left the area of CiA 301** (2026-10-19). Its
+  dictionary kept objects in 1000h–1FFFh that the standard defines
+  otherwise: strings at 1008h–100Ah, two of them at subindices a VAR does
+  not have, a serial number at 1018h without the identity's other
+  members, and at 1010h:03 and 1011h:03 a save with a reset and an erase,
+  where CiA 301 puts the application's parameters. They moved to the area
+  of the manufacturer, which the standard leaves to the device: the
+  information at 2000h–2005h, the work with the settings at 2100h–2102h,
+  the control at 2200h–2206h, each command of which has an index of its
+  own. The area of the standard holds nothing until the inverter
+  implements an object of it as the standard says. The names stay, so a
+  host that finds objects by name finds them once it reads the new table.
 
 ## 10a. What changed for an operator
 
@@ -1416,6 +1428,28 @@ Checking what a client writes, on 2026-10-19 (§7), changed:
   applied, 06040043h when they fail their rules, 08000020h when the medium
   fails. It showed only the refusals of applications, and of a save only
   the one of its check, under the name `last_failure`.
+
+Moving the objects out of the area of CiA 301, on 2026-10-19 (§7),
+changed:
+
+- **The objects left the area of CiA 301** for the area of the
+  manufacturer, under the same names:
+
+  | Was | Object | Is |
+  |---|---|---|
+  | 1008h:00 | `device_name` | 2000h:00 |
+  | 1009h:00 | `hardware_version` | 2001h:00 |
+  | 100Ah:00 | `firmware_version` | 2002h:00 |
+  | 100Ah:01 | `firmware_commitdate` | 2003h:00 |
+  | 100Ah:02 | `firmware_branch` | 2004h:00 |
+  | 1018h:04 | `serial_number` | 2005h:00 |
+  | 3001h:01–03 | `apply_all`, `discard_all`, `last_refusal` | 2100h:01–03 |
+  | 1010h:01, :03 | `save_all_parameters`, `save_all_parameters_and_reset` | 2101h:01, :02 |
+  | 1011h:01, :03 | `restore_all_default_parameters`, `erase_all_parameters` | 2102h:01, :02 |
+  | 2000h:01–03 | `reset_device`, `clear_errors`, `emergency` | 2200h–2202h |
+  | 2001h:01, :06–08 | `calibrate_angle_sensor`, `dc_a`, `dc_b`, `dc_c` | 2203h–2206h |
+
+  The signatures stay with the commands that moved from 1010h and 1011h.
 
 ## 10b. What applying taught us
 
