@@ -1452,7 +1452,7 @@ on 2026-10-16 (§4); they stay for the record.
 - ~~**`settings::value` variant vs raw bytes + type tag**~~ at the
   transport boundary. Settled by phase 2, which built the variant: the OD
   accessors convert `od_value` to `settings::value` on the way in and visit
-  it on the way out. Raw bytes would feed `make_od_value(raw, type)`
+  it on the way out. Raw bytes would feed `from_sdo_data(bytes, type)`
   directly and avoid that variant-to-variant conversion, which nothing has
   asked for since.
 - ~~**Exposing stored vs active value**~~ for `on_restart` parameters over

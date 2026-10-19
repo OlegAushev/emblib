@@ -1,6 +1,7 @@
 #pragma once
 
 #include <emb/math/saturation.hpp>
+#include <emb/meta/wrapper.hpp>
 
 #include <cassert>
 #include <cmath>
@@ -118,20 +119,14 @@ constexpr Float dequantize(Int n)
 }
 
 // The concept `some_quantity<T>` specifies that `T` is a class that wraps a
-// physical value of floating-point type. It is satisfied if and only if
-// `T::value_type` is a floating-point type, `T(v)` constructs a `T` from a `v`
-// of that type, and `value_of(q)`, called unqualified, returns a
-// `T::value_type`, not a reference to one, for a `q` of type `T`. It is
-// modeled only if `T(value_of(q))` wraps the same physical value as `q`.
+// physical value of floating-point type. It is satisfied if and only if `T`
+// is a wrapper (`some_wrapper`) of a floating-point type. It is modeled only
+// if `T(value_of(q))` wraps the same physical value as `q`.
 //
 // `units::named_unit` satisfies it, and so does `clamped` with floating-point
 // bounds, e.g. `signed_pu_f32`; arithmetic types such as `float` do not.
 template<typename T>
-concept some_quantity = requires(T q, typename T::value_type v) {
-  requires std::floating_point<typename T::value_type>;
-  { T(v) } -> std::same_as<T>;
-  { value_of(q) } -> std::same_as<typename T::value_type>;
-};
+concept some_quantity = some_wrapper<T> && std::floating_point<unwrapped_t<T>>;
 
 // The concept `some_ratio<R>` is satisfied if and only if `R::type` denotes
 // the same type as `std::ratio<R::num, R::den>`. Every specialization of

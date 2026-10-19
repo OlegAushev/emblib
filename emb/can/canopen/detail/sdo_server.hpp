@@ -113,7 +113,7 @@ private:
     if (!od_readable(entry.access))
       return std::unexpected(sdo_abort_code::read_from_write_only);
 
-    bool const text = entry.type == od_value_type::string;
+    bool const text = entry.type == od_data_type::string;
     auto const value =
         entry.read(ctx_, text ? text_word(entry.key()) : entry.arg);
     if (!value) return std::unexpected(value.error());
@@ -121,13 +121,12 @@ private:
            && "od: a reader returned another type than its object's");
 
     expedited_sdo tsdo;
-    tsdo.data = to_raw(*value);
+    tsdo.data = to_sdo_data(*value);
     if (text) {
       advance_text(tsdo.data);
     }
 
-    std::size_t const data_size =
-        od_data_type_sizes[std::to_underlying(entry.type)];
+    std::size_t const data_size = od_size_of(entry.type);
 
     tsdo.index = rsdo.index;
     tsdo.subindex = rsdo.subindex;
@@ -144,7 +143,7 @@ private:
     if (!od_writable(entry.access))
       return std::unexpected(sdo_abort_code::write_to_read_only);
 
-    od_value value = make_od_value(rsdo.data, entry.type);
+    od_value value = from_sdo_data(rsdo.data, entry.type);
     if (auto r = entry.write(ctx_, entry.arg, value); !r) {
       return std::unexpected(r.error());
     }

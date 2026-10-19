@@ -9,7 +9,7 @@
 namespace {
 
 using namespace emb::can::canopen;
-using enum od_value_type;
+using enum od_data_type;
 
 namespace settings = emb::settings;
 

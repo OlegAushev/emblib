@@ -41,19 +41,6 @@ using od_args_t = typename od_signature<decltype(+F)>::args;
 template<typename T>
 concept od_carried = od_scalar<T> || wraps_od_scalar<T>;
 
-template<typename T>
-struct od_scalar_of {
-  using type = T;
-};
-
-template<wraps_od_scalar T>
-struct od_scalar_of<T> {
-  using type = typename T::value_type;
-};
-
-template<typename T>
-using od_scalar_of_t = typename od_scalar_of<T>::type;
-
 template<typename R>
 struct od_read_value {
   using type = R;
@@ -145,9 +132,9 @@ concept od_rw_pair =
     od_reader<G, Ctx>
     && od_writer<S, Ctx>
     && std::same_as<
-        detail::od_scalar_of_t<
+        unwrapped_t<
             typename detail::od_read_value<detail::od_result_t<G>>::type>,
-        detail::od_scalar_of_t<
+        unwrapped_t<
             typename detail::od_written<detail::od_args_t<S>, Ctx>::type>>;
 
 namespace detail {
@@ -246,12 +233,12 @@ struct read_binding {
     if constexpr (od_reader<F, Ctx>) {
       using value_type = typename od_read_value<od_result_t<F>>::type;
       return {.access = Access,
-              .type = od_type_of<od_scalar_of_t<value_type>>,
+              .type = od_type_of<unwrapped_t<value_type>>,
               .read = &od_read_thunk<F, Ctx>};
     }
     else {
       return {.access = Access,
-              .type = od_value_type::uint32,
+              .type = od_data_type::uint32,
               .diagnosed = true};
     }
   }
@@ -266,12 +253,12 @@ struct write_binding {
     if constexpr (od_writer<S, Ctx>) {
       using value_type = typename od_written<od_args_t<S>, Ctx>::type;
       return {.access = od_access::wo,
-              .type = od_type_of<od_scalar_of_t<value_type>>,
+              .type = od_type_of<unwrapped_t<value_type>>,
               .write = &od_write_thunk<S, Ctx>};
     }
     else {
       return {.access = od_access::wo,
-              .type = od_value_type::uint32,
+              .type = od_data_type::uint32,
               .diagnosed = true};
     }
   }
@@ -291,13 +278,13 @@ struct rw_binding {
     if constexpr (od_rw_pair<G, S, Ctx>) {
       using value_type = typename od_read_value<od_result_t<G>>::type;
       return {.access = od_access::rw,
-              .type = od_type_of<od_scalar_of_t<value_type>>,
+              .type = od_type_of<unwrapped_t<value_type>>,
               .read = &od_read_thunk<G, Ctx>,
               .write = &od_write_thunk<S, Ctx>};
     }
     else {
       return {.access = od_access::rw,
-              .type = od_value_type::uint32,
+              .type = od_data_type::uint32,
               .diagnosed = true};
     }
   }
@@ -311,12 +298,12 @@ struct command_binding {
     static_assert(od_command<F, Ctx>, od_command_shape);
     if constexpr (od_command<F, Ctx>) {
       return {.access = od_access::wo,
-              .type = od_value_type::exec,
+              .type = od_data_type::exec,
               .write = &od_command_thunk<F, Ctx>};
     }
     else {
       return {.access = od_access::wo,
-              .type = od_value_type::exec,
+              .type = od_data_type::exec,
               .diagnosed = true};
     }
   }
@@ -330,12 +317,12 @@ struct text_binding {
     static_assert(od_text_reader<F, Ctx>, od_text_shape);
     if constexpr (od_text_reader<F, Ctx>) {
       return {.access = od_access::const_,
-              .type = od_value_type::string,
+              .type = od_data_type::string,
               .read = &od_text_thunk<F, Ctx>};
     }
     else {
       return {.access = od_access::const_,
-              .type = od_value_type::string,
+              .type = od_data_type::string,
               .diagnosed = true};
     }
   }

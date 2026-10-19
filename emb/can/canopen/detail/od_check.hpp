@@ -72,19 +72,19 @@ constexpr std::string item_error(od_catalog const& catalog,
   return out;
 }
 
-constexpr std::string_view type_name(od_value_type type)
+constexpr std::string_view type_name(od_data_type type)
 {
   switch (type) {
-  case od_value_type::boolean: return "boolean";
-  case od_value_type::int8: return "int8";
-  case od_value_type::int16: return "int16";
-  case od_value_type::int32: return "int32";
-  case od_value_type::uint8: return "uint8";
-  case od_value_type::uint16: return "uint16";
-  case od_value_type::uint32: return "uint32";
-  case od_value_type::float32: return "float32";
-  case od_value_type::exec: return "exec";
-  case od_value_type::string: return "string";
+  case od_data_type::boolean: return "boolean";
+  case od_data_type::int8: return "int8";
+  case od_data_type::int16: return "int16";
+  case od_data_type::int32: return "int32";
+  case od_data_type::uint8: return "uint8";
+  case od_data_type::uint16: return "uint16";
+  case od_data_type::uint32: return "uint32";
+  case od_data_type::float32: return "float32";
+  case od_data_type::exec: return "exec";
+  case od_data_type::string: return "string";
   }
   return "?";
 }
@@ -94,7 +94,7 @@ constexpr std::string_view type_name(od_value_type type)
 // empty view if it breaks none. A row that binds one object and a field of a
 // record obey the same rules.
 constexpr std::string_view
-handler_error(od_access access, od_value_type type, bool reader, bool writer)
+handler_error(od_access access, od_data_type type, bool reader, bool writer)
 {
   bool const readable = od_readable(access);
   bool const writable = od_writable(access);
@@ -103,10 +103,10 @@ handler_error(od_access access, od_value_type type, bool reader, bool writer)
   if (!readable && reader) return "write-only but has a reader";
   if (writable && !writer) return "writable but has no writer";
   if (!writable && writer) return "read-only but has a writer";
-  if (type == od_value_type::exec && access != od_access::wo) {
+  if (type == od_data_type::exec && access != od_access::wo) {
     return "an exec object must be wo";
   }
-  if (type == od_value_type::string && writable) {
+  if (type == od_data_type::string && writable) {
     return "a string object must not be writable";
   }
   return {};

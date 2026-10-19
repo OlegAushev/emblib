@@ -36,7 +36,7 @@ using od_value = std::variant<bool,
 template<typename T>
 concept od_scalar = alternative_of<T, od_value>;
 
-enum class od_value_type : std::uint8_t {
+enum class od_data_type : std::uint8_t {
   boolean,
   int8,
   int16,
@@ -66,20 +66,20 @@ static_assert(
 static_assert(
     std::same_as<std::variant_alternative_t<6, od_value>, std::uint32_t>);
 static_assert(std::same_as<std::variant_alternative_t<7, od_value>, float>);
-static_assert(std::to_underlying(od_value_type::float32) == 7);
+static_assert(std::to_underlying(od_data_type::float32) == 7);
 
 // The type code of the scalar `T`.
 template<od_scalar T>
-inline constexpr od_value_type od_type_of =
-    static_cast<od_value_type>(od_value(std::in_place_type<T>).index());
+inline constexpr od_data_type od_type_of =
+    static_cast<od_data_type>(od_value(std::in_place_type<T>).index());
 
 // Returns the index of the od_value alternative an object of type `type`
 // travels as: its own for a scalar type, uint32's for exec and string.
-constexpr std::size_t od_alternative_of(od_value_type type)
+constexpr std::size_t od_alternative_of(od_data_type type)
 {
   switch (type) {
-  case od_value_type::exec:
-  case od_value_type::string: return std::to_underlying(od_value_type::uint32);
+  case od_data_type::exec:
+  case od_data_type::string: return std::to_underlying(od_data_type::uint32);
   default: return std::to_underlying(type);
   }
 }
@@ -100,66 +100,75 @@ constexpr bool od_writable(od_access access)
 using od_read_result = std::expected<od_value, sdo_abort_code>;
 using od_write_result = std::expected<void, sdo_abort_code>;
 
-// Deserialize raw 4-byte SDO data into a typed od_value per the OD entry's
-// declared data_type. `exec` entries are forwarded as uint32 — they don't
-// carry a semantic value; the user write_func interprets the bytes as a
-// magic command (e.g. "save"/"load"). `string` returns uint32{0} — not
-// supported by the current SDO path (requires block transfer).
-inline od_value make_od_value(expedited_sdo_data raw, od_value_type type)
+// Returns the value that `bytes`, the data of an expedited SDO, carries for
+// an object of type `type`: the scalar of that type in its leading bytes,
+// whatever the bytes after it hold. An `exec` object reads as `uint32`, which
+// a command ignores unless it takes a signature. A `string` object is never
+// written, and reads as `uint32{0}`.
+inline od_value from_sdo_data(expedited_sdo_data bytes, od_data_type type)
 {
   switch (type) {
-  case od_value_type::boolean: return raw[0] != 0;
-  case od_value_type::int8: return static_cast<std::int8_t>(raw[0]);
-  case od_value_type::int16: {
+  case od_data_type::boolean: return bytes[0] != 0;
+  case od_data_type::int8: return static_cast<std::int8_t>(bytes[0]);
+  case od_data_type::int16: {
     std::int16_t v;
-    std::memcpy(&v, raw.data(), sizeof(v));
+    std::memcpy(&v, bytes.data(), sizeof(v));
     return v;
   }
-  case od_value_type::int32: {
+  case od_data_type::int32: {
     std::int32_t v;
-    std::memcpy(&v, raw.data(), sizeof(v));
+    std::memcpy(&v, bytes.data(), sizeof(v));
     return v;
   }
-  case od_value_type::uint8: return raw[0];
-  case od_value_type::uint16: {
+  case od_data_type::uint8: return bytes[0];
+  case od_data_type::uint16: {
     std::uint16_t v;
-    std::memcpy(&v, raw.data(), sizeof(v));
+    std::memcpy(&v, bytes.data(), sizeof(v));
     return v;
   }
-  case od_value_type::uint32:
-  case od_value_type::exec: {
+  case od_data_type::uint32:
+  case od_data_type::exec: {
     std::uint32_t v;
-    std::memcpy(&v, raw.data(), sizeof(v));
+    std::memcpy(&v, bytes.data(), sizeof(v));
     return v;
   }
-  case od_value_type::float32: {
+  case od_data_type::float32: {
     float v;
-    std::memcpy(&v, raw.data(), sizeof(v));
+    std::memcpy(&v, bytes.data(), sizeof(v));
     return v;
   }
   default: return std::uint32_t{0};
   }
 }
 
-// Serialize a typed od_value back into raw 4 bytes.
-inline expedited_sdo_data to_raw(od_value v)
+// Returns the data of an expedited SDO that carries `v`: the bytes of its
+// scalar, followed by zeros.
+inline expedited_sdo_data to_sdo_data(od_value v)
 {
-  expedited_sdo_data raw{};
-  v.visit([&](auto const& x) { std::memcpy(raw.data(), &x, sizeof(x)); });
-  return raw;
+  expedited_sdo_data bytes{};
+  v.visit([&](auto const& x) { std::memcpy(bytes.data(), &x, sizeof(x)); });
+  return bytes;
 }
 
-constexpr std::array<std::size_t, 10> od_data_type_sizes = {
-    sizeof(bool),
-    sizeof(std::int8_t),
-    sizeof(std::int16_t),
-    sizeof(std::int32_t),
-    sizeof(std::uint8_t),
-    sizeof(std::uint16_t),
-    sizeof(std::uint32_t),
-    sizeof(float),
-    4,
-    4};
+// Returns the size, in bytes, of an object of type `type` in the data of an
+// expedited SDO: that of its scalar, and 4 for `exec` and `string`, which
+// travel as `uint32`.
+constexpr std::size_t od_size_of(od_data_type type)
+{
+  switch (type) {
+  case od_data_type::boolean:
+  case od_data_type::int8:
+  case od_data_type::uint8: return 1;
+  case od_data_type::int16:
+  case od_data_type::uint16: return 2;
+  case od_data_type::int32:
+  case od_data_type::uint32:
+  case od_data_type::float32:
+  case od_data_type::exec:
+  case od_data_type::string: return 4;
+  }
+  return 4;
+}
 
 // The struct `od_key` is the address of an object: its index and subindex.
 // Keys are ordered by index, then by subindex.
@@ -199,7 +208,7 @@ struct od_catalog {
 template<typename Ctx>
 struct od_field {
   od_access access;
-  od_value_type type;
+  od_data_type type;
   od_read_fn<Ctx> read = nullptr;
   od_write_fn<Ctx> write = nullptr;
 };
@@ -221,7 +230,7 @@ struct od_field {
 template<typename Ctx>
 struct od_binding {
   od_access access;
-  od_value_type type;
+  od_data_type type;
   od_read_fn<Ctx> read = nullptr;
   od_write_fn<Ctx> write = nullptr;
   std::uint16_t arg = 0;
@@ -244,7 +253,7 @@ struct od_row {
   std::string_view subcategory;
   std::string_view name;
   std::string_view unit;
-  od_value_type type;
+  od_data_type type;
   od_binding<Ctx> binding;
 };
 
@@ -255,7 +264,7 @@ template<typename Ctx>
 struct od_entry {
   std::uint16_t index;
   std::uint8_t subindex;
-  od_value_type type;
+  od_data_type type;
   od_access access;
   std::uint16_t arg;
   od_read_fn<Ctx> read;

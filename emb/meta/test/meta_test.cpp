@@ -114,4 +114,43 @@ static_assert(
 static_assert(std::is_same_v<typelist_concat_t<typelist<A, B>, typelist<C, A>>,
                              typelist<A, B, C, A>>);
 
+// -- wrapper tests --
+
+// Wraps a float and lets value_of find it by argument-dependent lookup.
+struct meters {
+  using value_type = float;
+  float value;
+  constexpr explicit meters(float v) : value(v) {}
+  friend constexpr float value_of(meters m)
+  {
+    return m.value;
+  }
+};
+
+// Names a value type but cannot be unwrapped: it has no value_of.
+struct no_value_of {
+  using value_type = int;
+  int value;
+};
+
+// Unwraps to a reference rather than to a value.
+struct by_reference {
+  using value_type = int;
+  int value;
+  constexpr explicit by_reference(int v) : value(v) {}
+  friend constexpr int const& value_of(by_reference const& r)
+  {
+    return r.value;
+  }
+};
+
+static_assert(some_wrapper<meters>);
+static_assert(!some_wrapper<no_value_of>);
+static_assert(!some_wrapper<by_reference>);
+static_assert(!some_wrapper<float>);
+
+static_assert(std::is_same_v<unwrapped_t<meters>, float>);
+static_assert(std::is_same_v<unwrapped_t<float>, float>);
+static_assert(std::is_same_v<unwrapped_t<no_value_of>, no_value_of>);
+
 } // namespace

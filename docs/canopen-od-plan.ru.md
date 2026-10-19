@@ -40,7 +40,7 @@ g++ 16.2; большинство — также на clang 22 через `clang-
 - 2026-09-28. У строковых объектов один курсор на сервер (§2.6).
 - 2026-09-29. Построитель `od_rw<G, S>` входит в набор, хотя в etk ему пока
   нечего обслуживать.
-- 2026-09-29. В строке таблицы записан тип объекта (`od_value_type`), чтобы
+- 2026-09-29. В строке таблицы записан тип объекта (`od_data_type`), чтобы
   таблицу для клиента на ПК мог строить текстовый парсер; `make_dictionary`
   сверяет его с типом привязки (T15). Тип — колонкой строки, а не
   аргументом построителя: так он стоит на одном месте в каждой строке, а
@@ -79,11 +79,11 @@ g++ 16.2; большинство — также на clang 22 через `clang-
 
 ### 2.1 Типы (`emb/can/canopen/od.hpp`, переписывается)
 
-Остаются `od_value`, `od_scalar`, `od_value_type`, `od_access`,
-`od_read_result`, `od_write_result`, `make_od_value`, `to_raw` и
-`od_data_type_sizes`. Добавляются `static_assert`, связывающие коды 0–7
-`od_value_type` с индексами альтернатив `od_value`, и
-`constexpr od_alternative_of(od_value_type)`: для `exec` и `string` он
+Остаются `od_value`, `od_scalar`, `od_data_type`, `od_access`,
+`od_read_result`, `od_write_result`, `from_sdo_data`, `to_sdo_data` и
+`od_size_of`. Добавляются `static_assert`, связывающие коды 0–7
+`od_data_type` с индексами альтернатив `od_value`, и
+`constexpr od_alternative_of(od_data_type)`: для `exec` и `string` он
 возвращает индекс `uint32`.
 
 ```cpp
@@ -120,7 +120,7 @@ struct od_catalog {
 template<typename Ctx>
 struct od_binding {
   od_access access;
-  od_value_type type;
+  od_data_type type;
   od_read_fn<Ctx> read = nullptr;       // есть ⇔ od_readable(access)
   od_write_fn<Ctx> write = nullptr;     // есть ⇔ od_writable(access)
   std::uint16_t arg = 0;
@@ -134,7 +134,7 @@ template<typename Ctx>
 struct od_row {
   od_key key;
   std::string_view category, subcategory, name, unit;
-  od_value_type type;                   // для текстового парсера; T15
+  od_data_type type;                   // для текстового парсера; T15
   od_binding<Ctx> binding;
 };
 
@@ -143,7 +143,7 @@ template<typename Ctx>
 struct od_entry {
   std::uint16_t index;
   std::uint8_t subindex;
-  od_value_type type;
+  od_data_type type;
   od_access access;
   bool restorable;
   std::uint16_t arg;
@@ -355,12 +355,12 @@ read:    !od_readable(e.access)         -> read_from_write_only
          arg = e.type == string ? text_word(e.key()) : e.arg
          v = e.read(ctx_, arg);  !v     -> v.error()
          assert(v->index() == od_alternative_of(e.type))
-         data = to_raw(*v)
+         data = to_sdo_data(*v)
          string: word = (в data есть 0) ? 0 : word + 1
-         n = (4 - od_data_type_sizes[e.type]) & 3
+         n = (4 - od_size_of(e.type)) & 3
 
 write:   !od_writable(e.access)         -> write_to_read_only
-         e.write(ctx_, e.arg, make_od_value(data, e.type))
+         e.write(ctx_, e.arg, from_sdo_data(data, e.type))
 
 1011:04 (перехват записи до поиска, как сейчас):
          target = {data[0] | data[1] << 8, data[2]}
@@ -575,7 +575,7 @@ constinit emb::can::canopen::od_view<context> const dictionary{table};
 старых строк извлекаются так:
 
 ```
-perl -ne 'print "{{$1, $2}, \"$3\", \"$4\", \"$5\", \"$6\", od_access::$7, od_value_type::$8, \"$9\"},\n" if /^\{\{(0x\w+), (0x\w+)\}, \{"([^"]*)", "([^"]*)", "([^"]*)", *"([^"]*)", *od_access::(\w+), *od_value_type::(\w+), *(?:std::nullopt|to_od_value\(settings::parameter<"([^"]+)">)/' od.cpp
+perl -ne 'print "{{$1, $2}, \"$3\", \"$4\", \"$5\", \"$6\", od_access::$7, od_data_type::$8, \"$9\"},\n" if /^\{\{(0x\w+), (0x\w+)\}, \{"([^"]*)", "([^"]*)", "([^"]*)", *"([^"]*)", *od_access::(\w+), *od_data_type::(\w+), *(?:std::nullopt|to_od_value\(settings::parameter<"([^"]+)">)/' od.cpp
 ```
 
 Это 165 строк `{ключ, категория, подкатегория, имя, единица, access, тип,
@@ -686,7 +686,7 @@ access и типом; что `restorable` стоит ровно там, где �
   `int` — это `int32_t`, на ARM (`long`) — нет. Негативные тесты берут
   `double`, `std::int64_t` или структуру.
 - **Ошибка до `->`.** В сервере результат чтения проверяется до `assert` и
-  до `to_raw`.
+  до `to_sdo_data`.
 - **Каскад ошибок.** Без `diagnosed` ошибка построителя тянет за собой
   вторую из `od_check`.
 - **Const контекста мелкий.** `context const&` не защищает `drive` от
@@ -715,7 +715,7 @@ access и типом; что `restorable` стоит ровно там, где �
   проверкой T15 (см. «Решения»). В таблице etk её заполнил скрипт из старой
   таблицы (ad60ca8), где типы были записаны и сверены с выведенными; T15
   подтвердил все 165. Размеры секций образа не изменились ни в одном
-  пресете. Типы в etk пишутся коротко после `using enum od_value_type;`.
+  пресете. Типы в etk пишутся коротко после `using enum od_data_type;`.
 - 15 октября строка стала называть параметр настроек его объявлением, а
   не именем: `param::rw<params::motor::p>` вместо `param::rw<"motor.p">`,
   как в разделе 2. Объявление — `constexpr`-переменная, которую перечисляет

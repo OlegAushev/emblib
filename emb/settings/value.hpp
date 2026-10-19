@@ -1,6 +1,7 @@
 #pragma once
 
 #include <emb/meta/alternative_of.hpp>
+#include <emb/meta/wrapper.hpp>
 
 #include <bit>
 #include <concepts>
@@ -52,27 +53,14 @@ static_assert(
 static_assert(std::same_as<std::variant_alternative_t<3, value>, float>);
 static_assert(std::to_underlying(scalar_kind::float32) == 3);
 
-// The concept `some_wrapped_value<T>` is satisfied if and only if `T` wraps
-// one scalar that satisfies `some_value` and can be rebuilt from it:
-// `T::value_type` names the scalar type, `T` is constructible from
-// `T::value_type`, and `value_of` called with a `T const` lvalue returns
-// `T::value_type` by value.
-//
-// A wrapper, e.g. `emb::units::named_unit` or `emb::clamped`, opts in by
-// declaring a `value_of` overload that argument-dependent lookup finds: in
-// its own namespace or as a friend defined in the class. Only the scalar of a
-// wrapper is stored: conversions in this header go through `value_of` and
+// The concept `some_wrapped_value<T>` is satisfied if and only if `T` is a
+// wrapper (`some_wrapper`) of a scalar that satisfies `some_value`, e.g.
+// `emb::units::named_unit` or `emb::clamped` of a `float`. Only the scalar of
+// a wrapper is stored: conversions in this header go through `value_of` and
 // the constructor, never through the bytes of an object, so the layout of a
 // wrapper does not matter.
 template<typename T>
-concept some_wrapped_value = requires { typename T::value_type; }
-                          && some_value<typename T::value_type>
-                          && std::constructible_from<T, typename T::value_type>
-                          && requires(T const& v) {
-                               {
-                                 value_of(v)
-                               } -> std::same_as<typename T::value_type>;
-                             };
+concept some_wrapped_value = some_wrapper<T> && some_value<unwrapped_t<T>>;
 
 // The concept `some_parameter_type<T>` is satisfied if and only if `T`
 // satisfies `some_value` or `some_wrapped_value`, i.e. `T` is a type that a
@@ -80,24 +68,10 @@ concept some_wrapped_value = requires { typename T::value_type; }
 template<typename T>
 concept some_parameter_type = some_value<T> || some_wrapped_value<T>;
 
-namespace detail {
-
-template<typename T>
-struct scalar_of {
-  using type = T;
-};
-
-template<some_wrapped_value T>
-struct scalar_of<T> {
-  using type = typename T::value_type;
-};
-
-} // namespace detail
-
 // Scalar type in which a parameter of type `T` is stored and transported:
 // `T` itself if `T` satisfies `some_value`, otherwise `T::value_type`.
 template<some_parameter_type T>
-using scalar_t = typename detail::scalar_of<T>::type;
+using scalar_t = unwrapped_t<T>;
 
 // The `scalar_kind` of a parameter of type `T`, i.e. the enumerator that
 // names `scalar_t<T>`.

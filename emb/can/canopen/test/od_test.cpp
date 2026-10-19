@@ -11,7 +11,7 @@
 namespace {
 
 using namespace emb::can::canopen;
-using enum od_value_type;
+using enum od_data_type;
 
 struct ctx {
   float value = 0.f;
@@ -187,19 +187,19 @@ constexpr float command_returning(ctx&)
 
 // -- Types --
 
-static_assert(od_type_of<bool> == od_value_type::boolean);
-static_assert(od_type_of<std::int8_t> == od_value_type::int8);
-static_assert(od_type_of<std::int16_t> == od_value_type::int16);
-static_assert(od_type_of<std::int32_t> == od_value_type::int32);
-static_assert(od_type_of<std::uint8_t> == od_value_type::uint8);
-static_assert(od_type_of<std::uint16_t> == od_value_type::uint16);
-static_assert(od_type_of<std::uint32_t> == od_value_type::uint32);
-static_assert(od_type_of<float> == od_value_type::float32);
+static_assert(od_type_of<bool> == od_data_type::boolean);
+static_assert(od_type_of<std::int8_t> == od_data_type::int8);
+static_assert(od_type_of<std::int16_t> == od_data_type::int16);
+static_assert(od_type_of<std::int32_t> == od_data_type::int32);
+static_assert(od_type_of<std::uint8_t> == od_data_type::uint8);
+static_assert(od_type_of<std::uint16_t> == od_data_type::uint16);
+static_assert(od_type_of<std::uint32_t> == od_data_type::uint32);
+static_assert(od_type_of<float> == od_data_type::float32);
 
-static_assert(od_alternative_of(od_value_type::boolean) == 0);
-static_assert(od_alternative_of(od_value_type::float32) == 7);
-static_assert(od_alternative_of(od_value_type::exec) == 6);
-static_assert(od_alternative_of(od_value_type::string) == 6);
+static_assert(od_alternative_of(od_data_type::boolean) == 0);
+static_assert(od_alternative_of(od_data_type::float32) == 7);
+static_assert(od_alternative_of(od_data_type::exec) == 6);
+static_assert(od_alternative_of(od_data_type::string) == 6);
 
 static_assert(od_readable(od_access::ro)
               && od_readable(od_access::const_)
@@ -274,49 +274,49 @@ consteval od_binding<ctx> bind()
 }
 
 template<typename T>
-consteval od_value_type read_type()
+consteval od_data_type read_type()
 {
   return bind<od_ro<zero<T>>>().type;
 }
 
-static_assert(read_type<bool>() == od_value_type::boolean);
-static_assert(read_type<std::int8_t>() == od_value_type::int8);
-static_assert(read_type<std::int16_t>() == od_value_type::int16);
-static_assert(read_type<std::int32_t>() == od_value_type::int32);
-static_assert(read_type<std::uint8_t>() == od_value_type::uint8);
-static_assert(read_type<std::uint16_t>() == od_value_type::uint16);
-static_assert(read_type<std::uint32_t>() == od_value_type::uint32);
-static_assert(read_type<float>() == od_value_type::float32);
-static_assert(read_type<emb::units::hz_f32>() == od_value_type::float32);
+static_assert(read_type<bool>() == od_data_type::boolean);
+static_assert(read_type<std::int8_t>() == od_data_type::int8);
+static_assert(read_type<std::int16_t>() == od_data_type::int16);
+static_assert(read_type<std::int32_t>() == od_data_type::int32);
+static_assert(read_type<std::uint8_t>() == od_data_type::uint8);
+static_assert(read_type<std::uint16_t>() == od_data_type::uint16);
+static_assert(read_type<std::uint32_t>() == od_data_type::uint32);
+static_assert(read_type<float>() == od_data_type::float32);
+static_assert(read_type<emb::units::hz_f32>() == od_data_type::float32);
 
-static_assert(bind<od_ro<read_checked>>().type == od_value_type::float32);
+static_assert(bind<od_ro<read_checked>>().type == od_data_type::float32);
 
 static_assert(bind<od_ro<read_value>>().access == od_access::ro);
 static_assert(bind<od_ro<read_value>>().read
               == &detail::od_read_thunk<read_value, ctx>);
 static_assert(bind<od_ro<read_value>>().write == nullptr);
 static_assert(bind<od_const<read_u8>>().access == od_access::const_);
-static_assert(bind<od_const<read_u8>>().type == od_value_type::uint8);
+static_assert(bind<od_const<read_u8>>().type == od_data_type::uint8);
 
 static_assert(bind<od_wo<write_checked>>().access == od_access::wo);
-static_assert(bind<od_wo<write_checked>>().type == od_value_type::int16);
+static_assert(bind<od_wo<write_checked>>().type == od_data_type::int16);
 static_assert(bind<od_wo<write_checked>>().read == nullptr);
 static_assert(bind<od_wo<write_checked>>().write
               == &detail::od_write_thunk<write_checked, ctx>);
-static_assert(bind<od_wo<write_freq>>().type == od_value_type::float32);
+static_assert(bind<od_wo<write_freq>>().type == od_data_type::float32);
 
 static_assert(bind<od_rw<read_freq, write_value>>().access == od_access::rw);
 static_assert(bind<od_rw<read_freq, write_value>>().type
-              == od_value_type::float32);
+              == od_data_type::float32);
 static_assert(bind<od_rw<read_freq, write_value>>().read
               == &detail::od_read_thunk<read_freq, ctx>);
 static_assert(bind<od_rw<read_freq, write_value>>().write
               == &detail::od_write_thunk<write_value, ctx>);
 
 static_assert(bind<od_exec<command>>().access == od_access::wo);
-static_assert(bind<od_exec<command>>().type == od_value_type::exec);
+static_assert(bind<od_exec<command>>().type == od_data_type::exec);
 static_assert(bind<od_text<text>>().access == od_access::const_);
-static_assert(bind<od_text<text>>().type == od_value_type::string);
+static_assert(bind<od_text<text>>().type == od_data_type::string);
 
 static_assert(!bind<od_ro<read_value>>().diagnosed);
 static_assert(bind<od_ro<read_value>>().catalog == nullptr);
@@ -418,7 +418,7 @@ static_assert(test_text());
 consteval bool test_dictionary()
 {
   static constexpr od_binding<ctx> by_hand{.access = od_access::rw,
-                                           .type = od_value_type::float32,
+                                           .type = od_data_type::float32,
                                            .read = &raw_read,
                                            .write = &raw_write,
                                            .arg = 7};
@@ -526,7 +526,7 @@ static_assert(test_records());
 
 // Builds the binding of an object from its parts, for the checks below.
 consteval od_binding<ctx>
-raw(od_access access, od_value_type type, bool reader, bool writer)
+raw(od_access access, od_data_type type, bool reader, bool writer)
 {
   return {.access = access,
           .type = type,
@@ -581,22 +581,21 @@ consteval std::string check_one(od_binding<ctx> binding)
   return detail::od_check(rows);
 }
 
-static_assert(
-    check_one(raw(od_access::ro, od_value_type::float32, false, false))
-    == "od: 2000h:01 a/b/c: readable but has no reader");
-static_assert(check_one(raw(od_access::wo, od_value_type::float32, true, true))
+static_assert(check_one(raw(od_access::ro, od_data_type::float32, false, false))
+              == "od: 2000h:01 a/b/c: readable but has no reader");
+static_assert(check_one(raw(od_access::wo, od_data_type::float32, true, true))
               == "od: 2000h:01 a/b/c: write-only but has a reader");
-static_assert(check_one(raw(od_access::rw, od_value_type::float32, true, false))
+static_assert(check_one(raw(od_access::rw, od_data_type::float32, true, false))
               == "od: 2000h:01 a/b/c: writable but has no writer");
-static_assert(check_one(raw(od_access::ro, od_value_type::float32, true, true))
+static_assert(check_one(raw(od_access::ro, od_data_type::float32, true, true))
               == "od: 2000h:01 a/b/c: read-only but has a writer");
-static_assert(check_one(raw(od_access::rw, od_value_type::exec, true, true))
+static_assert(check_one(raw(od_access::rw, od_data_type::exec, true, true))
               == "od: 2000h:01 a/b/c: an exec object must be wo");
-static_assert(check_one(raw(od_access::rw, od_value_type::string, true, true))
+static_assert(check_one(raw(od_access::rw, od_data_type::string, true, true))
               == "od: 2000h:01 a/b/c: a string object must not be writable");
 
 // The type a row states must be the type its binding serves.
-consteval std::string check_declared(od_value_type declared,
+consteval std::string check_declared(od_data_type declared,
                                      od_binding<ctx> binding)
 {
   od_row<ctx> const rows[] = {
@@ -619,7 +618,7 @@ inline constexpr od_catalog hiding_catalog{"item", items, y_hidden};
 consteval od_binding<ctx> item(std::uint16_t arg, od_catalog const& from)
 {
   return {.access = od_access::ro,
-          .type = od_value_type::float32,
+          .type = od_data_type::float32,
           .read = &raw_read,
           .arg = arg,
           .catalog = &from};
@@ -687,7 +686,7 @@ consteval std::string check_pair(od_binding<ctx> first, od_binding<ctx> second)
 consteval od_binding<ctx> reading(std::uint16_t arg)
 {
   return {.access = od_access::ro,
-          .type = od_value_type::float32,
+          .type = od_data_type::float32,
           .read = &raw_read,
           .arg = arg};
 }
@@ -714,7 +713,7 @@ static_assert(check_one(item(0, hiding_catalog)).empty());
 consteval od_binding<ctx> diagnosed()
 {
   return {.access = od_access::ro,
-          .type = od_value_type::uint32,
+          .type = od_data_type::uint32,
           .diagnosed = true};
 }
 

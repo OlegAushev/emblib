@@ -291,12 +291,12 @@ class od_settings {
   // The members of the record of a parameter of type `Type`, with 01h
   // writable if `Writable` and with 0Ah read by `Actual` unless it is
   // nullptr.
-  template<od_value_type Type, bool Writable, auto Actual>
+  template<od_data_type Type, bool Writable, auto Actual>
   static constexpr auto param_layout = [] {
     constexpr bool actual = !std::is_null_pointer_v<decltype(Actual)>;
     std::array<field, actual ? 11 : 10> fields{{
         {.access = od_access::const_,
-         .type = od_value_type::uint8,
+         .type = od_data_type::uint8,
          .read = &last_subindex < actual ? 0x0A : 0x09 > },
         {.access = Writable ? od_access::rw : od_access::ro,
          .type = Type,
@@ -308,13 +308,13 @@ class od_settings {
         {.access = od_access::const_, .type = Type, .read = &read_min},
         {.access = od_access::const_, .type = Type, .read = &read_max},
         {.access = od_access::const_,
-         .type = od_value_type::uint8,
+         .type = od_data_type::uint8,
          .read = &read_policy},
         {.access = od_access::wo,
-         .type = od_value_type::exec,
+         .type = od_data_type::exec,
          .write = &apply_parameter},
         {.access = od_access::wo,
-         .type = od_value_type::exec,
+         .type = od_data_type::exec,
          .write = &discard_parameter},
     }};
     if constexpr (actual) {
@@ -328,7 +328,7 @@ class od_settings {
   // Whether `Actual` is nullptr, or a reader whose value travels as the
   // scalar `type` names.
   template<auto Actual>
-  static consteval bool reads_as(od_value_type type)
+  static consteval bool reads_as(od_data_type type)
   {
     if constexpr (std::is_null_pointer_v<decltype(Actual)>) {
       return true;
@@ -336,7 +336,7 @@ class od_settings {
     else if constexpr (od_reader<Actual, context_type>) {
       using value_type =
           typename detail::od_read_value<detail::od_result_t<Actual>>::type;
-      return od_type_of<detail::od_scalar_of_t<value_type>> == type;
+      return od_type_of<unwrapped_t<value_type>> == type;
     }
     else {
       return false;

@@ -10,3 +10,4 @@
 #include <emb/meta/typelist.hpp>
 #include <emb/meta/unroll.hpp>
 #include <emb/meta/visit_at.hpp>
+#include <emb/meta/wrapper.hpp>

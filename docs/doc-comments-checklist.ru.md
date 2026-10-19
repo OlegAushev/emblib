@@ -113,6 +113,9 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `unroll`
 - [x] `emb/meta/visit_at.hpp`
   - [x] `visit_at`
+- [x] `emb/meta/wrapper.hpp`
+  - [x] `some_wrapper`, `unwrapped_t` (`detail::unwrapped` без комментария:
+    его покрывает псевдоним)
 - [x] `emb/mmio.hpp`
   - [x] `some_register`, `some_writable_register`, `mask_type`, `value_type`
   - [x] `detail::is_contiguous_mask`, `valid_mask`, `field_mask`, `mask_for`,
@@ -171,8 +174,7 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `scalar_kind`
   - [x] `value`, `cell`
   - [x] `some_value`, `some_wrapped_value`, `some_parameter_type`
-  - [x] `scalar_t`, `kind_of` (`detail::scalar_of` без комментария: его
-    покрывает псевдоним)
+  - [x] `scalar_t`, `kind_of`
   - [x] `held_kind`
   - [x] `to_value`, `from_value`, `to_cell`, `from_cell` (у `to_value` и
     `to_cell` по две перегрузки, у каждой свой комментарий)
