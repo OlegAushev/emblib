@@ -1,7 +1,7 @@
 # Settings and NVM: design and migration plan
 
 Status: done. Every step of the plan is implemented: the settings live in
-a schema with bounds, groups and apply policies; they are stored as whole
+a schema with bounds and apply policies; they are stored as whole
 records that commit or do not; they are reached by declaration from the
 application and by index from a protocol; and a change takes effect without
 a restart, on command, wherever the application admits it. The stack it
@@ -33,7 +33,11 @@ applier the application hands the section, which checks, admits and
 configures each group of the change. The configs are built from the values
 applied only, a save keeps only what is applied or checked, and the
 dictionary shows every parameter and every group as a record; 1011h:04 is
-gone (§4, §7, §10).
+gone (§4, §7, §10). On 2026-10-17 the groups went: the applier compares
+what it builds from the values applied before and after a change, a check
+is a set of rules over the parameters each names, a rule that the values
+loaded break falls back to the defaults of its inputs, and the dictionary
+has no records of groups (§3, §4, §7, §10).
 
 ## 1. Scope
 
@@ -54,7 +58,7 @@ A replacement for the current NVM parameter stack (`emb/nvm.hpp` +
     emb::nvm          block storage concept, record format, slot store
         ^
         |
-    emb::settings     schema, descriptors, RAM image, typed access, groups,
+    emb::settings     schema, descriptors, RAM image, typed access, rules,
                       section
         ^                          ^
         |                          |
@@ -79,7 +83,6 @@ struct descriptor {
   std::uint32_t    id;        // hash of name mixed with the type code
   value_type       type;
   raw_value        def, min, max;  // cells, ordered under `type`
-  group_id         group;     // which config struct it feeds
   apply_policy     apply;     // on_command / on_restart
   bool             writable;  // may ever change at run time
   bool             expose;    // meant for external access at all
@@ -90,14 +93,14 @@ Declared as:
 
 ```cpp
 inline constexpr auto phase_swap =
-  param("drive.phase_swap", false, {.group = group::drive});
+  param("drive.phase_swap", false, {.apply = apply_policy::on_command});
 inline constexpr auto runout_speed =
   param("drive.runout_speed", rpm{100.0f},
         {.min = rpm{0.0f}, .max = rpm{5000.0f},
-         .group = group::drive, .apply = apply_policy::on_command});
+         .apply = apply_policy::on_command});
 inline constexpr auto stopping_torque =
   param("drive.stopping_torque", pu{0.05f},          // clamped: own bounds
-        {.group = group::drive, .apply = apply_policy::on_command});
+        {.apply = apply_policy::on_command});
 
 inline constexpr auto schema =
   settings::make_schema(phase_swap, runout_speed, stopping_torque);
@@ -160,13 +163,14 @@ When a change may take effect is not the schema's to say. A "safe state"
 means different things to different parameters — the phase order needs the
 bridge off, the machine model of the observer a rotor that is not driven,
 the gains nothing at all — and the application has to know it anyway. It
-says so group by group when a change is applied, and splits a group where
-its values may take effect at different times: in the inverter
-`drive.phase_swap` is a group of its own, `phase_order`, beside the
-protection thresholds of `drive`, and so is `ctrl.I_autotune`, `autotune`,
-beside the gains of `model`. Groups that feed one config share it:
-rebuilding `drive_config` for `phase_order` reads the thresholds from the
-values applied, i.e. changes none of them.
+says so when a change is applied: its applier compares what it builds from
+the values applied before the change and after it, and asks for a safe
+state only where something that needs one differs. In the inverter
+`change_between` tells which configs differ, and whether the change
+touches the phase order, the machine, whether the current controllers are
+tuned, or the hall sensor: `drive.phase_swap` and the protection thresholds
+feed one `drive_config`, yet only a change of the phase order waits for
+the drive to stand.
 
 Mechanism: **a command applies, through the application's applier, all or
 nothing.**
@@ -175,42 +179,47 @@ nothing.**
 - The section keeps, next to the values requested, the values applied, out
   of which the application builds its state, and the values stored. The
   config readers read the values applied only, so a value that waits never
-  reaches a rebuild of its group, whatever its policy.
-- `apply(index, applier)`, `apply_group(group, applier)` and
-  `apply_all(applier)` choose the values of parameters applied on command
-  that differ from the values applied — one, a group's or all — and apply
-  them as one transaction, below. A check or an admission that refuses
-  applies nothing and is kept, with its group, as `last_failure()`. An
-  `on_restart` parameter, or a group in which the schema declares nothing
-  applied on command, is refused whatever its values; a choice with nothing
-  in it succeeds without calling the applier.
-- `discard`, `discard_group` and `discard_all` put the values applied back
-  into the values requested, of either policy, but not into a parameter
-  that is not `writable`.
+  reaches a rebuild, whatever its policy.
+- `apply(index, applier)` and `apply_all(applier)` choose the values of
+  parameters applied on command that differ from the values applied — one
+  or all — and apply them as one transaction, below. A check or an
+  admission that refuses applies nothing and is kept as `last_failure()`.
+  `apply` refuses an `on_restart` parameter whatever its value; a choice
+  with nothing in it succeeds without calling the applier.
+- `discard` and `discard_all` put the values applied back into the values
+  requested, of either policy, but not into a parameter that is not
+  `writable`.
 
 ```
 candidate = the values applied, with the chosen cells taken in
-for each group of the change: applier.check(group, candidate)    -- pure
+applier.check(candidate)                                 -- pure
 guard = applier.lock()
-for each group of the change: applier.admit(group)               -- state
-the values applied = candidate
-for each group of the change: applier.configure(group, applied)  -- cannot fail
+applier.admit(the values applied, candidate)             -- state
+before = the values applied; the values applied = candidate
+applier.configure(before, the values applied)            -- cannot fail
 the guard ends
 ```
 
-The groups go in the order of `groups_of`, ascending. The applier is the
-application's (`some_applier`): `check` is a pure function of the values —
-the protection thresholds against each other, the hall angles as a set —
-which also runs before a save and at startup; `admit` reads the state under
-the lock, so the state it read holds until the configure ends; `configure`
-hands each config to its owner and cannot fail, which is why whatever can
-refuse is asked before. In the inverter `settings::applier` masks the
-timebase and below; admits a change to the phase order, the machine,
-autotune or the hall sensor only while the drive stands with its bridge
-off, in a safe state with the model idle and the PWM stopped, since the
-bridge stops a step after stopping hands over to ready; and has the drive
-rebuild the hall sensor's sector maps with the PWM update and the hall
-capture masked too, since a rotor that stands may still turn.
+The applier is the application's (`some_applier`): `check` is a pure
+function of the values, in the inverter every rule holding (below), which
+also runs before a save; `admit` compares the values applied before and
+after the change and reads the state under the lock, so the state it read
+holds until the configure ends; `configure` rebuilds what derives from the
+parameters that differ, in an order the application keeps, hands each
+config to its owner and cannot fail, which is why whatever can refuse is
+asked before. Each is asked once per change. In the inverter
+`settings::applier` masks the timebase and below; admits a change to the
+phase order, the machine, autotune or the hall sensor only while the drive
+stands with its bridge off, in a safe state with the model idle and the
+PWM stopped, since the bridge stops a step after stopping hands over to
+ready; and has the drive rebuild the hall sensor's sector maps with the
+PWM update and the hall capture masked too, since a rotor that stands may
+still turn.
+
+The inverter's configs compare with `==`, i.e. as numbers: a cell that
+changes from `+0.0` to `-0.0` is recorded as applied and rebuilds nothing,
+as no number changes. Static assertions pin what a change of each kind of
+parameter rebuilds and whether it waits for the drive to stand.
 
 Command, not pull. The seam used to be the drive's periodic task, which
 took what it could every 33 ms: a value written while the drive ran took
@@ -231,18 +240,39 @@ depend on `settings/`, lets a value change between two reads inside one
 control step, and throws away precomputation.
 
 A save keeps what the machine runs on: it refuses while a value applied on
-command waits, and checks the values that wait for a restart before it
-writes. `restart_required()` counts an `on_restart` value that differs from
-the one applied, requested or stored: a value saved and then put back
-still owes the restart that would load it. At startup the application
-checks every group as loaded and builds a group that fails from its
-defaults — `fall_back_to_defaults(group)` records them as applied — while
-the values loaded wait to be corrected or discarded.
+command waits, and checks the image, the values that wait for a restart
+with it, before it writes. `restart_required()` counts an `on_restart`
+value that differs from the one applied, requested or stored: a value
+saved and then put back still owes the restart that would load it.
 
-A batch is applied whole by `apply_group` or `apply_all`. A calibration of
-the hall sensor goes from the timebase interrupt into a mailbox of the
-drive; the main loop requests its twelve angles, and an operator applies
-the group `hall`, whose check validates the twelve as a set.
+A check is a set of rules (`settings/rule.hpp`). A rule names the
+parameters it relates, its inputs, as `inputs<schema, Decls...>`, a view
+of an image that shows them and no other, and `holds(in)` reads them alone:
+reading another parameter does not compile. A rule that holds on the
+defaults of its inputs therefore holds whenever they are at their defaults,
+whatever the other parameters hold, and `fall_back_to_defaults(rules)`
+mends values loaded that break it: right after the load the application
+has every rule they break fall back, the defaults of its inputs recorded
+as applied, while the values loaded wait to be corrected or discarded.
+Rules may share inputs, and a fallback that moves a shared input may break
+another rule, so the passes repeat until every rule holds; each pass checks
+every rule before it falls back any, so the order of the rules does not
+matter, and a rule falls back at most once, its inputs staying at their
+defaults. The program is ill-formed if a rule breaks on the defaults. In
+the inverter the rules are `dc_window`, `ot_margins` and `hall_angles`: a
+broken window of the DC voltage resets `prot.uvp_dc` and `prot.ovp_dc` and
+nothing else. Until the fallback, values loaded that break a rule hold
+back every change and every save, since a change is checked as the values
+applied with it taken in.
+
+A batch is applied whole by `apply_all`. One parameter at a time, each step
+is checked as the values applied with that one value taken in, so values a
+rule relates may have to be applied in an order: raising both bounds of a
+window, the upper first. A calibration of the hall sensor goes from the
+timebase interrupt into a mailbox of the drive; the main loop requests its
+twelve angles, and an operator applies them with 3001h:01, the twelve
+together: one at a time, a step either breaks the rule of the angles or
+leaves a geometry that belongs to neither the old calibration nor the new.
 
 ## 5. NVM record format
 
@@ -469,16 +499,15 @@ categories, unit — and takes everything else from the section and its
 schema through the parameter's declaration. The type is taken from the
 schema as well, and written in the row besides, so that a text parser can
 build a host's table from the source; the dictionary checks that the two
-agree. Each parameter is a record, one row at an index of its own, and so
-is each group (`can/canopen/od_settings.hpp`; the dictionary around it is
-described in `canopen-od-algorithm.ru.md`):
+agree. Each parameter is a record, one row at an index of its own
+(`can/canopen/od_settings.hpp`; the dictionary around it is described in
+`canopen-od-algorithm.ru.md`):
 
 ```cpp
 using setting = emb::can::canopen::od_settings<settings_of, applier_of>;
 namespace params = settings::params;
 
 inline constexpr emb::can::canopen::od_row<context> rows[] = {
-  {{0x3010, 0x00}, "config", "groups", "drive",      "",   exec,    setting::group<settings::group::drive>},
   {{0x3100, 0x00}, "config", "drive",  "phase_swap", "",   boolean, setting::param<params::drive::phase_swap>},
   {{0x3107, 0x00}, "config", "drive",  "pwm_freq",   "Hz", float32, setting::param<params::drive::pwm_freq, pwm_frequency_actual>},
   // ...
@@ -492,21 +521,18 @@ a parameter:
 
 | subindex | access | member |
 |---|---|---|
-| 00h | const u8 | the last subindex, 0Ah, or 0Bh with an actual value |
+| 00h | const u8 | the last subindex, 09h, or 0Ah with an actual value |
 | 01h | rw, ro if not `writable` | the value requested |
 | 02h | ro | the value applied |
 | 03h | ro | the value stored |
 | 04h–06h | const | the default, the lower and the upper bound |
 | 07h | const u8 | the policy: 0 on command, 1 on restart |
-| 08h | const u16 | the index of the record of its group |
-| 09h | wo exec | applies the parameter |
-| 0Ah | wo exec | discards its value requested |
-| 0Bh | ro | the actual value, with `param<Decl, Actual>` only |
+| 08h | wo exec | applies the parameter |
+| 09h | wo exec | discards its value requested |
+| 0Ah | ro | the actual value, with `param<Decl, Actual>` only |
 
-The record of a group: 00h = 4, 01h applies the group, 02h discards it,
-03h tells whether a value of it waits, 04h is its number. `apply_all`,
-`discard_all`, `last_failure` and `last_failure_group` serve `od_exec` and
-`od_ro`. A refusal answers with `to_sdo_abort`: what nothing applies on
+`apply_all`, `discard_all` and `last_failure` serve `od_exec` and `od_ro`.
+A refusal answers with `to_sdo_abort`: what nothing applies on
 command with `unsupported_access`, a failed check with
 `parameter_incompatibility`, a change not admitted or values that wait to
 be saved with `state_error`.
@@ -521,10 +547,7 @@ Completeness is checked at compile time, without coupling:
 - no duplicate `od_key` and no duplicate name in the dictionary, for every
   row, settings or not, and a record has its index to itself;
 - every schema parameter with `expose` has exactly one record and a hidden
-  one none, and every group with an exposed parameter has exactly one record
-  and every other group none — "forgot to publish the new parameter" fails
-  the build. A parameter's record links to its group's, so the check of the
-  groups runs as soon as the dictionary binds one parameter;
+  one none — "forgot to publish the new parameter" fails the build;
 - the type written in the row must equal the parameter's, `named_unit` and
   `emb::clamped` included (T15 in `canopen-od-algorithm.ru.md`), and an
   actual value must be read in that type.
@@ -540,7 +563,7 @@ external/emblib/emb/
   meta/fixed_string.hpp        [done] structural string for NTTP names
   nvm/storage.hpp              [done] block storage concept + is_erased
   settings/value.hpp           [done] value_type, value, cell conversions
-  settings/param.hpp           [done] param(): def/min/max, writable, group,
+  settings/param.hpp           [done] param(): def/min/max, writable,
                                       apply_policy, expose
   settings/schema.hpp          [done] make_schema, `parameter` by
                                       declaration, lookup by name and by id,
@@ -549,11 +572,14 @@ external/emblib/emb/
   settings/record.hpp          [done] record layout, encode and decode
   settings/store.hpp           [done] slots, active record, commit, load
                                       report
+  settings/rule.hpp            [done] inputs, some_rule, all_hold: checks
+                                      of parameters together, see §4
   settings/section.hpp         [done] one section: the values requested,
                                       stored and applied; load/save/wipe,
-                                      apply on command, discard
-  can/canopen/od_settings.hpp  [done] records of the parameters and the
-                                      groups of a section, see §7
+                                      apply on command, discard, fall back
+                                      by rules
+  can/canopen/od_settings.hpp  [done] records of the parameters of a
+                                      section, see §7
   can/canopen/od_section.hpp   [done] the readers of a section's state
                                       under 3000h
   test/mock/ram_storage.hpp  [done] constexpr RAM backend for tests
@@ -575,14 +601,14 @@ src/app/inverter/hw/
 
 src/app/inverter/settings/
   schema.hpp                   [done] the product's parameter list, with
-                                      bounds, groups and apply policies
+                                      bounds and apply policies
   params.hpp / params.cpp      [done] the config section; load/save/wipe
                                       and the service warnings as trouble
-  settings.hpp / settings.cpp  [done] the config readers, the checks of the
-                                      groups and the request of a hall
-                                      calibration
-  apply.hpp / apply.cpp        [done] the applier: when each group may
-                                      change, and what it rebuilds
+  settings.hpp / settings.cpp  [done] the config readers, what a change
+                                      rebuilds, the rules, and the request
+                                      of a hall calibration
+  apply.hpp / apply.cpp        [done] the applier: when a change may take
+                                      effect, and what it rebuilds
 ```
 
 ## 9. Implementation plan
@@ -717,14 +743,17 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   the cell `0xFFFFFFFB` is -5 and belongs in [-10, 10], while as a word it
   is above every positive bound.
 - **No per-parameter `validate` hook.** Bounds cover what a single value can
-  be judged on; anything else is a relation between parameters, and that
-  check belongs to the owner's `configure()`, which sees the whole config
-  struct. A type-erased hook would also need a thunk per parameter for no
-  gain.
-- **`group_id` takes any scoped enum with a one-byte underlying type.** The
-  set of groups belongs to the product, and the runtime table can only hold
-  a number; requiring `: std::uint8_t` rather than truncating turns an enum
-  that does not fit into a compile error.
+  be judged on; anything else is a relation between parameters. That check
+  belonged to the owner's `configure()`, which sees the whole config
+  struct, until applying on command moved it before the change; since
+  2026-10-17 it is a rule over the parameters it relates (§4). A type-erased
+  hook would also need a thunk per parameter for no gain.
+- ~~**`group_id` takes any scoped enum with a one-byte underlying type.**~~
+  Superseded on 2026-10-17 by "Groups gave way to rules and to configs
+  compared": there are no groups. The set of groups belongs to the product,
+  and the runtime table can only hold a number; requiring `: std::uint8_t`
+  rather than truncating turns an enum that does not fit into a compile
+  error.
 - **`apply_policy` defaults to `on_restart`.** Opting into live application
   is a claim about the consuming code; a parameter whose policy was never
   considered should cost a restart rather than silently take effect halfway
@@ -1090,7 +1119,9 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   leaves the client guessing when a value took effect; and an admission per
   parameter, which would have the schema state what the application knows
   better.
-- **Two policies; the groups say when.** `live` and `on_safe_state` became
+- ~~**Two policies; the groups say when.**~~ Superseded on 2026-10-17 by
+  "Groups gave way to rules and to configs compared": the applier says
+  when, from what a change touches. `live` and `on_safe_state` became
   `on_command`: when a change may take effect is the application's to say,
   group by group, through `admit`, and a group is split where its values
   may take effect at different times. Rejected: keeping `on_safe_state`,
@@ -1118,10 +1149,12 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   `on_restart` value stored that differs from the one applied owes a
   restart as much as a requested one does: a save followed by a discard
   would otherwise hide a restart that loads the value saved.
-- **A group invalid at startup falls back to its defaults.** The values
-  loaded stay requested, so the client sees what was refused and can
-  correct it, and a save refuses until it does. The defaults of each group
-  pass its check, which the application holds with a `static_assert`.
+- ~~**A group invalid at startup falls back to its defaults.**~~ Superseded
+  on 2026-10-17 by "A rule names its inputs, and reads nothing else": what
+  falls back are the inputs of a broken rule. The values loaded stay
+  requested, so the client sees what was refused and can correct it, and a
+  save refuses until it does. The defaults of each group pass its check,
+  which the application holds with a `static_assert`.
 - **A calibration is requested, not adopted.** A hall calibration reached
   the sensor from the interrupt and the settings through `adopt`, behind
   the take. It goes through a mailbox to the main loop now, which requests
@@ -1132,6 +1165,47 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   group as another. A record is one row whose layout of fields every record
   of its kind shares, so the dictionary keeps one entry per record and the
   checks run on rows. 1011h:04 went with it: the default is a member now.
+- **Groups gave way to rules and to configs compared** (2026-10-17). A
+  group decided three things for a change: what to check, whether the
+  change may take effect now, and what to rebuild. With the configs built
+  from the values applied and a change applied whole, the application reads
+  all three off the values: the applier compares what it builds from the
+  values applied before and after a change, rebuilds what differs and
+  admits the change by what it touches, and a check is a set of rules over
+  the parameters each names. The group of a parameter had to agree with
+  the reader of its config, and nothing checked it: a parameter read into
+  one config but declared in another's group would show its new value as
+  applied while the config kept the old one. The records of the groups,
+  08h of a parameter's record and 3001h:04 went with them, and so did the
+  link and the second argument of a record in the dictionary, which nothing
+  else used. Rejected: groups kept inside and dropped from the bus only,
+  which kept the duplication and the groups of one parameter that existed
+  to be admitted apart (`phase_order`, `autotune` in the inverter); and the
+  number of the broken rule in place of 3001h:04, which would have made the
+  order of the rules a contract.
+- **A rule names its inputs, and reads nothing else** (2026-10-17).
+  `inputs<schema, Decls...>` shows a rule its parameters and deletes `get`
+  of any other, so the list cannot miss a parameter the rule reads, and
+  the defaults of the inputs mend a rule that breaks, since they pass it.
+  What falls back is the inputs of the rule, not the config it guards:
+  falling back everything `drive_config` reads would reset the phase order
+  with a threshold. Rejected: the whole image, which would build `motor.p`
+  and the current scales from defaults that only a restart replaces;
+  inputs found by changing each parameter at compile time, which sees only
+  what changes the result near the defaults; and rules over whole configs,
+  whose inputs would be the whole config.
+- **A fallback runs pass by pass to a fixed point** (2026-10-17). Each pass
+  checks every rule before it falls back any, so a rule that would mend
+  another by going first does not decide by its place in the list, and a
+  rule falls back at most once, so there are at most as many passes as
+  rules. Rejected: falling back a rule as soon as it breaks, whose outcome
+  depends on the order of the list; and forbidding rules to share inputs,
+  which would merge them and coarsen both the fallback and the refusal.
+- **One parameter still applies alone** (2026-10-17). It is the one way to
+  apply part of what waits, e.g. a gain while a change that needs the drive
+  to stand stays requested. Each step is checked as the values applied with
+  that one value taken in, so values a rule relates may need an order, and
+  the twelve hall angles of a calibration go together through 3001h:01.
 
 ## 10a. What changed for an operator
 
@@ -1237,6 +1311,27 @@ Applying on command, on 2026-10-16 (§4, §7), changed more:
   `invalid_config` (`hall_invalid_calibration` for the hall sensor), and
   the values loaded wait to be corrected or discarded.
 
+Dropping the groups, on 2026-10-17 (§4, §7), changed:
+
+- **The records of the groups and 3001h:04 are gone.** 3001h:03 still
+  shows the abort of the last refusal; what broke, a client reads off what
+  it requested.
+- **The members of a parameter's record from 09h moved down by one**: 08h
+  applies the parameter, 09h discards it, 0Ah shows the actual value, and
+  00h reads 09h, or 0Ah with an actual value.
+- **Part of what waits applies one parameter at a time**, by 08h. A rule
+  may ask for an order — raising both bounds of the DC window, `ovp_dc`
+  first — and a calibration of the hall sensor applies with 3001h:01, the
+  twelve angles together.
+- **A rule that the values loaded break resets only its inputs** to their
+  defaults: `uvp_dc` and `ovp_dc` for the DC window, the two margins for
+  the overtemperature warning, `hall.enabled` and the twelve angles for the
+  hall sensor, where a group reset all fourteen of its parameters —
+  `runout_speed` and the stopping parameters with the thresholds, or
+  `hall.speed_tc` with the angles.
+- **A cell changed from `+0.0` to `-0.0` is applied without a rebuild**, as
+  no number changes; it needs no standstill either.
+
 ## 10b. What applying taught us
 
 The first two lessons concern `take()`, which applying on command replaced
@@ -1287,6 +1382,17 @@ on 2026-10-16 (§4); they stay for the record.
 - **A drive that stands may still turn.** The PWM update and the hall
   capture read the hall sensor's sector maps, and a rotor coasting below
   the runout speed keeps both firing; rebuilding the maps masks both.
+
+- **Once configs come from the values applied, a group says nothing the
+  configs do not.** What a change rebuilds is what differs between the
+  configs built before and after it, and what it needs to take effect
+  follows from the same comparison; a group only restated it, and a
+  restatement nothing checks drifts. Comparing configs needs them to
+  compare, which a defaulted `operator==` gives each.
+- **A fallback needs the scope of the check, not of the config.** The
+  inputs of a rule are the least that mends it and the most it may reset;
+  a config holds parameters that a failed check has nothing to say about,
+  the phase order among them.
 
 ## 11. Open questions
 
