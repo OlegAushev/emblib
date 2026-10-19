@@ -45,10 +45,9 @@ enum class od_data_type : std::uint8_t {
   uint16,
   uint32,
   float32,
-  string
 };
 
-// The codes of the scalar types are od_value's alternative indices, so
+// The codes of the data types are od_value's alternative indices, so
 // od_type_of below is an index and the two cannot silently drift apart.
 static_assert(std::variant_size_v<od_value> == 8);
 static_assert(std::same_as<std::variant_alternative_t<0, od_value>, bool>);
@@ -72,16 +71,6 @@ template<od_scalar T>
 inline constexpr od_data_type od_type_of =
     static_cast<od_data_type>(od_value(std::in_place_type<T>).index());
 
-// Returns the index of the od_value alternative an object of type `type`
-// travels as: its own for a scalar type, uint32's for a string.
-constexpr std::size_t od_alternative_of(od_data_type type)
-{
-  switch (type) {
-  case od_data_type::string: return std::to_underlying(od_data_type::uint32);
-  default: return std::to_underlying(type);
-  }
-}
-
 enum class od_access : std::uint8_t { rw, ro, wo, const_ };
 
 constexpr bool od_readable(od_access access)
@@ -100,8 +89,7 @@ using od_write_result = std::expected<void, sdo_abort_code>;
 
 // Returns the value that `bytes`, the data of an expedited SDO, carries for
 // an object of type `type`: the scalar of that type in its leading bytes,
-// whatever the bytes after it hold. A `string` object is never written, and
-// reads as `uint32{0}`.
+// whatever the bytes after it hold.
 inline od_value from_sdo_data(expedited_sdo_data bytes, od_data_type type)
 {
   switch (type) {
@@ -133,8 +121,8 @@ inline od_value from_sdo_data(expedited_sdo_data bytes, od_data_type type)
     std::memcpy(&v, bytes.data(), sizeof(v));
     return v;
   }
-  default: return std::uint32_t{0};
   }
+  return std::uint32_t{0};
 }
 
 // Returns the data of an expedited SDO that carries `v`: the bytes of its
@@ -147,8 +135,7 @@ inline expedited_sdo_data to_sdo_data(od_value v)
 }
 
 // Returns the size, in bytes, of an object of type `type` in the data of an
-// expedited SDO: that of its scalar, and 4 for a `string`, which travels as
-// `uint32` words.
+// expedited SDO: that of its scalar.
 constexpr std::size_t od_size_of(od_data_type type)
 {
   switch (type) {
@@ -159,8 +146,7 @@ constexpr std::size_t od_size_of(od_data_type type)
   case od_data_type::uint16: return 2;
   case od_data_type::int32:
   case od_data_type::uint32:
-  case od_data_type::float32:
-  case od_data_type::string: return 4;
+  case od_data_type::float32: return 4;
   }
   return 4;
 }
@@ -176,8 +162,8 @@ struct od_key {
 };
 
 // An object's handlers. `arg` is the argument its row binds, e.g. the index
-// of a settings parameter; a reader of a string object gets the number of
-// the 4-byte word to return instead.
+// of a settings parameter; the handlers of an array's element get the
+// element's position instead, its subindex less one.
 template<typename Ctx>
 using od_read_fn = od_read_result (*)(Ctx&, std::uint16_t arg);
 
@@ -222,12 +208,20 @@ struct od_field {
 // of the layout at that subindex. It has no handlers of its own, and its
 // `access` is not used; `type` is what the row states, and `arg` the argument
 // its fields pass on.
+//
+// A binding with a `count` serves an array instead: the index of its row,
+// which names it with subindex 00h. `count` reads subindex 00h, the number of
+// elements as a `uint8`; every other subindex is an element, of the binding's
+// `access` and `type`, served by `read` and `write` with the element's
+// position, its subindex less one, as their argument. An element past the
+// count answers what its handler answers.
 template<typename Ctx>
 struct od_binding {
   od_access access;
   od_data_type type;
   od_read_fn<Ctx> read = nullptr;
   od_write_fn<Ctx> write = nullptr;
+  od_read_fn<Ctx> count = nullptr;
   std::uint16_t arg = 0;
   od_catalog const* catalog = nullptr;
   std::span<od_field<Ctx> const> layout{};
@@ -278,6 +272,23 @@ struct od_record {
   std::uint16_t index;
   std::uint16_t arg;
   std::span<od_field<Ctx> const> layout;
+};
+
+// The largest number of elements of an array, at subindices 01h to FEh.
+inline constexpr std::size_t od_array_capacity = 0xFE;
+
+// The class template `od_array` is what the server keeps of an array: its
+// index, the type and access of its elements, the handler of subindex 00h,
+// which reads the number of elements, and those of the elements. On a 32-bit
+// target it takes 16 bytes.
+template<typename Ctx>
+struct od_array {
+  std::uint16_t index;
+  od_data_type type;
+  od_access access;
+  od_read_fn<Ctx> count;
+  od_read_fn<Ctx> read;
+  od_write_fn<Ctx> write;
 };
 
 } // namespace canopen

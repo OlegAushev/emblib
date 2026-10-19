@@ -1259,9 +1259,21 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   a signature, carry a `uint32` value outright. `od_exec` makes a
   write-only `uint32` object, the members 08h and 09h of a parameter's
   record are such objects, and the rule that an `exec` object be
-  write-only went with the type: the builder makes it so. `string` stays:
-  it is a type of CiA 301, and the server reads it otherwise than a
-  scalar, four bytes at a time.
+  write-only went with the type: the builder makes it so. `string` stayed
+  for the moment, the server reading it four bytes at a time; it went the
+  same day ("A string is an array of its characters").
+- **A string is an array of its characters** (2026-10-19). A string was
+  read four bytes at a time, and a cursor in the server remembered which
+  word came next: the one state the server kept between frames, which a
+  client mixing reads reset and no standard client knew. A string is an
+  array now: subindex 00h reads its length, and each subindex after it one
+  `uint8` character, up to 254. `od_string` builds it from the reader that
+  `od_text` took, and `find` serves the subindices of an array as it serves
+  those of a record, with the element's position as its argument. The type
+  `string` went, and `od_alternative_of` with it: the type codes are the
+  alternatives of `od_value`, one to one. Rejected: four characters to an
+  element, which keeps the traffic of before but makes the elements words
+  of text, and a type `char`, which CiA 301 does not have.
 - **The inverter's objects left the area of CiA 301** (2026-10-19). Its
   dictionary kept objects in 1000h–1FFFh that the standard defines
   otherwise: strings at 1008h–100Ah, two of them at subindices a VAR does
@@ -1450,6 +1462,13 @@ changed:
   | 2001h:01, :06–08 | `calibrate_angle_sensor`, `dc_a`, `dc_b`, `dc_c` | 2203h–2206h |
 
   The signatures stay with the commands that moved from 1010h and 1011h.
+
+Reading text as arrays, on 2026-10-19 (§7), changed:
+
+- **The device's strings are arrays** at 2000h–2004h: 00h reads the
+  length, 01h and on one character each, and a subindex past the length
+  answers 06090011h. A client that read a string four bytes at a time from
+  subindex 00h reads its length there now.
 
 ## 10b. What applying taught us
 

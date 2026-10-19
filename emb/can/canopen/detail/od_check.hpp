@@ -87,17 +87,17 @@ constexpr std::string_view type_name(od_data_type type)
   case od_data_type::uint16: return "uint16";
   case od_data_type::uint32: return "uint32";
   case od_data_type::float32: return "float32";
-  case od_data_type::string: return "string";
   }
   return "?";
 }
 
-// Returns the rule that an object breaks whose access is `access` and type
-// `type`, and that has a reader if `reader` and a writer if `writer`, or an
-// empty view if it breaks none. A row that binds one object and a field of a
-// record obey the same rules.
-constexpr std::string_view
-handler_error(od_access access, od_data_type type, bool reader, bool writer)
+// Returns the rule that an object breaks whose access is `access`, and that
+// has a reader if `reader` and a writer if `writer`, or an empty view if it
+// breaks none. A row that binds one object, a field of a record and the
+// elements of an array obey the same rules.
+constexpr std::string_view handler_error(od_access access,
+                                         bool reader,
+                                         bool writer)
 {
   bool const readable = od_readable(access);
   bool const writable = od_writable(access);
@@ -106,9 +106,6 @@ handler_error(od_access access, od_data_type type, bool reader, bool writer)
   if (!readable && reader) return "write-only but has a reader";
   if (writable && !writer) return "writable but has no writer";
   if (!writable && writer) return "read-only but has a writer";
-  if (type == od_data_type::string && writable) {
-    return "a string object must not be writable";
-  }
   return {};
 }
 
@@ -132,7 +129,6 @@ constexpr std::string check_record(od_row<Ctx> const& row)
   for (auto i = 0uz; i < binding.layout.size(); ++i) {
     auto const& field = binding.layout[i];
     auto const what = handler_error(field.access,
-                                    field.type,
                                     field.read != nullptr,
                                     field.write != nullptr);
     if (!what.empty()) {
@@ -142,6 +138,27 @@ constexpr std::string check_record(od_row<Ctx> const& row)
       out += what;
       return row_error(row, out);
     }
+  }
+  return {};
+}
+
+// The rules of a row that binds an array: the row names the array with
+// subindex 00h, and its elements obey the rules of one object.
+template<typename Ctx>
+constexpr std::string check_array(od_row<Ctx> const& row)
+{
+  auto const& binding = row.binding;
+
+  if (row.key.subindex != 0) {
+    return row_error(row, "an array's row must have subindex 00");
+  }
+  auto const what = handler_error(binding.access,
+                                  binding.read != nullptr,
+                                  binding.write != nullptr);
+  if (!what.empty()) {
+    std::string out = "element ";
+    out += what;
+    return row_error(row, out);
   }
   return {};
 }
@@ -165,11 +182,16 @@ constexpr std::string check_row(od_row<Ctx> const& row)
     return row_error(row, what);
   }
 
+  if (!binding.layout.empty() && binding.count != nullptr) {
+    return row_error(row, "a binding is a record or an array, not both");
+  }
   if (!binding.layout.empty()) {
     if (auto error = check_record(row); !error.empty()) return error;
   }
+  else if (binding.count != nullptr) {
+    if (auto error = check_array(row); !error.empty()) return error;
+  }
   else if (auto const what = handler_error(binding.access,
-                                           binding.type,
                                            binding.read != nullptr,
                                            binding.write != nullptr);
            !what.empty()) {
@@ -199,8 +221,8 @@ sorted_positions(od_row<Ctx> const (&rows)[N], Less less)
 }
 
 // Checks, over the rows sorted by key, that keys are unique and that a record
-// has its index to itself. A record's row has subindex 00h, so it comes first
-// among the rows of its index, next to any other.
+// or an array has its index to itself. The row of either has subindex 00h,
+// so it comes first among the rows of its index, next to any other.
 template<typename Ctx, std::size_t N>
 constexpr std::string check_keys(od_row<Ctx> const (&rows)[N])
 {
@@ -214,6 +236,9 @@ constexpr std::string check_keys(od_row<Ctx> const (&rows)[N])
 
     if (!first.binding.layout.empty() || !second.binding.layout.empty()) {
       return pair_error(first, second, "share the index of a record");
+    }
+    if (first.binding.count != nullptr || second.binding.count != nullptr) {
+      return pair_error(first, second, "share the index of an array");
     }
     if (first.key == second.key) {
       return pair_error(first, second, "have the same key");

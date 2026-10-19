@@ -34,7 +34,10 @@ template<typename T>
 concept some_od_rows =
     requires { typename detail::od_rows_traits<T>::context_type; };
 
-template<typename Ctx, std::size_t Entries, std::size_t Records>
+template<typename Ctx,
+         std::size_t Entries,
+         std::size_t Records,
+         std::size_t Arrays>
 class od_dictionary;
 
 template<auto const& Rows>
@@ -42,13 +45,16 @@ template<auto const& Rows>
 consteval auto make_dictionary();
 
 // The class template `od_dictionary` holds the entries of a dictionary sorted
-// by key, and its records sorted by index. Only `make_dictionary` creates a
-// dictionary, after checking the rows it is made of, so every dictionary, and
-// every `od_view` of one, meets the server's preconditions: keys are unique
-// and sorted, a record has its index to itself, and an entry or a field has a
-// reader exactly if its access is readable and a writer exactly if it is
-// writable.
-template<typename Ctx, std::size_t Entries, std::size_t Records>
+// by key, and its records and arrays sorted by index. Only `make_dictionary`
+// creates a dictionary, after checking the rows it is made of, so every
+// dictionary, and every `od_view` of one, meets the server's preconditions:
+// keys are unique and sorted, a record or an array has its index to itself,
+// and an entry, a field or the elements of an array have a reader exactly if
+// their access is readable and a writer exactly if it is writable.
+template<typename Ctx,
+         std::size_t Entries,
+         std::size_t Records,
+         std::size_t Arrays>
 class od_dictionary {
 public:
   constexpr std::span<od_entry<Ctx> const> entries() const
@@ -61,6 +67,11 @@ public:
     return records_;
   }
 
+  constexpr std::span<od_array<Ctx> const> arrays() const
+  {
+    return arrays_;
+  }
+
 private:
   consteval od_dictionary() = default;
 
@@ -70,12 +81,14 @@ private:
 
   std::array<od_entry<Ctx>, Entries> entries_{};
   std::array<od_record<Ctx>, Records> records_{};
+  std::array<od_array<Ctx>, Arrays> arrays_{};
 };
 
 // Returns the dictionary made of `Rows`, a C array of `od_row<Ctx> const`
 // that must be an `inline constexpr` variable of a named namespace: GCC at
 // -O0 emits any other table, the names of its objects included. A row whose
-// binding has a layout becomes a record, any other an entry. The program is
+// binding has a layout becomes a record, one whose binding has a count an
+// array, any other an entry. The program is
 // ill-formed if the rows break a rule of `detail::od_check`; the diagnostic
 // names the rule and the rows that break it, and points at the caller's line.
 // Checking sorts the rows by key and by name; only the rows outside a catalog
@@ -94,13 +107,32 @@ consteval auto make_dictionary()
       static_cast<std::size_t>(std::ranges::count_if(Rows, [](auto const& row) {
         return !row.binding.layout.empty();
       }));
+  constexpr auto arrays =
+      static_cast<std::size_t>(std::ranges::count_if(Rows, [](auto const& row) {
+        return row.binding.count != nullptr;
+      }));
 
-  od_dictionary<context_type, traits::size - records, records> dictionary;
+  od_dictionary<context_type, traits::size - records - arrays, records, arrays>
+      dictionary;
   auto entry = dictionary.entries_.begin();
   auto record = dictionary.records_.begin();
+  auto array = dictionary.arrays_.begin();
   for (auto const& row : Rows) {
     auto const& binding = row.binding;
-    if (binding.layout.empty()) {
+    if (!binding.layout.empty()) {
+      *record++ = {.index = row.key.index,
+                   .arg = binding.arg,
+                   .layout = binding.layout};
+    }
+    else if (binding.count != nullptr) {
+      *array++ = {.index = row.key.index,
+                  .type = binding.type,
+                  .access = binding.access,
+                  .count = binding.count,
+                  .read = binding.read,
+                  .write = binding.write};
+    }
+    else {
       *entry++ = {.index = row.key.index,
                   .subindex = row.key.subindex,
                   .type = binding.type,
@@ -109,38 +141,38 @@ consteval auto make_dictionary()
                   .read = binding.read,
                   .write = binding.write};
     }
-    else {
-      *record++ = {.index = row.key.index,
-                   .arg = binding.arg,
-                   .layout = binding.layout};
-    }
   }
   std::ranges::sort(dictionary.entries_, {}, &od_entry<context_type>::key);
   std::ranges::sort(dictionary.records_, {}, &od_record<context_type>::index);
+  std::ranges::sort(dictionary.arrays_, {}, &od_array<context_type>::index);
   return dictionary;
 }
 
-// The class template `od_view` refers to the entries and the records of an
-// `od_dictionary`, which it does not own, and looks objects up by key. It is
-// built only from a dictionary, never from a temporary one, so what it refers
-// to is sorted and checked.
+// The class template `od_view` refers to the entries, the records and the
+// arrays of an `od_dictionary`, which it does not own, and looks objects up by
+// key. It is built only from a dictionary, never from a temporary one, so what
+// it refers to is sorted and checked.
 template<typename Ctx>
 class od_view {
 public:
-  template<std::size_t Entries, std::size_t Records>
-  constexpr od_view(od_dictionary<Ctx, Entries, Records> const& dictionary)
-      : entries_(dictionary.entries()), records_(dictionary.records())
+  template<std::size_t Entries, std::size_t Records, std::size_t Arrays>
+  constexpr od_view(
+      od_dictionary<Ctx, Entries, Records, Arrays> const& dictionary)
+      : entries_(dictionary.entries()),
+        records_(dictionary.records()),
+        arrays_(dictionary.arrays())
   {
   }
 
-  template<std::size_t Entries, std::size_t Records>
-  od_view(od_dictionary<Ctx, Entries, Records> const&&) = delete;
+  template<std::size_t Entries, std::size_t Records, std::size_t Arrays>
+  od_view(od_dictionary<Ctx, Entries, Records, Arrays> const&&) = delete;
 
-  // Returns the object at `key`: the entry of its row, or the one that the
+  // Returns the object at `key`: the entry of its row; or the one that the
   // field of its record at its subindex makes, with the record's `arg` as its
-  // argument. Fails with `object_not_found` if no row serves the index of
-  // `key`, and with `subindex_not_found` if rows serve the index but not the
-  // subindex.
+  // argument; or, of an array, the count at subindex 00h and at any other the
+  // element whose position, the subindex less one, is its argument. Fails
+  // with `object_not_found` if no row serves the index of `key`, and with
+  // `subindex_not_found` if rows serve the index but not the subindex.
   constexpr std::expected<od_entry<Ctx>, sdo_abort_code> find(od_key key) const
   {
     auto const record = std::ranges::lower_bound(records_,
@@ -159,6 +191,27 @@ public:
                            .arg = record->arg,
                            .read = field.read,
                            .write = field.write};
+    }
+
+    auto const array =
+        std::ranges::lower_bound(arrays_, key.index, {}, &od_array<Ctx>::index);
+    if ((array != arrays_.end()) && (array->index == key.index)) {
+      if (key.subindex == 0) {
+        return od_entry<Ctx>{.index = key.index,
+                             .subindex = 0,
+                             .type = od_data_type::uint8,
+                             .access = od_access::const_,
+                             .arg = 0,
+                             .read = array->count,
+                             .write = nullptr};
+      }
+      return od_entry<Ctx>{.index = key.index,
+                           .subindex = key.subindex,
+                           .type = array->type,
+                           .access = array->access,
+                           .arg = static_cast<std::uint16_t>(key.subindex - 1),
+                           .read = array->read,
+                           .write = array->write};
     }
 
     auto const entry =
@@ -183,9 +236,15 @@ public:
     return records_;
   }
 
+  constexpr std::span<od_array<Ctx> const> arrays() const
+  {
+    return arrays_;
+  }
+
 private:
   std::span<od_entry<Ctx> const> entries_;
   std::span<od_record<Ctx> const> records_;
+  std::span<od_array<Ctx> const> arrays_;
 };
 
 } // namespace canopen

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -83,48 +82,19 @@ private:
   static constexpr id_t rsdo_cob_id_ = cob_id_of<cob_type::rsdo, NodeId>();
   static constexpr id_t tsdo_cob_id_ = cob_id_of<cob_type::tsdo, NodeId>();
 
-  // Where the last read of a string object stopped. A string travels 4 bytes
-  // per read; reading another string object starts over from its first word,
-  // and so does the read after the word that holds the terminating NUL.
-  struct text_cursor {
-    od_key key{};
-    std::uint16_t word = 0;
-  };
-
-  std::uint16_t text_word(od_key key)
-  {
-    if (text_.key != key) {
-      text_ = {key, 0};
-    }
-    return text_.word;
-  }
-
-  void advance_text(expedited_sdo_data const& data)
-  {
-    bool const last =
-        std::ranges::any_of(data, [](std::uint8_t byte) { return byte == 0; });
-    text_.word =
-        last ? std::uint16_t{0} : static_cast<std::uint16_t>(text_.word + 1);
-  }
-
   std::expected<expedited_sdo, sdo_abort_code>
   read_expedited(od_entry<Ctx> const& entry, expedited_sdo const& rsdo)
   {
     if (!od_readable(entry.access))
       return std::unexpected(sdo_abort_code::read_from_write_only);
 
-    bool const text = entry.type == od_data_type::string;
-    auto const value =
-        entry.read(ctx_, text ? text_word(entry.key()) : entry.arg);
+    auto const value = entry.read(ctx_, entry.arg);
     if (!value) return std::unexpected(value.error());
-    assert(value->index() == od_alternative_of(entry.type)
+    assert(value->index() == std::to_underlying(entry.type)
            && "od: a reader returned another type than its object's");
 
     expedited_sdo tsdo;
     tsdo.data = to_sdo_data(*value);
-    if (text) {
-      advance_text(tsdo.data);
-    }
 
     std::size_t const data_size = od_size_of(entry.type);
 
@@ -163,7 +133,6 @@ private:
   transport& bus_;
   od_view<Ctx> dictionary_;
   Ctx& ctx_;
-  text_cursor text_;
   emb::inplace_queue<payload_t, tsdo_queue_capacity> tsdo_queue_;
 };
 

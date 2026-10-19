@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
@@ -129,14 +130,15 @@ concept od_command = detail::od_function<F>
                   && detail::od_context_args<detail::od_args_t<F>, Ctx>
                   && detail::od_write_outcome<detail::od_result_t<F>>;
 
-// The concept `od_text_reader<F, Ctx>` is satisfied if and only if `F` is a
-// function, or a lambda without captures, that takes nothing, `Ctx&` or
+// The concept `od_string_reader<F, Ctx>` is satisfied if and only if `F` is
+// a function, or a lambda without captures, that takes nothing, `Ctx&` or
 // `Ctx const&` and returns `std::string_view` or `char const*`.
 template<auto F, typename Ctx>
-concept od_text_reader = detail::od_function<F>
-                      && detail::od_context_args<detail::od_args_t<F>, Ctx>
-                      && (std::same_as<detail::od_result_t<F>, std::string_view>
-                          || std::same_as<detail::od_result_t<F>, char const*>);
+concept od_string_reader =
+    detail::od_function<F>
+    && detail::od_context_args<detail::od_args_t<F>, Ctx>
+    && (std::same_as<detail::od_result_t<F>, std::string_view>
+        || std::same_as<detail::od_result_t<F>, char const*>);
 
 // The concept `od_rw_pair<G, S, Ctx>` is satisfied if and only if `G` is a
 // reader and `S` a writer whose values travel as the same scalar, even if one
@@ -217,20 +219,26 @@ constexpr od_write_result od_command_thunk(Ctx& ctx,
   }
 }
 
-// Returns bytes [4 * word, 4 * word + 4) of the text as a little-endian
-// uint32, with zeros past its end.
+// Returns the length of the string, as many characters as an array holds at
+// most.
 template<auto F, typename Ctx>
-constexpr od_read_result od_text_thunk(Ctx& ctx, std::uint16_t word)
+constexpr od_read_result od_string_count_thunk(Ctx& ctx, std::uint16_t)
 {
   std::string_view const text = od_call<F>(ctx);
-  std::uint32_t chunk = 0;
-  for (auto i = 0uz; i < 4; ++i) {
-    auto const at = (4 * std::size_t{word}) + i;
-    if (at < text.size()) {
-      chunk |= std::uint32_t{static_cast<unsigned char>(text[at])} << (8 * i);
-    }
+  return od_value{
+      static_cast<std::uint8_t>(std::min(text.size(), od_array_capacity))};
+}
+
+// Returns the character of the string at `position`, or answers
+// `subindex_not_found` past its length.
+template<auto F, typename Ctx>
+constexpr od_read_result od_string_char_thunk(Ctx& ctx, std::uint16_t position)
+{
+  std::string_view const text = od_call<F>(ctx);
+  if (position >= std::min(text.size(), od_array_capacity)) {
+    return std::unexpected(sdo_abort_code::subindex_not_found);
   }
-  return od_value{chunk};
+  return od_value{static_cast<std::uint8_t>(text[position])};
 }
 
 inline constexpr std::string_view od_reader_shape =
@@ -245,8 +253,8 @@ inline constexpr std::string_view od_command_shape =
     "od: a command takes nothing or a reference to the context, and returns "
     "void or od_write_result";
 
-inline constexpr std::string_view od_text_shape =
-    "od: a text reader takes nothing or a reference to the context, and "
+inline constexpr std::string_view od_string_shape =
+    "od: a string reader takes nothing or a reference to the context, and "
     "returns std::string_view or char const*";
 
 template<auto F, od_access Access>
@@ -338,19 +346,20 @@ struct command_binding {
 };
 
 template<auto F>
-struct text_binding {
+struct string_binding {
   template<typename Ctx>
   consteval operator od_binding<Ctx>() const
   {
-    static_assert(od_text_reader<F, Ctx>, od_text_shape);
-    if constexpr (od_text_reader<F, Ctx>) {
+    static_assert(od_string_reader<F, Ctx>, od_string_shape);
+    if constexpr (od_string_reader<F, Ctx>) {
       return {.access = od_access::const_,
-              .type = od_data_type::string,
-              .read = &od_text_thunk<F, Ctx>};
+              .type = od_data_type::uint8,
+              .read = &od_string_char_thunk<F, Ctx>,
+              .count = &od_string_count_thunk<F, Ctx>};
     }
     else {
       return {.access = od_access::const_,
-              .type = od_data_type::string,
+              .type = od_data_type::uint8,
               .diagnosed = true};
     }
   }
@@ -367,8 +376,9 @@ struct text_binding {
 // writer (`od_writer`), `od_rw<G, S>` a reader and a writer of the same
 // scalar (`od_rw_pair`), `od_exec<F>` a command (`od_command`), a `uint32`
 // object written to run it, whose value the command does not get, and
-// `od_text<F>` a text (`od_text_reader`), which a client reads 4 bytes at a
-// time up to and including its terminating NUL.
+// `od_string<F>` a string (`od_string_reader`) as an array of its
+// characters: subindex 00h reads its length, and each subindex after it one
+// `uint8` character, up to `od_array_capacity` of them.
 // `od_exec<F, Signature>` binds a command that runs only if the value written
 // is `Signature`, and answers any other with `data_store_error`, 0800 0020h,
 // as CiA 301 asks of the objects that store parameters and restore their
@@ -395,7 +405,7 @@ inline constexpr std::uint32_t od_save_signature = 0x65766173;
 inline constexpr std::uint32_t od_load_signature = 0x64616F6C;
 
 template<auto F>
-inline constexpr detail::text_binding<F> od_text{};
+inline constexpr detail::string_binding<F> od_string{};
 
 } // namespace canopen
 } // namespace can

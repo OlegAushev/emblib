@@ -196,9 +196,6 @@ static_assert(od_type_of<std::uint16_t> == od_data_type::uint16);
 static_assert(od_type_of<std::uint32_t> == od_data_type::uint32);
 static_assert(od_type_of<float> == od_data_type::float32);
 
-static_assert(od_alternative_of(od_data_type::boolean) == 0);
-static_assert(od_alternative_of(od_data_type::float32) == 7);
-static_assert(od_alternative_of(od_data_type::string) == 6);
 
 static_assert(od_readable(od_access::ro)
               && od_readable(od_access::const_)
@@ -254,9 +251,9 @@ static_assert(od_command<+[] {}, ctx>);
 static_assert(!od_command<command_returning, ctx>);
 static_assert(!od_command<write_value, ctx>);
 
-static_assert(od_text_reader<text, ctx>);
-static_assert(od_text_reader<word, ctx>);
-static_assert(!od_text_reader<read_value, ctx>);
+static_assert(od_string_reader<text, ctx>);
+static_assert(od_string_reader<word, ctx>);
+static_assert(!od_string_reader<read_value, ctx>);
 
 static_assert(od_rw_pair<read_value, write_value, ctx>);
 static_assert(od_rw_pair<read_freq, write_value, ctx>);
@@ -314,8 +311,10 @@ static_assert(bind<od_rw<read_freq, write_value>>().write
 
 static_assert(bind<od_exec<command>>().access == od_access::wo);
 static_assert(bind<od_exec<command>>().type == od_data_type::uint32);
-static_assert(bind<od_text<text>>().access == od_access::const_);
-static_assert(bind<od_text<text>>().type == od_data_type::string);
+static_assert(bind<od_string<text>>().access == od_access::const_);
+static_assert(bind<od_string<text>>().type == od_data_type::uint8);
+static_assert(bind<od_string<text>>().count
+              == &detail::od_string_count_thunk<text, ctx>);
 
 static_assert(!bind<od_ro<read_value>>().diagnosed);
 static_assert(bind<od_ro<read_value>>().catalog == nullptr);
@@ -427,24 +426,26 @@ static_assert(od_load_signature
                   | std::uint32_t{'a'} << 16
                   | std::uint32_t{'d'} << 24));
 
-// A text is read 4 bytes at a time, little-endian, with zeros past its end;
-// the word that holds the terminating NUL is the last.
-consteval bool test_text()
+// A string is an array of its characters: the count is its length, and each
+// position one character; a position past the length is no element.
+consteval bool test_string()
 {
   ctx c;
-  auto const read = bind<od_text<text>>().read;
-  if (read(c, 0) != od_read_result{std::uint32_t{0x64636261}}) return false;
-  if (read(c, 1) != od_read_result{std::uint32_t{0x00676665}}) return false;
-  if (read(c, 2) != od_read_result{std::uint32_t{0}}) return false;
-
-  auto const whole_word = bind<od_text<word>>().read;
-  if (whole_word(c, 0) != od_read_result{std::uint32_t{0x64636261}}) {
+  auto const string = bind<od_string<text>>();
+  if (string.count(c, 0) != od_read_result{std::uint8_t{7}}) return false;
+  if (string.read(c, 0) != od_read_result{std::uint8_t{'a'}}) return false;
+  if (string.read(c, 6) != od_read_result{std::uint8_t{'g'}}) return false;
+  if (string.read(c, 7)
+      != std::unexpected(sdo_abort_code::subindex_not_found)) {
     return false;
   }
-  return whole_word(c, 1) == od_read_result{std::uint32_t{0}};
+
+  auto const pointer = bind<od_string<word>>();
+  if (pointer.count(c, 0) != od_read_result{std::uint8_t{4}}) return false;
+  return pointer.read(c, 3) == od_read_result{std::uint8_t{'d'}};
 }
 
-static_assert(test_text());
+static_assert(test_string());
 
 // -- Dictionary --
 
@@ -460,7 +461,6 @@ consteval bool test_dictionary()
       {{0x5000, 0x02}, "watch",  "b", "value",   "",   float32, od_ro<read_value>},
       {{0x2000, 0x01}, "ctl",    "a", "command", "",   uint32,  od_exec<command>},
       {{0x5000, 0x01}, "watch",  "b", "checked", "",   float32, od_ro<read_checked>},
-      {{0x1008, 0x00}, "info",   "a", "text",    "",   string,  od_text<text>},
       {{0x3000, 0x01}, "config", "a", "freq",    "Hz", float32, od_rw<read_freq, write_value>},
       {{0x3000, 0x02}, "config", "a", "raw",     "",   float32, by_hand},
   };
@@ -470,14 +470,14 @@ consteval bool test_dictionary()
   od_view<ctx> const view{dictionary};
 
   auto const entries = view.entries();
-  if (entries.size() != 6) return false;
+  if (entries.size() != 5) return false;
   for (auto i = 1uz; i < entries.size(); ++i) {
     if (!(entries[i - 1].key() < entries[i].key())) return false;
   }
-  if (entries.front().key() != od_key{0x1008, 0x00}) return false;
+  if (entries.front().key() != od_key{0x2000, 0x01}) return false;
   if (entries.back().key() != od_key{0x5000, 0x02}) return false;
 
-  if (!view.records().empty()) return false;
+  if (!view.records().empty() || !view.arrays().empty()) return false;
 
   // An index that rows serve lacks only the subindex; any other, the object.
   auto const no_subindex = std::unexpected(sdo_abort_code::subindex_not_found);
@@ -555,6 +555,61 @@ consteval bool test_records()
 
 static_assert(test_records());
 
+// An array serves every subindex of its index: 00h reads the count, and any
+// other the element at the subindex less one, which its handler may refuse.
+consteval bool test_arrays()
+{
+  // clang-format off
+  static constexpr od_row<ctx> rows[] = {
+      {{0x2001, 0x00}, "info",  "a", "word",  "", uint8,   od_string<word>},
+      {{0x5000, 0x01}, "watch", "b", "value", "", float32, od_ro<read_value>},
+      {{0x2000, 0x00}, "info",  "a", "text",  "", uint8,   od_string<text>},
+  };
+  // clang-format on
+
+  auto const dictionary = make_dictionary<rows>();
+  od_view<ctx> const view{dictionary};
+
+  if (view.entries().size() != 1) return false;
+  auto const arrays = view.arrays();
+  if ((arrays.size() != 2) || (arrays[0].index != 0x2000)) return false;
+
+  ctx c;
+  auto const count = view.find({0x2000, 0x00});
+  if (!count
+      || (count->access != od_access::const_)
+      || (count->type != uint8)) {
+    return false;
+  }
+  if (count->read(c, count->arg) != od_read_result{std::uint8_t{7}}) {
+    return false;
+  }
+
+  auto const first = view.find({0x2000, 0x01});
+  if (!first || (first->key() != od_key{0x2000, 0x01}) || (first->arg != 0)) {
+    return false;
+  }
+  if (first->read(c, first->arg) != od_read_result{std::uint8_t{'a'}}) {
+    return false;
+  }
+
+  auto const past = view.find({0x2000, 0x08});
+  if (!past
+      || past->read(c, past->arg)
+             != std::unexpected(sdo_abort_code::subindex_not_found)) {
+    return false;
+  }
+
+  auto const last = view.find({0x2001, 0x04});
+  if (!last || last->read(c, last->arg) != od_read_result{std::uint8_t{'d'}}) {
+    return false;
+  }
+  return view.find({0x2002, 0x00})
+      == std::unexpected(sdo_abort_code::object_not_found);
+}
+
+static_assert(test_arrays());
+
 // -- Checks --
 
 // Builds the binding of an object from its parts, for the checks below.
@@ -622,8 +677,6 @@ static_assert(check_one(raw(od_access::rw, od_data_type::float32, true, false))
               == "od: 2000h:01 a/b/c: writable but has no writer");
 static_assert(check_one(raw(od_access::ro, od_data_type::float32, true, true))
               == "od: 2000h:01 a/b/c: read-only but has a writer");
-static_assert(check_one(raw(od_access::rw, od_data_type::string, true, true))
-              == "od: 2000h:01 a/b/c: a string object must not be writable");
 
 // The type a row states must be the type its binding serves.
 consteval std::string check_declared(od_data_type declared,
@@ -637,8 +690,8 @@ consteval std::string check_declared(od_data_type declared,
 static_assert(check_declared(float32, od_ro<read_freq>).empty());
 static_assert(check_declared(float32, od_ro<read_u8>)
               == "od: 2000h:01 a/b/c: declared float32, bound as uint8");
-static_assert(check_declared(uint32, od_text<text>)
-              == "od: 2000h:01 a/b/c: declared uint32, bound as string");
+static_assert(check_declared(uint32, od_string<text>)
+              == "od: 2000h:01 a/b/c: declared uint32, bound as uint8");
 
 inline constexpr std::string_view items[] = {"x", "y"};
 inline constexpr bool all_exposed[] = {true, true};
@@ -684,6 +737,20 @@ static_assert(check_record({.access = od_access::ro,
                             .layout = unread_layout})
               == "od: 2000h:00 a/b/c: member 01h readable but has no reader");
 
+// An array is checked at the row that names it, its elements as one object.
+static_assert(check_record(od_string<text>).empty());
+static_assert(check_one(od_string<text>)
+              == "od: 2000h:01 a/b/c: an array's row must have subindex 00");
+static_assert(
+    check_record({.access = od_access::ro, .type = uint8, .count = &raw_read})
+    == "od: 2000h:00 a/b/c: element readable but has no reader");
+static_assert(check_record({.access = od_access::ro,
+                            .type = float32,
+                            .count = &raw_read,
+                            .layout = record_layout})
+              == "od: 2000h:00 a/b/c: a binding is a record or an array, not "
+                 "both");
+
 consteval std::string check_two(od_row<ctx> first, od_row<ctx> second)
 {
   od_row<ctx> const rows[] = {first, second};
@@ -706,6 +773,10 @@ static_assert(
     check_two({{0x2000, 0x00}, "a", "b", "c", "", float32, record(1)},
               {{0x2001, 0x00}, "a", "b", "d", "", float32, record(1)})
         .empty());
+static_assert(
+    check_two({{0x2000, 0x00}, "a", "b", "c", "", uint8, od_string<text>},
+              {{0x2000, 0x05}, "a", "b", "d", "", uint8, od_ro<read_u8>})
+    == "od: 2000h:00 a/b/c and 2000h:05 a/b/d share the index of an array");
 // Checks two objects that differ in key and name, 2000h:01 a/b/c and
 // 2000h:02 a/b/d.
 consteval std::string check_pair(od_binding<ctx> first, od_binding<ctx> second)
