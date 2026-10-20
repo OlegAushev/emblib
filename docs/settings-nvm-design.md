@@ -1305,6 +1305,13 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   describe the entries added: they follow from the rows. Rejected: a row
   at 00h written by hand, which would have to follow every object added
   to the index.
+- **The fingerprint is the inverter's first object** (2026-10-20). A host
+  reads `dictionary_id` before it knows which table to decode the
+  inverter by, so its address must not move when the table does. It
+  moved from 2006h to 2000h, the first index of the manufacturer's area;
+  `device_name` and `serial_number`, which tell one inverter from
+  another, follow it at 2001h and 2002h, and the rest of the information
+  after them.
 - **The inverter's objects left the area of CiA 301** (2026-10-19). Its
   dictionary kept objects in 1000h–1FFFh that the standard defines
   otherwise: strings at 1008h–100Ah, two of them at subindices a VAR does
@@ -1531,6 +1538,24 @@ changed:
 - **Subindex 00h reads the highest subindex** at 2100h (03h), 2101h and
   2102h (02h), 3000h (13h), 3008h (06h), 3009h (02h) and 5000h (79h), as
   a `const` `uint8`. It answered 06090011h.
+
+Telling the build and putting the fingerprint first, on 2026-10-20 (§7),
+changed:
+
+- **2007h, `build_type`, and 2008h, `settings_storage`**, read
+  "debug" or "release" and "flash" or "fram", as arrays of characters.
+- **The information moved** so that the fingerprint comes first, under
+  the same names:
+
+  | Object | Was | Is |
+  |---|---|---|
+  | `dictionary_id` | 2006h:00 | 2000h:00 |
+  | `device_name` | 2000h:00 | 2001h:00 |
+  | `serial_number` | 2005h:00 | 2002h:00 |
+  | `hardware_version` | 2001h:00 | 2003h:00 |
+  | `firmware_version` | 2002h:00 | 2004h:00 |
+  | `firmware_commitdate` | 2003h:00 | 2005h:00 |
+  | `firmware_branch` | 2004h:00 | 2006h:00 |
 
 ## 10b. What applying taught us
 
