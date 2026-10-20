@@ -1294,6 +1294,17 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   at 5001h–5004h. Rejected: a reader of one element by its position, with
   the length written in the builder, which could disagree with the source
   and let the element's handler read past its end.
+- **The dictionary serves subindex 00h of an index with members**
+  (2026-10-20). An index of several objects from 01h on, such as 3000h or
+  5000h, answered 06090011h at 00h, where CiA 301 puts the highest
+  subindex of an object with members, and a standard client reads it
+  first. `make_dictionary` adds an entry at 00h to each index whose
+  objects all lie past it: a `const` `uint8` that reads the subindex of
+  the last. A row at 00h that shares its index with others breaks a new
+  rule, T25, so the place is never taken. The fingerprint does not
+  describe the entries added: they follow from the rows. Rejected: a row
+  at 00h written by hand, which would have to follow every object added
+  to the index.
 - **The inverter's objects left the area of CiA 301** (2026-10-19). Its
   dictionary kept objects in 1000h–1FFFh that the standard defines
   otherwise: strings at 1008h–100Ah, two of them at subindices a VAR does
@@ -1513,6 +1524,13 @@ Serving the lists of values as arrays, on 2026-10-20 (§7), changed:
   inputs and ten probe channels on both. The first element is at 01h; one
   past the last answers 06090011h, where a sensor the board lacks answered
   06020000h.
+
+Serving subindex 00h of the indices with members, on 2026-10-20 (§7),
+changed:
+
+- **Subindex 00h reads the highest subindex** at 2100h (03h), 2101h and
+  2102h (02h), 3000h (13h), 3008h (06h), 3009h (02h) and 5000h (79h), as
+  a `const` `uint8`. It answered 06090011h.
 
 ## 10b. What applying taught us
 

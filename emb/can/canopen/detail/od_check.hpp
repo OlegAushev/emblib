@@ -231,9 +231,10 @@ sorted_positions(od_row<Ctx> const (&rows)[N], Less less)
   return order;
 }
 
-// Checks, over the rows sorted by key, that keys are unique and that a record
-// or an array has its index to itself. The row of either has subindex 00h,
-// so it comes first among the rows of its index, next to any other.
+// Checks, over the rows sorted by key, that keys are unique, that a record or
+// an array has its index to itself, and that no object at subindex 00h shares
+// its index, whose subindex 00h the dictionary then serves. A row at 00h
+// comes first among the rows of its index, next to any other.
 template<typename Ctx, std::size_t N>
 constexpr std::string check_keys(od_row<Ctx> const (&rows)[N])
 {
@@ -253,6 +254,12 @@ constexpr std::string check_keys(od_row<Ctx> const (&rows)[N])
     }
     if (first.key == second.key) {
       return pair_error(first, second, "have the same key");
+    }
+    if (first.key.subindex == 0 || second.key.subindex == 0) {
+      return pair_error(first,
+                        second,
+                        "share an index whose subindex 00 the dictionary "
+                        "serves");
     }
   }
   return {};

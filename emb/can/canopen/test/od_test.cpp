@@ -543,12 +543,13 @@ consteval bool test_dictionary()
   auto const dictionary = make_dictionary<rows>();
   od_view<ctx> const view{dictionary};
 
+  // Each of the three indices gets its subindex 00h.
   auto const entries = view.entries();
-  if (entries.size() != 5) return false;
+  if (entries.size() != 8) return false;
   for (auto i = 1uz; i < entries.size(); ++i) {
     if (!(entries[i - 1].key() < entries[i].key())) return false;
   }
-  if (entries.front().key() != od_key{0x2000, 0x01}) return false;
+  if (entries.front().key() != od_key{0x2000, 0x00}) return false;
   if (entries.back().key() != od_key{0x5000, 0x02}) return false;
 
   if (!view.records().empty() || !view.arrays().empty()) return false;
@@ -557,8 +558,6 @@ consteval bool test_dictionary()
   auto const no_subindex = std::unexpected(sdo_abort_code::subindex_not_found);
   auto const no_object = std::unexpected(sdo_abort_code::object_not_found);
   if (view.find({0x5000, 0x03}) != no_subindex) return false;
-  if (view.find({0x5000, 0x00}) != no_subindex) return false;
-  if (view.find({0x3000, 0x00}) != no_subindex) return false;
   if (view.find({0x0FFF, 0x00}) != no_object) return false;
   if (view.find({0x4000, 0x01}) != no_object) return false;
   if (view.find({0xFFFF, 0xFF}) != no_object) return false;
@@ -566,7 +565,20 @@ consteval bool test_dictionary()
   auto const raw = view.find({0x3000, 0x02});
   if (!raw || (raw->arg != 7)) return false;
 
+  // Subindex 00h of an index whose objects start past it reads the highest
+  // subindex of the index.
   ctx c;
+  auto const highest = [&](std::uint16_t index) {
+    auto const last = view.find({index, 0x00});
+    if (!last || (last->access != od_access::const_) || (last->type != uint8)) {
+      return od_read_result{};
+    }
+    return last->read(c, last->arg);
+  };
+  if (highest(0x5000) != od_read_result{std::uint8_t{2}}) return false;
+  if (highest(0x3000) != od_read_result{std::uint8_t{2}}) return false;
+  if (highest(0x2000) != od_read_result{std::uint8_t{1}}) return false;
+
   auto const freq = view.find({0x3000, 0x01});
   if (!freq || (freq->access != od_access::rw)) return false;
   if (!freq->write(c, freq->arg, od_value{4.5f})) return false;
@@ -591,7 +603,7 @@ consteval bool test_records()
   auto const dictionary = make_dictionary<rows>();
   od_view<ctx> const view{dictionary};
 
-  if (view.entries().size() != 1) return false;
+  if (view.entries().size() != 2) return false;
   auto const records = view.records();
   if ((records.size() != 2) || (records[0].index != 0x4000)) return false;
   if (records[1].arg != 2) return false;
@@ -645,7 +657,7 @@ consteval bool test_arrays()
   auto const dictionary = make_dictionary<rows>();
   od_view<ctx> const view{dictionary};
 
-  if (view.entries().size() != 1) return false;
+  if (view.entries().size() != 2) return false;
   auto const arrays = view.arrays();
   if ((arrays.size() != 3) || (arrays[0].index != 0x2000)) return false;
 
@@ -916,6 +928,11 @@ static_assert(
     check_two({{0x2000, 0x00}, "a", "b", "c", "", uint8, od_string<text>},
               {{0x2000, 0x05}, "a", "b", "d", "", uint8, od_ro<read_u8>})
     == "od: 2000h:00 a/b/c and 2000h:05 a/b/d share the index of an array");
+static_assert(
+    check_two({{0x2000, 0x05}, "a", "b", "d", "", uint8, od_ro<read_u8>},
+              {{0x2000, 0x00}, "a", "b", "c", "", float32, od_ro<read_value>})
+    == "od: 2000h:05 a/b/d and 2000h:00 a/b/c share an index whose subindex "
+       "00 the dictionary serves");
 // Checks two objects that differ in key and name, 2000h:01 a/b/c and
 // 2000h:02 a/b/d.
 consteval std::string check_pair(od_binding<ctx> first, od_binding<ctx> second)

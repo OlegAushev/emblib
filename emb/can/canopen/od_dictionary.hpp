@@ -83,6 +83,37 @@ constexpr std::uint32_t od_fingerprint(od_row<Ctx> const (&rows)[N])
   return h;
 }
 
+// Returns the number of indices whose objects, the rows of neither a record
+// nor an array, all have a subindex past 00h: the indices whose subindex 00h
+// the dictionary serves itself.
+template<typename Ctx, std::size_t N>
+constexpr std::size_t od_implied_count(od_row<Ctx> const (&rows)[N])
+{
+  std::array<od_key, N> keys{};
+  auto count = 0uz;
+  for (auto const& row : rows) {
+    if (row.binding.layout.empty() && row.binding.count == nullptr) {
+      keys[count++] = row.key;
+    }
+  }
+  std::ranges::sort(keys.begin(), keys.begin() + count);
+
+  auto implied = 0uz;
+  for (auto i = 0uz; i < count; ++i) {
+    bool const first = (i == 0) || (keys[i - 1].index != keys[i].index);
+    if (first && keys[i].subindex != 0) ++implied;
+  }
+  return implied;
+}
+
+// Returns `arg`, the highest subindex of an index whose subindex 00h the
+// dictionary serves itself.
+template<typename Ctx>
+constexpr od_read_result od_highest_subindex(Ctx&, std::uint16_t arg)
+{
+  return od_value{static_cast<std::uint8_t>(arg)};
+}
+
 } // namespace detail
 
 // The concept `some_od_rows<T>` is satisfied if and only if `T` is a C array
@@ -153,11 +184,13 @@ private:
 // that must be an `inline constexpr` variable of a named namespace: GCC at
 // -O0 emits any other table, the names of its objects included. A row whose
 // binding has a layout becomes a record, one whose binding has a count an
-// array, any other an entry. The program is
-// ill-formed if the rows break a rule of `detail::od_check`; the diagnostic
-// names the rule and the rows that break it, and points at the caller's line.
-// Checking sorts the rows by key and by name; only the rows outside a catalog
-// are compared in pairs, for a handler they share.
+// array, any other an entry. An index whose entries all have a subindex past
+// 00h gets one more, at 00h: a `const` `uint8` that reads the highest
+// subindex of the index, as CiA 301 asks of an object with members. The
+// program is ill-formed if the rows break a rule of `detail::od_check`; the
+// diagnostic names the rule and the rows that break it, and points at the
+// caller's line. Checking sorts the rows by key and by name; only the rows
+// outside a catalog are compared in pairs, for a handler they share.
 template<auto const& Rows>
   requires some_od_rows<std::remove_reference_t<decltype(Rows)>>
 consteval auto make_dictionary()
@@ -177,9 +210,12 @@ consteval auto make_dictionary()
         return row.binding.count != nullptr;
       }));
 
-  od_dictionary<context_type, traits::size - records - arrays, records, arrays>
-      dictionary;
-  auto entry = dictionary.entries_.begin();
+  constexpr auto plain = traits::size - records - arrays;
+  constexpr auto implied = detail::od_implied_count(Rows);
+
+  od_dictionary<context_type, plain + implied, records, arrays> dictionary;
+  std::array<od_entry<context_type>, plain> entries{};
+  auto entry = entries.begin();
   auto record = dictionary.records_.begin();
   auto array = dictionary.arrays_.begin();
   for (auto const& row : Rows) {
@@ -207,7 +243,30 @@ consteval auto make_dictionary()
                   .write = binding.write};
     }
   }
-  std::ranges::sort(dictionary.entries_, {}, &od_entry<context_type>::key);
+  std::ranges::sort(entries, {}, &od_entry<context_type>::key);
+
+  // Each index whose first entry is past 00h gets its subindex 00h, before
+  // that entry, reading the subindex of its last.
+  auto out = dictionary.entries_.begin();
+  for (auto i = 0uz; i < plain; ++i) {
+    auto const index = entries[i].index;
+    bool const first = (i == 0) || (entries[i - 1].index != index);
+    if (first && entries[i].subindex != 0) {
+      auto last = i;
+      while ((last + 1 < plain) && (entries[last + 1].index == index)) {
+        ++last;
+      }
+      *out++ = {.index = index,
+                .subindex = 0,
+                .type = od_data_type::uint8,
+                .access = od_access::const_,
+                .arg = entries[last].subindex,
+                .read = &detail::od_highest_subindex<context_type>,
+                .write = nullptr};
+    }
+    *out++ = entries[i];
+  }
+
   std::ranges::sort(dictionary.records_, {}, &od_record<context_type>::index);
   std::ranges::sort(dictionary.arrays_, {}, &od_array<context_type>::index);
   dictionary.fingerprint_ = detail::od_fingerprint(Rows);
@@ -234,12 +293,14 @@ public:
   template<std::size_t Entries, std::size_t Records, std::size_t Arrays>
   od_view(od_dictionary<Ctx, Entries, Records, Arrays> const&&) = delete;
 
-  // Returns the object at `key`: the entry of its row; or the one that the
-  // field of its record at its subindex makes, with the record's `arg` as its
-  // argument; or, of an array, the count at subindex 00h and at any other the
-  // element whose position, the subindex less one, is its argument. Fails
-  // with `object_not_found` if no row serves the index of `key`, and with
-  // `subindex_not_found` if rows serve the index but not the subindex.
+  // Returns the object at `key`: the entry of its row, or the one that reads
+  // the highest subindex at subindex 00h of an index whose objects start past
+  // it; or the one that the field of its record at its subindex makes, with
+  // the record's `arg` as its argument; or, of an array, the count at
+  // subindex 00h and at any other the element whose position, the subindex
+  // less one, is its argument. Fails with `object_not_found` if no row serves
+  // the index of `key`, and with `subindex_not_found` if rows serve the index
+  // but not the subindex.
   constexpr std::expected<od_entry<Ctx>, sdo_abort_code> find(od_key key) const
   {
     auto const record = std::ranges::lower_bound(records_,
