@@ -91,6 +91,17 @@ constexpr std::string_view type_name(od_data_type type)
   return "?";
 }
 
+constexpr std::string_view access_name(od_access access)
+{
+  switch (access) {
+  case od_access::rw: return "rw";
+  case od_access::ro: return "ro";
+  case od_access::wo: return "wo";
+  case od_access::const_: return "const";
+  }
+  return "?";
+}
+
 // Returns the rule that an object breaks whose access is `access`, and that
 // has a reader if `reader` and a writer if `writer`, or an empty view if it
 // breaks none. A row that binds one object, a field of a record and the

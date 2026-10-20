@@ -610,6 +610,55 @@ consteval bool test_arrays()
 
 static_assert(test_arrays());
 
+// -- Fingerprint --
+
+// The 32-bit FNV-1a hash of `text`, as the dictionary hashes the text of its
+// rows.
+consteval std::uint32_t fnv1a(std::string_view text)
+{
+  std::uint32_t h = 0x811C9DC5u;
+  for (char c : text) {
+    h ^= static_cast<std::uint8_t>(c);
+    h *= 0x01000193u;
+  }
+  return h;
+}
+
+// The fingerprint hashes the text of the rows in the order of keys, whatever
+// their order in the source; a renamed row changes it.
+consteval bool test_fingerprint()
+{
+  // clang-format off
+  static constexpr od_row<ctx> rows[] = {
+      {{0x5000, 0x01}, "watch",  "b", "value", "", float32, od_ro<read_value>},
+      {{0x2000, 0x00}, "info",   "a", "text",  "", uint8,   od_string<text>},
+      {{0x4000, 0x00}, "config", "r", "first", "", float32, record(1)},
+  };
+  static constexpr od_row<ctx> reordered[] = {rows[2], rows[0], rows[1]};
+  static constexpr od_row<ctx> renamed[] = {
+      rows[0],
+      rows[1],
+      {{0x4000, 0x00}, "config", "r", "other", "", float32, record(1)},
+  };
+  // clang-format on
+
+  constexpr std::string_view text =
+      "2000h:00 info/a/text uint8 array const\n"
+      "4000h:00 config/r/first float32 record\n"
+      " 00h uint8 const\n"
+      " 01h float32 rw\n"
+      " 02h uint16 ro\n"
+      "5000h:01 watch/b/value float32 object ro\n";
+
+  auto const dictionary = make_dictionary<rows>();
+  if (dictionary.fingerprint() != fnv1a(text)) return false;
+  if (od_view<ctx>{dictionary}.fingerprint() != fnv1a(text)) return false;
+  if (make_dictionary<reordered>().fingerprint() != fnv1a(text)) return false;
+  return make_dictionary<renamed>().fingerprint() != fnv1a(text);
+}
+
+static_assert(test_fingerprint());
+
 // -- Checks --
 
 // Builds the binding of an object from its parts, for the checks below.

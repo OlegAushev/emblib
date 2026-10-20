@@ -3,9 +3,12 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <expected>
 #include <iterator>
 #include <span>
+#include <string>
+#include <string_view>
 #include <type_traits>
 
 #include "detail/od_check.hpp"
@@ -25,6 +28,60 @@ struct od_rows_traits<od_row<Ctx> const[N]> {
   using context_type = Ctx;
   static constexpr std::size_t size = N;
 };
+
+// Returns the fingerprint of `rows`: the 32-bit FNV-1a hash of the text that
+// describes them, a line for each row in the order of keys, as a host can
+// write it from the rows of its own table. A row's line names its key and
+// names as the diagnostics do, its type, and whether it serves an object, an
+// array or a record: "3000h:01 config/nvm/magic uint32 object ro". An
+// object's or an array's line ends with its access, an array's that of its
+// elements; a record's line is followed by a line for each field of its
+// layout, " 00h uint8 const". Every line ends in a newline. The unit is left
+// out: it changes how a value reads, not where it is or how it travels.
+template<typename Ctx, std::size_t N>
+constexpr std::uint32_t od_fingerprint(od_row<Ctx> const (&rows)[N])
+{
+  auto const order = sorted_positions(rows, [](auto const& a, auto const& b) {
+    return a.key < b.key;
+  });
+
+  std::uint32_t h = 0x811C9DC5u;
+  auto const mix = [&h](std::string_view text) {
+    for (char c : text) {
+      h ^= static_cast<std::uint8_t>(c);
+      h *= 0x01000193u;
+    }
+  };
+
+  std::string line;
+  for (auto const i : order) {
+    auto const& row = rows[i];
+    auto const& binding = row.binding;
+    line.clear();
+    append_row(line, row);
+    line += ' ';
+    line += type_name(row.type);
+    if (!binding.layout.empty()) {
+      line += " record\n";
+      for (auto f = 0uz; f < binding.layout.size(); ++f) {
+        line += ' ';
+        append_hex(line, static_cast<unsigned>(f), 2);
+        line += "h ";
+        line += type_name(binding.layout[f].type);
+        line += ' ';
+        line += access_name(binding.layout[f].access);
+        line += '\n';
+      }
+    }
+    else {
+      line += binding.count != nullptr ? " array " : " object ";
+      line += access_name(binding.access);
+      line += '\n';
+    }
+    mix(line);
+  }
+  return h;
+}
 
 } // namespace detail
 
@@ -72,6 +129,13 @@ public:
     return arrays_;
   }
 
+  // Returns the fingerprint of the rows the dictionary was made of, which a
+  // host compares with that of its own table (`detail::od_fingerprint`).
+  constexpr std::uint32_t fingerprint() const
+  {
+    return fingerprint_;
+  }
+
 private:
   consteval od_dictionary() = default;
 
@@ -82,6 +146,7 @@ private:
   std::array<od_entry<Ctx>, Entries> entries_{};
   std::array<od_record<Ctx>, Records> records_{};
   std::array<od_array<Ctx>, Arrays> arrays_{};
+  std::uint32_t fingerprint_ = 0;
 };
 
 // Returns the dictionary made of `Rows`, a C array of `od_row<Ctx> const`
@@ -145,6 +210,7 @@ consteval auto make_dictionary()
   std::ranges::sort(dictionary.entries_, {}, &od_entry<context_type>::key);
   std::ranges::sort(dictionary.records_, {}, &od_record<context_type>::index);
   std::ranges::sort(dictionary.arrays_, {}, &od_array<context_type>::index);
+  dictionary.fingerprint_ = detail::od_fingerprint(Rows);
   return dictionary;
 }
 
@@ -160,7 +226,8 @@ public:
       od_dictionary<Ctx, Entries, Records, Arrays> const& dictionary)
       : entries_(dictionary.entries()),
         records_(dictionary.records()),
-        arrays_(dictionary.arrays())
+        arrays_(dictionary.arrays()),
+        fingerprint_(dictionary.fingerprint())
   {
   }
 
@@ -241,10 +308,17 @@ public:
     return arrays_;
   }
 
+  // Returns the fingerprint of the dictionary (`od_dictionary::fingerprint`).
+  constexpr std::uint32_t fingerprint() const
+  {
+    return fingerprint_;
+  }
+
 private:
   std::span<od_entry<Ctx> const> entries_;
   std::span<od_record<Ctx> const> records_;
   std::span<od_array<Ctx> const> arrays_;
+  std::uint32_t fingerprint_;
 };
 
 } // namespace canopen

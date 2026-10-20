@@ -1274,6 +1274,15 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   alternatives of `od_value`, one to one. Rejected: four characters to an
   element, which keeps the traffic of before but makes the elements words
   of text, and a type `char`, which CiA 301 does not have.
+- **The dictionary has a fingerprint** (2026-10-20). A host decodes what
+  the inverter sends by a table generated from `od.cpp`, and nothing told
+  a stale table from a fresh one: addresses and types moved three times in
+  two days. `make_dictionary` hashes, with FNV-1a, a text that describes
+  every row in the order of keys, its key, names, type, kind and access,
+  and every field of a record's layout, and the inverter shows the hash at
+  2006h:00, `dictionary_id`. A host that writes the same text from its
+  table compares the two. The unit is left out of the text: it changes how
+  a value reads, not where it is or how it travels.
 - **The inverter's objects left the area of CiA 301** (2026-10-19). Its
   dictionary kept objects in 1000h–1FFFh that the standard defines
   otherwise: strings at 1008h–100Ah, two of them at subindices a VAR does
@@ -1469,6 +1478,12 @@ Reading text as arrays, on 2026-10-19 (§7), changed:
   length, 01h and on one character each, and a subindex past the length
   answers 06090011h. A client that read a string four bytes at a time from
   subindex 00h reads its length there now.
+
+Fingerprinting the dictionary, on 2026-10-20 (§7), changed:
+
+- **2006h:00, `dictionary_id`**, shows the fingerprint of the dictionary:
+  the FNV-1a hash of a text that describes its rows, which a host writes
+  from its own table to tell whether that table is the inverter's.
 
 ## 10b. What applying taught us
 
