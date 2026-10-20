@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
@@ -82,6 +83,20 @@ struct od_written<typelist<Ctx&, U>, Ctx> : od_written_value<U> {};
 template<typename U, typename Ctx>
 struct od_written<typelist<Ctx const&, U>, Ctx> : od_written_value<U> {};
 
+// The elements of the array that a reader returns, by value or by const
+// reference: their type and their number.
+template<typename R>
+struct od_elements : std::false_type {};
+
+template<typename T, std::size_t N>
+struct od_elements<std::array<T, N>> : std::true_type {
+  using type = T;
+  static constexpr std::size_t count = N;
+};
+
+template<typename T, std::size_t N>
+struct od_elements<std::array<T, N> const&> : od_elements<std::array<T, N>> {};
+
 template<typename R>
 concept od_write_outcome =
     std::same_as<R, void> || std::same_as<R, od_write_result>;
@@ -139,6 +154,20 @@ concept od_string_reader =
     && detail::od_context_args<detail::od_args_t<F>, Ctx>
     && (std::same_as<detail::od_result_t<F>, std::string_view>
         || std::same_as<detail::od_result_t<F>, char const*>);
+
+// The concept `od_array_reader<F, Ctx>` is satisfied if and only if `F` is a
+// function, or a lambda without captures, that takes nothing, `Ctx&` or
+// `Ctx const&` and returns `std::array`, by value or by const reference, of at
+// most `od_array_capacity` od_value scalars or types wrapping one.
+template<auto F, typename Ctx>
+concept od_array_reader =
+    detail::od_function<F>
+    && detail::od_context_args<detail::od_args_t<F>, Ctx>
+    && detail::od_elements<detail::od_result_t<F>>::value
+    && detail::od_carried<
+        typename detail::od_elements<detail::od_result_t<F>>::type>
+    && (detail::od_elements<detail::od_result_t<F>>::count
+        <= od_array_capacity);
 
 // The concept `od_rw_pair<G, S, Ctx>` is satisfied if and only if `G` is a
 // reader and `S` a writer whose values travel as the same scalar, even if one
@@ -241,6 +270,25 @@ constexpr od_read_result od_string_char_thunk(Ctx& ctx, std::uint16_t position)
   return od_value{static_cast<std::uint8_t>(text[position])};
 }
 
+// Returns `Count`, the number of elements of an array of a fixed length.
+template<typename Ctx, std::size_t Count>
+constexpr od_read_result od_array_count_thunk(Ctx&, std::uint16_t)
+{
+  return od_value{static_cast<std::uint8_t>(Count)};
+}
+
+// Returns the element at `position` of the array that `F` returns, or answers
+// `subindex_not_found` past its end.
+template<auto F, typename Ctx>
+constexpr od_read_result od_array_element_thunk(Ctx& ctx,
+                                                std::uint16_t position)
+{
+  if (position >= od_elements<od_result_t<F>>::count) {
+    return std::unexpected(sdo_abort_code::subindex_not_found);
+  }
+  return to_od_value(od_call<F>(ctx)[position]);
+}
+
 inline constexpr std::string_view od_reader_shape =
     "od: a reader takes nothing or a reference to the context, and returns "
     "an od_value scalar, a type wrapping one, or std::expected of either";
@@ -256,6 +304,11 @@ inline constexpr std::string_view od_command_shape =
 inline constexpr std::string_view od_string_shape =
     "od: a string reader takes nothing or a reference to the context, and "
     "returns std::string_view or char const*";
+
+inline constexpr std::string_view od_array_shape =
+    "od: an array reader takes nothing or a reference to the context, and "
+    "returns std::array, by value or by const reference, of at most 254 "
+    "od_value scalars or types wrapping one";
 
 template<auto F, od_access Access>
 struct read_binding {
@@ -365,6 +418,27 @@ struct string_binding {
   }
 };
 
+template<auto F>
+struct array_binding {
+  template<typename Ctx>
+  consteval operator od_binding<Ctx>() const
+  {
+    static_assert(od_array_reader<F, Ctx>, od_array_shape);
+    if constexpr (od_array_reader<F, Ctx>) {
+      using elements = od_elements<od_result_t<F>>;
+      return {.access = od_access::ro,
+              .type = od_type_of<unwrapped_t<typename elements::type>>,
+              .read = &od_array_element_thunk<F, Ctx>,
+              .count = &od_array_count_thunk<Ctx, elements::count>};
+    }
+    else {
+      return {.access = od_access::ro,
+              .type = od_data_type::uint32,
+              .diagnosed = true};
+    }
+  }
+};
+
 } // namespace detail
 
 // The variable templates below bind an object in an `od_row` to typed
@@ -378,7 +452,10 @@ struct string_binding {
 // object written to run it, whose value the command does not get, and
 // `od_string<F>` a string (`od_string_reader`) as an array of its
 // characters: subindex 00h reads its length, and each subindex after it one
-// `uint8` character, up to `od_array_capacity` of them.
+// `uint8` character, up to `od_array_capacity` of them. `od_ro_array<F>`
+// binds an array that a reader returns (`od_array_reader`) the same way:
+// subindex 00h reads the number of its elements, and each subindex after it
+// one element, read-only, of the scalar the elements travel as.
 // `od_exec<F, Signature>` binds a command that runs only if the value written
 // is `Signature`, and answers any other with `data_store_error`, 0800 0020h,
 // as CiA 301 asks of the objects that store parameters and restore their
@@ -406,6 +483,9 @@ inline constexpr std::uint32_t od_load_signature = 0x64616F6C;
 
 template<auto F>
 inline constexpr detail::string_binding<F> od_string{};
+
+template<auto F>
+inline constexpr detail::array_binding<F> od_ro_array{};
 
 } // namespace canopen
 } // namespace can

@@ -1283,6 +1283,17 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   2006h:00, `dictionary_id`. A host that writes the same text from its
   table compares the two. The unit is left out of the text: it changes how
   a value reads, not where it is or how it travels.
+- **A list of values is an array** (2026-10-20). The temperatures of the
+  power module's and the motor's sensors, the external inputs and the
+  probe channels were objects at subindices of 5000h, one each, and where
+  a board had fewer sensors than subindices, a template reader answered
+  06020000h: a host could not learn how many sensors a board had.
+  `od_ro_array` binds a reader that returns a `std::array` as an array:
+  subindex 00h reads its length, which the type gives, and each subindex
+  after it one read-only element. The inverter serves its four lists so,
+  at 5001h–5004h. Rejected: a reader of one element by its position, with
+  the length written in the builder, which could disagree with the source
+  and let the element's handler read past its end.
 - **The inverter's objects left the area of CiA 301** (2026-10-19). Its
   dictionary kept objects in 1000h–1FFFh that the standard defines
   otherwise: strings at 1008h–100Ah, two of them at subindices a VAR does
@@ -1484,6 +1495,24 @@ Fingerprinting the dictionary, on 2026-10-20 (§7), changed:
 - **2006h:00, `dictionary_id`**, shows the fingerprint of the dictionary:
   the FNV-1a hash of a text that describes its rows, which a host writes
   from its own table to tell whether that table is the inverter's.
+
+Serving the lists of values as arrays, on 2026-10-20 (§7), changed:
+
+- **The lists are arrays**, each at an index of its own, and the objects
+  at subindices of 5000h they replace are gone:
+
+  | Was | Objects | Is |
+  |---|---|---|
+  | 5000h:24–26 | `temp/Tpwr_a`–`Tpwr_c` | 5001h, `temp/Tpwr_sensors` |
+  | 5000h:27–2B | `temp/Tmot1`–`Tmot5` | 5002h, `temp/Tmot_sensors` |
+  | 5000h:81–84 | `ext/V1`–`V4` | 5003h, `ext/V` |
+  | 5000h:F1–FA | `logger/ch0`–`ch9` | 5004h, `logger/ch` |
+
+  00h reads the number of elements: three sensors of the power module and
+  five of the motor on rev-a, one of each on the miniboard, four external
+  inputs and ten probe channels on both. The first element is at 01h; one
+  past the last answers 06090011h, where a sensor the board lacks answered
+  06020000h.
 
 ## 10b. What applying taught us
 

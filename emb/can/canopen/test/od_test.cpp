@@ -1,3 +1,4 @@
+#include <array>
 #include <cstdint>
 #include <expected>
 #include <string>
@@ -93,6 +94,25 @@ constexpr char const* word()
   return "abcd";
 }
 
+constexpr std::array<float, 3> samples()
+{
+  return {1.5f, 2.5f, 3.5f};
+}
+
+inline constexpr std::array rates{emb::units::hz_f32{50.f},
+                                  emb::units::hz_f32{60.f}};
+
+// An array of wrapped scalars, by const reference.
+constexpr std::array<emb::units::hz_f32, 2> const& read_rates(ctx const&)
+{
+  return rates;
+}
+
+constexpr std::array<float, od_array_capacity> read_longest()
+{
+  return {};
+}
+
 constexpr od_read_result raw_read(ctx& c, std::uint16_t)
 {
   return od_value{c.value};
@@ -185,6 +205,23 @@ constexpr float command_returning(ctx&)
   return 0.f;
 }
 
+constexpr std::array<double, 2> read_doubles()
+{
+  return {};
+}
+
+constexpr std::array<float, od_array_capacity + 1> read_too_long()
+{
+  return {};
+}
+
+std::array<float, 2> unguarded{};
+
+std::array<float, 2>& read_unguarded()
+{
+  return unguarded;
+}
+
 // -- Types --
 
 static_assert(od_type_of<bool> == od_data_type::boolean);
@@ -255,6 +292,15 @@ static_assert(od_string_reader<text, ctx>);
 static_assert(od_string_reader<word, ctx>);
 static_assert(!od_string_reader<read_value, ctx>);
 
+static_assert(od_array_reader<samples, ctx>);
+static_assert(od_array_reader<read_rates, ctx>);
+static_assert(od_array_reader<read_longest, ctx>);
+static_assert(!od_array_reader<read_too_long, ctx>);
+static_assert(!od_array_reader<read_doubles, ctx>);
+static_assert(!od_array_reader<read_unguarded, ctx>);
+static_assert(!od_array_reader<read_value, ctx>);
+static_assert(!od_array_reader<text, ctx>);
+
 static_assert(od_rw_pair<read_value, write_value, ctx>);
 static_assert(od_rw_pair<read_freq, write_value, ctx>);
 static_assert(od_rw_pair<read_value, write_freq, ctx>);
@@ -315,6 +361,14 @@ static_assert(bind<od_string<text>>().access == od_access::const_);
 static_assert(bind<od_string<text>>().type == od_data_type::uint8);
 static_assert(bind<od_string<text>>().count
               == &detail::od_string_count_thunk<text, ctx>);
+static_assert(bind<od_ro_array<samples>>().access == od_access::ro);
+static_assert(bind<od_ro_array<samples>>().type == od_data_type::float32);
+static_assert(bind<od_ro_array<samples>>().read
+              == &detail::od_array_element_thunk<samples, ctx>);
+static_assert(bind<od_ro_array<samples>>().write == nullptr);
+static_assert(bind<od_ro_array<samples>>().count
+              == &detail::od_array_count_thunk<ctx, 3>);
+static_assert(bind<od_ro_array<read_rates>>().type == od_data_type::float32);
 
 static_assert(!bind<od_ro<read_value>>().diagnosed);
 static_assert(bind<od_ro<read_value>>().catalog == nullptr);
@@ -447,6 +501,26 @@ consteval bool test_string()
 
 static_assert(test_string());
 
+// An array that a reader returns is served the same way: the count is its
+// length, and each position one element, which travels as its scalar.
+consteval bool test_ro_array()
+{
+  ctx c;
+  auto const array = bind<od_ro_array<samples>>();
+  if (array.count(c, 0) != od_read_result{std::uint8_t{3}}) return false;
+  if (array.read(c, 0) != od_read_result{1.5f}) return false;
+  if (array.read(c, 2) != od_read_result{3.5f}) return false;
+  if (array.read(c, 3) != std::unexpected(sdo_abort_code::subindex_not_found)) {
+    return false;
+  }
+
+  auto const wrapped = bind<od_ro_array<read_rates>>();
+  if (wrapped.count(c, 0) != od_read_result{std::uint8_t{2}}) return false;
+  return wrapped.read(c, 1) == od_read_result{60.f};
+}
+
+static_assert(test_ro_array());
+
 // -- Dictionary --
 
 consteval bool test_dictionary()
@@ -561,9 +635,10 @@ consteval bool test_arrays()
 {
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x2001, 0x00}, "info",  "a", "word",  "", uint8,   od_string<word>},
-      {{0x5000, 0x01}, "watch", "b", "value", "", float32, od_ro<read_value>},
-      {{0x2000, 0x00}, "info",  "a", "text",  "", uint8,   od_string<text>},
+      {{0x2001, 0x00}, "info",  "a", "word",    "", uint8,   od_string<word>},
+      {{0x5001, 0x00}, "watch", "b", "samples", "", float32, od_ro_array<samples>},
+      {{0x5000, 0x01}, "watch", "b", "value",   "", float32, od_ro<read_value>},
+      {{0x2000, 0x00}, "info",  "a", "text",    "", uint8,   od_string<text>},
   };
   // clang-format on
 
@@ -572,7 +647,7 @@ consteval bool test_arrays()
 
   if (view.entries().size() != 1) return false;
   auto const arrays = view.arrays();
-  if ((arrays.size() != 2) || (arrays[0].index != 0x2000)) return false;
+  if ((arrays.size() != 3) || (arrays[0].index != 0x2000)) return false;
 
   ctx c;
   auto const count = view.find({0x2000, 0x00});
@@ -602,6 +677,20 @@ consteval bool test_arrays()
 
   auto const last = view.find({0x2001, 0x04});
   if (!last || last->read(c, last->arg) != od_read_result{std::uint8_t{'d'}}) {
+    return false;
+  }
+
+  auto const sample = view.find({0x5001, 0x03});
+  if (!sample
+      || (sample->access != od_access::ro)
+      || (sample->type != float32)
+      || (sample->read(c, sample->arg) != od_read_result{3.5f})) {
+    return false;
+  }
+  auto const beyond = view.find({0x5001, 0x04});
+  if (!beyond
+      || beyond->read(c, beyond->arg)
+             != std::unexpected(sdo_abort_code::subindex_not_found)) {
     return false;
   }
   return view.find({0x2002, 0x00})
@@ -788,6 +877,7 @@ static_assert(check_record({.access = od_access::ro,
 
 // An array is checked at the row that names it, its elements as one object.
 static_assert(check_record(od_string<text>).empty());
+static_assert(check_record(od_ro_array<samples>).empty());
 static_assert(check_one(od_string<text>)
               == "od: 2000h:01 a/b/c: an array's row must have subindex 00");
 static_assert(
