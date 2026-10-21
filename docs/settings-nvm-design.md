@@ -1299,6 +1299,20 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   alternatives of `od_value`, one to one. Rejected: four characters to an
   element, which keeps the traffic of before but makes the elements words
   of text, and a type `char`, which CiA 301 does not have.
+- **The values a host watches take an index per group** (2026-10-21).
+  5000h held them all, a block of 10h subindices for each group, 37
+  objects on 121 subindices. CiA 301 allows it, as subindex 00h of a
+  record is the highest subindex supported and the others answer
+  06090011h, but it made one record of unrelated values, which a tool
+  that walks the record from 01h to 00h meets with 84 refusals, and left a
+  group room for 15 objects, the electrical one already 14. Each group now
+  has an index of its own, in steps of 10h as the parameters have, with
+  its members from 01h on: 5000h system, 5010h electrical, 5020h
+  temperatures, 5030h torque, 5040h speed, 5050h angle and 5070h hall; the
+  arrays follow their groups, 5021h and 5022h the sensors of temperature,
+  5080h the external inputs and 5090h the probe. The dictionary adds six
+  entries at 00h, 96 bytes of flash. Rejected: one record without gaps,
+  where an object added to a group moves those after it.
 - **The dictionary describes itself for a host** (2026-10-21). A host
   decoded the inverter by a table that a script built by parsing `od.cpp`,
   for which a row stated its type, and checked it by a fingerprint it had
@@ -1669,6 +1683,25 @@ shows:
   shows "pu/s" where it showed "pu", `model.Vd_limit_factor` "pu" where it
   showed none, and `motor.R` "Ω" where it showed "Ohm". Every other unit
   is as before.
+
+An index for each group of watched values, on 2026-10-21 (§10), moved
+them:
+
+| Was | Now | Objects |
+|---|---|---|
+| 5000h:11–1E | 5010h:01–0E | `electrical.*`, from `Vdc` to `Vq_comp` |
+| 5000h:21–23 | 5020h:01–03 | `temperature.Tmcu`, `Tpwr`, `Tmot` |
+| 5001h, 5002h | 5021h, 5022h | `temperature.Tpwr_sensors`, `Tmot_sensors` |
+| 5000h:31–33 | 5030h:01–03 | `torque.*` |
+| 5000h:41–43 | 5040h:01–03 | `speed.*` |
+| 5000h:51–52 | 5050h:01–02 | `angle.*` |
+| 5000h:71–79 | 5070h:01–09 | `hall.*` |
+| 5003h | 5080h | `ext_input.V` |
+| 5004h | 5090h | `probe.channels` |
+
+`system.uptime` stays at 5000h:01. Subindex 00h of each new index reads
+the number of its objects; paths and titles do not change, and a host
+that reads the description finds the objects where they now are.
 
 ## 10b. What applying taught us
 

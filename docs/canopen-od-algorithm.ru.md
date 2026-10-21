@@ -203,7 +203,7 @@ od_write_result (*)(Ctx&, std::uint16_t arg, od_value);  // od_write_fn<Ctx>
 Строка — ключ, метка и привязка:
 
 ```cpp
-{{0x5000, 0x12}, {"electrical.Idc", {"DC current", "Ток DC"}, "A"}, od_ro<Idc>},
+{{0x5010, 0x02}, {"electrical.Idc", {"DC current", "Ток DC"}, "A"}, od_ro<Idc>},
 {{0x3141, 0x00}, {},                                                setting::param<params::motor::R>},
 ```
 
@@ -804,8 +804,8 @@ T38, группы без строк. Последний проход отмеч�
 В образ попадают:
 
 - записи, составные объекты и массивы: по 16, 12 и 16 байт `.rodata`, у
-  etk 85 записей, из них 7 — подындексы 00h, которые добавил словарь, 67
-  составных объектов и 11 массивов, 2 340 байт;
+  etk 91 запись, из них 13 — подындексы 00h, которые добавил словарь, 67
+  составных объектов и 11 массивов, 2 436 байт;
 - раскладки: по 12 байт на поле, у etk девять раскладок, 1 140 байт;
 - отпечаток в словаре и вид: 4 и 28 байт `.rodata`;
 - по thunk'у на обработчик и сами обработчики;
@@ -846,7 +846,7 @@ T38, группы без строк. Последний проход отмеч�
 {"type":"array","index":"0x2001","path":"device.name","title":"Device name","title_ru":"Наименование устройства","class":"about","datatype":"uint8","access":"const","text":true}
 {"type":"object","index":"0x2101","sub":"0x01","path":"settings.save_all_parameters","title":"Save all parameters","title_ru":"Сохранить все параметры","class":"control","datatype":"uint32","access":"wo","command":true,"signature":"0x65766173"}
 {"type":"record","index":"0x3141","path":"motor.R","title":"Stator resistance","title_ru":"Сопротивление статора","class":"parameters","datatype":"float32","unit":"Ω","layout":0}
-{"type":"object","index":"0x5000","sub":"0x11","path":"electrical.Vdc","title":"DC voltage","title_ru":"Напряжение DC","class":"watch","datatype":"float32","access":"ro","unit":"V"}
+{"type":"object","index":"0x5010","sub":"0x01","path":"electrical.Vdc","title":"DC voltage","title_ru":"Напряжение DC","class":"watch","datatype":"float32","access":"ro","unit":"V"}
 ```
 
 `datatype` — скалярный тип (`boolean` … `float32`), как `od_data_type`; у
@@ -1157,8 +1157,8 @@ abort `80 01 20 03 01 00 01 06` (06010001h).
 
 ```
 emb/can/canopen/od_dictionary.hpp: In instantiation of 'consteval auto emb::can::canopen::make_dictionary() [with const auto& Rows = comm::can::canopen::od::rows; const auto& Areas = comm::can::canopen::od::areas; const auto& Groups = comm::can::canopen::od::groups]':
-comm/can/canopen/od.cpp:258:60:   required from here
-  258 |     emb::can::canopen::make_dictionary<rows, areas, groups>();
+comm/can/canopen/od.cpp:259:60:   required from here
+  259 |     emb::can::canopen::make_dictionary<rows, areas, groups>();
 emb/can/canopen/od_dictionary.hpp:189:60: error: static assertion failed: od: 3100h:00 drive.phase_swap and 3100h:00 drive.pwm_frequency share the index of a record
 ```
 
@@ -1166,8 +1166,8 @@ emb/can/canopen/od_dictionary.hpp:189:60: error: static assertion failed: od: 31
 `electrical`, срабатывает T35:
 
 ```
-comm/can/canopen/od.cpp:258:60:   required from here
-emb/can/canopen/od_dictionary.hpp:189:60: error: static assertion failed: od: 5000h:11 elec.Vdc: group 'elec' is not declared
+comm/can/canopen/od.cpp:259:60:   required from here
+emb/can/canopen/od_dictionary.hpp:189:60: error: static assertion failed: od: 5010h:01 elec.Vdc: group 'elec' is not declared
 ```
 
 Если обработчик `Vdc` вернёт `double`, которого нет среди скаляров
@@ -1175,13 +1175,16 @@ emb/can/canopen/od_dictionary.hpp:189:60: error: static assertion failed: od: 50
 
 ```
 emb/can/canopen/od_handlers.hpp: In instantiation of 'consteval emb::can::canopen::detail::read_binding<F, Access>::operator emb::can::canopen::od_binding<Ctx>() const [with Ctx = comm::can::canopen::od::context; auto F = comm::can::canopen::od::Vdc; …]':
-comm/can/canopen/od.cpp:102:125:   required from here
-  102 | {{0x5000, 0x11}, {"electrical.Vdc", {"DC voltage", "Напряжение DC"}},                                             od_ro<Vdc>},
+comm/can/canopen/od.cpp:103:125:   required from here
+  103 | {{0x5010, 0x01}, {"electrical.Vdc", {"DC voltage", "Напряжение DC"}},                                             od_ro<Vdc>},
 emb/can/canopen/od_handlers.hpp:340:19: error: static assertion failed: od: a reader takes nothing or a reference to the context, and returns an od_value scalar, a type wrapping one, or std::expected of either
 ```
 
 Дальше GCC объясняет, какое условие концепта не выполнено. Второй ошибки
-из `make_dictionary` нет: построитель поставил `diagnosed`.
+из `make_dictionary` нет: построитель поставил `diagnosed`. Ошибку в самой
+таблице, как в первых двух примерах, компилятор показывает дважды: её
+называет и `make_description`, которая проверяет те же строки (во втором
+случае «required from here» указывает на строку `description`).
 
 ## 6. Обоснования решений
 
@@ -1420,12 +1423,14 @@ JSON Lines — потому что строки независимы: хост �
 ## 8. Стоимость
 
 Образ etk (rev-a-release, 156 строк — 78 записей, 67 составных объектов и
-11 массивов, и ещё 7 записей 00h, которые добавил словарь): записи,
-составные объекты и массивы — 2 340 байт, отпечаток — 4, раскладки —
+11 массивов, и ещё 13 записей 00h, которые добавил словарь): записи,
+составные объекты и массивы — 2 436 байт, отпечаток — 4, раскладки —
 1 140, вид — 28, всё в `.rodata`. Составные объекты настроек
 вместо одиночных объектов прибавили к flash rev-a-release 3 896 байт; уход
 записей групп, ссылок и второго аргумента 17 октября сократил его на 1 552,
-списки в массивах 20 октября — на 376, а подындексы 00h прибавили 120.
+списки в массивах 20 октября — на 376, а подындексы 00h прибавили 120;
+индекс на каждую группу наблюдаемых величин 21 октября — ещё 96, шесть
+подындексов 00h.
 Под таблицу больше не уходят ни `.data`, ни RAM; прежде это было 7 260
 байт `.data`, то есть столько же RAM и столько же flash под образ
 инициализации. Весь переход сократил flash на 11 344 байта и RAM на 7 292;
