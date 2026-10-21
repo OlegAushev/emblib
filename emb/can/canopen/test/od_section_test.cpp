@@ -129,33 +129,39 @@ consteval bool test_the_readers_follow_the_section()
 
 static_assert(test_the_readers_follow_the_section());
 
+inline constexpr od_area areas[] = {{0x3000, 0x3FFF, od_class::parameters}};
+
+inline constexpr od_group groups[] = {
+    {"nvm", {"Non-volatile memory", "Энергонезависимая память"}},
+};
+
 consteval bool test_dictionary()
 {
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x3000, 0x01}, "config", "nvm",   "magic",            "", uint32,  od_ro<status::magic>},
-      {{0x3000, 0x02}, "config", "nvm",   "slot_count",       "", uint32,  od_ro<status::slot_count>},
-      {{0x3000, 0x03}, "config", "nvm",   "slot_capacity",    "", uint32,  od_ro<status::slot_capacity>},
-      {{0x3000, 0x04}, "config", "nvm",   "slots_per_block",  "", uint32,  od_ro<status::slots_per_block>},
-      {{0x3000, 0x05}, "config", "nvm",   "sequence",         "", uint32,  od_ro<status::sequence>},
-      {{0x3000, 0x06}, "config", "nvm",   "erase_cycles",     "", uint32,  od_ro<status::erase_cycles>},
-      {{0x3000, 0x07}, "config", "nvm",   "loaded_slot",      "", uint32,  od_ro<status::loaded_slot>},
-      {{0x3000, 0x08}, "config", "nvm",   "loaded_sequence",  "", uint32,  od_ro<status::loaded_sequence>},
-      {{0x3000, 0x09}, "config", "nvm",   "valid",            "", boolean, od_ro<status::valid>},
-      {{0x3000, 0x0A}, "config", "nvm",   "schema_matched",   "", boolean, od_ro<status::schema_matched>},
-      {{0x3000, 0x0B}, "config", "nvm",   "read_failed",      "", boolean, od_ro<status::read_failed>},
-      {{0x3000, 0x0C}, "config", "nvm",   "stored",           "", uint32,  od_ro<status::stored>},
-      {{0x3000, 0x0D}, "config", "nvm",   "loaded",           "", uint32,  od_ro<status::loaded>},
-      {{0x3000, 0x0E}, "config", "nvm",   "unknown",          "", uint32,  od_ro<status::unknown>},
-      {{0x3000, 0x0F}, "config", "nvm",   "rejected",         "", uint32,  od_ro<status::rejected>},
-      {{0x3000, 0x10}, "config", "nvm",   "missing",          "", uint32,  od_ro<status::missing>},
-      {{0x3000, 0x11}, "config", "nvm",   "restart_required", "", boolean, od_ro<status::restart_required>},
-      {{0x3000, 0x12}, "config", "nvm",   "unapplied",        "", boolean, od_ro<status::unapplied>},
-      {{0x3000, 0x13}, "config", "nvm",   "unsaved",          "", boolean, od_ro<status::unsaved>},
+      {{0x3000, 0x01}, {"nvm.magic", {"Magic number", "Сигнатура"}},                                        od_ro<status::magic>},
+      {{0x3000, 0x02}, {"nvm.slot_count", {"Slot count", "Число слотов"}},                                  od_ro<status::slot_count>},
+      {{0x3000, 0x03}, {"nvm.slot_capacity", {"Slot capacity", "Ёмкость слота"}},                           od_ro<status::slot_capacity>},
+      {{0x3000, 0x04}, {"nvm.slots_per_block", {"Slots per block", "Слотов в блоке"}},                      od_ro<status::slots_per_block>},
+      {{0x3000, 0x05}, {"nvm.sequence", {"Sequence number", "Порядковый номер"}},                           od_ro<status::sequence>},
+      {{0x3000, 0x06}, {"nvm.erase_cycles", {"Erase cycles", "Циклы стирания"}},                            od_ro<status::erase_cycles>},
+      {{0x3000, 0x07}, {"nvm.loaded_slot", {"Loaded slot", "Загруженный слот"}},                            od_ro<status::loaded_slot>},
+      {{0x3000, 0x08}, {"nvm.loaded_sequence", {"Loaded sequence number", "Загруженный порядковый номер"}}, od_ro<status::loaded_sequence>},
+      {{0x3000, 0x09}, {"nvm.valid", {"Record valid", "Запись действительна"}},                             od_ro<status::valid>},
+      {{0x3000, 0x0A}, {"nvm.schema_matched", {"Schema matched", "Схема совпала"}},                         od_ro<status::schema_matched>},
+      {{0x3000, 0x0B}, {"nvm.read_failed", {"Read failed", "Ошибка чтения"}},                               od_ro<status::read_failed>},
+      {{0x3000, 0x0C}, {"nvm.stored", {"Values stored", "Значений в записи"}},                              od_ro<status::stored>},
+      {{0x3000, 0x0D}, {"nvm.loaded", {"Values loaded", "Значений загружено"}},                             od_ro<status::loaded>},
+      {{0x3000, 0x0E}, {"nvm.unknown", {"Unknown values", "Неизвестных значений"}},                         od_ro<status::unknown>},
+      {{0x3000, 0x0F}, {"nvm.rejected", {"Values rejected", "Значений отвергнуто"}},                        od_ro<status::rejected>},
+      {{0x3000, 0x10}, {"nvm.missing", {"Parameters missing", "Параметров без значения"}},                  od_ro<status::missing>},
+      {{0x3000, 0x11}, {"nvm.restart_required", {"Restart required", "Требуется перезапуск"}},              od_ro<status::restart_required>},
+      {{0x3000, 0x12}, {"nvm.unapplied", {"Unapplied changes", "Неприменённые изменения"}},                 od_ro<status::unapplied>},
+      {{0x3000, 0x13}, {"nvm.unsaved", {"Unsaved changes", "Несохранённые изменения"}},                     od_ro<status::unsaved>},
   };
   // clang-format on
 
-  auto const dictionary = make_dictionary<rows>();
+  auto const dictionary = make_dictionary<rows, areas, groups>();
   od_view<ctx> const view{dictionary};
 
   ctx c;

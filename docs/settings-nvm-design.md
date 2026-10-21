@@ -519,22 +519,22 @@ concept some_storage = requires {
 
 ## 7. CANopen binding
 
-The OD table keeps what genuinely belongs to CANopen — index, display name,
-categories, unit — and takes everything else from the section and its
-schema through the parameter's declaration. The type is taken from the
-schema as well, and written in the row besides, so that a text parser can
-build a host's table from the source; the dictionary checks that the two
-agree. Each parameter is a record, one row at an index of its own
-(`can/canopen/od_settings.hpp`; the dictionary around it is described in
-`canopen-od-algorithm.ru.md`):
+The OD table keeps what genuinely belongs to CANopen — the index of each
+record, and the areas of indices, from which the class of an object
+follows — and takes everything else from the section and its schema
+through the parameter's declaration: the type, and the record's label,
+its path being the parameter's name and its title the parameter's. Each
+parameter is a record, one row at an index of its own, whose label is
+empty (`can/canopen/od_settings.hpp`; the dictionary around it is
+described in `canopen-od-algorithm.ru.md`):
 
 ```cpp
 using setting = emb::can::canopen::od_settings<settings_of, applier_of>;
 namespace params = settings::params;
 
 inline constexpr emb::can::canopen::od_row<context> rows[] = {
-  {{0x3100, 0x00}, "config", "drive",  "phase_swap", "",   boolean, setting::param<params::drive::phase_swap>},
-  {{0x3107, 0x00}, "config", "drive",  "pwm_freq",   "Hz", float32, setting::param<params::drive::pwm_freq, pwm_frequency_actual>},
+  {{0x3100, 0x00}, {}, setting::param<params::drive::phase_swap>},
+  {{0x3107, 0x00}, {}, setting::param<params::drive::pwm_frequency, pwm_frequency_actual>},
   // ...
 };
 ```
@@ -565,20 +565,25 @@ command with `unsupported_access`, a failed check with
 `parameter_incompatibility`, a change not admitted or values that wait to
 be saved with `state_error`.
 
-The `od_key <-> name` mapping stays hand-maintained on purpose: OD indices
-are an external contract frozen for tools and EDS. Moving them into the
-schema would not reduce maintenance, only put a protocol fact in the wrong
-file.
+The mapping of a key to a parameter stays hand-maintained on purpose: OD
+indices are an external contract frozen for tools and EDS. Moving them
+into the schema would not reduce maintenance, only put a protocol fact in
+the wrong file. The name goes the other way: the schema has it, and the
+dictionary takes it as the record's path rather than naming the parameter
+a second time.
 
 Completeness is checked at compile time, without coupling:
 
-- no duplicate `od_key` and no duplicate name in the dictionary, for every
+- no duplicate `od_key` and no duplicate path in the dictionary, for every
   row, settings or not, and a record has its index to itself;
 - every schema parameter with `expose` has exactly one record and a hidden
   one none — "forgot to publish the new parameter" fails the build;
-- the type written in the row must equal the parameter's, `named_unit` and
-  `emb::clamped` included (T15 in `canopen-od-algorithm.ru.md`), and an
-  actual value must be read in that type.
+- a parameter's path, its name, is a group and a name of a group the
+  dictionary declares, and its title is not empty in any language (T2,
+  T35 and T36 in `canopen-od-algorithm.ru.md`); a row of a parameter that
+  gives a label of its own is refused (T34);
+- the record's type is the parameter's by construction, `named_unit` and
+  `emb::clamped` included, and an actual value must be read in that type.
 
 1011h:04, which restored one default, is gone: a client reads 04h and
 writes it to 01h. Restoring all defaults (2102h:01) requests them; they
@@ -1292,6 +1297,25 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   alternatives of `od_value`, one to one. Rejected: four characters to an
   element, which keeps the traffic of before but makes the elements words
   of text, and a type `char`, which CiA 301 does not have.
+- **Objects are named by path and titled; their class comes from areas**
+  (2026-10-21). A row named an object by a category, a subcategory and a
+  name, with a rule for none of them: the category, which told a host
+  whether to poll an object or let it be changed, followed from the area
+  of the index and still took a typo; a parameter was named twice, in the
+  schema and in the table, alike for 20 of 67; and the type was written in
+  the row for a text parser that built a host's table. A row now holds its
+  key, a label — a path `group.name`, a title in English and in Russian
+  and a unit — and its binding; a parameter's record takes its label from
+  the declaration, the path being its name in the schema, so its row
+  writes `{}`. `make_dictionary` takes the areas, `od_area{first, last, class_}`,
+  from which the class of an object follows, `about`, `control`,
+  `parameters` or `watch`, and the groups, `od_group{name, title}`, that
+  paths start with. It checks paths, areas, groups and titles, and drops
+  the type column with the rule that checked it; the fingerprint describes
+  paths and classes. Rejected: the class in the row, checked against its
+  area, which only repeats the area; a path of three segments, the class
+  first, which repeats it in every path; titles in English only, while the
+  host shows Russian.
 - **A parameter has a title and a unit** (2026-10-21). A transport that
   shows a parameter to people had only its name, an identifier such as
   "motor.pole_pairs", and a unit typed by hand in the table of the dictionary,
@@ -1586,6 +1610,18 @@ changed:
   | `firmware_version` | 2002h:00 | 2004h:00 |
   | `firmware_commitdate` | 2003h:00 | 2005h:00 |
   | `firmware_branch` | 2004h:00 | 2006h:00 |
+
+Naming objects by path, on 2026-10-21 (§7, §10), changed what a tool
+shows:
+
+- **Objects have a path and a title.** A tool finds an object by its path,
+  `group.name`, e.g. `electrical.Vdc` or `motor.R`, where it had a
+  category, a subcategory and a name; a parameter's path is its name in
+  the schema. Every object, and every group, has a title in English and
+  in Russian. The class follows from the index: `about` (was `info`),
+  `control` (was `ctl`), `parameters` (was `config`) and `watch`.
+  Addresses do not change; the fingerprint at 2000h:00 does, and a tool
+  that built its table by parsing `od.cpp` no longer can.
 
 ## 10b. What applying taught us
 

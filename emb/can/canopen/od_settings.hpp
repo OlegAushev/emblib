@@ -130,8 +130,10 @@ concept od_settings_access =
 //
 // `param<Decl>` binds the record of the parameter that `Decl` declares, and
 // `param<Decl, Actual>` one that also shows its actual value, as the reader
-// `Actual` reads it in the type of the parameter. The record's type, stated
-// by the row, is the parameter's; its members, by subindex:
+// `Actual` reads it in the type of the parameter. The record's path is the
+// parameter's name and its title the parameter's, so its row has no label of
+// its own: `{key, {}, param<Decl>}`. The record's type is the parameter's;
+// its members, by subindex:
 //
 //   00h  const u8   the last subindex, 09h, or 0Ah with `Actual`
 //   01h  rw         the value requested; ro if the parameter is not writable
@@ -348,6 +350,7 @@ class od_settings {
               .arg = static_cast<std::uint16_t>(param::index),
               .catalog = &catalog,
               .layout = param_layout<type, param::desc.writable, Actual>,
+              .label = {.path = Decl.desc.name, .title = Decl.title},
               .diagnosed = !(known && shown && fits)};
     }
   };

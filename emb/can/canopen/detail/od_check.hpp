@@ -4,9 +4,9 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <iterator>
 #include <string>
 #include <string_view>
-#include <tuple>
 #include <vector>
 
 #include "../od.hpp"
@@ -24,19 +24,45 @@ constexpr void append_hex(std::string& out, unsigned value, int digits)
   }
 }
 
-// Renders a row as "3002h:01 config/drive/phase_swap".
+// Whether every field of `label` is empty, as the label of a row whose
+// binding gives one must be.
+constexpr bool is_empty(od_label const& label)
+{
+  return label.path.empty()
+      && label.title.en.empty()
+      && label.title.ru.empty()
+      && label.unit.empty();
+}
+
+// Returns the label of `row`: the one its binding gives, if any, or else its
+// own.
+template<typename Ctx>
+constexpr od_label const& label_of(od_row<Ctx> const& row)
+{
+  return is_empty(row.binding.label) ? row.label : row.binding.label;
+}
+
+// Renders a row as "3100h:00 drive.phase_swap", or as "3100h:00" if it has no
+// path.
 template<typename Ctx>
 constexpr void append_row(std::string& out, od_row<Ctx> const& row)
 {
   append_hex(out, row.key.index, 4);
   out += "h:";
   append_hex(out, row.key.subindex, 2);
-  out += ' ';
-  out += row.category;
-  out += '/';
-  out += row.subcategory;
-  out += '/';
-  out += row.name;
+  if (auto const path = label_of(row).path; !path.empty()) {
+    out += ' ';
+    out += path;
+  }
+}
+
+// Renders an area as "2000h-20FFh".
+constexpr void append_area(std::string& out, od_area const& area)
+{
+  append_hex(out, area.first, 4);
+  out += "h-";
+  append_hex(out, area.last, 4);
+  out += 'h';
 }
 
 template<typename Ctx>
@@ -59,6 +85,15 @@ constexpr std::string pair_error(od_row<Ctx> const& first,
   out += " and ";
   append_row(out, second);
   out += ' ';
+  out += what;
+  return out;
+}
+
+constexpr std::string group_error(od_group const& group, std::string_view what)
+{
+  std::string out = "od: group '";
+  out += group.name;
+  out += "': ";
   out += what;
   return out;
 }
@@ -91,6 +126,17 @@ constexpr std::string_view type_name(od_data_type type)
   return "?";
 }
 
+constexpr std::string_view class_name(od_class class_)
+{
+  switch (class_) {
+  case od_class::about: return "about";
+  case od_class::control: return "control";
+  case od_class::parameters: return "parameters";
+  case od_class::watch: return "watch";
+  }
+  return "?";
+}
+
 constexpr std::string_view access_name(od_access access)
 {
   switch (access) {
@@ -100,6 +146,104 @@ constexpr std::string_view access_name(od_access access)
   case od_access::const_: return "const";
   }
   return "?";
+}
+
+// Whether `text` is a segment of a path: a letter followed by letters, digits
+// and underscores, all ASCII.
+constexpr bool is_segment(std::string_view text)
+{
+  auto const letter = [](char c) {
+    return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+  };
+  if (text.empty() || !letter(text.front())) return false;
+  return std::ranges::all_of(text, [&](char c) {
+    return letter(c) || (c >= '0' && c <= '9') || c == '_';
+  });
+}
+
+// Whether `path` is a group and a name, two segments joined by a dot.
+constexpr bool is_path(std::string_view path)
+{
+  auto const dot = path.find('.');
+  return dot != std::string_view::npos
+      && is_segment(path.substr(0, dot))
+      && is_segment(path.substr(dot + 1));
+}
+
+// Returns the group of `path`, the part before its first dot.
+constexpr std::string_view group_of(std::string_view path)
+{
+  return path.substr(0, path.find('.'));
+}
+
+// Whether `text` is valid UTF-8 without a quotation mark, a backslash or a
+// control character (U+0000 to U+001F and U+007F to U+009F): a text that a
+// string of JSON holds as it is, without escapes. Valid UTF-8 encodes each
+// character in its shortest form, and no surrogate or code point past
+// U+10FFFF.
+constexpr bool is_verbatim_text(std::string_view text)
+{
+  constexpr std::uint32_t least[] = {0, 0, 0x80, 0x800, 0x10000};
+  for (auto i = 0uz; i < text.size();) {
+    auto const lead = static_cast<std::uint8_t>(text[i]);
+    auto const length = lead < 0x80             ? 1uz
+                      : (lead & 0xE0u) == 0xC0u ? 2uz
+                      : (lead & 0xF0u) == 0xE0u ? 3uz
+                      : (lead & 0xF8u) == 0xF0u ? 4uz
+                                                : 0uz;
+    if (length == 0 || i + length > text.size()) return false;
+    std::uint32_t code = lead & (0x7Fu >> (length == 1 ? 0 : length));
+    for (auto k = 1uz; k < length; ++k) {
+      auto const next = static_cast<std::uint8_t>(text[i + k]);
+      if ((next & 0xC0u) != 0x80u) return false;
+      code = (code << 6) | (next & 0x3Fu);
+    }
+    if (code < least[length]
+        || (code >= 0xD800 && code <= 0xDFFF)
+        || code > 0x10FFFF) {
+      return false;
+    }
+    if (code < 0x20 || (code >= 0x7F && code <= 0x9F)) return false;
+    if (code == '"' || code == '\\') return false;
+    i += length;
+  }
+  return true;
+}
+
+// Returns the rule that a title breaks, or an empty view if it breaks none:
+// each language must have a text, and each text must be verbatim
+// (`is_verbatim_text`).
+constexpr std::string_view title_error(i18n const& title)
+{
+  if (title.en.empty() || title.ru.empty()) {
+    return "the title must not be empty in any language";
+  }
+  if (!is_verbatim_text(title.en) || !is_verbatim_text(title.ru)) {
+    return "the title must be UTF-8 without quotation marks, backslashes or "
+           "control characters";
+  }
+  return {};
+}
+
+// Returns the area of `areas` that `index` lies in, or nullptr if it lies in
+// none.
+template<std::size_t A>
+constexpr od_area const* area_of(std::uint16_t index, od_area const (&areas)[A])
+{
+  auto const area = std::ranges::find_if(areas, [&](od_area const& a) {
+    return a.first <= index && index <= a.last;
+  });
+  return area != std::end(areas) ? area : nullptr;
+}
+
+// Returns the position in `groups` of the group named `name`, or `G` if no
+// group has that name.
+template<std::size_t G>
+constexpr std::size_t group_position(std::string_view name,
+                                     od_group const (&groups)[G])
+{
+  return static_cast<std::size_t>(
+      std::ranges::find(groups, name, &od_group::name) - std::begin(groups));
 }
 
 // Returns the rule that an object breaks whose access is `access`, and that
@@ -174,24 +318,49 @@ constexpr std::string check_array(od_row<Ctx> const& row)
   return {};
 }
 
-template<typename Ctx>
-constexpr std::string check_row(od_row<Ctx> const& row)
+// The rules of the label of a row: the row has none if its binding gives
+// one, the path is a group and a name, the group is declared, and the title
+// obeys `title_error`.
+template<typename Ctx, std::size_t G>
+constexpr std::string check_label(od_row<Ctx> const& row,
+                                  od_group const (&groups)[G])
+{
+  auto const& label = label_of(row);
+
+  if (!is_empty(row.binding.label) && !is_empty(row.label)) {
+    return row_error(row, "the row has a label, but its binding gives one");
+  }
+  if (!is_path(label.path)) {
+    return row_error(row,
+                     "the path must be a group and a name, each a letter "
+                     "followed by letters, digits or underscores");
+  }
+  if (group_position(group_of(label.path), groups) == G) {
+    std::string what = "group '";
+    what += group_of(label.path);
+    what += "' is not declared";
+    return row_error(row, what);
+  }
+  if (auto const what = title_error(label.title); !what.empty()) {
+    return row_error(row, what);
+  }
+  return {};
+}
+
+template<typename Ctx, std::size_t A, std::size_t G>
+constexpr std::string check_row(od_row<Ctx> const& row,
+                                od_area const (&areas)[A],
+                                od_group const (&groups)[G])
 {
   auto const& binding = row.binding;
 
   if (row.key.index < 0x1000) {
     return row_error(row, "indices below 1000h are reserved");
   }
-  if (row.category.empty() || row.subcategory.empty() || row.name.empty()) {
-    return row_error(row, "category, subcategory and name must not be empty");
+  if (area_of(row.key.index, areas) == nullptr) {
+    return row_error(row, "the index lies in no area");
   }
-  if (row.type != binding.type) {
-    std::string what = "declared ";
-    what += type_name(row.type);
-    what += ", bound as ";
-    what += type_name(binding.type);
-    return row_error(row, what);
-  }
+  if (auto error = check_label(row, groups); !error.empty()) return error;
 
   if (!binding.layout.empty() && binding.count != nullptr) {
     return row_error(row, "a binding is a record or an array, not both");
@@ -211,6 +380,81 @@ constexpr std::string check_row(od_row<Ctx> const& row)
   if (binding.catalog != nullptr
       && binding.arg >= binding.catalog->names.size()) {
     return row_error(row, "arg is outside its catalog");
+  }
+  return {};
+}
+
+// Checks the areas: each ends no earlier than it begins, and no two overlap,
+// which neighbors among the areas sorted by their first index would.
+template<std::size_t A>
+constexpr std::string check_areas(od_area const (&areas)[A])
+{
+  for (auto const& area : areas) {
+    if (area.first > area.last) {
+      std::string out = "od: area ";
+      append_area(out, area);
+      out += ": the first index is past the last";
+      return out;
+    }
+  }
+
+  std::array<od_area, A> sorted{};
+  std::ranges::copy(areas, sorted.begin());
+  std::ranges::sort(sorted, {}, &od_area::first);
+  for (auto k = 1uz; k < A; ++k) {
+    if (sorted[k].first <= sorted[k - 1].last) {
+      std::string out = "od: areas ";
+      append_area(out, sorted[k - 1]);
+      out += " and ";
+      append_area(out, sorted[k]);
+      out += " overlap";
+      return out;
+    }
+  }
+  return {};
+}
+
+// Checks the groups: each name is a segment of a path, not the name of a
+// class, and declared once, and each title obeys `title_error`.
+template<std::size_t G>
+constexpr std::string check_groups(od_group const (&groups)[G])
+{
+  constexpr od_class classes[] = {od_class::about,
+                                  od_class::control,
+                                  od_class::parameters,
+                                  od_class::watch};
+  for (auto i = 0uz; i < G; ++i) {
+    auto const& group = groups[i];
+    if (!is_segment(group.name)) {
+      return group_error(group,
+                         "the name must be a letter followed by letters, "
+                         "digits or underscores");
+    }
+    if (std::ranges::contains(classes, group.name, class_name)) {
+      return group_error(group, "named as a class");
+    }
+    if (group_position(group.name, groups) != i) {
+      return group_error(group, "declared twice");
+    }
+    if (auto const what = title_error(group.title); !what.empty()) {
+      return group_error(group, what);
+    }
+  }
+  return {};
+}
+
+// Checks that each group has a row.
+template<typename Ctx, std::size_t N, std::size_t G>
+constexpr std::string check_groups_used(od_row<Ctx> const (&rows)[N],
+                                        od_group const (&groups)[G])
+{
+  std::array<bool, G> used{};
+  for (auto const& row : rows) {
+    auto const group = group_position(group_of(label_of(row).path), groups);
+    if (group < G) used[group] = true;
+  }
+  for (auto i = 0uz; i < G; ++i) {
+    if (!used[i]) return group_error(groups[i], "has no row");
   }
   return {};
 }
@@ -265,22 +509,18 @@ constexpr std::string check_keys(od_row<Ctx> const (&rows)[N])
   return {};
 }
 
-// Checks, over the rows sorted by name, that no two rows share category,
-// subcategory and name.
+// Checks, over the rows sorted by path, that no two rows share a path.
 template<typename Ctx, std::size_t N>
-constexpr std::string check_names(od_row<Ctx> const (&rows)[N])
+constexpr std::string check_paths(od_row<Ctx> const (&rows)[N])
 {
-  auto const name_of = [](od_row<Ctx> const& row) {
-    return std::tuple{row.category, row.subcategory, row.name};
-  };
-  auto const order = sorted_positions(rows, [&](auto const& a, auto const& b) {
-    return name_of(a) < name_of(b);
+  auto const order = sorted_positions(rows, [](auto const& a, auto const& b) {
+    return label_of(a).path < label_of(b).path;
   });
   for (auto k = 1uz; k < N; ++k) {
     auto const& first = rows[std::min(order[k - 1], order[k])];
     auto const& second = rows[std::max(order[k - 1], order[k])];
-    if (name_of(first) == name_of(second)) {
-      return pair_error(first, second, "have the same name");
+    if (label_of(first).path == label_of(second).path) {
+      return pair_error(first, second, "have the same path");
     }
   }
   return {};
@@ -377,25 +617,34 @@ constexpr std::string check_catalogs(od_row<Ctx> const (&rows)[N])
   return {};
 }
 
-// Returns an empty string if the rows make a valid dictionary, or else the
-// first rule they break: rules of a single row in source order, then those of
-// two rows, keys before names before handlers, then catalog coverage. Returns
-// an empty string as well if a builder has already reported an error in some
-// row. Keys and names are checked over sorted rows, catalogs in one pass each;
-// only the rows outside a catalog are compared in pairs, for their handlers.
-template<typename Ctx, std::size_t N>
-constexpr std::string od_check(od_row<Ctx> const (&rows)[N])
+// Returns an empty string if the rows, the areas and the groups make a valid
+// dictionary, or else the first rule they break: rules of the areas, then of
+// the groups, then of a single row in source order, then those of two rows,
+// keys before paths before handlers, then catalog coverage, and last that
+// every group has a row. Returns an empty string as well if a builder has
+// already reported an error in some row. Keys and paths are checked over
+// sorted rows, catalogs in one pass each; only the rows outside a catalog are
+// compared in pairs, for their handlers.
+template<typename Ctx, std::size_t N, std::size_t A, std::size_t G>
+constexpr std::string od_check(od_row<Ctx> const (&rows)[N],
+                               od_area const (&areas)[A],
+                               od_group const (&groups)[G])
 {
   for (auto const& row : rows) {
     if (row.binding.diagnosed) return {};
   }
+  if (auto error = check_areas(areas); !error.empty()) return error;
+  if (auto error = check_groups(groups); !error.empty()) return error;
   for (auto const& row : rows) {
-    if (auto error = check_row(row); !error.empty()) return error;
+    if (auto error = check_row(row, areas, groups); !error.empty()) {
+      return error;
+    }
   }
   if (auto error = check_keys(rows); !error.empty()) return error;
-  if (auto error = check_names(rows); !error.empty()) return error;
+  if (auto error = check_paths(rows); !error.empty()) return error;
   if (auto error = check_handlers(rows); !error.empty()) return error;
-  return check_catalogs(rows);
+  if (auto error = check_catalogs(rows); !error.empty()) return error;
+  return check_groups_used(rows, groups);
 }
 
 } // namespace detail

@@ -186,21 +186,38 @@ static_assert(bind<bridge::param<prod_serial>>().layout[1].access
 static_assert(bind<bridge::param<prod_serial>>().layout[1].write == nullptr);
 static_assert(bind<bridge::param<motor_p>>().layout[1].access == od_access::rw);
 
+// A record is named as its parameter: by the parameter's name and title.
+static_assert(bind<bridge::param<motor_p>>().label.path == "motor.p");
+static_assert(bind<bridge::param<motor_p>>().label.title == motor_p.title);
+static_assert(bind<bridge::param<motor_p>>().label.unit.empty());
+
 // -- Records --
+
+inline constexpr od_area areas[] = {
+    {0x3000, 0x30FF, od_class::control},
+    {0x3100, 0x31FF, od_class::parameters},
+};
+
+inline constexpr od_group groups[] = {
+    {"drive", {"Drive", "Привод"}},
+    {"motor", {"Motor", "Двигатель"}},
+    {"prod", {"Production", "Производство"}},
+    {"settings", {"Settings", "Настройки"}},
+};
 
 // clang-format off
 inline constexpr od_row<ctx> records[] = {
-    {{0x3100, 0x00}, "config", "drive",    "phase_swap",   "",   boolean, bridge::param<drive_phase_swap>},
-    {{0x3101, 0x00}, "config", "motor",    "pole_pairs",   "",   int32,   bridge::param<motor_p>},
-    {{0x3102, 0x00}, "config", "drive",    "freq",         "Hz", float32, bridge::param<drive_freq, actual_freq>},
-    {{0x3103, 0x00}, "config", "prod",     "serial",       "",   uint32,  bridge::param<prod_serial>},
-    {{0x3001, 0x01}, "ctl",    "settings", "apply_all",    "",   uint32,  od_exec<bridge::apply_all>},
-    {{0x3001, 0x02}, "ctl",    "settings", "discard_all",  "",   uint32,  od_exec<bridge::discard_all>},
-    {{0x3001, 0x03}, "ctl",    "settings", "last_refusal", "",   uint32,  od_ro<bridge::last_refusal>},
+    {{0x3100, 0x00}, {},                                                             bridge::param<drive_phase_swap>},
+    {{0x3101, 0x00}, {},                                                             bridge::param<motor_p>},
+    {{0x3102, 0x00}, {},                                                             bridge::param<drive_freq, actual_freq>},
+    {{0x3103, 0x00}, {},                                                             bridge::param<prod_serial>},
+    {{0x3001, 0x01}, {"settings.apply_all", {"Apply all", "Применить все"}},         od_exec<bridge::apply_all>},
+    {{0x3001, 0x02}, {"settings.discard_all", {"Discard all", "Отбросить все"}},     od_exec<bridge::discard_all>},
+    {{0x3001, 0x03}, {"settings.last_refusal", {"Last refusal", "Последний отказ"}}, od_ro<bridge::last_refusal>},
 };
 // clang-format on
 
-inline constexpr auto dictionary = make_dictionary<records>();
+inline constexpr auto dictionary = make_dictionary<records, areas, groups>();
 
 // Reads and writes the dictionary as a server would, through `c`.
 struct client {
@@ -350,12 +367,10 @@ static_assert(test_commands());
 
 consteval std::string check_missing()
 {
-  // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x3100, 0x00}, "config", "drive", "phase_swap", "", boolean, bridge::param<drive_phase_swap>},
+      {{0x3100, 0x00}, {}, bridge::param<drive_phase_swap>},
   };
-  // clang-format on
-  return detail::od_check(rows);
+  return detail::od_check(rows, areas, groups);
 }
 
 static_assert(check_missing() == "od: settings parameter 'motor.p' has no row");
@@ -371,33 +386,34 @@ consteval std::string check_hidden()
       .layout = bind<bridge::param<prod_serial>>().layout};
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x3100, 0x00}, "config", "drive",  "phase_swap", "",   boolean, bridge::param<drive_phase_swap>},
-      {{0x3101, 0x00}, "config", "motor",  "pole_pairs", "",   int32,   bridge::param<motor_p>},
-      {{0x3102, 0x00}, "config", "drive",  "freq",       "Hz", float32, bridge::param<drive_freq>},
-      {{0x3103, 0x00}, "config", "prod",   "serial",     "",   uint32,  bridge::param<prod_serial>},
-      {{0x3104, 0x00}, "config", "prod",   "secret",     "",   uint32,  secret},
+      {{0x3100, 0x00}, {},                                     bridge::param<drive_phase_swap>},
+      {{0x3101, 0x00}, {},                                     bridge::param<motor_p>},
+      {{0x3102, 0x00}, {},                                     bridge::param<drive_freq>},
+      {{0x3103, 0x00}, {},                                     bridge::param<prod_serial>},
+      {{0x3104, 0x00}, {"prod.secret", {"Secret", "Секрет"}}, secret},
   };
   // clang-format on
-  return detail::od_check(rows);
+  return detail::od_check(rows, areas, groups);
 }
 
 static_assert(check_hidden()
               == "od: settings parameter 'prod.secret' is not exposed but has "
-                 "a row: 3104h:00 config/prod/secret");
+                 "a row: 3104h:00 prod.secret");
 
-// A row states the parameter's type; a wrong one is reported at the row.
-consteval std::string check_declared()
+// The record takes its label from the schema; a row that gives one as well is
+// reported at the row.
+consteval std::string check_label()
 {
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x3101, 0x00}, "config", "motor", "pole_pairs", "", float32, bridge::param<motor_p>},
+      {{0x3101, 0x00}, {"motor.pole_pairs", {"Pole pairs", "Число пар полюсов"}}, bridge::param<motor_p>},
   };
   // clang-format on
-  return detail::od_check(rows);
+  return detail::od_check(rows, areas, groups);
 }
 
-static_assert(check_declared()
-              == "od: 3101h:00 config/motor/pole_pairs: declared float32, "
-                 "bound as int32");
+static_assert(check_label()
+              == "od: 3101h:00 motor.p: the row has a label, but its binding "
+                 "gives one");
 
 } // namespace

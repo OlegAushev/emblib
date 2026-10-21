@@ -14,6 +14,7 @@
 
 #include "sdo.hpp"
 
+#include <emb/i18n.hpp>
 #include <emb/meta/alternative_of.hpp>
 
 namespace emb {
@@ -161,6 +162,50 @@ struct od_key {
   friend constexpr auto operator<=>(od_key, od_key) = default;
 };
 
+// The scoped enumeration `od_class` defines what a host does with an object,
+// as the area of its index decides (`od_area`).
+enum class od_class : std::uint8_t {
+  // An object that describes the device: its name, serial number, versions,
+  // build and the fingerprint of its dictionary.
+  about,
+  // A command, a setpoint, or the state of an operation that a command
+  // started, e.g. of applying or saving settings.
+  control,
+  // A parameter of the device's settings, the state of their storage, or a
+  // calibration constant.
+  parameters,
+  // A value that a host polls to show the device at work.
+  watch,
+};
+
+// The struct `od_area` gives the indices from `first` to `last`, inclusive,
+// to objects of the class `class_`. The areas of a dictionary do not overlap,
+// and every index of the dictionary lies in one of them.
+struct od_area {
+  std::uint16_t first;
+  std::uint16_t last;
+  od_class class_;
+};
+
+// The struct `od_group` declares a group of objects: its name, which the path
+// of each of its objects starts with, and its title for people. Every group a
+// dictionary declares has objects, and none is named as a class.
+struct od_group {
+  std::string_view name;
+  i18n title;
+};
+
+// The struct `od_label` labels an object: `path`, "group.name", by which a
+// host finds it, its title for people, in each language, and the symbol of
+// the unit of its value, empty if it has none. The path and the title are
+// required; `unit` comes last, with a default, as most objects have none.
+// What serves the object does not depend on its label.
+struct od_label {
+  std::string_view path;
+  i18n title;
+  std::string_view unit = {};
+};
+
 // An object's handlers. `arg` is the argument its row binds, e.g. the index
 // of a settings parameter; the handlers of an array's element get the
 // element's position instead, its subindex less one.
@@ -200,14 +245,16 @@ struct od_field {
 // by hand must have a reader exactly if the access is readable and a writer
 // exactly if it is writable, and its reader must return the alternative its
 // type travels as. `catalog` is the index space `arg` selects from, if any.
-// `diagnosed` is set by a builder that has already reported an error, so that
-// `make_dictionary` does not report a second one.
+// `label` is the label of the object if the builder knows it, as that of a
+// settings parameter knows its name and title from the schema; the row then
+// has none of its own. `diagnosed` is set by a builder that has already
+// reported an error, so that `make_dictionary` does not report a second one.
 //
 // A binding with a `layout` serves a record instead: every subindex of the
 // index of its row, which names it with subindex 00h, each through the field
 // of the layout at that subindex. It has no handlers of its own, and its
-// `access` is not used; `type` is what the row states, and `arg` the argument
-// its fields pass on.
+// `access` is not used; `type` is the type of the record's value, and `arg`
+// the argument its fields pass on.
 //
 // A binding with a `count` serves an array instead: the index of its row,
 // which names it with subindex 00h. `count` reads subindex 00h, the number of
@@ -225,24 +272,18 @@ struct od_binding {
   std::uint16_t arg = 0;
   od_catalog const* catalog = nullptr;
   std::span<od_field<Ctx> const> layout{};
+  od_label label{};
   bool diagnosed = false;
 };
 
-// The class template `od_row` is one object, or one record, as an application
-// writes it: its key, the names a host finds it by, its unit, its type and its
-// binding. The type is stated in the row, although the binding determines it,
-// so that a text parser can generate a host's table from the application's
-// source; `make_dictionary` checks that the two agree. Rows exist only at
-// compile time: `make_dictionary` keeps the key and the binding and drops the
-// rest.
+// The class template `od_row` is one object, one record or one array, as an
+// application writes it: its key, its label and its binding. The label is
+// empty, `{}`, if the binding gives one. Rows exist only at compile time:
+// `make_dictionary` keeps the key and the binding and drops the rest.
 template<typename Ctx>
 struct od_row {
   od_key key;
-  std::string_view category;
-  std::string_view subcategory;
-  std::string_view name;
-  std::string_view unit;
-  od_data_type type;
+  od_label label;
   od_binding<Ctx> binding;
 };
 

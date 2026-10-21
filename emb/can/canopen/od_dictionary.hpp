@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <expected>
@@ -29,17 +30,19 @@ struct od_rows_traits<od_row<Ctx> const[N]> {
   static constexpr std::size_t size = N;
 };
 
-// Returns the fingerprint of `rows`: the 32-bit FNV-1a hash of the text that
-// describes them, a line for each row in the order of keys, as a host can
-// write it from the rows of its own table. A row's line names its key and
-// names as the diagnostics do, its type, and whether it serves an object, an
-// array or a record: "3000h:01 config/nvm/magic uint32 object ro". An
-// object's or an array's line ends with its access, an array's that of its
-// elements; a record's line is followed by a line for each field of its
-// layout, " 00h uint8 const". Every line ends in a newline. The unit is left
-// out: it changes how a value reads, not where it is or how it travels.
-template<typename Ctx, std::size_t N>
-constexpr std::uint32_t od_fingerprint(od_row<Ctx> const (&rows)[N])
+// Returns the fingerprint of `rows`, whose indices lie in `areas`: the 32-bit
+// FNV-1a hash of the text that describes them, a line for each row in the
+// order of keys, as a host can write it from the rows of its own table. A
+// row's line names its key and path as the diagnostics do, its class, its
+// type, and whether it serves an object, an array or a record:
+// "3000h:01 nvm.magic parameters uint32 object ro". An object's or an array's
+// line ends with its access, an array's that of its elements; a record's line
+// is followed by a line for each field of its layout, " 00h uint8 const".
+// Every line ends in a newline. The title and the unit are left out: they
+// change how a value reads, not where it is or how it travels.
+template<typename Ctx, std::size_t N, std::size_t A>
+constexpr std::uint32_t od_fingerprint(od_row<Ctx> const (&rows)[N],
+                                       od_area const (&areas)[A])
 {
   auto const order = sorted_positions(rows, [](auto const& a, auto const& b) {
     return a.key < b.key;
@@ -60,7 +63,12 @@ constexpr std::uint32_t od_fingerprint(od_row<Ctx> const (&rows)[N])
     line.clear();
     append_row(line, row);
     line += ' ';
-    line += type_name(row.type);
+    // A row outside every area breaks a rule of `od_check`, which reports it;
+    // its line no longer matters.
+    auto const* const area = area_of(row.key.index, areas);
+    line += area != nullptr ? class_name(area->class_) : "?";
+    line += ' ';
+    line += type_name(binding.type);
     if (!binding.layout.empty()) {
       line += " record\n";
       for (auto f = 0uz; f < binding.layout.size(); ++f) {
@@ -122,14 +130,28 @@ template<typename T>
 concept some_od_rows =
     requires { typename detail::od_rows_traits<T>::context_type; };
 
+// The concept `some_od_areas<T>` is satisfied if and only if `T` is a C array
+// of `od_area const`.
+template<typename T>
+concept some_od_areas = std::is_bounded_array_v<T>
+                     && std::same_as<std::remove_extent_t<T>, od_area const>;
+
+// The concept `some_od_groups<T>` is satisfied if and only if `T` is a C
+// array of `od_group const`.
+template<typename T>
+concept some_od_groups = std::is_bounded_array_v<T>
+                      && std::same_as<std::remove_extent_t<T>, od_group const>;
+
 template<typename Ctx,
          std::size_t Entries,
          std::size_t Records,
          std::size_t Arrays>
 class od_dictionary;
 
-template<auto const& Rows>
+template<auto const& Rows, auto const& Areas, auto const& Groups>
   requires some_od_rows<std::remove_reference_t<decltype(Rows)>>
+        && some_od_areas<std::remove_reference_t<decltype(Areas)>>
+        && some_od_groups<std::remove_reference_t<decltype(Groups)>>
 consteval auto make_dictionary();
 
 // The class template `od_dictionary` holds the entries of a dictionary sorted
@@ -170,8 +192,10 @@ public:
 private:
   consteval od_dictionary() = default;
 
-  template<auto const& Rows>
+  template<auto const& Rows, auto const& Areas, auto const& Groups>
     requires some_od_rows<std::remove_reference_t<decltype(Rows)>>
+          && some_od_areas<std::remove_reference_t<decltype(Areas)>>
+          && some_od_groups<std::remove_reference_t<decltype(Groups)>>
   friend consteval auto make_dictionary();
 
   std::array<od_entry<Ctx>, Entries> entries_{};
@@ -180,26 +204,33 @@ private:
   std::uint32_t fingerprint_ = 0;
 };
 
-// Returns the dictionary made of `Rows`, a C array of `od_row<Ctx> const`
-// that must be an `inline constexpr` variable of a named namespace: GCC at
-// -O0 emits any other table, the names of its objects included. A row whose
-// binding has a layout becomes a record, one whose binding has a count an
-// array, any other an entry. An index whose entries all have a subindex past
-// 00h gets one more, at 00h: a `const` `uint8` that reads the highest
-// subindex of the index, as CiA 301 asks of an object with members. The
-// program is ill-formed if the rows break a rule of `detail::od_check`; the
-// diagnostic names the rule and the rows that break it, and points at the
-// caller's line. Checking sorts the rows by key and by name; only the rows
-// outside a catalog are compared in pairs, for a handler they share.
-template<auto const& Rows>
+// Returns the dictionary made of `Rows`, a C array of `od_row<Ctx> const`,
+// whose indices lie in `Areas`, a C array of `od_area const`, and whose paths
+// start with the groups of `Groups`, a C array of `od_group const`. Each must
+// be an `inline constexpr` variable of a named namespace: GCC at -O0 emits any
+// other table, the labels in it included. A row whose binding has a layout
+// becomes a record, one whose binding has a count an array, any other an
+// entry. An index whose entries all have a subindex past 00h gets one more,
+// at 00h: a `const` `uint8` that reads the highest subindex of the index, as
+// CiA 301 asks of an object with members. The areas and the groups only
+// check the rows and enter the fingerprint; the dictionary keeps neither. The
+// program is ill-formed if the rows, the areas or the groups break a rule of
+// `detail::od_check`; the diagnostic names the rule and what breaks it, and
+// points at the caller's line. Checking sorts the rows by key and by path;
+// only the rows outside a catalog are compared in pairs, for a handler they
+// share.
+template<auto const& Rows, auto const& Areas, auto const& Groups>
   requires some_od_rows<std::remove_reference_t<decltype(Rows)>>
+        && some_od_areas<std::remove_reference_t<decltype(Areas)>>
+        && some_od_groups<std::remove_reference_t<decltype(Groups)>>
 consteval auto make_dictionary()
 {
   using traits =
       detail::od_rows_traits<std::remove_reference_t<decltype(Rows)>>;
   using context_type = typename traits::context_type;
 
-  static_assert(detail::od_check(Rows).empty(), detail::od_check(Rows));
+  static_assert(detail::od_check(Rows, Areas, Groups).empty(),
+                detail::od_check(Rows, Areas, Groups));
 
   constexpr auto records =
       static_cast<std::size_t>(std::ranges::count_if(Rows, [](auto const& row) {
@@ -269,7 +300,7 @@ consteval auto make_dictionary()
 
   std::ranges::sort(dictionary.records_, {}, &od_record<context_type>::index);
   std::ranges::sort(dictionary.arrays_, {}, &od_array<context_type>::index);
-  dictionary.fingerprint_ = detail::od_fingerprint(Rows);
+  dictionary.fingerprint_ = detail::od_fingerprint(Rows, Areas);
   return dictionary;
 }
 

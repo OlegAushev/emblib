@@ -523,6 +523,25 @@ static_assert(test_ro_array());
 
 // -- Dictionary --
 
+// The areas and the groups of the dictionaries below.
+inline constexpr od_area areas[] = {
+    {0x2000, 0x20FF, od_class::about},
+    {0x2100, 0x2FFF, od_class::control},
+    {0x3000, 0x4FFF, od_class::parameters},
+    {0x5000, 0x5FFF, od_class::watch},
+};
+
+inline constexpr od_group groups[] = {
+    {"a", {"Group A", "Группа А"}},
+    {"b", {"Group B", "Группа Б"}},
+};
+
+// The label of an object of the tables below, titled after its path.
+consteval od_label titled(std::string_view path)
+{
+  return {path, {path, path}};
+}
+
 consteval bool test_dictionary()
 {
   static constexpr od_binding<ctx> by_hand{.access = od_access::rw,
@@ -532,15 +551,15 @@ consteval bool test_dictionary()
                                            .arg = 7};
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x5000, 0x02}, "watch",  "b", "value",   "",   float32, od_ro<read_value>},
-      {{0x2000, 0x01}, "ctl",    "a", "command", "",   uint32,  od_exec<command>},
-      {{0x5000, 0x01}, "watch",  "b", "checked", "",   float32, od_ro<read_checked>},
-      {{0x3000, 0x01}, "config", "a", "freq",    "Hz", float32, od_rw<read_freq, write_value>},
-      {{0x3000, 0x02}, "config", "a", "raw",     "",   float32, by_hand},
+      {{0x5000, 0x02}, titled("b.value"),                          od_ro<read_value>},
+      {{0x2100, 0x01}, titled("a.command"),                        od_exec<command>},
+      {{0x5000, 0x01}, titled("b.checked"),                        od_ro<read_checked>},
+      {{0x3000, 0x01}, {"a.freq", {"Frequency", "Частота"}, "Hz"}, od_rw<read_freq, write_value>},
+      {{0x3000, 0x02}, titled("a.raw"),                            by_hand},
   };
   // clang-format on
 
-  auto const dictionary = make_dictionary<rows>();
+  auto const dictionary = make_dictionary<rows, areas, groups>();
   od_view<ctx> const view{dictionary};
 
   // Each of the three indices gets its subindex 00h.
@@ -549,7 +568,7 @@ consteval bool test_dictionary()
   for (auto i = 1uz; i < entries.size(); ++i) {
     if (!(entries[i - 1].key() < entries[i].key())) return false;
   }
-  if (entries.front().key() != od_key{0x2000, 0x00}) return false;
+  if (entries.front().key() != od_key{0x2100, 0x00}) return false;
   if (entries.back().key() != od_key{0x5000, 0x02}) return false;
 
   if (!view.records().empty() || !view.arrays().empty()) return false;
@@ -577,7 +596,7 @@ consteval bool test_dictionary()
   };
   if (highest(0x5000) != od_read_result{std::uint8_t{2}}) return false;
   if (highest(0x3000) != od_read_result{std::uint8_t{2}}) return false;
-  if (highest(0x2000) != od_read_result{std::uint8_t{1}}) return false;
+  if (highest(0x2100) != od_read_result{std::uint8_t{1}}) return false;
 
   auto const freq = view.find({0x3000, 0x01});
   if (!freq || (freq->access != od_access::rw)) return false;
@@ -594,13 +613,13 @@ consteval bool test_records()
 {
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x4001, 0x00}, "config", "r", "second", "", float32, record(2)},
-      {{0x5000, 0x01}, "watch",  "b", "value",  "", float32, od_ro<read_value>},
-      {{0x4000, 0x00}, "config", "r", "first",  "", float32, record(1)},
+      {{0x4001, 0x00}, titled("a.second"), record(2)},
+      {{0x5000, 0x01}, titled("b.value"),  od_ro<read_value>},
+      {{0x4000, 0x00}, titled("a.first"),  record(1)},
   };
   // clang-format on
 
-  auto const dictionary = make_dictionary<rows>();
+  auto const dictionary = make_dictionary<rows, areas, groups>();
   od_view<ctx> const view{dictionary};
 
   if (view.entries().size() != 2) return false;
@@ -647,14 +666,14 @@ consteval bool test_arrays()
 {
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x2001, 0x00}, "info",  "a", "word",    "", uint8,   od_string<word>},
-      {{0x5001, 0x00}, "watch", "b", "samples", "", float32, od_ro_array<samples>},
-      {{0x5000, 0x01}, "watch", "b", "value",   "", float32, od_ro<read_value>},
-      {{0x2000, 0x00}, "info",  "a", "text",    "", uint8,   od_string<text>},
+      {{0x2001, 0x00}, titled("a.word"),    od_string<word>},
+      {{0x5001, 0x00}, titled("b.samples"), od_ro_array<samples>},
+      {{0x5000, 0x01}, titled("b.value"),   od_ro<read_value>},
+      {{0x2000, 0x00}, titled("a.text"),    od_string<text>},
   };
   // clang-format on
 
-  auto const dictionary = make_dictionary<rows>();
+  auto const dictionary = make_dictionary<rows, areas, groups>();
   od_view<ctx> const view{dictionary};
 
   if (view.entries().size() != 2) return false;
@@ -725,42 +744,69 @@ consteval std::uint32_t fnv1a(std::string_view text)
   return h;
 }
 
+// The areas above, but for 3000h-4FFFh, which holds objects of another
+// class.
+inline constexpr od_area reclassed[] = {
+    {0x2000, 0x20FF, od_class::about},
+    {0x2100, 0x2FFF, od_class::control},
+    {0x3000, 0x4FFF, od_class::watch},
+    {0x5000, 0x5FFF, od_class::watch},
+};
+
 // The fingerprint hashes the text of the rows in the order of keys, whatever
-// their order in the source; a renamed row changes it.
+// their order in the source; a renamed row, or an index in an area of another
+// class, changes it, and a title does not.
 consteval bool test_fingerprint()
 {
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x5000, 0x01}, "watch",  "b", "value", "", float32, od_ro<read_value>},
-      {{0x2000, 0x00}, "info",   "a", "text",  "", uint8,   od_string<text>},
-      {{0x4000, 0x00}, "config", "r", "first", "", float32, record(1)},
+      {{0x5000, 0x01}, titled("b.value"), od_ro<read_value>},
+      {{0x2000, 0x00}, titled("a.text"),  od_string<text>},
+      {{0x4000, 0x00}, titled("a.first"), record(1)},
   };
   static constexpr od_row<ctx> reordered[] = {rows[2], rows[0], rows[1]};
   static constexpr od_row<ctx> renamed[] = {
       rows[0],
       rows[1],
-      {{0x4000, 0x00}, "config", "r", "other", "", float32, record(1)},
+      {{0x4000, 0x00}, titled("a.other"), record(1)},
+  };
+  static constexpr od_row<ctx> retitled[] = {
+      rows[0],
+      rows[1],
+      {{0x4000, 0x00}, {"a.first", {"First", "Первый"}}, record(1)},
   };
   // clang-format on
 
   constexpr std::string_view text =
-      "2000h:00 info/a/text uint8 array const\n"
-      "4000h:00 config/r/first float32 record\n"
+      "2000h:00 a.text about uint8 array const\n"
+      "4000h:00 a.first parameters float32 record\n"
       " 00h uint8 const\n"
       " 01h float32 rw\n"
       " 02h uint16 ro\n"
-      "5000h:01 watch/b/value float32 object ro\n";
+      "5000h:01 b.value watch float32 object ro\n";
 
-  auto const dictionary = make_dictionary<rows>();
+  auto const dictionary = make_dictionary<rows, areas, groups>();
   if (dictionary.fingerprint() != fnv1a(text)) return false;
   if (od_view<ctx>{dictionary}.fingerprint() != fnv1a(text)) return false;
-  if (make_dictionary<reordered>().fingerprint() != fnv1a(text)) return false;
-  return make_dictionary<renamed>().fingerprint() != fnv1a(text);
+  if (make_dictionary<reordered, areas, groups>().fingerprint()
+      != fnv1a(text)) {
+    return false;
+  }
+  if (make_dictionary<retitled, areas, groups>().fingerprint() != fnv1a(text)) {
+    return false;
+  }
+  if (make_dictionary<rows, reclassed, groups>().fingerprint() == fnv1a(text)) {
+    return false;
+  }
+  return make_dictionary<renamed, areas, groups>().fingerprint() != fnv1a(text);
 }
 
 static_assert(test_fingerprint());
 
 // -- Checks --
+
+// The one group of the tables below.
+inline constexpr od_group group_a[] = {{"a", {"Group A", "Группа А"}}};
 
 // Builds the binding of an object from its parts, for the checks below.
 consteval od_binding<ctx>
@@ -776,11 +822,11 @@ consteval std::string check_valid()
 {
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x2000, 0x01}, "ctl",   "a", "command", "", uint32,  od_exec<command>},
-      {{0x5000, 0x01}, "watch", "a", "value",   "", float32, od_ro<read_value>},
+      {{0x2100, 0x01}, titled("a.command"), od_exec<command>},
+      {{0x5000, 0x01}, titled("a.value"),   od_ro<read_value>},
   };
   // clang-format on
-  return detail::od_check(rows);
+  return detail::od_check(rows, areas, group_a);
 }
 
 static_assert(check_valid().empty());
@@ -789,59 +835,247 @@ consteval std::string check_reserved_index()
 {
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x0FFF, 0x01}, "a", "b", "c", "", float32, od_ro<read_value>},
+      {{0x0FFF, 0x01}, titled("a.c"), od_ro<read_value>},
   };
   // clang-format on
-  return detail::od_check(rows);
+  return detail::od_check(rows, areas, group_a);
 }
 
 static_assert(check_reserved_index()
-              == "od: 0FFFh:01 a/b/c: indices below 1000h are reserved");
-
-consteval std::string check_empty_name()
-{
-  // clang-format off
-  static constexpr od_row<ctx> rows[] = {
-      {{0x2000, 0x01}, "a", "", "c", "", float32, od_ro<read_value>},
-  };
-  // clang-format on
-  return detail::od_check(rows);
-}
-
-static_assert(check_empty_name()
-              == "od: 2000h:01 a//c: category, subcategory and name must not "
-                 "be empty");
+              == "od: 0FFFh:01 a.c: indices below 1000h are reserved");
 
 consteval std::string check_one(od_binding<ctx> binding)
 {
-  od_row<ctx> const rows[] = {
-      {{0x2000, 0x01}, "a", "b", "c", "", binding.type, binding}};
-  return detail::od_check(rows);
+  od_row<ctx> const rows[] = {{{0x2000, 0x01}, titled("a.c"), binding}};
+  return detail::od_check(rows, areas, group_a);
 }
 
 static_assert(check_one(raw(od_access::ro, od_data_type::float32, false, false))
-              == "od: 2000h:01 a/b/c: readable but has no reader");
+              == "od: 2000h:01 a.c: readable but has no reader");
 static_assert(check_one(raw(od_access::wo, od_data_type::float32, true, true))
-              == "od: 2000h:01 a/b/c: write-only but has a reader");
+              == "od: 2000h:01 a.c: write-only but has a reader");
 static_assert(check_one(raw(od_access::rw, od_data_type::float32, true, false))
-              == "od: 2000h:01 a/b/c: writable but has no writer");
+              == "od: 2000h:01 a.c: writable but has no writer");
 static_assert(check_one(raw(od_access::ro, od_data_type::float32, true, true))
-              == "od: 2000h:01 a/b/c: read-only but has a writer");
+              == "od: 2000h:01 a.c: read-only but has a writer");
 
-// The type a row states must be the type its binding serves.
-consteval std::string check_declared(od_data_type declared,
-                                     od_binding<ctx> binding)
+// An index must lie in an area.
+consteval std::string check_outside()
 {
-  od_row<ctx> const rows[] = {
-      {{0x2000, 0x01}, "a", "b", "c", "", declared, binding}};
-  return detail::od_check(rows);
+  // clang-format off
+  static constexpr od_row<ctx> rows[] = {
+      {{0x6000, 0x01}, titled("a.c"), od_ro<read_value>},
+  };
+  // clang-format on
+  return detail::od_check(rows, areas, group_a);
 }
 
-static_assert(check_declared(float32, od_ro<read_freq>).empty());
-static_assert(check_declared(float32, od_ro<read_u8>)
-              == "od: 2000h:01 a/b/c: declared float32, bound as uint8");
-static_assert(check_declared(uint32, od_string<text>)
-              == "od: 2000h:01 a/b/c: declared uint32, bound as uint8");
+static_assert(check_outside() == "od: 6000h:01 a.c: the index lies in no area");
+
+// -- Checks: labels --
+
+// Checks the label `label` of an object at 2000h:01.
+consteval std::string check_label(od_label label)
+{
+  od_row<ctx> const rows[] = {{{0x2000, 0x01}, label, od_ro<read_value>}};
+  return detail::od_check(rows, areas, group_a);
+}
+
+inline constexpr std::string_view not_a_path =
+    ": the path must be a group and a name, each a letter followed by "
+    "letters, digits or underscores";
+
+static_assert(check_label(titled("a.c")).empty());
+static_assert(check_label(titled("a.Vdc_2")).empty());
+static_assert(check_label(titled("a"))
+              == "od: 2000h:01 a" + std::string{not_a_path});
+static_assert(check_label(titled("a.c.d"))
+              == "od: 2000h:01 a.c.d" + std::string{not_a_path});
+static_assert(check_label(titled("a.1c"))
+              == "od: 2000h:01 a.1c" + std::string{not_a_path});
+static_assert(check_label(titled("a._c"))
+              == "od: 2000h:01 a._c" + std::string{not_a_path});
+static_assert(check_label(titled("a.c-d"))
+              == "od: 2000h:01 a.c-d" + std::string{not_a_path});
+static_assert(check_label(titled(".c"))
+              == "od: 2000h:01 .c" + std::string{not_a_path});
+static_assert(check_label(titled("a/c"))
+              == "od: 2000h:01 a/c" + std::string{not_a_path});
+static_assert(check_label({}) == "od: 2000h:01" + std::string{not_a_path});
+static_assert(check_label(titled("x.c"))
+              == "od: 2000h:01 x.c: group 'x' is not declared");
+
+// Checks the title `en`, `ru` of an object at 2000h:01.
+consteval std::string check_title(std::string_view en, std::string_view ru)
+{
+  return check_label({"a.c", {en, ru}});
+}
+
+inline constexpr std::string_view not_verbatim =
+    "od: 2000h:01 a.c: the title must be UTF-8 without quotation marks, "
+    "backslashes or control characters";
+
+static_assert(check_title("Motor temperature, °C", "Температура, °C").empty());
+static_assert(check_title("Resistance, Ω", "Сопротивление, Ω").empty());
+static_assert(check_title("Smile \U0001F600", "Улыбка \U0001F600").empty());
+static_assert(check_title("C", "")
+              == "od: 2000h:01 a.c: the title must not be empty in any "
+                 "language");
+static_assert(check_title("", "Ц")
+              == "od: 2000h:01 a.c: the title must not be empty in any "
+                 "language");
+static_assert(check_title("The \"c\"", "Ц") == not_verbatim);
+static_assert(check_title("C", "Ц\\") == not_verbatim);
+static_assert(check_title("C\n", "Ц") == not_verbatim);
+static_assert(check_title("C\x7F", "Ц") == not_verbatim);
+// U+0085, a control character of Latin-1.
+static_assert(check_title("C\xC2\x85", "Ц") == not_verbatim);
+// UTF-8 cut short, a stray continuation byte, a byte that never starts a
+// character, the overlong form of '/', a surrogate and a code point past
+// U+10FFFF.
+static_assert(check_title("C\xC3", "Ц") == not_verbatim);
+static_assert(check_title("C\x80", "Ц") == not_verbatim);
+static_assert(check_title("C\xFF", "Ц") == not_verbatim);
+static_assert(check_title("C\xC0\xAF", "Ц") == not_verbatim);
+static_assert(check_title("C\xED\xA0\x80", "Ц") == not_verbatim);
+static_assert(check_title("C\xF4\x90\x80\x80", "Ц") == not_verbatim);
+
+// A binding that gives its object's label, as that of a settings parameter
+// does.
+consteval od_binding<ctx> named()
+{
+  return {.access = od_access::ro,
+          .type = od_data_type::float32,
+          .read = &raw_read,
+          .label = {"a.named", {"Named", "Названный"}}};
+}
+
+static_assert(check_one(named())
+              == "od: 2000h:01 a.named: the row has a label, "
+                 "but its binding gives one");
+
+consteval std::string check_named(od_label label)
+{
+  od_row<ctx> const rows[] = {{{0x2000, 0x01}, label, named()}};
+  return detail::od_check(rows, areas, group_a);
+}
+
+static_assert(check_named({}).empty());
+static_assert(check_named({"", {}, "V"})
+              == "od: 2000h:01 a.named: the row has a label, but its binding "
+                 "gives one");
+
+// -- Checks: areas and groups --
+
+// Checks the object at 2000h:01, of the path "a.c", against `in`.
+template<std::size_t A>
+consteval std::string check_in(od_area const (&in)[A])
+{
+  od_row<ctx> const rows[] = {
+      {{0x2000, 0x01}, titled("a.c"), od_ro<read_value>}};
+  return detail::od_check(rows, in, group_a);
+}
+
+consteval std::string check_backward()
+{
+  od_area const in[] = {{0x2000, 0x20FF, od_class::about},
+                        {0x3000, 0x2FFF, od_class::watch}};
+  return check_in(in);
+}
+
+consteval std::string check_overlap()
+{
+  od_area const in[] = {{0x2080, 0x21FF, od_class::control},
+                        {0x2000, 0x20FF, od_class::about}};
+  return check_in(in);
+}
+
+consteval std::string check_adjacent()
+{
+  od_area const in[] = {{0x2100, 0x21FF, od_class::control},
+                        {0x2000, 0x20FF, od_class::about}};
+  return check_in(in);
+}
+
+static_assert(check_backward()
+              == "od: area 3000h-2FFFh: the first index is past the last");
+static_assert(check_overlap()
+              == "od: areas 2000h-20FFh and 2080h-21FFh overlap");
+static_assert(check_adjacent().empty());
+
+// Checks the object at 2000h:01, of the path "a.c", with the group "a" and
+// `group` declared.
+consteval std::string check_group(od_group group)
+{
+  od_row<ctx> const rows[] = {
+      {{0x2000, 0x01}, titled("a.c"), od_ro<read_value>}};
+  od_group const with[] = {group_a[0], group};
+  return detail::od_check(rows, areas, with);
+}
+
+inline constexpr std::string_view not_a_name =
+    "': the name must be a letter followed by letters, digits or "
+    "underscores";
+
+static_assert(check_group({"1b", {"B", "Б"}})
+              == "od: group '1b" + std::string{not_a_name});
+static_assert(check_group({"b.c", {"B", "Б"}})
+              == "od: group 'b.c" + std::string{not_a_name});
+static_assert(check_group({"", {"B", "Б"}})
+              == "od: group '" + std::string{not_a_name});
+static_assert(check_group({"watch", {"Watch", "Наблюдение"}})
+              == "od: group 'watch': named as a class");
+static_assert(check_group({"parameters", {"Parameters", "Параметры"}})
+              == "od: group 'parameters': named as a class");
+static_assert(check_group({"a", {"A again", "Снова А"}})
+              == "od: group 'a': declared twice");
+static_assert(check_group({"b", {"B", ""}})
+              == "od: group 'b': the title must not be empty in any "
+                 "language");
+static_assert(check_group({"b", {"B\t", "Б"}})
+              == "od: group 'b': the title must be UTF-8 without quotation "
+                 "marks, backslashes or control characters");
+static_assert(check_group({"b", {"B", "Б"}}) == "od: group 'b': has no row");
+
+// A record is checked field by field, at the row that names it.
+consteval std::string check_record(od_binding<ctx> binding)
+{
+  od_row<ctx> const rows[] = {{{0x2000, 0x00}, titled("a.c"), binding}};
+  return detail::od_check(rows, areas, group_a);
+}
+
+inline constexpr od_field<ctx> unread_layout[] = {
+    {.access = od_access::const_, .type = uint8, .read = &read_last_subindex},
+    {.access = od_access::ro, .type = float32},
+};
+
+static_assert(check_record(record(1)).empty());
+static_assert(check_one(record(1))
+              == "od: 2000h:01 a.c: a record's row must have subindex 00");
+static_assert(check_record({.access = od_access::ro,
+                            .type = float32,
+                            .read = &raw_read,
+                            .layout = record_layout})
+              == "od: 2000h:00 a.c: a record has no handlers of its own");
+static_assert(check_record({.access = od_access::ro,
+                            .type = float32,
+                            .layout = unread_layout})
+              == "od: 2000h:00 a.c: member 01h readable but has no reader");
+
+// An array is checked at the row that names it, its elements as one object.
+static_assert(check_record(od_string<text>).empty());
+static_assert(check_record(od_ro_array<samples>).empty());
+static_assert(check_one(od_string<text>)
+              == "od: 2000h:01 a.c: an array's row must have subindex 00");
+static_assert(
+    check_record({.access = od_access::ro, .type = uint8, .count = &raw_read})
+    == "od: 2000h:00 a.c: element readable but has no reader");
+static_assert(check_record({.access = od_access::ro,
+                            .type = float32,
+                            .count = &raw_read,
+                            .layout = record_layout})
+              == "od: 2000h:00 a.c: a binding is a record or an array, not "
+                 "both");
 
 inline constexpr std::string_view items[] = {"x", "y"};
 inline constexpr bool all_exposed[] = {true, true};
@@ -859,86 +1093,42 @@ consteval od_binding<ctx> item(std::uint16_t arg, od_catalog const& from)
 }
 
 static_assert(check_one(item(2, catalog))
-              == "od: 2000h:01 a/b/c: arg is outside its catalog");
-
-// A record is checked field by field, at the row that names it.
-consteval std::string check_record(od_binding<ctx> binding)
-{
-  od_row<ctx> const rows[] = {
-      {{0x2000, 0x00}, "a", "b", "c", "", binding.type, binding}};
-  return detail::od_check(rows);
-}
-
-inline constexpr od_field<ctx> unread_layout[] = {
-    {.access = od_access::const_, .type = uint8, .read = &read_last_subindex},
-    {.access = od_access::ro, .type = float32},
-};
-
-static_assert(check_record(record(1)).empty());
-static_assert(check_one(record(1))
-              == "od: 2000h:01 a/b/c: a record's row must have subindex 00");
-static_assert(check_record({.access = od_access::ro,
-                            .type = float32,
-                            .read = &raw_read,
-                            .layout = record_layout})
-              == "od: 2000h:00 a/b/c: a record has no handlers of its own");
-static_assert(check_record({.access = od_access::ro,
-                            .type = float32,
-                            .layout = unread_layout})
-              == "od: 2000h:00 a/b/c: member 01h readable but has no reader");
-
-// An array is checked at the row that names it, its elements as one object.
-static_assert(check_record(od_string<text>).empty());
-static_assert(check_record(od_ro_array<samples>).empty());
-static_assert(check_one(od_string<text>)
-              == "od: 2000h:01 a/b/c: an array's row must have subindex 00");
-static_assert(
-    check_record({.access = od_access::ro, .type = uint8, .count = &raw_read})
-    == "od: 2000h:00 a/b/c: element readable but has no reader");
-static_assert(check_record({.access = od_access::ro,
-                            .type = float32,
-                            .count = &raw_read,
-                            .layout = record_layout})
-              == "od: 2000h:00 a/b/c: a binding is a record or an array, not "
-                 "both");
+              == "od: 2000h:01 a.c: arg is outside its catalog");
 
 consteval std::string check_two(od_row<ctx> first, od_row<ctx> second)
 {
   od_row<ctx> const rows[] = {first, second};
-  return detail::od_check(rows);
+  return detail::od_check(rows, areas, group_a);
 }
 
+static_assert(check_two({{0x2000, 0x01}, titled("a.c"), od_ro<read_value>},
+                        {{0x2000, 0x01}, titled("a.d"), od_ro<read_u8>})
+              == "od: 2000h:01 a.c and 2000h:01 a.d have the same key");
+static_assert(check_two({{0x2000, 0x01}, titled("a.c"), od_ro<read_value>},
+                        {{0x2000, 0x02}, titled("a.c"), od_ro<read_u8>})
+              == "od: 2000h:01 a.c and 2000h:02 a.c have the same path");
 static_assert(
-    check_two({{0x2000, 0x01}, "a", "b", "c", "", float32, od_ro<read_value>},
-              {{0x2000, 0x01}, "a", "b", "d", "", uint8, od_ro<read_u8>})
-    == "od: 2000h:01 a/b/c and 2000h:01 a/b/d have the same key");
+    check_two({{0x2000, 0x00}, titled("a.c"), record(1)},
+              {{0x2000, 0x05}, titled("a.d"), od_ro<read_u8>})
+    == "od: 2000h:00 a.c and 2000h:05 a.d share the index of a record");
+static_assert(check_two({{0x2000, 0x00}, titled("a.c"), record(1)},
+                        {{0x2001, 0x00}, titled("a.d"), record(1)})
+                  .empty());
 static_assert(
-    check_two({{0x2000, 0x01}, "a", "b", "c", "", float32, od_ro<read_value>},
-              {{0x2000, 0x02}, "a", "b", "c", "", uint8, od_ro<read_u8>})
-    == "od: 2000h:01 a/b/c and 2000h:02 a/b/c have the same name");
+    check_two({{0x2000, 0x00}, titled("a.c"), od_string<text>},
+              {{0x2000, 0x05}, titled("a.d"), od_ro<read_u8>})
+    == "od: 2000h:00 a.c and 2000h:05 a.d share the index of an array");
 static_assert(
-    check_two({{0x2000, 0x00}, "a", "b", "c", "", float32, record(1)},
-              {{0x2000, 0x05}, "a", "b", "d", "", uint8, od_ro<read_u8>})
-    == "od: 2000h:00 a/b/c and 2000h:05 a/b/d share the index of a record");
-static_assert(
-    check_two({{0x2000, 0x00}, "a", "b", "c", "", float32, record(1)},
-              {{0x2001, 0x00}, "a", "b", "d", "", float32, record(1)})
-        .empty());
-static_assert(
-    check_two({{0x2000, 0x00}, "a", "b", "c", "", uint8, od_string<text>},
-              {{0x2000, 0x05}, "a", "b", "d", "", uint8, od_ro<read_u8>})
-    == "od: 2000h:00 a/b/c and 2000h:05 a/b/d share the index of an array");
-static_assert(
-    check_two({{0x2000, 0x05}, "a", "b", "d", "", uint8, od_ro<read_u8>},
-              {{0x2000, 0x00}, "a", "b", "c", "", float32, od_ro<read_value>})
-    == "od: 2000h:05 a/b/d and 2000h:00 a/b/c share an index whose subindex "
-       "00 the dictionary serves");
-// Checks two objects that differ in key and name, 2000h:01 a/b/c and
-// 2000h:02 a/b/d.
+    check_two({{0x2000, 0x05}, titled("a.d"), od_ro<read_u8>},
+              {{0x2000, 0x00}, titled("a.c"), od_ro<read_value>})
+    == "od: 2000h:05 a.d and 2000h:00 a.c share an index whose subindex 00 "
+       "the dictionary serves");
+// Checks two objects that differ in key and path, 2000h:01 a.c and
+// 2000h:02 a.d.
 consteval std::string check_pair(od_binding<ctx> first, od_binding<ctx> second)
 {
-  return check_two({{0x2000, 0x01}, "a", "b", "c", "", first.type, first},
-                   {{0x2000, 0x02}, "a", "b", "d", "", second.type, second});
+  return check_two({{0x2000, 0x01}, titled("a.c"), first},
+                   {{0x2000, 0x02}, titled("a.d"), second});
 }
 
 consteval od_binding<ctx> reading(std::uint16_t arg)
@@ -950,21 +1140,20 @@ consteval od_binding<ctx> reading(std::uint16_t arg)
 }
 
 static_assert(check_pair(od_ro<read_value>, od_ro<read_value>)
-              == "od: 2000h:01 a/b/c and 2000h:02 a/b/d are read by the same "
+              == "od: 2000h:01 a.c and 2000h:02 a.d are read by the same "
                  "handler");
 static_assert(check_pair(od_wo<write_value>, od_wo<write_value>)
-              == "od: 2000h:01 a/b/c and 2000h:02 a/b/d are written by the "
-                 "same handler");
+              == "od: 2000h:01 a.c and 2000h:02 a.d are written by the same "
+                 "handler");
 // The same handler with different arguments serves different objects.
 static_assert(check_pair(reading(0), reading(1)).empty());
 
 static_assert(check_pair(item(0, catalog), item(0, catalog))
-              == "od: item 'x' has two rows: 2000h:01 a/b/c and 2000h:02 "
-                 "a/b/d");
+              == "od: item 'x' has two rows: 2000h:01 a.c and 2000h:02 a.d");
 static_assert(check_one(item(0, catalog)) == "od: item 'y' has no row");
 static_assert(check_pair(item(0, catalog), item(1, catalog)).empty());
 static_assert(check_pair(item(0, hiding_catalog), item(1, hiding_catalog))
-              == "od: item 'y' is not exposed but has a row: 2000h:02 a/b/d");
+              == "od: item 'y' is not exposed but has a row: 2000h:02 a.d");
 static_assert(check_one(item(0, hiding_catalog)).empty());
 
 // A builder that has reported its error silences the checks.
@@ -975,9 +1164,8 @@ consteval od_binding<ctx> diagnosed()
           .diagnosed = true};
 }
 
-static_assert(
-    check_two({{0x0FFF, 0x01}, "a", "b", "c", "", float32, od_ro<read_value>},
-              {{0x2000, 0x02}, "a", "b", "d", "", uint32, diagnosed()})
-        .empty());
+static_assert(check_two({{0x0FFF, 0x01}, titled("a.c"), od_ro<read_value>},
+                        {{0x2000, 0x02}, titled("a.d"), diagnosed()})
+                  .empty());
 
 } // namespace
