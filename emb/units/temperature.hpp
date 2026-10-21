@@ -3,17 +3,22 @@
 #include <emb/units/named_unit.hpp>
 
 #include <concepts>
+#include <string_view>
 
 namespace emb {
 namespace units {
 
 namespace tags {
 
-// Unit tag of the degree Celsius.
-struct degree_celsius {};
+// Unit tag of the degree Celsius, whose symbol is "°C".
+struct degree_celsius {
+  static constexpr std::string_view symbol = "°C";
+};
 
-// Unit tag of the kelvin.
-struct kelvin {};
+// Unit tag of the kelvin, whose symbol is "K".
+struct kelvin {
+  static constexpr std::string_view symbol = "K";
+};
 
 } // namespace tags
 

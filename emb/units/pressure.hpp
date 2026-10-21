@@ -3,20 +3,27 @@
 #include <emb/units/named_unit.hpp>
 
 #include <concepts>
+#include <string_view>
 
 namespace emb {
 namespace units {
 
 namespace tags {
 
-// Unit tag of the pascal.
-struct pascal {};
+// Unit tag of the pascal, whose symbol is "Pa".
+struct pascal {
+  static constexpr std::string_view symbol = "Pa";
+};
 
-// Unit tag of the megapascal.
-struct megapascal {};
+// Unit tag of the megapascal, whose symbol is "MPa".
+struct megapascal {
+  static constexpr std::string_view symbol = "MPa";
+};
 
-// Unit tag of the standard atmosphere.
-struct atmosphere {};
+// Unit tag of the standard atmosphere, whose symbol is "atm".
+struct atmosphere {
+  static constexpr std::string_view symbol = "atm";
+};
 
 } // namespace tags
 

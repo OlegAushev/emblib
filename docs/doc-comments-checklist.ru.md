@@ -56,7 +56,7 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `to_rad`, `to_deg`, `to_eradps`, `to_rpm`
   - [x] `norm2pi`, `normpi`, `norm2pi_fast`, `normpi_fast`
 - [x] `emb/math/clamped.hpp`
-  - [x] `clamped`
+  - [x] `clamped` (и друг `unit_symbol` для `signed_pu`/`unsigned_pu`)
   - [x] `signed_pu`, `unsigned_pu`, `signed_pu_f32`, `unsigned_pu_f32`
 - [x] `emb/math/numeric.hpp`
   - [x] `fmod_trivial`, `fmod`
@@ -109,6 +109,8 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `typelist_unique_t`, `typelist_unique_v`, `typelist_unique`
   - [x] `typelist_append`, `typelist_append_t`
   - [x] `typelist_concat`, `typelist_concat_t`
+- [x] `emb/meta/unit_symbol.hpp`
+  - [x] `unit_with_symbol`, `unit_symbol_of`
 - [x] `emb/meta/unroll.hpp`
   - [x] `unroll`
 - [x] `emb/meta/visit_at.hpp`
@@ -195,7 +197,9 @@ emblib не попал. Такие файлы помечены «песочни�
 - [x] `emb/singleton.hpp`
   - [x] `singleton`
   - [x] `singleton_array`
-- [x] `emb/units.hpp` — только подключает заголовки `emb/units/`, сущностей нет
+- [x] `emb/units.hpp` — только подключает заголовки `emb/units/`, сущностей нет;
+  у каждого тега `tags::*` в заголовках ниже — член `symbol`, его называет
+  комментарий тега
 - [x] `emb/units/angle.hpp`
   - [x] `tags::erad`, `tags::edeg`, `tags::rad`, `tags::deg`
   - [x] `erad`, `edeg`, `rad`, `deg`, `erad_f32`, `edeg_f32`, `rad_f32`,
@@ -222,7 +226,7 @@ emblib не попал. Такие файлы помечены «песочни�
     `liter_per_minute_f32`
   - [x] `convert_to` (две перегрузки)
 - [x] `emb/units/named_unit.hpp`
-  - [x] `named_unit`, `some_unit`, `convert_to`
+  - [x] `named_unit` (и друг `unit_symbol`), `some_unit`, `convert_to`
 - [x] `emb/units/pressure.hpp`
   - [x] `tags::pascal`, `tags::megapascal`, `tags::atmosphere`
   - [x] `pascal`, `megapascal`, `atmosphere`, `pascal_f32`, `megapascal_f32`,

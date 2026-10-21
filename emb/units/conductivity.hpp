@@ -3,14 +3,18 @@
 #include <emb/units/named_unit.hpp>
 
 #include <concepts>
+#include <string_view>
 
 namespace emb {
 namespace units {
 
 namespace tags {
 
-// Unit tag of the microsiemens per centimeter.
-struct microsiemens_per_cm {};
+// Unit tag of the microsiemens per centimeter, whose symbol is "µS/cm",
+// with U+00B5, the micro sign.
+struct microsiemens_per_cm {
+  static constexpr std::string_view symbol = "µS/cm";
+};
 
 } // namespace tags
 

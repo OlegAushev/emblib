@@ -1,0 +1,38 @@
+#pragma once
+
+#include <concepts>
+#include <string_view>
+
+namespace emb {
+
+// The concept `unit_with_symbol<T>` is satisfied if and only if `T` is a unit
+// that names its symbol, i.e. `unit_symbol` called unqualified with a
+// `T const` lvalue returns `std::string_view`, e.g. "V" for
+// `emb::units::volt_f32` and "pu" for `emb::signed_pu_f32`.
+//
+// A type opts in as it does for `value_of` (see `some_wrapper`): by declaring
+// a `unit_symbol` overload that argument-dependent lookup finds, in its own
+// namespace or as a friend defined in the class. Generic code, e.g. a
+// transport that shows a value with its unit, then needs to know neither the
+// type nor where it is declared.
+template<typename T>
+concept unit_with_symbol = requires(T const& v) {
+  { unit_symbol(v) } -> std::same_as<std::string_view>;
+};
+
+// Returns the symbol of the unit of `T` if `T` satisfies `unit_with_symbol`,
+// otherwise an empty `std::string_view`. The symbol belongs to the type, not
+// to a value: `unit_symbol` is called with a value-initialized `T`, so the
+// program is ill-formed if such a `T` cannot be default-constructed.
+template<typename T>
+constexpr std::string_view unit_symbol_of()
+{
+  if constexpr (unit_with_symbol<T>) {
+    return unit_symbol(T{});
+  }
+  else {
+    return {};
+  }
+}
+
+} // namespace emb

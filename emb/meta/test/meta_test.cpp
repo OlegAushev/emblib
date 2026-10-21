@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cassert>
+#include <string_view>
 
 namespace {
 
@@ -152,5 +153,33 @@ static_assert(!some_wrapper<float>);
 static_assert(std::is_same_v<unwrapped_t<meters>, float>);
 static_assert(std::is_same_v<unwrapped_t<float>, float>);
 static_assert(std::is_same_v<unwrapped_t<no_value_of>, no_value_of>);
+
+// -- unit symbol tests --
+
+// Names the symbol of its unit, found by argument-dependent lookup.
+struct volts {
+  float value = 0.f;
+  friend constexpr std::string_view unit_symbol(volts)
+  {
+    return "V";
+  }
+};
+
+// Names a symbol, but not as a std::string_view.
+struct c_string_symbol {
+  friend constexpr char const* unit_symbol(c_string_symbol)
+  {
+    return "V";
+  }
+};
+
+static_assert(unit_with_symbol<volts>);
+static_assert(!unit_with_symbol<c_string_symbol>);
+static_assert(!unit_with_symbol<meters>);
+static_assert(!unit_with_symbol<float>);
+
+static_assert(unit_symbol_of<volts>() == "V");
+static_assert(unit_symbol_of<meters>().empty());
+static_assert(unit_symbol_of<float>().empty());
 
 } // namespace

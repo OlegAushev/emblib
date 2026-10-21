@@ -5,17 +5,22 @@
 #include <emb/math.hpp>
 
 #include <concepts>
+#include <string_view>
 
 namespace emb {
 namespace units {
 
 namespace tags {
 
-// Unit tag of the revolution per minute.
-struct rpm {};
+// Unit tag of the revolution per minute, whose symbol is "rpm".
+struct rpm {
+  static constexpr std::string_view symbol = "rpm";
+};
 
-// Unit tag of the electrical radian per second.
-struct eradps {};
+// Unit tag of the electrical radian per second, whose symbol is "rad(el)/s".
+struct eradps {
+  static constexpr std::string_view symbol = "rad(el)/s";
+};
 
 } // namespace tags
 

@@ -5,6 +5,7 @@
 
 #include <chrono>
 #include <concepts>
+#include <string_view>
 #include <type_traits>
 
 namespace emb {
@@ -12,11 +13,15 @@ namespace units {
 
 namespace tags {
 
-// Unit tag of the hertz.
-struct hz {};
+// Unit tag of the hertz, whose symbol is "Hz".
+struct hz {
+  static constexpr std::string_view symbol = "Hz";
+};
 
-// Unit tag of the second.
-struct sec {};
+// Unit tag of the second, whose symbol is "s".
+struct sec {
+  static constexpr std::string_view symbol = "s";
+};
 
 } // namespace tags
 

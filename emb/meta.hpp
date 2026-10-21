@@ -8,6 +8,7 @@
 #include <emb/meta/same_as_any.hpp>
 #include <emb/meta/type_index.hpp>
 #include <emb/meta/typelist.hpp>
+#include <emb/meta/unit_symbol.hpp>
 #include <emb/meta/unroll.hpp>
 #include <emb/meta/visit_at.hpp>
 #include <emb/meta/wrapper.hpp>

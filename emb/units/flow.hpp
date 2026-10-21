@@ -3,17 +3,22 @@
 #include <emb/units/named_unit.hpp>
 
 #include <concepts>
+#include <string_view>
 
 namespace emb {
 namespace units {
 
 namespace tags {
 
-// Unit tag of the cubic meter per hour.
-struct cubic_meter_per_hour {};
+// Unit tag of the cubic meter per hour, whose symbol is "m³/h".
+struct cubic_meter_per_hour {
+  static constexpr std::string_view symbol = "m³/h";
+};
 
-// Unit tag of the liter per minute.
-struct liter_per_minute {};
+// Unit tag of the liter per minute, whose symbol is "L/min".
+struct liter_per_minute {
+  static constexpr std::string_view symbol = "L/min";
+};
 
 } // namespace tags
 

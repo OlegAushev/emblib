@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <compare>
 #include <concepts>
+#include <string_view>
 
 namespace emb {
 
@@ -72,6 +73,19 @@ public:
   friend constexpr value_type value_of(clamped v)
   {
     return v.value();
+  }
+
+  // Returns "pu", the symbol of a per-unit value, for a floating-point
+  // `clamped` with the bounds -1 and 1 or 0 and 1, i.e. a `signed_pu` or an
+  // `unsigned_pu`; declared only for those. Generic code calls it
+  // unqualified, e.g. through `emb::unit_symbol_of`: as a friend defined in
+  // the class, it is found only by argument-dependent lookup.
+  friend constexpr std::string_view unit_symbol(clamped)
+    requires std::floating_point<value_type>
+          && (lo == value_type{-1} || lo == value_type{0})
+          && (hi == value_type{1})
+  {
+    return "pu";
   }
 
   friend constexpr auto operator<=>(clamped, clamped) = default;

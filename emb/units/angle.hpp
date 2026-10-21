@@ -6,23 +6,35 @@
 
 #include <concepts>
 #include <cstdint>
+#include <string_view>
 
 namespace emb {
 namespace units {
 
 namespace tags {
 
-// Unit tag of the electrical radian.
-struct erad {};
+// Unit tag of the electrical radian, whose symbol is "rad(el)". An electrical
+// unit is marked "el"; that of the radian in parentheses, so that a compound
+// symbol such as "rad(el)/s" reads unambiguously.
+struct erad {
+  static constexpr std::string_view symbol = "rad(el)";
+};
 
-// Unit tag of the electrical degree.
-struct edeg {};
+// Unit tag of the electrical degree, whose symbol is "°el", as drive
+// documentation writes it, e.g. "120 °el".
+struct edeg {
+  static constexpr std::string_view symbol = "°el";
+};
 
-// Unit tag of the radian.
-struct rad {};
+// Unit tag of the radian, whose symbol is "rad".
+struct rad {
+  static constexpr std::string_view symbol = "rad";
+};
 
-// Unit tag of the degree.
-struct deg {};
+// Unit tag of the degree, whose symbol is "°".
+struct deg {
+  static constexpr std::string_view symbol = "°";
+};
 
 } // namespace tags
 
