@@ -240,6 +240,22 @@ struct od_field {
   od_write_fn<Ctx> write = nullptr;
 };
 
+// The struct `od_field_label` labels a member of a record, a field of its
+// layout, for a host: `name`, a segment of a path unique in the layout, the
+// title, in each language, whether the member holds the record's value
+// (`inherits`), as the requested value of a settings parameter does, and so
+// takes the record's type and unit, and whether it is a command (`command`),
+// with the word that must be written (`signature`), if any. A label written
+// by hand must tell the truth about its field: nothing checks that a command
+// is written to run it or that its signature is the one its handler checks.
+struct od_field_label {
+  std::string_view name;
+  i18n title;
+  bool inherits = false;
+  bool command = false;
+  std::optional<std::uint32_t> signature{};
+};
+
 // The class template `od_binding` describes what serves an object: its access
 // and type, its handlers and the argument passed to them. The builders in
 // od_handlers.hpp and od_settings.hpp make one from typed handlers; one made
@@ -262,7 +278,8 @@ struct od_field {
 // index of its row, which names it with subindex 00h, each through the field
 // of the layout at that subindex. It has no handlers of its own, and its
 // `access` is not used; `type` is the type of the record's value, and `arg`
-// the argument its fields pass on.
+// the argument its fields pass on. `field_labels` labels each field, in the
+// order of the layout.
 //
 // A binding with a `count` serves an array instead: the index of its row,
 // which names it with subindex 00h. `count` reads subindex 00h, the number of
@@ -280,6 +297,7 @@ struct od_binding {
   std::uint16_t arg = 0;
   od_catalog const* catalog = nullptr;
   std::span<od_field<Ctx> const> layout{};
+  std::span<od_field_label const> field_labels{};
   od_label label{};
   std::string_view unit{};
   bool command = false;

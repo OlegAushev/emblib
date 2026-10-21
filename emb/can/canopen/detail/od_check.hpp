@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -21,6 +22,20 @@ constexpr void append_hex(std::string& out, unsigned value, int digits)
   constexpr std::string_view hex = "0123456789ABCDEF";
   for (int shift = 4 * (digits - 1); shift >= 0; shift -= 4) {
     out += hex[(value >> shift) & 0xFu];
+  }
+}
+
+// Appends `value` in decimal digits.
+constexpr void append_decimal(std::string& out, std::size_t value)
+{
+  char digits[20]{};
+  auto count = 0uz;
+  do {
+    digits[count++] = static_cast<char>('0' + value % 10);
+    value /= 10;
+  } while (value != 0);
+  while (count != 0) {
+    out += digits[--count];
   }
 }
 
@@ -195,6 +210,13 @@ constexpr bool is_verbatim_text(std::string_view text)
   constexpr std::uint32_t least[] = {0, 0, 0x80, 0x800, 0x10000};
   for (auto i = 0uz; i < text.size();) {
     auto const lead = static_cast<std::uint8_t>(text[i]);
+    if (lead < 0x80) {
+      if (lead < 0x20 || lead == 0x7F || lead == '"' || lead == '\\') {
+        return false;
+      }
+      ++i;
+      continue;
+    }
     auto const length = lead < 0x80             ? 1uz
                       : (lead & 0xE0u) == 0xC0u ? 2uz
                       : (lead & 0xF0u) == 0xE0u ? 3uz
@@ -273,9 +295,116 @@ constexpr std::string_view handler_error(od_access access,
   return {};
 }
 
+// Returns "member 03h" for the member at subindex `sub`.
+constexpr std::string member_name(std::size_t sub)
+{
+  std::string out = "member ";
+  append_hex(out, static_cast<unsigned>(sub), 2);
+  out += 'h';
+  return out;
+}
+
+// Returns the rule that `labels`, the labels of the members of a layout,
+// break, or an empty string if they break none: each member is named as a
+// segment of a path, unique in the layout, and titled, and only a command has
+// a signature. The rules depend on the labels alone, so labels that records
+// share are checked once (`check_shared_labels`).
+constexpr std::string field_labels_error(std::span<od_field_label const> labels)
+{
+  for (auto i = 0uz; i < labels.size(); ++i) {
+    auto const& label = labels[i];
+    if (!is_segment(label.name)) {
+      return member_name(i)
+           + ": the name must be a letter followed by letters, digits or "
+             "underscores";
+    }
+    for (auto j = 0uz; j < i; ++j) {
+      if (labels[j].name == label.name) {
+        std::string out = "members ";
+        append_hex(out, static_cast<unsigned>(j), 2);
+        out += "h and ";
+        append_hex(out, static_cast<unsigned>(i), 2);
+        out += "h have the same name";
+        return out;
+      }
+    }
+    if (auto const what = title_error(label.title); !what.empty()) {
+      return member_name(i) + ": " + std::string{what};
+    }
+    if (label.signature && !label.command) {
+      return member_name(i) + " has a signature but is no command";
+    }
+  }
+  return {};
+}
+
+// The rules of the labels of the members of a record that depend on the
+// record: a label for each field, a member that inherits the record's value
+// of the record's type, and no unit for a record without such a member, which
+// the unit would not apply to.
+template<typename Ctx>
+constexpr std::string check_field_labels(od_row<Ctx> const& row)
+{
+  auto const& binding = row.binding;
+  auto const& labels = binding.field_labels;
+
+  if (labels.size() != binding.layout.size()) {
+    std::string what = "the record has ";
+    append_decimal(what, binding.layout.size());
+    what += " members but labels ";
+    append_decimal(what, labels.size());
+    return row_error(row, what);
+  }
+  bool inherited = false;
+  for (auto i = 0uz; i < labels.size(); ++i) {
+    if (labels[i].inherits && binding.layout[i].type != binding.type) {
+      std::string what = member_name(i) + " inherits the record's type, ";
+      what += type_name(binding.type);
+      what += ", but is ";
+      what += type_name(binding.layout[i].type);
+      return row_error(row, what);
+    }
+    inherited = inherited || labels[i].inherits;
+  }
+  if (!inherited && !unit_of(row).empty()) {
+    return row_error(row,
+                     "a record without a member that inherits its value has "
+                     "no unit");
+  }
+  return {};
+}
+
+// Checks the labels of the members of the records by `field_labels_error`,
+// once for each set of labels, which the records of one kind share, and
+// reports a broken one at the first record that has it.
+template<typename Ctx, std::size_t N>
+constexpr std::string check_shared_labels(od_row<Ctx> const (&rows)[N])
+{
+  std::array<std::span<od_field_label const>, N> checked{};
+  auto count = 0uz;
+  for (auto const& row : rows) {
+    auto const& labels = row.binding.field_labels;
+    if (row.binding.layout.empty()) continue;
+    bool const seen = std::ranges::any_of(
+        checked.begin(),
+        checked.begin() + count,
+        [&](std::span<od_field_label const> other) {
+          return other.data() == labels.data() && other.size() == labels.size();
+        });
+    if (seen) continue;
+    checked[count++] = labels;
+    if (auto const what = field_labels_error(labels); !what.empty()) {
+      return row_error(row, what);
+    }
+  }
+  return {};
+}
+
 // The rules of a row that binds a record: the row names the record with
 // subindex 00h, the binding has no handlers of its own, the layout fits in the
-// subindices, and each field obeys the rules of one object.
+// subindices, each field obeys the rules of one object, and the labels of
+// the fields obey `check_field_labels`; `check_shared_labels` checks the rest
+// of their rules once for all the records that share them.
 template<typename Ctx>
 constexpr std::string check_record(od_row<Ctx> const& row)
 {
@@ -303,7 +432,7 @@ constexpr std::string check_record(od_row<Ctx> const& row)
       return row_error(row, out);
     }
   }
-  return {};
+  return check_field_labels(row);
 }
 
 // The rules of a row that binds an array: the row names the array with
@@ -660,7 +789,9 @@ constexpr std::string check_catalogs(od_row<Ctx> const (&rows)[N])
 
 // Returns an empty string if the rows, the areas and the groups make a valid
 // dictionary, or else the first rule they break: rules of the areas, then of
-// the groups, then of a single row in source order, then those of two rows,
+// the groups, then of a single row in source order, then those of the labels
+// of the members of records, once for each set of labels, then those of two
+// rows,
 // keys before paths before handlers, then catalog coverage, and last that
 // every group has a row. Returns an empty string as well if a builder has
 // already reported an error in some row. Keys and paths are checked over
@@ -681,6 +812,7 @@ constexpr std::string od_check(od_row<Ctx> const (&rows)[N],
       return error;
     }
   }
+  if (auto error = check_shared_labels(rows); !error.empty()) return error;
   if (auto error = check_keys(rows); !error.empty()) return error;
   if (auto error = check_paths(rows); !error.empty()) return error;
   if (auto error = check_handlers(rows); !error.empty()) return error;

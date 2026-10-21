@@ -267,11 +267,13 @@ emblib не попал. Такие файлы помечены «песочни�
 - [ ] `emb/can/canopen/detail/hb_producer.hpp`
 - [ ] `emb/can/canopen/detail/nmt_slave.hpp`
 - [ ] `emb/can/canopen/detail/od_check.hpp`
+- [ ] `emb/can/canopen/detail/od_describe.hpp`
 - [ ] `emb/can/canopen/detail/rpdo_consumer.hpp`
 - [ ] `emb/can/canopen/detail/sdo_server.hpp`
 - [ ] `emb/can/canopen/detail/sync_producer.hpp`
 - [ ] `emb/can/canopen/detail/tpdo_producer.hpp`
 - [ ] `emb/can/canopen/od.hpp` — песочница: `od_access`, `od_scalar`
+- [ ] `emb/can/canopen/od_description.hpp`
 - [ ] `emb/can/canopen/od_dictionary.hpp`
 - [ ] `emb/can/canopen/od_handlers.hpp`
 - [ ] `emb/can/canopen/od_section.hpp`

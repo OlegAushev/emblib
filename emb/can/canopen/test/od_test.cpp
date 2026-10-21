@@ -1,10 +1,12 @@
 #include <array>
 #include <cstdint>
 #include <expected>
+#include <span>
 #include <string>
 #include <string_view>
 
 #include <emb/can/canopen/od.hpp>
+#include <emb/can/canopen/od_description.hpp>
 #include <emb/can/canopen/od_dictionary.hpp>
 #include <emb/can/canopen/od_handlers.hpp>
 #include <emb/units.hpp>
@@ -145,12 +147,21 @@ inline constexpr od_field<ctx> record_layout[] = {
     {.access = od_access::ro, .type = uint16, .read = &read_arg},
 };
 
+// The labels of the members of `record_layout`; the value is the record's.
+inline constexpr od_field_label record_labels[] = {
+    {.name = "highest_subindex",
+     .title = {"Highest subindex", "Наибольший подындекс"}},
+    {.name = "value", .title = {"Value", "Значение"}, .inherits = true},
+    {.name = "arg", .title = {"Argument", "Аргумент"}},
+};
+
 consteval od_binding<ctx> record(std::uint16_t arg)
 {
   return {.access = od_access::ro,
           .type = float32,
           .arg = arg,
-          .layout = record_layout};
+          .layout = record_layout,
+          .field_labels = record_labels};
 }
 
 template<typename T>
@@ -768,10 +779,10 @@ consteval bool test_arrays()
 
 static_assert(test_arrays());
 
-// -- Fingerprint --
+// -- Description --
 
-// The 32-bit FNV-1a hash of `text`, as the dictionary hashes the text of its
-// rows.
+// The 32-bit FNV-1a hash of `text`, as the fingerprint hashes the body of a
+// description.
 consteval std::uint32_t fnv1a(std::string_view text)
 {
   std::uint32_t h = 0x811C9DC5u;
@@ -782,8 +793,103 @@ consteval std::uint32_t fnv1a(std::string_view text)
   return h;
 }
 
-// The areas above, but for 3000h-4FFFh, which holds objects of another
-// class.
+// The groups of the tables below, in an order the description does not keep.
+inline constexpr od_group described_groups[] = {
+    {"b", {"Group B", "Группа Б"}},
+    {"a", {"Group A", "Группа А"}},
+};
+
+inline constexpr od_group regrouped[] = {described_groups[1],
+                                         described_groups[0]};
+
+// clang-format off
+inline constexpr od_row<ctx> described[] = {
+    {{0x5000, 0x01}, {"b.value", {"Value", "Значение"}, "V"}, od_ro<read_value>},
+    {{0x2100, 0x01}, {"a.save", {"Save", "Сохранить"}},       od_exec<command, od_save_signature>},
+    {{0x2000, 0x00}, {"a.text", {"Text", "Текст"}},           od_string<text>},
+    {{0x4000, 0x00}, {"a.first", {"First", "Первый"}, "A"},   record(1)},
+    {{0x5001, 0x00}, {"b.rates", {"Rates", "Частоты"}},       od_ro_array<read_rates>},
+};
+// clang-format on
+
+inline constexpr od_row<ctx> reordered[] = {described[3],
+                                            described[0],
+                                            described[4],
+                                            described[2],
+                                            described[1]};
+
+// The body of the description of `described`: groups by their first rows,
+// the members of the layout, then the rows by key, each line canonical.
+inline constexpr std::string_view described_body =
+    "{\"type\":\"group\",\"name\":\"a\",\"title\":\"Group A\","
+    "\"title_ru\":\"Группа А\"}\n"
+    "{\"type\":\"group\",\"name\":\"b\",\"title\":\"Group B\","
+    "\"title_ru\":\"Группа Б\"}\n"
+    "{\"type\":\"field\",\"layout\":0,\"sub\":\"0x00\","
+    "\"name\":\"highest_subindex\",\"title\":\"Highest subindex\","
+    "\"title_ru\":\"Наибольший подындекс\",\"datatype\":\"uint8\","
+    "\"access\":\"const\"}\n"
+    "{\"type\":\"field\",\"layout\":0,\"sub\":\"0x01\",\"name\":\"value\","
+    "\"title\":\"Value\",\"title_ru\":\"Значение\",\"access\":\"rw\","
+    "\"inherits\":true}\n"
+    "{\"type\":\"field\",\"layout\":0,\"sub\":\"0x02\",\"name\":\"arg\","
+    "\"title\":\"Argument\",\"title_ru\":\"Аргумент\",\"datatype\":\"uint16\","
+    "\"access\":\"ro\"}\n"
+    "{\"type\":\"array\",\"index\":\"0x2000\",\"path\":\"a.text\","
+    "\"title\":\"Text\",\"title_ru\":\"Текст\",\"class\":\"about\","
+    "\"datatype\":\"uint8\",\"access\":\"const\",\"text\":true}\n"
+    "{\"type\":\"object\",\"index\":\"0x2100\",\"sub\":\"0x01\","
+    "\"path\":\"a.save\",\"title\":\"Save\",\"title_ru\":\"Сохранить\","
+    "\"class\":\"control\",\"datatype\":\"uint32\",\"access\":\"wo\","
+    "\"command\":true,\"signature\":\"0x65766173\"}\n"
+    "{\"type\":\"record\",\"index\":\"0x4000\",\"path\":\"a.first\","
+    "\"title\":\"First\",\"title_ru\":\"Первый\",\"class\":\"parameters\","
+    "\"datatype\":\"float32\",\"unit\":\"A\",\"layout\":0}\n"
+    "{\"type\":\"object\",\"index\":\"0x5000\",\"sub\":\"0x01\","
+    "\"path\":\"b.value\",\"title\":\"Value\",\"title_ru\":\"Значение\","
+    "\"class\":\"watch\",\"datatype\":\"float32\",\"access\":\"ro\","
+    "\"unit\":\"V\"}\n"
+    "{\"type\":\"array\",\"index\":\"0x5001\",\"path\":\"b.rates\","
+    "\"title\":\"Rates\",\"title_ru\":\"Частоты\",\"class\":\"watch\","
+    "\"datatype\":\"float32\",\"access\":\"ro\",\"unit\":\"Hz\"}\n";
+
+inline constexpr std::string_view described_header_start =
+    "{\"type\":\"header\",\"format\":\"emb-canopen-od\",\"version\":1,"
+    "\"device\":\"Test device\",\"fingerprint\":\"0x";
+
+constexpr auto description =
+    make_description<described, areas, described_groups, "Test device">();
+
+consteval std::string_view as_view(auto const& chars)
+{
+  return {chars.data(), chars.size()};
+}
+
+// The description is its header, which states the fingerprint, then the
+// body, whose hash the fingerprint is, the dictionary's.
+static_assert(as_view(description).starts_with(described_header_start));
+static_assert(as_view(description).ends_with(described_body));
+static_assert(description.size()
+              == described_header_start.size() + 11 + described_body.size());
+static_assert(od_description_fingerprint(description) == fnv1a(described_body));
+static_assert(
+    make_dictionary<described, areas, described_groups>().fingerprint()
+    == fnv1a(described_body));
+consteval bool test_view_fingerprint()
+{
+  auto const dictionary = make_dictionary<described, areas, described_groups>();
+  return od_view<ctx>{dictionary}.fingerprint() == fnv1a(described_body);
+}
+
+static_assert(test_view_fingerprint());
+
+// Neither the order of the rows nor that of the groups changes the text.
+static_assert(
+    as_view(make_description<reordered, areas, regrouped, "Test device">())
+    == as_view(description));
+
+// The fingerprint follows the paths, the classes and the titles: a row
+// renamed, retitled or in an area of another class changes it.
 inline constexpr od_area reclassed[] = {
     {0x2000, 0x20FF, od_class::about},
     {0x2100, 0x2FFF, od_class::control},
@@ -791,55 +897,105 @@ inline constexpr od_area reclassed[] = {
     {0x5000, 0x5FFF, od_class::watch},
 };
 
-// The fingerprint hashes the text of the rows in the order of keys, whatever
-// their order in the source; a renamed row, or an index in an area of another
-// class, changes it, and a title does not.
-consteval bool test_fingerprint()
+inline constexpr od_row<ctx> retitled[] = {
+    described[0],
+    described[1],
+    described[2],
+    {{0x4000, 0x00}, {"a.first", {"First", "Первая"}, "A"}, record(1)},
+    described[4]};
+
+static_assert(
+    make_dictionary<described, reclassed, described_groups>().fingerprint()
+    != fnv1a(described_body));
+static_assert(make_dictionary<retitled, areas, described_groups>().fingerprint()
+              != fnv1a(described_body));
+
+// -- Description: layouts --
+
+constexpr od_read_result read_other_arg(ctx&, std::uint16_t arg)
 {
-  // clang-format off
-  static constexpr od_row<ctx> rows[] = {
-      {{0x5000, 0x01}, titled("b.value"), od_ro<read_value>},
-      {{0x2000, 0x00}, titled("a.text"),  od_string<text>},
-      {{0x4000, 0x00}, titled("a.first"), record(1)},
-  };
-  static constexpr od_row<ctx> reordered[] = {rows[2], rows[0], rows[1]};
-  static constexpr od_row<ctx> renamed[] = {
-      rows[0],
-      rows[1],
-      {{0x4000, 0x00}, titled("a.other"), record(1)},
-  };
-  static constexpr od_row<ctx> retitled[] = {
-      rows[0],
-      rows[1],
-      {{0x4000, 0x00}, {"a.first", {"First", "Первый"}}, record(1)},
-  };
-  // clang-format on
-
-  constexpr std::string_view text =
-      "2000h:00 a.text about uint8 array const\n"
-      "4000h:00 a.first parameters float32 record\n"
-      " 00h uint8 const\n"
-      " 01h float32 rw\n"
-      " 02h uint16 ro\n"
-      "5000h:01 b.value watch float32 object ro\n";
-
-  auto const dictionary = make_dictionary<rows, areas, groups>();
-  if (dictionary.fingerprint() != fnv1a(text)) return false;
-  if (od_view<ctx>{dictionary}.fingerprint() != fnv1a(text)) return false;
-  if (make_dictionary<reordered, areas, groups>().fingerprint()
-      != fnv1a(text)) {
-    return false;
-  }
-  if (make_dictionary<retitled, areas, groups>().fingerprint() != fnv1a(text)) {
-    return false;
-  }
-  if (make_dictionary<rows, reclassed, groups>().fingerprint() == fnv1a(text)) {
-    return false;
-  }
-  return make_dictionary<renamed, areas, groups>().fingerprint() != fnv1a(text);
+  return od_value{static_cast<std::uint16_t>(arg + 1)};
 }
 
-static_assert(test_fingerprint());
+// `record_layout` with another reader of the argument, which a host does not
+// see: the two layouts describe as one.
+inline constexpr od_field<ctx> other_layout[] = {
+    record_layout[0],
+    record_layout[1],
+    {.access = od_access::ro, .type = uint16, .read = &read_other_arg},
+};
+
+// A record of a uint8 whose value is a const member, as 00h and 07h of the
+// record of a parameter are, and with a command that takes a signature.
+inline constexpr od_field<ctx> byte_layout[] = {
+    {.access = od_access::const_, .type = uint8, .read = &read_last_subindex},
+    {.access = od_access::const_, .type = uint8, .read = &read_last_subindex},
+    {.access = od_access::wo, .type = uint32, .write = &raw_write},
+};
+
+inline constexpr od_field_label byte_labels[] = {
+    {.name = "highest_subindex",
+     .title = {"Highest subindex", "Наибольший подындекс"}},
+    {.name = "value", .title = {"Value", "Значение"}, .inherits = true},
+    {.name = "save",
+     .title = {"Save", "Сохранить"},
+     .command = true,
+     .signature = od_save_signature},
+};
+
+// clang-format off
+inline constexpr od_row<ctx> layouts[] = {
+    {{0x4002, 0x00}, titled("a.byte"),   {.access = od_access::ro, .type = uint8, .layout = byte_layout, .field_labels = byte_labels}},
+    {{0x4001, 0x00}, titled("a.other"),  {.access = od_access::ro, .type = float32, .arg = 2, .layout = other_layout, .field_labels = record_labels}},
+    {{0x4000, 0x00}, titled("a.first"),  record(1)},
+    {{0x5000, 0x01}, titled("b.value"),  od_ro<read_value>},
+};
+// clang-format on
+
+constexpr auto described_layouts =
+    make_description<layouts, areas, groups, "Test device">();
+
+// Returns the number of times `part` occurs in `text`.
+consteval std::size_t occurrences(std::string_view text, std::string_view part)
+{
+  auto count = 0uz;
+  for (auto at = text.find(part); at != std::string_view::npos;
+       at = text.find(part, at + 1)) {
+    ++count;
+  }
+  return count;
+}
+
+// Two layouts, one of them twice: 3 and 3 members.
+static_assert(occurrences(as_view(described_layouts), "\"type\":\"field\"")
+              == 6);
+static_assert(occurrences(as_view(described_layouts), "\"layout\":0}") == 2);
+static_assert(occurrences(as_view(described_layouts), "\"layout\":1}") == 1);
+// The const member that inherits the value is told from 00h by the flag, and
+// the command shows its signature.
+static_assert(as_view(described_layouts)
+                  .contains("{\"type\":\"field\",\"layout\":1,\"sub\":\"0x00\","
+                            "\"name\":\"highest_subindex\",\"title\":"
+                            "\"Highest subindex\",\"title_ru\":\"Наибольший "
+                            "подындекс\",\"datatype\":\"uint8\",\"access\":"
+                            "\"const\"}\n"));
+static_assert(as_view(described_layouts)
+                  .contains("{\"type\":\"field\",\"layout\":1,\"sub\":\"0x01\","
+                            "\"name\":\"value\",\"title\":\"Value\","
+                            "\"title_ru\":\"Значение\",\"access\":\"const\","
+                            "\"inherits\":true}\n"));
+static_assert(
+    as_view(described_layouts)
+        .contains("{\"type\":\"field\",\"layout\":1,\"sub\":\"0x02\","
+                  "\"name\":\"save\",\"title\":\"Save\","
+                  "\"title_ru\":\"Сохранить\",\"datatype\":\"uint32\","
+                  "\"access\":\"wo\",\"command\":true,"
+                  "\"signature\":\"0x65766173\"}\n"));
+static_assert(as_view(described_layouts)
+                  .contains("{\"type\":\"record\",\"index\":\"0x4002\","
+                            "\"path\":\"a.byte\",\"title\":\"a.byte\","
+                            "\"title_ru\":\"a.byte\",\"class\":\"parameters\","
+                            "\"datatype\":\"uint8\",\"layout\":1}\n"));
 
 // -- Checks --
 
@@ -1133,6 +1289,86 @@ static_assert(check_record({.access = od_access::ro,
                             .type = float32,
                             .layout = unread_layout})
               == "od: 2000h:00 a.c: member 01h readable but has no reader");
+
+// The members of a record are labelled: one label for each, named, titled,
+// a member that inherits the value of the record's type, and a signature for
+// a command only.
+consteval std::string check_labels(std::span<od_field_label const> labels,
+                                   std::string_view unit = {})
+{
+  od_row<ctx> const rows[] = {{{0x2000, 0x00},
+                               {"a.c", {"C", "Ц"}, unit},
+                               {.access = od_access::ro,
+                                .type = float32,
+                                .layout = record_layout,
+                                .field_labels = labels}}};
+  return detail::od_check(rows, areas, group_a);
+}
+
+// The labels of `record_layout`, the member at `at` replaced with `label`.
+consteval std::array<od_field_label, 3> relabelled(std::size_t at,
+                                                   od_field_label label)
+{
+  std::array<od_field_label, 3> out{record_labels[0],
+                                    record_labels[1],
+                                    record_labels[2]};
+  out[at] = label;
+  return out;
+}
+
+static_assert(check_labels(record_labels).empty());
+static_assert(check_labels(std::span{record_labels}.first(2))
+              == "od: 2000h:00 a.c: the record has 3 members but labels 2");
+static_assert(check_labels(relabelled(1, {.name = "2nd", .title = {"V", "З"}}))
+              == "od: 2000h:00 a.c: member 01h: the name must be a letter "
+                 "followed by letters, digits or underscores");
+static_assert(check_labels(relabelled(2,
+                                      {.name = "highest_subindex",
+                                       .title = {"A", "А"}}))
+              == "od: 2000h:00 a.c: members 00h and 02h have the same name");
+static_assert(check_labels(relabelled(1, {.name = "value", .title = {"V", ""}}))
+              == "od: 2000h:00 a.c: member 01h: the title must not be empty in "
+                 "any language");
+static_assert(
+    check_labels(relabelled(1, {.name = "value", .title = {"V\"", "З"}}))
+    == "od: 2000h:00 a.c: member 01h: the title must be UTF-8 without "
+       "quotation marks, backslashes or control characters");
+static_assert(check_labels(relabelled(2,
+                                      {.name = "arg",
+                                       .title = {"A", "А"},
+                                       .signature = od_save_signature}))
+              == "od: 2000h:00 a.c: member 02h has a signature but is no "
+                 "command");
+static_assert(check_labels(relabelled(
+                  2,
+                  {.name = "arg", .title = {"A", "А"}, .inherits = true}))
+              == "od: 2000h:00 a.c: member 02h inherits the record's type, "
+                 "float32, but is uint16");
+// A record whose value no member holds has no unit, nor does its line state
+// a type.
+static_assert(
+    check_labels(relabelled(1, {.name = "value", .title = {"V", "З"}}), "A")
+    == "od: 2000h:00 a.c: a record without a member that inherits "
+       "its value has no unit");
+
+inline constexpr std::array<od_field_label, 3> plain_labels =
+    relabelled(1, {.name = "value", .title = {"Value", "Значение"}});
+
+inline constexpr od_row<ctx> plain[] = {
+    {{0x4000, 0x00},
+     titled("a.plain"),
+     {.access = od_access::ro,
+      .type = float32,
+      .layout = record_layout,
+      .field_labels = plain_labels}},
+};
+
+static_assert(
+    as_view(make_description<plain, areas, group_a, "Test device">())
+        .ends_with("{\"type\":\"record\",\"index\":\"0x4000\","
+                   "\"path\":\"a.plain\",\"title\":\"a.plain\","
+                   "\"title_ru\":\"a.plain\",\"class\":\"parameters\","
+                   "\"layout\":0}\n"));
 
 // An array is checked at the row that names it, its elements as one object.
 static_assert(check_record(od_string<text>).empty());

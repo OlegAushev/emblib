@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <expected>
 #include <optional>
+#include <span>
 #include <string_view>
 #include <type_traits>
 #include <utility>
@@ -338,6 +339,38 @@ class od_settings {
     return fields;
   }();
 
+  // The labels of the members of the record of a parameter, for a host; a
+  // record without `Actual` takes the first ten. The members that show a
+  // value of the parameter inherit the record's type and unit.
+  static constexpr od_field_label param_labels[] = {
+      {.name = "highest_subindex",
+       .title = {"Highest subindex", "Наибольший подындекс"}},
+      {.name = "requested",
+       .title = {"Requested value", "Запрошенное значение"},
+       .inherits = true},
+      {.name = "applied",
+       .title = {"Applied value", "Применённое значение"},
+       .inherits = true},
+      {.name = "stored",
+       .title = {"Stored value", "Сохранённое значение"},
+       .inherits = true},
+      {.name = "default",
+       .title = {"Default value", "Значение по умолчанию"},
+       .inherits = true},
+      {.name = "min",
+       .title = {"Lower bound", "Нижняя граница"},
+       .inherits = true},
+      {.name = "max",
+       .title = {"Upper bound", "Верхняя граница"},
+       .inherits = true},
+      {.name = "policy", .title = {"Apply policy", "Политика применения"}},
+      {.name = "apply", .title = {"Apply", "Применить"}, .command = true},
+      {.name = "discard", .title = {"Discard", "Отбросить"}, .command = true},
+      {.name = "actual",
+       .title = {"Actual value", "Фактическое значение"},
+       .inherits = true},
+  };
+
   // Whether `Actual` is nullptr, or a reader whose value travels as the
   // scalar `type` names.
   template<auto Actual>
@@ -381,6 +414,7 @@ class od_settings {
           od_type_of<settings::scalar_t<typename param::type>>;
       constexpr bool fits = reads_as<Actual>(type);
       constexpr bool in_unit = !fits || reads_in_unit_of<Decl, Actual>();
+      constexpr bool actual = !std::is_null_pointer_v<decltype(Actual)>;
       static_assert(shown, detail::not_exposed_message<param::name>());
       static_assert(fits, detail::actual_type_message<param::name>());
       static_assert(in_unit, detail::actual_unit_message<param::name>());
@@ -390,6 +424,9 @@ class od_settings {
               .arg = static_cast<std::uint16_t>(param::index),
               .catalog = &catalog,
               .layout = param_layout<type, param::desc.writable, Actual>,
+              .field_labels =
+                  std::span<od_field_label const>{param_labels}.first(
+                      actual ? 11 : 10),
               .label = {.path = Decl.desc.name, .title = Decl.title},
               .unit = Decl.unit,
               .diagnosed = !(known && shown && fits && in_unit)};

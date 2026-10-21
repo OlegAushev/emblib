@@ -13,6 +13,7 @@
 #include <type_traits>
 
 #include "detail/od_check.hpp"
+#include "detail/od_describe.hpp"
 #include "od.hpp"
 
 namespace emb {
@@ -30,65 +31,19 @@ struct od_rows_traits<od_row<Ctx> const[N]> {
   static constexpr std::size_t size = N;
 };
 
-// Returns the fingerprint of `rows`, whose indices lie in `areas`: the 32-bit
-// FNV-1a hash of the text that describes them, a line for each row in the
-// order of keys, as a host can write it from the rows of its own table. A
-// row's line names its key and path as the diagnostics do, its class, its
-// type, and whether it serves an object, an array or a record:
-// "3000h:01 nvm.magic parameters uint32 object ro". An object's or an array's
-// line ends with its access, an array's that of its elements; a record's line
-// is followed by a line for each field of its layout, " 00h uint8 const".
-// Every line ends in a newline. The title and the unit are left out: they
-// change how a value reads, not where it is or how it travels.
-template<typename Ctx, std::size_t N, std::size_t A>
+// Returns the fingerprint of the dictionary made of `rows`, `areas` and
+// `groups`: the 32-bit FNV-1a hash of the body of its description
+// (`od_describe`), every line after the header, each with its newline. The
+// header of a description states it, and a host compares it with the one the
+// device reads at 2000h:00 to tell whether the description is the device's.
+template<typename Ctx, std::size_t N, std::size_t A, std::size_t G>
 constexpr std::uint32_t od_fingerprint(od_row<Ctx> const (&rows)[N],
-                                       od_area const (&areas)[A])
+                                       od_area const (&areas)[A],
+                                       od_group const (&groups)[G])
 {
-  auto const order = sorted_positions(rows, [](auto const& a, auto const& b) {
-    return a.key < b.key;
-  });
-
-  std::uint32_t h = 0x811C9DC5u;
-  auto const mix = [&h](std::string_view text) {
-    for (char c : text) {
-      h ^= static_cast<std::uint8_t>(c);
-      h *= 0x01000193u;
-    }
-  };
-
-  std::string line;
-  for (auto const i : order) {
-    auto const& row = rows[i];
-    auto const& binding = row.binding;
-    line.clear();
-    append_row(line, row);
-    line += ' ';
-    // A row outside every area breaks a rule of `od_check`, which reports it;
-    // its line no longer matters.
-    auto const* const area = area_of(row.key.index, areas);
-    line += area != nullptr ? class_name(area->class_) : "?";
-    line += ' ';
-    line += type_name(binding.type);
-    if (!binding.layout.empty()) {
-      line += " record\n";
-      for (auto f = 0uz; f < binding.layout.size(); ++f) {
-        line += ' ';
-        append_hex(line, static_cast<unsigned>(f), 2);
-        line += "h ";
-        line += type_name(binding.layout[f].type);
-        line += ' ';
-        line += access_name(binding.layout[f].access);
-        line += '\n';
-      }
-    }
-    else {
-      line += binding.count != nullptr ? " array " : " object ";
-      line += access_name(binding.access);
-      line += '\n';
-    }
-    mix(line);
-  }
-  return h;
+  od_hashing_sink sink;
+  od_describe(sink, rows, areas, groups);
+  return sink.hash;
 }
 
 // Returns the number of indices whose objects, the rows of neither a record
@@ -182,8 +137,8 @@ public:
     return arrays_;
   }
 
-  // Returns the fingerprint of the rows the dictionary was made of, which a
-  // host compares with that of its own table (`detail::od_fingerprint`).
+  // Returns the fingerprint of the dictionary, which the header of its
+  // description states (`detail::od_fingerprint`).
   constexpr std::uint32_t fingerprint() const
   {
     return fingerprint_;
@@ -213,7 +168,9 @@ private:
 // entry. An index whose entries all have a subindex past 00h gets one more,
 // at 00h: a `const` `uint8` that reads the highest subindex of the index, as
 // CiA 301 asks of an object with members. The areas and the groups only
-// check the rows and enter the fingerprint; the dictionary keeps neither. The
+// check the rows and enter the fingerprint, the hash of the body of the
+// description that `make_description` makes of the same arrays; the
+// dictionary keeps neither. The
 // program is ill-formed if the rows, the areas or the groups break a rule of
 // `detail::od_check`; the diagnostic names the rule and what breaks it, and
 // points at the caller's line. Checking sorts the rows by key and by path;
@@ -300,7 +257,7 @@ consteval auto make_dictionary()
 
   std::ranges::sort(dictionary.records_, {}, &od_record<context_type>::index);
   std::ranges::sort(dictionary.arrays_, {}, &od_array<context_type>::index);
-  dictionary.fingerprint_ = detail::od_fingerprint(Rows, Areas);
+  dictionary.fingerprint_ = detail::od_fingerprint(Rows, Areas, Groups);
   return dictionary;
 }
 

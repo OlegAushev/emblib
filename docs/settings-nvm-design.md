@@ -1299,6 +1299,26 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   alternatives of `od_value`, one to one. Rejected: four characters to an
   element, which keeps the traffic of before but makes the elements words
   of text, and a type `char`, which CiA 301 does not have.
+- **The dictionary describes itself for a host** (2026-10-21). A host
+  decoded the inverter by a table that a script built by parsing `od.cpp`,
+  for which a row stated its type, and checked it by a fingerprint it had
+  to recompute from a canonical text of its own. `make_description` now
+  builds a description of the dictionary at compile time, in JSON Lines: a
+  header with the format, its version, the device and the fingerprint, a
+  line for each group, for each member of each layout of a record, and for
+  each object, array or record, with its path, titles, class, type,
+  access, unit and flags. The fingerprint at 2000h:00 is the hash of the
+  description's body, so a host compares two numbers and recomputes
+  nothing. The members of a record are labelled for it: the bridge to the
+  settings names and titles the members of a parameter's record and marks
+  those that hold its value, which inherit its type and unit, and the
+  commands. The text is canonical, so that two builds of one dictionary
+  describe it byte for byte the same. The firmware keeps the description
+  in a section of the ELF that is not loaded. Rejected: building the
+  description on the host from the source, which knows neither the types
+  nor the units the compiler derives; a separate program or build target,
+  a second build of the table; the description in flash, which no host can
+  read until the server transfers segments.
 - **An object's unit comes from its type** (2026-10-21). A row's unit was
   typed by hand and checked against nothing: an angle read as `edeg_f32`
   showed "°", which says nothing of electrical degrees, and a reader of

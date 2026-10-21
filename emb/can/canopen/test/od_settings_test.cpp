@@ -3,6 +3,7 @@
 #include <string>
 #include <string_view>
 
+#include <emb/can/canopen/od_description.hpp>
 #include <emb/can/canopen/od_dictionary.hpp>
 #include <emb/can/canopen/od_handlers.hpp>
 #include <emb/can/canopen/od_settings.hpp>
@@ -266,6 +267,93 @@ inline constexpr od_row<ctx> records[] = {
 
 inline constexpr auto dictionary = make_dictionary<records, areas, groups>();
 
+// -- Description --
+
+inline constexpr auto description =
+    make_description<records, areas, groups, "Test device">();
+
+consteval std::string_view as_view(auto const& chars)
+{
+  return {chars.data(), chars.size()};
+}
+
+// Returns the number of times `part` occurs in `text`.
+consteval std::size_t occurrences(std::string_view text, std::string_view part)
+{
+  auto count = 0uz;
+  for (auto at = text.find(part); at != std::string_view::npos;
+       at = text.find(part, at + 1)) {
+    ++count;
+  }
+  return count;
+}
+
+static_assert(od_description_fingerprint(description)
+              == dictionary.fingerprint());
+
+// Three layouts, whatever the types of the parameters: writable without the
+// actual value, writable with it, and read-only.
+static_assert(occurrences(as_view(description), R"("type":"field")")
+              == 10 + 11 + 10);
+static_assert(
+    as_view(description)
+        .contains(
+            R"({"type":"record","index":"0x3100","path":"drive.phase_swap",)"
+            R"("title":"Phase swap","title_ru":"Перестановка фаз",)"
+            R"("class":"parameters","datatype":"boolean","layout":0})"
+            "\n"));
+static_assert(
+    as_view(description)
+        .contains(R"({"type":"record","index":"0x3101","path":"motor.p",)"
+                  R"("title":"Pole pairs","title_ru":"Число пар полюсов",)"
+                  R"("class":"parameters","datatype":"int32","layout":0})"
+                  "\n"));
+static_assert(
+    as_view(description)
+        .contains(
+            R"({"type":"record","index":"0x3102","path":"drive.freq",)"
+            R"("title":"Frequency","title_ru":"Частота","class":"parameters",)"
+            R"("datatype":"float32","unit":"Hz","layout":1})"
+            "\n"));
+static_assert(
+    as_view(description)
+        .contains(R"({"type":"record","index":"0x3103","path":"prod.serial",)"
+                  R"("title":"Serial number","title_ru":"Серийный номер",)"
+                  R"("class":"parameters","datatype":"uint32","layout":2})"
+                  "\n"));
+static_assert(
+    as_view(description)
+        .contains(
+            R"({"type":"record","index":"0x3104","path":"drive.slope",)"
+            R"("title":"Speed slope","title_ru":"Темп изменения скорости",)"
+            R"("class":"parameters","datatype":"float32","unit":"rpm/s",)"
+            R"("layout":1})"
+            "\n"));
+
+// The members that show a value inherit the record's type and unit; those
+// that apply and discard it are commands of their own type, even in the
+// record of a uint32.
+static_assert(
+    as_view(description)
+        .contains(
+            R"({"type":"field","layout":2,"sub":"0x01","name":"requested",)"
+            R"("title":"Requested value","title_ru":"Запрошенное значение",)"
+            R"("access":"ro","inherits":true})"
+            "\n"));
+static_assert(
+    as_view(description)
+        .contains(
+            R"({"type":"field","layout":2,"sub":"0x08","name":"apply",)"
+            R"("title":"Apply","title_ru":"Применить","datatype":"uint32",)"
+            R"("access":"wo","command":true})"
+            "\n"));
+static_assert(
+    as_view(description)
+        .contains(R"({"type":"field","layout":1,"sub":"0x0A","name":"actual",)"
+                  R"("title":"Actual value","title_ru":"Фактическое значение",)"
+                  R"("access":"ro","inherits":true})"
+                  "\n"));
+
 // Reads and writes the dictionary as a server would, through `c`.
 struct client {
   od_view<ctx> view;
@@ -430,7 +518,8 @@ consteval std::string check_hidden()
       .type = uint32,
       .arg = 4,
       .catalog = &bridge::catalog,
-      .layout = bind<bridge::param<prod_serial>>().layout};
+      .layout = bind<bridge::param<prod_serial>>().layout,
+      .field_labels = bind<bridge::param<prod_serial>>().field_labels};
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
       {{0x3100, 0x00}, {},                                     bridge::param<drive_phase_swap>},
