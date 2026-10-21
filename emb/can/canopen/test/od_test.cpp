@@ -370,6 +370,44 @@ static_assert(bind<od_ro_array<samples>>().count
               == &detail::od_array_count_thunk<ctx, 3>);
 static_assert(bind<od_ro_array<read_rates>>().type == od_data_type::float32);
 
+// The unit of an object is the symbol of the type of its value, if the type
+// names one: of what the reader returns or the writer takes, of the elements
+// of an array.
+static_assert(bind<od_ro<read_freq>>().unit == "Hz");
+static_assert(bind<od_ro<read_value>>().unit.empty());
+static_assert(bind<od_const<zero<emb::units::edeg_f32>>>().unit == "\u00B0el");
+static_assert(bind<od_wo<write_freq>>().unit == "Hz");
+static_assert(bind<od_ro_array<read_rates>>().unit == "Hz");
+static_assert(bind<od_ro_array<samples>>().unit.empty());
+static_assert(bind<od_exec<command>>().unit.empty());
+static_assert(bind<od_string<text>>().unit.empty());
+
+// The reader and the writer of an rw object agree on the unit if one of them
+// names none; the unit is the one named.
+static_assert(bind<od_rw<read_freq, write_value>>().unit == "Hz");
+static_assert(bind<od_rw<read_value, write_freq>>().unit == "Hz");
+static_assert(bind<od_rw<read_freq, write_freq>>().unit == "Hz");
+static_assert(bind<od_rw<read_value, write_value>>().unit.empty());
+// A reader of rpm and a writer of hertz travel as the same scalar, but
+// disagree on the unit: the binding is refused with a message of its own.
+static_assert(od_rw_pair<zero<emb::units::rpm_f32>, write_freq, ctx>);
+static_assert(
+    !detail::od_units_agree<zero<emb::units::rpm_f32>, write_freq, ctx>);
+static_assert(detail::od_units_agree<read_freq, write_value, ctx>);
+static_assert(detail::od_rw_unit_disagreement
+              != detail::od_rw_type_disagreement);
+
+// A command and an array of characters are marked as such, a command with
+// its signature, if it takes one.
+static_assert(bind<od_exec<command>>().command);
+static_assert(!bind<od_exec<command>>().signature);
+static_assert(bind<od_exec<command, od_save_signature>>().signature
+              == od_save_signature);
+static_assert(bind<od_string<text>>().text);
+static_assert(!bind<od_string<text>>().command);
+static_assert(!bind<od_ro<read_value>>().command);
+static_assert(!bind<od_ro<read_value>>().text);
+
 static_assert(!bind<od_ro<read_value>>().diagnosed);
 static_assert(bind<od_ro<read_value>>().catalog == nullptr);
 
@@ -554,7 +592,7 @@ consteval bool test_dictionary()
       {{0x5000, 0x02}, titled("b.value"),                          od_ro<read_value>},
       {{0x2100, 0x01}, titled("a.command"),                        od_exec<command>},
       {{0x5000, 0x01}, titled("b.checked"),                        od_ro<read_checked>},
-      {{0x3000, 0x01}, {"a.freq", {"Frequency", "Частота"}, "Hz"}, od_rw<read_freq, write_value>},
+      {{0x3000, 0x01}, {"a.freq", {"Frequency", "Частота"}},       od_rw<read_freq, write_value>},
       {{0x3000, 0x02}, titled("a.raw"),                            by_hand},
   };
   // clang-format on
@@ -964,6 +1002,40 @@ static_assert(check_named({}).empty());
 static_assert(check_named({"", {}, "V"})
               == "od: 2000h:01 a.named: the row has a label, but its binding "
                  "gives one");
+
+// -- Checks: units --
+
+// Checks the object at 2000h:00, of the path "a.c" and the unit `unit`,
+// bound by `binding`.
+consteval std::string check_unit(std::string_view unit, od_binding<ctx> binding)
+{
+  od_row<ctx> const rows[] = {
+      {{0x2000, 0x00}, {"a.c", {"C", "Ц"}, unit}, binding}};
+  return detail::od_check(rows, areas, group_a);
+}
+
+// A unit for a value whose type names none, or in place of the symbol of the
+// type, which the label must not repeat.
+static_assert(check_unit("V", od_ro<read_value>).empty());
+static_assert(check_unit("rpm", od_ro<read_freq>).empty());
+static_assert(check_unit("", od_ro<read_freq>).empty());
+static_assert(check_unit("Hz", od_ro<read_freq>)
+              == "od: 2000h:00 a.c: the unit 'Hz' repeats the symbol of the "
+                 "value's type");
+static_assert(check_unit("Hz", od_ro_array<read_rates>)
+              == "od: 2000h:00 a.c: the unit 'Hz' repeats the symbol of the "
+                 "value's type");
+// No unit for a command, an array of characters or a boolean.
+static_assert(check_unit("V", od_exec<command>)
+              == "od: 2000h:00 a.c: a command has no unit");
+static_assert(check_unit("V", od_string<text>)
+              == "od: 2000h:00 a.c: an array of characters has no unit");
+static_assert(check_unit("V", od_ro<zero<bool>>)
+              == "od: 2000h:00 a.c: a boolean has no unit");
+static_assert(check_unit("\"V\"", od_ro<read_value>)
+              == "od: 2000h:00 a.c: the unit must be UTF-8 without quotation "
+                 "marks, backslashes or control characters");
+static_assert(check_unit("\u03A9", od_ro<read_value>).empty());
 
 // -- Checks: areas and groups --
 

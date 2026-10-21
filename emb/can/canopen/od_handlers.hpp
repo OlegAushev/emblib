@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <expected>
+#include <optional>
 #include <string_view>
 #include <type_traits>
 #include <variant>
@@ -14,6 +15,7 @@
 #include "od_value_cast.hpp"
 
 #include <emb/meta/typelist.hpp>
+#include <emb/meta/unit_symbol.hpp>
 
 namespace emb {
 namespace can {
@@ -310,6 +312,26 @@ inline constexpr std::string_view od_array_shape =
     "returns std::array, by value or by const reference, of at most 254 "
     "od_value scalars or types wrapping one";
 
+inline constexpr std::string_view od_rw_type_disagreement =
+    "od: the reader and the writer of an rw object disagree on the type";
+
+inline constexpr std::string_view od_rw_unit_disagreement =
+    "od: the reader and the writer of an rw object disagree on the unit";
+
+// Whether the reader `G` and the writer `S` of an rw object, which travel as
+// the same scalar (`od_rw_pair`), agree on the unit: the symbols of the types
+// they read and write are equal, or one of them is empty, as that of a bare
+// scalar is. A reader of `hz_f32` and a writer of `float` agree, on "Hz"; a
+// reader of `rpm_f32` and a writer of `hz_f32` do not.
+template<auto G, auto S, typename Ctx>
+inline constexpr bool od_units_agree = [] {
+  constexpr auto read =
+      unit_symbol_of<typename od_read_value<od_result_t<G>>::type>();
+  constexpr auto written =
+      unit_symbol_of<typename od_written<od_args_t<S>, Ctx>::type>();
+  return read.empty() || written.empty() || read == written;
+}();
+
 template<auto F, od_access Access>
 struct read_binding {
   template<typename Ctx>
@@ -320,7 +342,8 @@ struct read_binding {
       using value_type = typename od_read_value<od_result_t<F>>::type;
       return {.access = Access,
               .type = od_type_of<unwrapped_t<value_type>>,
-              .read = &od_read_thunk<F, Ctx>};
+              .read = &od_read_thunk<F, Ctx>,
+              .unit = unit_symbol_of<value_type>()};
     }
     else {
       return {.access = Access,
@@ -340,7 +363,8 @@ struct write_binding {
       using value_type = typename od_written<od_args_t<S>, Ctx>::type;
       return {.access = od_access::wo,
               .type = od_type_of<unwrapped_t<value_type>>,
-              .write = &od_write_thunk<S, Ctx>};
+              .write = &od_write_thunk<S, Ctx>,
+              .unit = unit_symbol_of<value_type>()};
     }
     else {
       return {.access = od_access::wo,
@@ -359,14 +383,21 @@ struct rw_binding {
     static_assert(od_writer<S, Ctx>, od_writer_shape);
     static_assert(
         !(od_reader<G, Ctx> && od_writer<S, Ctx>) || od_rw_pair<G, S, Ctx>,
-        "od: the reader and the writer of an rw object disagree "
-        "on the type");
+        od_rw_type_disagreement);
     if constexpr (od_rw_pair<G, S, Ctx>) {
-      using value_type = typename od_read_value<od_result_t<G>>::type;
+      using read_type = typename od_read_value<od_result_t<G>>::type;
+      using written_type = typename od_written<od_args_t<S>, Ctx>::type;
+      constexpr bool agree = od_units_agree<G, S, Ctx>;
+      static_assert(agree, od_rw_unit_disagreement);
+
+      constexpr auto read_unit = unit_symbol_of<read_type>();
       return {.access = od_access::rw,
-              .type = od_type_of<unwrapped_t<value_type>>,
+              .type = od_type_of<unwrapped_t<read_type>>,
               .read = &od_read_thunk<G, Ctx>,
-              .write = &od_write_thunk<S, Ctx>};
+              .write = &od_write_thunk<S, Ctx>,
+              .unit = read_unit.empty() ? unit_symbol_of<written_type>()
+                                        : read_unit,
+              .diagnosed = !agree};
     }
     else {
       return {.access = od_access::rw,
@@ -388,11 +419,14 @@ struct command_binding {
     if constexpr (od_command<F, Ctx>) {
       return {.access = od_access::wo,
               .type = od_data_type::uint32,
-              .write = &od_command_thunk<F, Ctx, Signature...>};
+              .write = &od_command_thunk<F, Ctx, Signature...>,
+              .command = true,
+              .signature = std::optional<std::uint32_t>{Signature...}};
     }
     else {
       return {.access = od_access::wo,
               .type = od_data_type::uint32,
+              .command = true,
               .diagnosed = true};
     }
   }
@@ -408,11 +442,13 @@ struct string_binding {
       return {.access = od_access::const_,
               .type = od_data_type::uint8,
               .read = &od_string_char_thunk<F, Ctx>,
-              .count = &od_string_count_thunk<F, Ctx>};
+              .count = &od_string_count_thunk<F, Ctx>,
+              .text = true};
     }
     else {
       return {.access = od_access::const_,
               .type = od_data_type::uint8,
+              .text = true,
               .diagnosed = true};
     }
   }
@@ -429,7 +465,8 @@ struct array_binding {
       return {.access = od_access::ro,
               .type = od_type_of<unwrapped_t<typename elements::type>>,
               .read = &od_array_element_thunk<F, Ctx>,
-              .count = &od_array_count_thunk<Ctx, elements::count>};
+              .count = &od_array_count_thunk<Ctx, elements::count>,
+              .unit = unit_symbol_of<typename elements::type>()};
     }
     else {
       return {.access = od_access::ro,
@@ -443,23 +480,28 @@ struct array_binding {
 
 // The variable templates below bind an object in an `od_row` to typed
 // handlers. The object's type is the scalar the handler's value travels as,
-// and its access is the builder's; the row's context type is deduced from the
-// row. A handler that does not fit its builder is reported at the row.
+// its unit the symbol of the type of that value (`emb::unit_symbol_of`), if
+// it names one, and its access is the builder's; the row's context type is
+// deduced from the row. A handler that does not fit its builder is reported
+// at the row.
 //
 // `od_ro<F>` and `od_const<F>` bind a reader (`od_reader`), `od_wo<S>` a
 // writer (`od_writer`), `od_rw<G, S>` a reader and a writer of the same
-// scalar (`od_rw_pair`), `od_exec<F>` a command (`od_command`), a `uint32`
-// object written to run it, whose value the command does not get, and
-// `od_string<F>` a string (`od_string_reader`) as an array of its
-// characters: subindex 00h reads its length, and each subindex after it one
-// `uint8` character, up to `od_array_capacity` of them. `od_ro_array<F>`
+// scalar (`od_rw_pair`) whose units agree (`detail::od_units_agree`),
+// `od_exec<F>` a command (`od_command`), a `uint32` object written to run it,
+// whose value the command does not get, and `od_string<F>` a string
+// (`od_string_reader`) as an array of its characters: subindex 00h reads its
+// length, and each subindex after it one `uint8` character, up to
+// `od_array_capacity` of them. A command and an array of characters have no
+// unit, and their bindings are marked `command` and `text`. `od_ro_array<F>`
 // binds an array that a reader returns (`od_array_reader`) the same way:
 // subindex 00h reads the number of its elements, and each subindex after it
 // one element, read-only, of the scalar the elements travel as.
 // `od_exec<F, Signature>` binds a command that runs only if the value written
 // is `Signature`, and answers any other with `data_store_error`, 0800 0020h,
 // as CiA 301 asks of the objects that store parameters and restore their
-// defaults (`od_save_signature`, `od_load_signature`).
+// defaults (`od_save_signature`, `od_load_signature`); its binding keeps
+// `Signature` as its `signature`.
 template<auto F>
 inline constexpr detail::read_binding<F, od_access::ro> od_ro{};
 

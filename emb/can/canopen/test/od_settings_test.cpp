@@ -40,12 +40,20 @@ inline constexpr auto prod_serial = settings::param(
     {.title = {"Serial number", "Серийный номер"}, .writable = false});
 inline constexpr auto prod_secret =
     settings::param("prod.secret", std::uint32_t{0}, {.expose = false});
+// A slope held as rpm, whose unit replaces the symbol of its type.
+inline constexpr auto drive_slope =
+    settings::param("drive.slope",
+                    emb::units::rpm_f32{100.0f},
+                    {.title = {"Speed slope", "Темп изменения скорости"},
+                     .unit = "rpm/s",
+                     .apply = settings::apply_policy::on_command});
 
 inline constexpr auto schema = settings::make_schema(drive_phase_swap,
                                                      motor_p,
                                                      drive_freq,
                                                      prod_serial,
-                                                     prod_secret);
+                                                     prod_secret,
+                                                     drive_slope);
 
 using fram = emb::test::ram_storage<512>;
 inline constexpr settings::placement fram_placement{.magic = 0x47464354u,
@@ -112,6 +120,21 @@ constexpr std::int32_t actual_pole_pairs()
   return 11;
 }
 
+constexpr emb::units::hz_f32 actual_hz()
+{
+  return emb::units::hz_f32{9500.0f};
+}
+
+constexpr emb::units::rpm_f32 actual_rpm()
+{
+  return emb::units::rpm_f32{100.0f};
+}
+
+constexpr emb::units::eradps_f32 actual_eradps()
+{
+  return emb::units::eradps_f32{10.0f};
+}
+
 using bridge = od_settings<section_of, make_applier>;
 
 // -- Error mapping --
@@ -150,11 +173,26 @@ static_assert(detail::not_exposed_message<"prod.secret">().view()
 static_assert(detail::actual_type_message<"drive.freq">().view()
               == "od: the actual value of settings parameter 'drive.freq' is "
                  "not read as its type");
+static_assert(detail::actual_unit_message<"drive.freq">().view()
+              == "od: the actual value of settings parameter 'drive.freq' is "
+                 "read in another unit");
+
+// The actual value is read in the unit of its parameter: in a type that names
+// no unit, in the type of the parameter, or in the parameter's unit, which
+// may replace the symbol of the type.
+static_assert(detail::od_reads_in_unit<actual_freq, emb::units::hz_f32>("Hz"));
+static_assert(detail::od_reads_in_unit<actual_hz, emb::units::hz_f32>("Hz"));
+static_assert(detail::od_reads_in_unit<actual_hz, float>("Hz"));
+static_assert(
+    detail::od_reads_in_unit<actual_rpm, emb::units::rpm_f32>("rpm/s"));
+static_assert(!detail::od_reads_in_unit<actual_rpm, float>("Hz"));
+static_assert(
+    !detail::od_reads_in_unit<actual_eradps, emb::units::rpm_f32>("rpm"));
 
 // -- Catalogs --
 
 static_assert(bridge::catalog.what == "settings parameter");
-static_assert(bridge::catalog.names.size() == 5);
+static_assert(bridge::catalog.names.size() == 6);
 static_assert(bridge::catalog.names[1] == "motor.p");
 static_assert(bridge::catalog.exposed[3]);
 static_assert(!bridge::catalog.exposed[4]);
@@ -191,6 +229,14 @@ static_assert(bind<bridge::param<motor_p>>().label.path == "motor.p");
 static_assert(bind<bridge::param<motor_p>>().label.title == motor_p.title);
 static_assert(bind<bridge::param<motor_p>>().label.unit.empty());
 
+// The record's unit is the parameter's: the symbol of its type, or the unit
+// that replaces it.
+static_assert(bind<bridge::param<drive_freq>>().unit == "Hz");
+static_assert(bind<bridge::param<motor_p>>().unit.empty());
+static_assert(bind<bridge::param<drive_slope>>().unit == "rpm/s");
+static_assert(!bind<bridge::param<drive_freq, actual_hz>>().diagnosed);
+static_assert(!bind<bridge::param<drive_slope, actual_rpm>>().diagnosed);
+
 // -- Records --
 
 inline constexpr od_area areas[] = {
@@ -211,6 +257,7 @@ inline constexpr od_row<ctx> records[] = {
     {{0x3101, 0x00}, {},                                                             bridge::param<motor_p>},
     {{0x3102, 0x00}, {},                                                             bridge::param<drive_freq, actual_freq>},
     {{0x3103, 0x00}, {},                                                             bridge::param<prod_serial>},
+    {{0x3104, 0x00}, {},                                                             bridge::param<drive_slope, actual_rpm>},
     {{0x3001, 0x01}, {"settings.apply_all", {"Apply all", "Применить все"}},         od_exec<bridge::apply_all>},
     {{0x3001, 0x02}, {"settings.discard_all", {"Discard all", "Отбросить все"}},     od_exec<bridge::discard_all>},
     {{0x3001, 0x03}, {"settings.last_refusal", {"Last refusal", "Последний отказ"}}, od_ro<bridge::last_refusal>},
@@ -391,6 +438,7 @@ consteval std::string check_hidden()
       {{0x3102, 0x00}, {},                                     bridge::param<drive_freq>},
       {{0x3103, 0x00}, {},                                     bridge::param<prod_serial>},
       {{0x3104, 0x00}, {"prod.secret", {"Secret", "Секрет"}}, secret},
+      {{0x3105, 0x00}, {},                                     bridge::param<drive_slope>},
   };
   // clang-format on
   return detail::od_check(rows, areas, groups);

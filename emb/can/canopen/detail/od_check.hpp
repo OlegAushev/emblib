@@ -42,6 +42,15 @@ constexpr od_label const& label_of(od_row<Ctx> const& row)
   return is_empty(row.binding.label) ? row.label : row.binding.label;
 }
 
+// Returns the unit of `row`: the one its label gives, if any, or else the
+// one its binding gives.
+template<typename Ctx>
+constexpr std::string_view unit_of(od_row<Ctx> const& row)
+{
+  auto const unit = label_of(row).unit;
+  return unit.empty() ? row.binding.unit : unit;
+}
+
 // Renders a row as "3100h:00 drive.phase_swap", or as "3100h:00" if it has no
 // path.
 template<typename Ctx>
@@ -347,6 +356,37 @@ constexpr std::string check_label(od_row<Ctx> const& row,
   return {};
 }
 
+// The rules of the unit of a row: it is verbatim (`is_verbatim_text`), the
+// label does not repeat the unit the binding gives, the symbol of the
+// value's type, and a command, an array of characters or a boolean has none:
+// the value of a command is not used, a character is no quantity, and a
+// boolean has no dimension.
+template<typename Ctx>
+constexpr std::string check_unit(od_row<Ctx> const& row)
+{
+  auto const& binding = row.binding;
+  auto const unit = unit_of(row);
+
+  if (unit.empty()) return {};
+  if (!is_verbatim_text(unit)) {
+    return row_error(row,
+                     "the unit must be UTF-8 without quotation marks, "
+                     "backslashes or control characters");
+  }
+  if (label_of(row).unit == binding.unit) {
+    std::string what = "the unit '";
+    what += unit;
+    what += "' repeats the symbol of the value's type";
+    return row_error(row, what);
+  }
+  if (binding.command) return row_error(row, "a command has no unit");
+  if (binding.text) return row_error(row, "an array of characters has no unit");
+  if (binding.type == od_data_type::boolean) {
+    return row_error(row, "a boolean has no unit");
+  }
+  return {};
+}
+
 template<typename Ctx, std::size_t A, std::size_t G>
 constexpr std::string check_row(od_row<Ctx> const& row,
                                 od_area const (&areas)[A],
@@ -361,6 +401,7 @@ constexpr std::string check_row(od_row<Ctx> const& row,
     return row_error(row, "the index lies in no area");
   }
   if (auto error = check_label(row, groups); !error.empty()) return error;
+  if (auto error = check_unit(row); !error.empty()) return error;
 
   if (!binding.layout.empty() && binding.count != nullptr) {
     return row_error(row, "a binding is a record or an array, not both");

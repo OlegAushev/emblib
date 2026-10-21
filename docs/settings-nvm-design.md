@@ -582,8 +582,10 @@ Completeness is checked at compile time, without coupling:
   dictionary declares, and its title is not empty in any language (T2,
   T35 and T36 in `canopen-od-algorithm.ru.md`); a row of a parameter that
   gives a label of its own is refused (T34);
-- the record's type is the parameter's by construction, `named_unit` and
-  `emb::clamped` included, and an actual value must be read in that type.
+- the record's type and unit are the parameter's by construction,
+  `named_unit` and `emb::clamped` included, and an actual value must be
+  read in that type and in a type of no other unit (S4 and S5 in
+  `canopen-od-algorithm.ru.md`).
 
 1011h:04, which restored one default, is gone: a client reads 04h and
 writes it to 01h. Restoring all defaults (2102h:01) requests them; they
@@ -1297,6 +1299,24 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   alternatives of `od_value`, one to one. Rejected: four characters to an
   element, which keeps the traffic of before but makes the elements words
   of text, and a type `char`, which CiA 301 does not have.
+- **An object's unit comes from its type** (2026-10-21). A row's unit was
+  typed by hand and checked against nothing: an angle read as `edeg_f32`
+  showed "°", which says nothing of electrical degrees, and a reader of
+  rpm could have been labelled "Hz". A builder now puts in the binding the
+  symbol of the type of the value its handler reads or writes, of the
+  elements of an array, or a settings parameter's unit; the label of a row
+  may replace it, for a value whose type names no unit or names the wrong
+  one, but may not repeat it, so that a type made exact later makes the
+  label's unit an error rather than dead text. A command, an array of
+  characters and a boolean take no unit, and the binding marks the first
+  two, a command with its signature, for the description a host will read.
+  The reader and the writer of an rw object, and the reader of a
+  parameter's actual value, are checked for the unit beside the check of
+  the scalar, each with a message of its own, so that a disagreement on
+  the unit is not reported as one on the type. Rejected: the unit as an
+  argument of each builder, which every row would repeat; the check of
+  units inside `od_rw_pair`, a public concept that promises a common
+  scalar only.
 - **Objects are named by path and titled; their class comes from areas**
   (2026-10-21). A row named an object by a category, a subcategory and a
   name, with a rule for none of them: the category, which told a host
@@ -1622,6 +1642,13 @@ shows:
   `control` (was `ctl`), `parameters` (was `config`) and `watch`.
   Addresses do not change; the fingerprint at 2000h:00 does, and a tool
   that built its table by parsing `od.cpp` no longer can.
+- **Units come from types.** The 18 objects of an electrical angle — the
+  12 angles of the hall sensor, `model.angle_correction`, the reference
+  and actual angle, the hall angle and the two angles of the emulator —
+  show "°el" where they showed "°"; `hall_calibration.phase_current_slope`
+  shows "pu/s" where it showed "pu", `model.Vd_limit_factor` "pu" where it
+  showed none, and `motor.R` "Ω" where it showed "Ohm". Every other unit
+  is as before.
 
 ## 10b. What applying taught us
 

@@ -17,6 +17,7 @@
 #include <emb/meta/alternative_of.hpp>
 #include <emb/meta/fixed_string.hpp>
 #include <emb/meta/typelist.hpp>
+#include <emb/meta/unit_symbol.hpp>
 #include <emb/settings/image.hpp>
 #include <emb/settings/schema.hpp>
 #include <emb/settings/section.hpp>
@@ -105,6 +106,28 @@ consteval auto actual_type_message()
        + "' is not read as its type";
 }
 
+template<fixed_string Name>
+consteval auto actual_unit_message()
+{
+  return "od: the actual value of settings parameter '"
+       + Name
+       + "' is read in another unit";
+}
+
+// Whether the reader `Actual` reads the actual value of a parameter of type
+// `T` and unit `unit` in that unit: the type of the value it returns names no
+// unit, or the symbol of `T`, or `unit`. A reader of `rpm_f32` fits a
+// parameter of type `rpm_f32` whose unit is "rpm/s", one of `hz_f32` a
+// parameter of type `float` whose unit is "Hz"; one of `rpm_f32` fits
+// neither the latter nor a parameter of type `eradps_f32`.
+template<auto Actual, typename T>
+consteval bool od_reads_in_unit(std::string_view unit)
+{
+  using value_type = typename od_read_value<od_result_t<Actual>>::type;
+  constexpr auto symbol = unit_symbol_of<value_type>();
+  return symbol.empty() || symbol == unit_symbol_of<T>() || symbol == unit;
+}
+
 } // namespace detail
 
 // The concept `od_settings_access<SectionOf, MakeApplier>` is satisfied if
@@ -130,10 +153,10 @@ concept od_settings_access =
 //
 // `param<Decl>` binds the record of the parameter that `Decl` declares, and
 // `param<Decl, Actual>` one that also shows its actual value, as the reader
-// `Actual` reads it in the type of the parameter. The record's path is the
-// parameter's name and its title the parameter's, so its row has no label of
-// its own: `{key, {}, param<Decl>}`. The record's type is the parameter's;
-// its members, by subindex:
+// `Actual` reads it in the type and the unit of the parameter. The record's
+// path is the parameter's name and its title the parameter's, so its row has
+// no label of its own: `{key, {}, param<Decl>}`. The record's type and unit
+// are the parameter's; its members, by subindex:
 //
 //   00h  const u8   the last subindex, 09h, or 0Ah with `Actual`
 //   01h  rw         the value requested; ro if the parameter is not writable
@@ -155,7 +178,8 @@ concept od_settings_access =
 // A record of a parameter carries `catalog`, so `make_dictionary` checks that
 // each exposed parameter has exactly one record and each hidden one none.
 // Binding a declaration that the schema does not hold, a hidden parameter, or
-// an `Actual` of another type is reported at the row. A value of a type no
+// an `Actual` of another type or unit (`detail::od_reads_in_unit`) is
+// reported at the row. A value of a type no
 // parameter can hold is refused with `data_type_mismatch`.
 template<auto SectionOf, auto MakeApplier>
   requires od_settings_access<SectionOf, MakeApplier>
@@ -332,6 +356,20 @@ class od_settings {
     }
   }
 
+  // Whether `Actual` is nullptr, or a reader that reads the actual value of the
+  // parameter `Decl` declares in its unit (`detail::od_reads_in_unit`).
+  template<auto& Decl, auto Actual>
+  static consteval bool reads_in_unit_of()
+  {
+    if constexpr (std::is_null_pointer_v<decltype(Actual)>) {
+      return true;
+    }
+    else {
+      using type = typename std::remove_cvref_t<decltype(Decl)>::type;
+      return detail::od_reads_in_unit<Actual, type>(Decl.unit);
+    }
+  }
+
   template<auto& Decl, auto Actual>
   struct param_binding {
     consteval operator od_binding<context_type>() const
@@ -342,8 +380,10 @@ class od_settings {
       constexpr auto type =
           od_type_of<settings::scalar_t<typename param::type>>;
       constexpr bool fits = reads_as<Actual>(type);
+      constexpr bool in_unit = !fits || reads_in_unit_of<Decl, Actual>();
       static_assert(shown, detail::not_exposed_message<param::name>());
       static_assert(fits, detail::actual_type_message<param::name>());
+      static_assert(in_unit, detail::actual_unit_message<param::name>());
 
       return {.access = od_access::ro,
               .type = type,
@@ -351,7 +391,8 @@ class od_settings {
               .catalog = &catalog,
               .layout = param_layout<type, param::desc.writable, Actual>,
               .label = {.path = Decl.desc.name, .title = Decl.title},
-              .diagnosed = !(known && shown && fits)};
+              .unit = Decl.unit,
+              .diagnosed = !(known && shown && fits && in_unit)};
     }
   };
 

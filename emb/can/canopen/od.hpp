@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <cstring>
 #include <expected>
+#include <optional>
 #include <span>
 #include <string_view>
 #include <utility>
@@ -247,8 +248,15 @@ struct od_field {
 // type travels as. `catalog` is the index space `arg` selects from, if any.
 // `label` is the label of the object if the builder knows it, as that of a
 // settings parameter knows its name and title from the schema; the row then
-// has none of its own. `diagnosed` is set by a builder that has already
-// reported an error, so that `make_dictionary` does not report a second one.
+// has none of its own. `unit` is the symbol of the unit of the object's value
+// as the builder knows it: that of the type its handler reads or writes
+// (`emb::unit_symbol_of`), or the unit of a settings parameter; the unit of
+// the row's label, if any, takes its place. `command` marks a command, which
+// is written to run it, and `signature`, if it has a value, is the word that
+// must be written; `text` marks an array of characters. `diagnosed` is set by
+// a builder that has already reported an error, so that `make_dictionary`
+// does not report a second one. Of the fields, only the handlers, the
+// argument, the access, the type and the layout reach the image.
 //
 // A binding with a `layout` serves a record instead: every subindex of the
 // index of its row, which names it with subindex 00h, each through the field
@@ -273,6 +281,10 @@ struct od_binding {
   od_catalog const* catalog = nullptr;
   std::span<od_field<Ctx> const> layout{};
   od_label label{};
+  std::string_view unit{};
+  bool command = false;
+  std::optional<std::uint32_t> signature{};
+  bool text = false;
   bool diagnosed = false;
 };
 
