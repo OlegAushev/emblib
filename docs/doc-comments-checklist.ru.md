@@ -51,6 +51,8 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `clarke_inputs`
   - [x] `clarke_transform`
   - [x] `invclarke_transform`
+- [x] `emb/i18n.hpp`
+  - [x] `i18n`
 - [x] `emb/math.hpp` — только подключает заголовки `emb/math/`, сущностей нет
 - [x] `emb/math/angle.hpp`
   - [x] `to_rad`, `to_deg`, `to_eradps`, `to_rpm`
@@ -134,9 +136,12 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `apply_policy`
   - [x] `descriptor`
   - [x] `detail::parameter_default_outside_range`,
-    `detail::parameter_min_above_max`
+    `detail::parameter_min_above_max`, `detail::parameter_title_missing`,
+    `detail::parameter_unit_repeats_symbol`,
+    `detail::parameter_unit_meaningless`
   - [x] `detail::lowest`, `detail::highest`, `detail::identify`
-  - [x] `options`, `declaration`, `param`
+  - [x] `options` (и поля `title`, `unit`), `declaration` (и поля `title`,
+    `unit`), `param`
 - [x] `emb/settings/record.hpp`
   - [x] `record_format` (с описанием формата записи)
   - [x] `record_header_size`, `record_cell_size`, `record_footer_size`

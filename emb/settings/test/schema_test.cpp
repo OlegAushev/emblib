@@ -13,22 +13,29 @@ using namespace emb::settings;
 using rpm = units::rpm_f32;
 using pu = unsigned_pu_f32;
 
-inline constexpr auto drive_phase_swap = param("drive.phase_swap", false);
+inline constexpr auto drive_phase_swap =
+    param("drive.phase_swap",
+          false,
+          {.title = {"Phase swap", "Перестановка фаз"}});
 inline constexpr auto drive_runout_speed =
     param("drive.runout_speed",
           rpm{100.0f},
-          {.min = rpm{0.0f},
+          {.title = {"Runout speed", "Скорость выбега"},
+           .min = rpm{0.0f},
            .max = rpm{5000.0f},
            .apply = apply_policy::on_command});
 inline constexpr auto motor_p =
     param("motor.p",
           std::int32_t{11},
-          {.min = std::int32_t{1}, .max = std::int32_t{64}});
+          {.title = {"Pole pairs", "Число пар полюсов"},
+           .min = std::int32_t{1},
+           .max = std::int32_t{64}});
 // A clamped brings its own bounds: nothing to spell out.
 inline constexpr auto drive_stopping_torque =
     param("drive.stopping_torque",
           pu{0.05f},
-          {.apply = apply_policy::on_command});
+          {.title = {"Stopping torque", "Момент остановки"},
+           .apply = apply_policy::on_command});
 inline constexpr auto prot_watchdog_timeout =
     param("prot.watchdog_timeout",
           std::uint32_t{1000},
@@ -107,8 +114,10 @@ consteval bool test_ids_are_unique_and_sorted()
 
 // The same name with a different type is a different parameter as far as
 // stored data is concerned.
-inline constexpr auto as_float = make_schema(param("x", 1.0f));
-inline constexpr auto as_int = make_schema(param("x", std::int32_t{1}));
+inline constexpr auto as_float =
+    make_schema(param("x", 1.0f, {.title = {"X", "X"}}));
+inline constexpr auto as_int =
+    make_schema(param("x", std::int32_t{1}, {.title = {"X", "X"}}));
 static_assert(as_float.parameters[0].id != as_int.parameters[0].id);
 
 consteval bool test_find_by_id()
@@ -134,5 +143,42 @@ consteval bool test_single_parameter_schema()
 static_assert(test_ids_are_unique_and_sorted());
 static_assert(test_find_by_id());
 static_assert(test_single_parameter_schema());
+
+// -- Title and unit --
+
+// The declaration keeps the title and the unit for people; the unit is the
+// symbol of the type unless the declaration gives another.
+static_assert(drive_runout_speed.title.en == "Runout speed");
+static_assert(drive_runout_speed.title.ru == "Скорость выбега");
+static_assert(drive_runout_speed.unit == "rpm");
+static_assert(drive_stopping_torque.unit == "pu");
+static_assert(motor_p.unit.empty());
+static_assert(drive_phase_swap.unit.empty());
+
+// A unit replaces the symbol of a type that names none, or one that does not
+// describe the parameter.
+inline constexpr auto dc_undervoltage =
+    param("protection.uvp_dc",
+          35.0f,
+          {.title = {"DC undervoltage", "Пониженное напряжение"}, .unit = "V"});
+inline constexpr auto speed_slope =
+    param("model.speed_slope",
+          rpm{1000.0f},
+          {.title = {"Speed slope", "Скорость нарастания скорости"},
+           .unit = "rpm/s"});
+static_assert(dc_undervoltage.unit == "V");
+static_assert(speed_slope.unit == "rpm/s");
+
+// A hidden parameter needs no title.
+static_assert(prot_watchdog_timeout.title.en.empty());
+
+// The title and the unit stay out of the descriptor, which the schema keeps:
+// declarations that differ in them alone describe the same parameter.
+inline constexpr auto renamed_for_people =
+    param("drive.stopping_torque",
+          pu{0.05f},
+          {.title = {"Torque while stopping", "Момент при остановке"},
+           .apply = apply_policy::on_command});
+static_assert(renamed_for_people.desc == drive_stopping_torque.desc);
 
 } // namespace

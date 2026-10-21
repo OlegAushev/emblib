@@ -19,19 +19,25 @@ namespace settings = emb::settings;
 inline constexpr auto drive_phase_swap =
     settings::param("drive.phase_swap",
                     false,
-                    {.apply = settings::apply_policy::on_command});
+                    {.title = {"Phase swap", "Перестановка фаз"},
+                     .apply = settings::apply_policy::on_command});
 inline constexpr auto motor_p =
     settings::param("motor.p",
                     std::int32_t{11},
-                    {.min = std::int32_t{1}, .max = std::int32_t{64}});
+                    {.title = {"Pole pairs", "Число пар полюсов"},
+                     .min = std::int32_t{1},
+                     .max = std::int32_t{64}});
 inline constexpr auto drive_freq =
     settings::param("drive.freq",
                     emb::units::hz_f32{10000.0f},
-                    {.min = emb::units::hz_f32{1000.0f},
+                    {.title = {"Frequency", "Частота"},
+                     .min = emb::units::hz_f32{1000.0f},
                      .max = emb::units::hz_f32{20000.0f},
                      .apply = settings::apply_policy::on_command});
-inline constexpr auto prod_serial =
-    settings::param("prod.serial", std::uint32_t{0}, {.writable = false});
+inline constexpr auto prod_serial = settings::param(
+    "prod.serial",
+    std::uint32_t{0},
+    {.title = {"Serial number", "Серийный номер"}, .writable = false});
 inline constexpr auto prod_secret =
     settings::param("prod.secret", std::uint32_t{0}, {.expose = false});
 

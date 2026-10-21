@@ -1,5 +1,7 @@
 #pragma once
 
+#include <emb/i18n.hpp>
+#include <emb/meta/unit_symbol.hpp>
 #include <emb/settings/value.hpp>
 
 #include <limits>
@@ -64,12 +66,17 @@ struct descriptor {
 
 namespace detail {
 
-// `parameter_default_outside_range` and `parameter_min_above_max` fail the
-// constant evaluation that calls them, and the diagnostic names the
-// function: they are neither `constexpr` nor defined. `param` calls them to
-// reject a declaration at its call.
+// The functions below fail the constant evaluation that calls them, and the
+// diagnostic names the function: they are neither `constexpr` nor defined.
+// `param` calls them to reject a declaration at its call: for a default
+// outside the bounds, a lower bound above the upper one, an exposed
+// parameter without a title in each language, a unit that only repeats the
+// symbol of the type, and a unit given to a `bool`.
 void parameter_default_outside_range();
 void parameter_min_above_max();
+void parameter_title_missing();
+void parameter_unit_repeats_symbol();
+void parameter_unit_meaningless();
 
 // Returns `T` constructed from the lowest finite value of `scalar_t<T>`. The
 // constructor of a wrapper may clamp it, e.g. that of `emb::clamped` to its
@@ -113,10 +120,22 @@ constexpr std::uint32_t identify(std::string_view name, scalar_kind kind)
 } // namespace detail
 
 // The class template `options` holds the optional part of the declaration of
-// a parameter of type `T`, as `param` takes it. Each field sets the field of
-// the same name in the `descriptor` of the parameter.
+// a parameter of type `T`, as `param` takes it. Each field from `min` on sets
+// the field of the same name in the `descriptor` of the parameter; `title` and
+// `unit` are kept in the `declaration`, outside the descriptor, which a
+// schema keeps in the image.
 template<some_parameter_type T>
 struct options {
+  // Name of the parameter for people, in each language. `param` rejects an
+  // exposed parameter (`expose`) without a title in each: a transport shows
+  // it to them.
+  i18n title{};
+  // Symbol of the unit of the value, for a type that names no unit or one that
+  // does not describe the parameter, e.g. "rpm/s" for a slope held as an
+  // `rpm_f32`: it replaces the symbol of the type
+  // (`emb::unit_symbol_of<T>()`). `param` rejects a unit equal to that
+  // symbol, which would only repeat it, and any unit of a `bool`.
+  std::string_view unit{};
   // Lower and upper bound of the value, inclusive. If left out, each is the
   // widest `T` admits: the lowest or the highest finite value of
   // `scalar_t<T>`, converted to `T`. A wrapper that clamps, e.g.
@@ -133,12 +152,14 @@ struct options {
 };
 
 // The class template `declaration` holds a parameter as `param` declares it:
-// its `descriptor`, and its type as `T`, which `type` names and from which
-// `make_schema` builds the typelist of the schema. Kept in a `constexpr`
-// variable with static storage duration, a declaration is also what names
-// its parameter to `parameter`, `image` and `section`:
+// its `descriptor`, its title and unit for people, and its type as `T`, which
+// `type` names and from which `make_schema` builds the typelist of the
+// schema. Kept in a `constexpr` variable with static storage duration, a
+// declaration is also what names its parameter to `parameter`, `image` and
+// `section`:
 //
-//   inline constexpr auto pole_pairs = param("motor.p", std::int32_t{11});
+//   inline constexpr auto pole_pairs = param(
+//       "motor.pole_pairs", std::int32_t{11}, {.title = {"Pole pairs", "…"}});
 //   ...
 //   values.get<pole_pairs>()
 template<some_parameter_type T>
@@ -146,6 +167,11 @@ struct declaration {
   using type = T;
 
   descriptor desc;
+  // Name of the parameter for people, as `options::title` gives it.
+  i18n title;
+  // Symbol of the unit of the value: `options::unit` if given, otherwise the
+  // symbol of the type, empty if the type names none.
+  std::string_view unit;
 };
 
 namespace detail {
@@ -170,13 +196,16 @@ concept some_declaration = detail::is_declaration<std::remove_cvref_t<T>>;
 // Declares a parameter for `make_schema`: named `name`, with the default value
 // `def` and the rest of the declaration in `opts`.
 //
-//   param("motor.p", std::int32_t{11}, {.min = 1, .max = 64, .apply = ...})
+//   param("motor.pole_pairs", std::int32_t{11},
+//         {.title = {"Pole pairs", "…"}, .min = 1, .max = 64, .apply = ...})
 //
 // The type of the parameter is that of `def`, so a literal must have that
 // type exactly: `0.05f`, not `0.05`, and `std::int32_t{1}`, not `1`, an `int`,
 // which on some targets is not `std::int32_t`. Compilation fails at the call
-// if `opts.min` is above `opts.max` or `def` lies outside
-// [`opts.min`, `opts.max`].
+// if `opts.min` is above `opts.max`, if `def` lies outside
+// [`opts.min`, `opts.max`], if the parameter is exposed without a title in
+// each language, or if `opts.unit` repeats the symbol of `T` or is given to a
+// `bool`.
 template<some_parameter_type T>
 consteval declaration<T> param(std::string_view name,
                                T def,
@@ -192,6 +221,15 @@ consteval declaration<T> param(std::string_view name,
   if (!in_range(kind, to_cell(def), min, max)) {
     detail::parameter_default_outside_range();
   }
+  if (opts.expose && (opts.title.en.empty() || opts.title.ru.empty())) {
+    detail::parameter_title_missing();
+  }
+  if (!opts.unit.empty() && opts.unit == unit_symbol_of<T>()) {
+    detail::parameter_unit_repeats_symbol();
+  }
+  if (!opts.unit.empty() && kind == scalar_kind::boolean) {
+    detail::parameter_unit_meaningless();
+  }
 
   return {descriptor{.name = name,
                      .id = detail::identify(name, kind),
@@ -201,7 +239,9 @@ consteval declaration<T> param(std::string_view name,
                      .max = max,
                      .apply = opts.apply,
                      .writable = opts.writable,
-                     .expose = opts.expose}};
+                     .expose = opts.expose},
+          opts.title,
+          opts.unit.empty() ? unit_symbol_of<T>() : opts.unit};
 }
 
 } // namespace settings

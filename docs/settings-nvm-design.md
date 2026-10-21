@@ -93,17 +93,25 @@ Declared as:
 
 ```cpp
 inline constexpr auto phase_swap =
-  param("drive.phase_swap", false, {.apply = apply_policy::on_command});
+  param("drive.phase_swap", false,
+        {.title = {"Phase swap", "Перестановка фаз"},
+         .apply = apply_policy::on_command});
 inline constexpr auto runout_speed =
-  param("drive.runout_speed", rpm{100.0f},
-        {.min = rpm{0.0f}, .max = rpm{5000.0f},
+  param("drive.runout_speed", rpm{100.0f},           // unit "rpm" from the type
+        {.title = {"Runout speed", "Скорость выбега"},
+         .min = rpm{0.0f}, .max = rpm{5000.0f},
          .apply = apply_policy::on_command});
 inline constexpr auto stopping_torque =
   param("drive.stopping_torque", pu{0.05f},          // clamped: own bounds
-        {.apply = apply_policy::on_command});
+        {.title = {"Stopping torque", "Момент останова"},
+         .apply = apply_policy::on_command});
+inline constexpr auto uvp_dc =
+  param("protection.uvp_dc", 35.0f,                  // a float names no unit
+        {.title = {"DC undervoltage", "Пониженное напряжение"}, .unit = "V",
+         .apply = apply_policy::on_command});
 
-inline constexpr auto schema =
-  settings::make_schema(phase_swap, runout_speed, stopping_torque);
+inline constexpr auto schema = settings::make_schema(
+    phase_swap, runout_speed, stopping_torque, uvp_dc);
 ```
 
 The declaration is also the key of the typed access: `get<runout_speed>()`
@@ -116,9 +124,19 @@ reached by index only may be declared in the `make_schema` call.
 
 The type comes from the default, so a literal needs its suffix — `param("x",
 0.05)` does not compile. Per-parameter checks (default within bounds, min
-below max) live in `param()` so that a bad declaration is reported on its
-own line; cross-parameter ones (duplicate name, identifier collision) live
-in `make_schema`.
+below max, a title for an exposed parameter, a unit that neither repeats the
+type's symbol nor is given to a `bool`) live in `param()` so that a bad
+declaration is reported on its own line; cross-parameter ones (duplicate
+name, identifier collision) live in `make_schema`.
+
+The title, in English and in Russian (`emb::i18n`), and the unit are for
+people: a transport shows them. A parameter `expose`d to a transport must
+have a title in each language. The unit is the symbol of the type
+(`emb::unit_symbol_of`), e.g. "rpm" for an `rpm_f32`; `.unit` gives one to a
+type that names none, e.g. a `float` threshold in volts, or replaces one that
+does not describe the parameter, e.g. "rpm/s" for a slope held as an
+`rpm_f32`. Both are kept in the declaration, outside the descriptor: the
+schema keeps its descriptors in the image, and the texts stay out of it.
 
 No offset and no size: every value occupies one four-byte cell, so a
 parameter's index *is* its position in the RAM image, and the image is a
@@ -1274,6 +1292,18 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   alternatives of `od_value`, one to one. Rejected: four characters to an
   element, which keeps the traffic of before but makes the elements words
   of text, and a type `char`, which CiA 301 does not have.
+- **A parameter has a title and a unit** (2026-10-21). A transport that
+  shows a parameter to people had only its name, an identifier such as
+  "motor.pole_pairs", and a unit typed by hand in the table of the dictionary,
+  which nothing checked against the parameter. `options` takes a `title`, in
+  English and in Russian (`emb::i18n`, taken from the inverter's faults into
+  emblib), and a `unit`; `param()` rejects an exposed parameter without a
+  title in each language, a unit that repeats the symbol of the type and a
+  unit given to a `bool`. The unit is the symbol of the type unless `.unit`
+  replaces it. Both stay in the declaration, outside the descriptor, so that
+  the image, which keeps the descriptors, does not carry them; renaming a
+  title therefore changes no identifier. Rejected: the title in the
+  descriptor, which would put every title in flash.
 - **The dictionary has a fingerprint** (2026-10-20). A host decodes what
   the inverter sends by a table generated from `od.cpp`, and nothing told
   a stale table from a fresh one: addresses and types moved three times in

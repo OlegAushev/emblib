@@ -10,12 +10,20 @@ namespace {
 using namespace emb;
 using namespace emb::settings;
 
-inline constexpr auto limit_low = param("limit.low", std::uint32_t{10});
-inline constexpr auto limit_high = param("limit.high", std::uint32_t{20});
-inline constexpr auto ctrl_gain = param("ctrl.gain", 0.5f);
+inline constexpr auto limit_low =
+    param("limit.low",
+          std::uint32_t{10},
+          {.title = {"Low limit", "Нижний предел"}});
+inline constexpr auto limit_high =
+    param("limit.high",
+          std::uint32_t{20},
+          {.title = {"High limit", "Верхний предел"}});
+inline constexpr auto ctrl_gain =
+    param("ctrl.gain", 0.5f, {.title = {"Gain", "Коэффициент усиления"}});
 inline constexpr auto schema = make_schema(limit_low, limit_high, ctrl_gain);
 
-inline constexpr auto other_x = param("other.x", std::uint32_t{0});
+inline constexpr auto other_x =
+    param("other.x", std::uint32_t{0}, {.title = {"Other X", "Другой X"}});
 inline constexpr auto other_schema = make_schema(other_x);
 
 using limits = inputs<schema, limit_high, limit_low>;

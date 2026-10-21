@@ -12,29 +12,49 @@ namespace {
 using namespace emb;
 using namespace emb::settings;
 
-inline constexpr auto drive_runout =
-    param("drive.runout",
-          std::uint32_t{100},
-          {.max = std::uint32_t{1000}, .apply = apply_policy::on_command});
+inline constexpr auto drive_runout = param("drive.runout",
+                                           std::uint32_t{100},
+                                           {.title = {"Runout", "Выбег"},
+                                            .max = std::uint32_t{1000},
+                                            .apply = apply_policy::on_command});
 inline constexpr auto drive_phase_swap =
-    param("drive.phase_swap", false, {.apply = apply_policy::on_command});
-inline constexpr auto motor_p = param("motor.p",
-                                      std::int32_t{11},
-                                      {.min = std::int32_t{1},
-                                       .max = std::int32_t{64},
-                                       .apply = apply_policy::on_restart});
+    param("drive.phase_swap",
+          false,
+          {.title = {"Phase swap", "Перестановка фаз"},
+           .apply = apply_policy::on_command});
+inline constexpr auto motor_p =
+    param("motor.p",
+          std::int32_t{11},
+          {.title = {"Pole pairs", "Число пар полюсов"},
+           .min = std::int32_t{1},
+           .max = std::int32_t{64},
+           .apply = apply_policy::on_restart});
 inline constexpr auto prod_serial =
-    param("prod.serial", std::uint32_t{0}, {.writable = false});
+    param("prod.serial",
+          std::uint32_t{0},
+          {.title = {"Serial number", "Серийный номер"}, .writable = false});
 inline constexpr auto motor_R =
     param("motor.R",
           0.0014f,
-          {.min = 0.0f, .max = 10.0f, .apply = apply_policy::on_command});
+          {.title = {"Stator resistance", "Сопротивление статора"},
+           .min = 0.0f,
+           .max = 10.0f,
+           .apply = apply_policy::on_command});
 inline constexpr auto limit_low =
-    param("limit.low", std::uint32_t{10}, {.apply = apply_policy::on_command});
+    param("limit.low",
+          std::uint32_t{10},
+          {.title = {"Low limit", "Нижний предел"},
+           .apply = apply_policy::on_command});
 inline constexpr auto limit_high =
-    param("limit.high", std::uint32_t{20}, {.apply = apply_policy::on_command});
+    param("limit.high",
+          std::uint32_t{20},
+          {.title = {"High limit", "Верхний предел"},
+           .apply = apply_policy::on_command});
 inline constexpr auto limit_top =
-    param("limit.top", std::uint32_t{30}, {.apply = apply_policy::on_command});
+    param("limit.top",
+          std::uint32_t{30},
+          {.title = {"Top limit", "Наибольший предел"},
+           .apply = apply_policy::on_command});
 
 // motor.R, applied on command, follows two parameters applied after a
 // restart, one of them read-only, so that the order of the cells hides
