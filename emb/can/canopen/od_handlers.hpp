@@ -109,16 +109,29 @@ constexpr bool od_names(enum_carrier32_t<E> value)
   }
 }
 
+// What a reader that returns `R` reads: the value, of `type`, and whether the
+// reader may answer an abort instead (`fallible`), as one that returns
+// `std::expected` does, or may have no value (`optional`), as one that returns
+// `std::optional` does.
 template<typename R>
 struct od_read_value {
   using type = R;
   static constexpr bool fallible = false;
+  static constexpr bool optional = false;
 };
 
 template<typename T>
 struct od_read_value<std::expected<T, sdo_abort_code>> {
   using type = T;
   static constexpr bool fallible = true;
+  static constexpr bool optional = false;
+};
+
+template<typename T>
+struct od_read_value<std::optional<T>> {
+  using type = T;
+  static constexpr bool fallible = false;
+  static constexpr bool optional = true;
 };
 
 template<typename Args, typename Ctx>
@@ -185,8 +198,8 @@ using od_context_of = std::remove_reference_t<typelist_at_t<od_args_t<F>, 0>>;
 // function, or a lambda without captures, that takes nothing, `Ctx&` or
 // `Ctx const&` and returns an od_value scalar, a type wrapping one (see
 // `wraps_od_scalar`), an enumeration of at most 32 bits (see
-// `od_enumeration`), or `std::expected` of any of them with
-// `sdo_abort_code`.
+// `od_enumeration`), `std::expected` of any of them with `sdo_abort_code`,
+// or `std::optional` of any of them.
 template<auto F, typename Ctx>
 concept od_reader =
     detail::od_function<F>
@@ -264,12 +277,20 @@ constexpr decltype(auto) od_call(Ctx& ctx, Values const&... values)
   }
 }
 
+// Reads the value through `F`. An abort that `F` answers passes through, and
+// an empty `std::optional` answers `no_data_available`, 0800 0024h: the
+// object has no value to read now.
 template<auto F, typename Ctx>
 constexpr od_read_result od_read_thunk(Ctx& ctx, std::uint16_t)
 {
   if constexpr (od_read_value<od_result_t<F>>::fallible) {
     return od_call<F>(ctx).transform(
         [](auto const& value) { return to_od_value(value); });
+  }
+  else if constexpr (od_read_value<od_result_t<F>>::optional) {
+    auto const value = od_call<F>(ctx);
+    if (!value) return std::unexpected(sdo_abort_code::no_data_available);
+    return to_od_value(*value);
   }
   else {
     return to_od_value(od_call<F>(ctx));
@@ -374,7 +395,7 @@ constexpr od_read_result od_array_element_thunk(Ctx& ctx,
 inline constexpr std::string_view od_reader_shape =
     "od: a reader takes nothing or a reference to the context, and returns "
     "an od_value scalar, a type wrapping one, an enumeration of at most 32 "
-    "bits, or std::expected of any of them";
+    "bits, or std::expected or std::optional of any of them";
 
 inline constexpr std::string_view od_writer_shape =
     "od: a writer takes the value, optionally after a reference to the "
@@ -634,7 +655,10 @@ struct array_binding {
 // row's context type is deduced from the row. A handler that does not fit its
 // builder is reported at the row. A writer of an enumeration gets only the
 // values its labels name: another value answers `value_range_exceeded`,
-// 0609 0030h, and another type `data_type_mismatch`, 0607 0010h.
+// 0609 0030h, and another type `data_type_mismatch`, 0607 0010h. A reader of
+// an object may return `std::optional`: an empty one answers
+// `no_data_available`, 0800 0024h, and the object's type, unit and table are
+// those of the value it holds; the elements of an array may not be optional.
 //
 // `od_ro<F>` and `od_const<F>` bind a reader (`od_reader`), `od_wo<S>` a
 // writer (`od_writer`), `od_rw<G, S>` a reader and a writer of the same

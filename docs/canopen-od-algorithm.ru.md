@@ -12,8 +12,8 @@ etk вне области CiA 301 и текстом в массивах симв
 добавляет сам (20 октября), с путями и наименованиями объектов, классами
 по областям индексов, единицами из типов значений, без колонки типа и с
 описанием словаря для хоста (21 октября), с таблицами значений в описании
-и перечислениями на шине (22 октября); примеры взяты из
-adpt-etk-inverter.
+и перечислениями на шине, с ответом «нет данных» на пустой `std::optional`
+(22 октября); примеры взяты из adpt-etk-inverter.
 Почему устроено именно так и какие варианты отвергнуты, рассказывает план
 `canopen-od-plan.ru.md`; привязку параметров настроек со стороны схемы
 описывает §7 `settings-nvm-design.md`.
@@ -398,7 +398,7 @@ constinit od_view<Ctx> const dictionary{table}                       .rodata
 
 | Концепт | Аргументы | Результат |
 |---|---|---|
-| `od_reader<F, Ctx>` | нет, `Ctx&` или `Ctx const&` | скаляр `od_value`, обёртка над ним, перечисление не шире 32 бит (`od_enumeration`) или `std::expected` одного из них с `sdo_abort_code` |
+| `od_reader<F, Ctx>` | нет, `Ctx&` или `Ctx const&` | скаляр `od_value`, обёртка над ним, перечисление не шире 32 бит (`od_enumeration`), `std::expected` одного из них с `sdo_abort_code` или `std::optional` одного из них |
 | `od_writer<S, Ctx>` | значение (по значению или `const&`), перед ним необязательно `Ctx&` или `Ctx const&` | `void` или `od_write_result` |
 | `od_command<F, Ctx>` | нет, `Ctx&` или `Ctx const&` | `void` или `od_write_result` |
 | `od_string_reader<F, Ctx>` | нет, `Ctx&` или `Ctx const&` | `std::string_view` или `char const*` |
@@ -406,7 +406,7 @@ constinit od_view<Ctx> const dictionary{table}                       .rodata
 | `od_rw_pair<G, S, Ctx>` | читатель и писатель | их скаляры на шине (`od_carrier_t`) совпадают |
 
 Значение писателя (`od_writer`) — тех же видов, что результат читателя, без
-`std::expected`. Сигнатуры сравниваются точно. Читатель, который принимает
+`std::expected` и `std::optional`; элемент массива — тоже. Сигнатуры сравниваются точно. Читатель, который принимает
 контекст по значению, не подходит: всё, что он запишет в копию, потерялось
 бы.
 
@@ -418,7 +418,11 @@ Thunk — шаблон функции emblib с сигнатурой запис�
 
 - `od_read_thunk<F, Ctx>(ctx, arg)` зовёт `F` и переводит результат
   `to_od_value`. Если `F` возвращает `std::expected`, ошибка проходит
-  насквозь (`transform`). `arg` не используется.
+  насквозь (`transform`); если `std::optional`, пустой ответ — abort
+  `no_data_available` (08000024h): значения сейчас нет, и объект говорит
+  это кодом, а не особым числом вроде NaN или нуля, которые хост принял
+  бы за данные. `std::expected` остаётся для читателя, которому нужен
+  другой код. `arg` не используется.
 - `od_write_thunk<S, Ctx>(ctx, arg, value)` достаёт из `value` значение
   того типа, который ждёт `S`: `from_od_value<T>`, для обёртки — через её
   конструктор из скаляра. Если альтернатива чужая, возвращает
@@ -507,6 +511,13 @@ consteval operator od_binding<Ctx>() const;
 стоит рядом с `od_rw_pair`, а не внутри: концепт публичный, он обещает
 только общий скаляр, и сообщение о типе не должно описывать расхождение
 единиц.
+
+Читатель объекта — у `od_ro`, `od_const` и `od_rw` — может вернуть
+`std::optional<T>`: тип, единица и таблица значений объекта — от `T`, а
+пустой ответ thunk переводит в 08000024h. Массивов правило не касается:
+элемент массива — скаляр, обёртка или перечисление, и ни массив из
+`std::optional`, ни `std::optional` массива читателем массива не являются;
+элементу понадобился бы свой ответ на подындекс.
 
 Перечисление на шине всегда названо. Построитель, который выводит тип из
 перечисления — `od_ro`, `od_const`, `od_wo`, `od_rw` и `od_ro_array`, —
@@ -1309,7 +1320,7 @@ emb/can/canopen/od_dictionary.hpp:189:60: error: static assertion failed: od: 50
 emb/can/canopen/od_handlers.hpp: In instantiation of 'consteval emb::can::canopen::detail::read_binding<F, Access>::operator emb::can::canopen::od_binding<Ctx>() const [with Ctx = comm::can::canopen::od::context; auto F = comm::can::canopen::od::Vdc; …]':
 comm/can/canopen/od.cpp:103:125:   required from here
   103 | {{0x5010, 0x01}, {"electrical.Vdc", {"DC voltage", "Напряжение DC"}},                                             od_ro<Vdc>},
-emb/can/canopen/od_handlers.hpp:445:19: error: static assertion failed: od: a reader takes nothing or a reference to the context, and returns an od_value scalar, a type wrapping one, an enumeration of at most 32 bits, or std::expected of any of them
+emb/can/canopen/od_handlers.hpp:466:19: error: static assertion failed: od: a reader takes nothing or a reference to the context, and returns an od_value scalar, a type wrapping one, an enumeration of at most 32 bits, or std::expected or std::optional of any of them
 ```
 
 Дальше GCC объясняет, какое условие концепта не выполнено. Второй ошибки
@@ -1640,7 +1651,10 @@ constexpr из 4 000 000, которые разрешает `.clangd`: стол�
   числе отвергнутые — `double`, `int64_t`, структура, контекст по значению,
   лишний параметр, массив из `double`, длиннее 254 или по неконстантной
   ссылке; привязки всех построителей; вызовы через привязки — чтение
-  обёртки, ошибка из `expected`, запись в обёртку, отказ команды, команда с
+  обёртки, ошибка из `expected`, пустой `std::optional` — 08000024h — и
+  непустой у `od_ro` и `od_rw`, тип, единица и таблица читателя
+  `std::optional`, массивы, которые его не принимают, запись в обёртку,
+  отказ команды, команда с
   подписью, символы текста, элементы массива значений; сортировка и поиск,
   оба кода abort, подындекс 00h, который добавляет словарь; составные объекты — размер, общая раскладка, аргумент
   каждого члена; массивы — число элементов, элементы, элемент за длиной;

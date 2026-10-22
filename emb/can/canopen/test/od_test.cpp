@@ -1,6 +1,7 @@
 #include <array>
 #include <cstdint>
 #include <expected>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -756,6 +757,75 @@ consteval bool test_enumerations()
 }
 
 static_assert(test_enumerations());
+
+// -- Readers of a value that may be absent --
+
+constexpr std::optional<emb::units::hz_f32> read_maybe_freq(ctx const& c)
+{
+  if (c.fail) return std::nullopt;
+  return emb::units::hz_f32{c.value};
+}
+
+constexpr std::optional<gear> read_maybe_gear(ctx const& c)
+{
+  if (c.fail) return std::nullopt;
+  return gear::reverse;
+}
+
+constexpr std::optional<std::array<float, 2>> maybe_samples()
+{
+  return std::nullopt;
+}
+
+constexpr std::array<std::optional<float>, 2> maybe_elements()
+{
+  return {};
+}
+
+// A reader of an object may return std::optional: the object's type, unit and
+// table are those of the value it holds. The elements of an array may not
+// be optional, nor the array.
+static_assert(od_reader<read_maybe_freq, ctx>);
+static_assert(od_reader<read_maybe_gear, ctx>);
+static_assert(!od_array_reader<maybe_samples, ctx>);
+static_assert(!od_array_reader<maybe_elements, ctx>);
+static_assert(bind<od_ro<read_maybe_freq>>().type == od_data_type::float32);
+static_assert(bind<od_ro<read_maybe_freq>>().unit == "Hz");
+static_assert(bind<od_const<read_maybe_freq>>().access == od_access::const_);
+static_assert(bind<od_ro<read_maybe_gear>>().type == od_data_type::uint32);
+static_assert(bind<od_ro<read_maybe_gear>>().value_labels.size() == 3);
+static_assert(od_rw_pair<read_maybe_freq, write_value, ctx>);
+static_assert(bind<od_rw<read_maybe_freq, write_freq>>().unit == "Hz");
+
+// An empty value answers no_data_available, 0800 0024h; a value is read as a
+// reader of the value itself reads it.
+consteval bool test_absent_values()
+{
+  ctx c{.value = 1.5f};
+  auto const no_data = std::unexpected(sdo_abort_code::no_data_available);
+  if (bind<od_ro<read_maybe_freq>>().read(c, 0) != od_read_result{1.5f}) {
+    return false;
+  }
+  if (bind<od_ro<read_maybe_gear>>().read(c, 0)
+      != od_read_result{std::uint32_t{4}}) {
+    return false;
+  }
+  if (bind<od_rw<read_maybe_freq, write_freq>>().read(c, 0)
+      != od_read_result{1.5f}) {
+    return false;
+  }
+  c.fail = true;
+  if (bind<od_ro<read_maybe_freq>>().read(c, 0) != no_data) return false;
+  if (bind<od_ro<read_maybe_gear>>().read(c, 0) != no_data) return false;
+  if (bind<od_rw<read_maybe_freq, write_freq>>().read(c, 0) != no_data) {
+    return false;
+  }
+  // The writer of the pair writes as any writer does.
+  return bind<od_rw<read_maybe_freq, write_freq>>().write(c, 0, od_value{2.5f})
+      && c.value == 2.5f;
+}
+
+static_assert(test_absent_values());
 
 // -- Dictionary --
 
