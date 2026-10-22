@@ -94,10 +94,14 @@ consteval bool test_the_readers_follow_the_section()
   ctx c;
   c.section.load(c.memory);
 
-  // An empty medium restores nothing.
+  // An empty medium restores nothing, and what only a record has reads
+  // nothing; the other readers answer.
   if (status::valid(c) || status::read_failed(c)) return false;
-  if (status::loaded_slot(c) != 0xFFFFFFFFu) return false;
-  if (status::sequence(c) != 0 || status::erase_cycles(c) != 0) return false;
+  if (status::loaded_slot(c) || status::loaded_sequence(c)) return false;
+  if (status::schema_matched(c) || status::stored(c)) return false;
+  if (status::loaded(c) || status::unknown(c)) return false;
+  if (status::rejected(c) || status::missing(c)) return false;
+  if (status::sequence(c) || status::erase_cycles(c)) return false;
   if (status::unsaved(c) || status::unapplied(c)) return false;
   if (status::restart_required(c)) return false;
 
@@ -112,22 +116,55 @@ consteval bool test_the_readers_follow_the_section()
   if (!c.section.apply_all(applier)) return false;
   if (status::unapplied(c)) return false;
   if (!c.section.save(applier)) return false;
-  if (status::sequence(c) != 1 || status::erase_cycles(c) != 0) return false;
+  if (status::sequence(c) != 1u || status::erase_cycles(c) != 0u) return false;
   if (status::unsaved(c) || !status::restart_required(c)) return false;
+  // The report is of the load, which found no record.
+  if (status::loaded_slot(c)) return false;
 
   ctx d{c.memory, {}};
   d.section.load(d.memory);
-  if (!status::valid(d) || !status::schema_matched(d)) return false;
-  if (status::loaded_slot(d) != 0 || status::loaded_sequence(d) != 1) {
+  if (!status::valid(d) || status::schema_matched(d) != true) return false;
+  if (status::loaded_slot(d) != 0u || status::loaded_sequence(d) != 1u) {
     return false;
   }
-  if (status::stored(d) != 3 || status::loaded(d) != 3) return false;
-  if (status::unknown(d) != 0 || status::rejected(d) != 0) return false;
-  if (status::missing(d) != 0) return false;
+  if (status::stored(d) != 3u || status::loaded(d) != 3u) return false;
+  if (status::unknown(d) != 0u || status::rejected(d) != 0u) return false;
+  if (status::missing(d) != 0u) return false;
+  if (status::sequence(d) != 1u) return false;
   return !status::restart_required(d);
 }
 
 static_assert(test_the_readers_follow_the_section());
+
+// A medium that needs no erasing has seen no erase cycle, record or not.
+using fram = emb::test::ram_storage<512>;
+inline constexpr settings::placement fram_placement{.magic = 0x47464354u,
+                                                    .base = 0,
+                                                    .slot_capacity = 128,
+                                                    .slot_count = 2};
+
+using fram_section = settings::section<schema, fram, fram_placement>;
+
+struct fram_ctx {
+  fram memory;
+  fram_section section;
+};
+
+constexpr fram_section& fram_section_of(fram_ctx& c)
+{
+  return c.section;
+}
+
+using fram_status = od_section_status<fram_section_of>;
+
+consteval bool test_a_medium_without_erasing()
+{
+  fram_ctx c;
+  c.section.load(c.memory);
+  return !fram_status::sequence(c) && fram_status::erase_cycles(c) == 0u;
+}
+
+static_assert(test_a_medium_without_erasing());
 
 inline constexpr od_area areas[] = {{0x3000, 0x3FFF, od_class::parameters}};
 
@@ -171,9 +208,16 @@ consteval bool test_dictionary()
   if (magic->read(c, magic->arg) != od_read_result{flash_placement.magic}) {
     return false;
   }
+  // No record: the slot answers no_data_available, and whether the record
+  // was restored answers false.
   auto const slot = view.find({0x3000, 0x07});
-  if (!slot) return false;
-  return slot->read(c, slot->arg) == od_read_result{0xFFFFFFFFu};
+  auto const valid = view.find({0x3000, 0x09});
+  if (!slot || !valid) return false;
+  if (slot->read(c, slot->arg)
+      != std::unexpected(sdo_abort_code::no_data_available)) {
+    return false;
+  }
+  return valid->read(c, valid->arg) == od_read_result{false};
 }
 
 static_assert(test_dictionary());

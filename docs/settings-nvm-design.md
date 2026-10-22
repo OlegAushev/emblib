@@ -578,7 +578,13 @@ show a value inherit with the type.
 application or a save, as an `od_refusal`, whose labels name it, and
 answers 08000024h while there was none. `od_section_status` reads the state
 of the section, 3000h, through the same function of the context as the
-bridge. A refusal answers with `to_sdo_abort`, the code `to_refusal` maps it
+bridge. What only a record has answers 08000024h while there is no record:
+the number of the record last restored or written (05h), the erase cycles
+on flash (06h), and of the report of the last load the slot, the number,
+whether the schema matched and the counts of values (07h, 08h, 0Ah,
+0Ch–10h). Whether the load restored a record (09h), whether the medium
+refused a read (0Bh), the flags (11h–13h) and the placement (01h–04h)
+always read a value. A refusal answers with `to_sdo_abort`, the code `to_refusal` maps it
 to: what nothing applies on command with `unsupported_access`, a failed
 check with `parameter_incompatibility`, a change not admitted or values
 that wait to be saved with `state_error`, a failing medium with
@@ -1318,6 +1324,26 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   alternatives of `od_value`, one to one. Rejected: four characters to an
   element, which keeps the traffic of before but makes the elements words
   of text, and a type `char`, which CiA 301 does not have.
+- **No record is no data** (2026-10-22). The state of the section at
+  3000h answered a load that restored nothing with the defaults of its
+  report — FFFFFFFFh for the slot, 0 for the number, false for the schema,
+  zeros for the counts — and its sequence number, until a record existed,
+  with 0, all of which a host read as a record's data: 0 is a valid number,
+  as numbers wrap around through it, false a valid "the schema differs",
+  and no parameter missing a falsehood where none has a value stored. Now
+  each reader of what only a record has returns `std::optional`, and the
+  dictionary answers an empty one with 08000024h: 05h and, on flash, 06h
+  while the section has no record, and 07h, 08h, 0Ah and 0Ch–10h after a
+  load that restored none. The counts 0Ch–0Fh would not lie at zero, but
+  they are defaults of a report there is none of, and one rule over the
+  whole report reads more simply than one per member: 09h is false if and
+  only if those members answer 08000024h. 09h, whether a record was
+  restored, is the answer itself; 0Bh, whether the medium refused a read,
+  is about the load, not the record; 11h–13h are flags of the section and
+  01h–04h constants of its placement; 06h on a medium without erasing is
+  zero, which is true. Rejected: reading 09h before the rest, which every
+  host would have to know to do; a special value for each member, which
+  a host would have to learn member by member.
 - **No sequence number without a record** (2026-10-22). `section::sequence()`
   returned zero before the first load, after a load that restored no record
   and after a wipe, the same zero that numbers a record once the numbers
