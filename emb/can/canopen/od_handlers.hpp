@@ -7,13 +7,17 @@
 #include <cstdint>
 #include <expected>
 #include <optional>
+#include <span>
 #include <string_view>
 #include <type_traits>
+#include <utility>
 #include <variant>
 
 #include "od.hpp"
 #include "od_value_cast.hpp"
 
+#include <emb/meta/enum_carrier32.hpp>
+#include <emb/meta/enum_labels.hpp>
 #include <emb/meta/typelist.hpp>
 #include <emb/meta/unit_symbol.hpp>
 
@@ -44,7 +48,66 @@ template<auto F>
 using od_args_t = typename od_signature<decltype(+F)>::args;
 
 template<typename T>
-concept od_carried = od_scalar<T> || wraps_od_scalar<T>;
+concept od_carried = od_scalar<T> || wraps_od_scalar<T> || od_enumeration<T>;
+
+// Whether `T` is no enumeration, or one that labels its values, as an
+// enumeration on the bus must.
+template<typename T>
+concept od_labelled = !std::is_enum_v<T> || enum_with_labels<T>;
+
+// The labels of the values of the enumeration `E` as a table of values, for
+// the binding of an object of it.
+template<enum_with_labels E>
+inline constexpr auto od_enum_value_labels = [] {
+  constexpr auto labels = enum_labels_of<E>();
+  std::array<od_value_label, labels.size()> out{};
+  for (auto i = 0uz; i < labels.size(); ++i) {
+    out[i] = {.value = std::to_underlying(labels[i].value()),
+              .name = labels[i].name(),
+              .title = labels[i].title()};
+  }
+  return out;
+}();
+
+// The table of the values of an object whose value is of type `T`: that of
+// the labels of `T` if it is an enumeration, otherwise none.
+template<typename T>
+inline constexpr std::span<od_value_label const> od_value_labels_of{};
+
+template<enum_with_labels E>
+inline constexpr std::span<od_value_label const> od_value_labels_of<E> =
+    od_enum_value_labels<E>;
+
+// The values that the labels of the enumeration `E` name, in their carrier,
+// in increasing order: all that a writer of `E` keeps of the labels.
+template<enum_with_labels E>
+inline constexpr auto od_enum_values = [] {
+  constexpr auto labels = enum_labels_of<E>();
+  std::array<enum_carrier32_t<E>, labels.size()> out{};
+  for (auto i = 0uz; i < labels.size(); ++i) {
+    out[i] = std::to_underlying(labels[i].value());
+  }
+  return out;
+}();
+
+// Whether `value`, in the carrier of the enumeration `E`, is a value that the
+// labels of `E` name: one from the lowest to the highest if they name every
+// value between, one of those they name otherwise.
+template<enum_with_labels E>
+constexpr bool od_names(enum_carrier32_t<E> value)
+{
+  constexpr auto& values = od_enum_values<E>;
+  constexpr bool gapless = static_cast<std::int64_t>(values.back())
+                             - static_cast<std::int64_t>(values.front())
+                             + 1
+                        == static_cast<std::int64_t>(values.size());
+  if constexpr (gapless) {
+    return values.front() <= value && value <= values.back();
+  }
+  else {
+    return std::ranges::binary_search(values, value);
+  }
+}
 
 template<typename R>
 struct od_read_value {
@@ -121,7 +184,9 @@ using od_context_of = std::remove_reference_t<typelist_at_t<od_args_t<F>, 0>>;
 // The concept `od_reader<F, Ctx>` is satisfied if and only if `F` is a
 // function, or a lambda without captures, that takes nothing, `Ctx&` or
 // `Ctx const&` and returns an od_value scalar, a type wrapping one (see
-// `wraps_od_scalar`), or `std::expected` of either with `sdo_abort_code`.
+// `wraps_od_scalar`), an enumeration of at most 32 bits (see
+// `od_enumeration`), or `std::expected` of any of them with
+// `sdo_abort_code`.
 template<auto F, typename Ctx>
 concept od_reader =
     detail::od_function<F>
@@ -132,8 +197,8 @@ concept od_reader =
 // The concept `od_writer<S, Ctx>` is satisfied if and only if `S` is a
 // function, or a lambda without captures, that takes the value to write, by
 // value or by const reference, optionally after `Ctx&` or `Ctx const&`, and
-// returns `void` or `od_write_result`. The value is an od_value scalar or a
-// type wrapping one.
+// returns `void` or `od_write_result`. The value is an od_value scalar, a
+// type wrapping one, or an enumeration of at most 32 bits.
 template<auto S, typename Ctx>
 concept od_writer = detail::od_function<S>
                  && detail::od_written<detail::od_args_t<S>, Ctx>::valid
@@ -160,7 +225,8 @@ concept od_string_reader =
 // The concept `od_array_reader<F, Ctx>` is satisfied if and only if `F` is a
 // function, or a lambda without captures, that takes nothing, `Ctx&` or
 // `Ctx const&` and returns `std::array`, by value or by const reference, of at
-// most `od_array_capacity` od_value scalars or types wrapping one.
+// most `od_array_capacity` od_value scalars, types wrapping one, or
+// enumerations of at most 32 bits.
 template<auto F, typename Ctx>
 concept od_array_reader =
     detail::od_function<F>
@@ -172,16 +238,17 @@ concept od_array_reader =
         <= od_array_capacity);
 
 // The concept `od_rw_pair<G, S, Ctx>` is satisfied if and only if `G` is a
-// reader and `S` a writer whose values travel as the same scalar, even if one
-// is wrapped and the other is not.
+// reader and `S` a writer whose values travel as the same scalar
+// (`od_carrier_t`), even if one is wrapped and the other is not, or one is an
+// enumeration and the other its carrier.
 template<auto G, auto S, typename Ctx>
 concept od_rw_pair =
     od_reader<G, Ctx>
     && od_writer<S, Ctx>
     && std::same_as<
-        unwrapped_t<
+        od_carrier_t<
             typename detail::od_read_value<detail::od_result_t<G>>::type>,
-        unwrapped_t<
+        od_carrier_t<
             typename detail::od_written<detail::od_args_t<S>, Ctx>::type>>;
 
 namespace detail {
@@ -209,12 +276,25 @@ constexpr od_read_result od_read_thunk(Ctx& ctx, std::uint16_t)
   }
 }
 
+// Writes `value` through `S`. A value of an enumeration is checked in its
+// carrier, before the enumeration is formed: one that its labels do not name
+// answers `value_range_exceeded`, as 260 does for an enumeration of
+// `std::uint8_t` that names 4.
 template<auto S, typename Ctx>
 constexpr od_write_result od_write_thunk(Ctx& ctx,
                                          std::uint16_t,
                                          od_value value)
 {
   using value_type = typename od_written<od_args_t<S>, Ctx>::type;
+  if constexpr (od_enumeration<value_type>) {
+    auto const* const carried = std::get_if<od_carrier_t<value_type>>(&value);
+    if (carried == nullptr) {
+      return std::unexpected(sdo_abort_code::data_type_mismatch);
+    }
+    if (!od_names<value_type>(*carried)) {
+      return std::unexpected(sdo_abort_code::value_range_exceeded);
+    }
+  }
   auto const written = from_od_value<value_type>(value);
   if (!written) return std::unexpected(sdo_abort_code::data_type_mismatch);
 
@@ -293,7 +373,8 @@ constexpr od_read_result od_array_element_thunk(Ctx& ctx,
 
 inline constexpr std::string_view od_reader_shape =
     "od: a reader takes nothing or a reference to the context, and returns "
-    "an od_value scalar, a type wrapping one, or std::expected of either";
+    "an od_value scalar, a type wrapping one, an enumeration of at most 32 "
+    "bits, or std::expected of any of them";
 
 inline constexpr std::string_view od_writer_shape =
     "od: a writer takes the value, optionally after a reference to the "
@@ -310,13 +391,20 @@ inline constexpr std::string_view od_string_shape =
 inline constexpr std::string_view od_array_shape =
     "od: an array reader takes nothing or a reference to the context, and "
     "returns std::array, by value or by const reference, of at most 254 "
-    "od_value scalars or types wrapping one";
+    "od_value scalars, types wrapping one or enumerations of at most 32 bits";
+
+inline constexpr std::string_view od_unlabelled_enumeration =
+    "od: an enumeration on the bus must be scoped and label its values "
+    "(emb::enum_with_labels)";
 
 inline constexpr std::string_view od_rw_type_disagreement =
     "od: the reader and the writer of an rw object disagree on the type";
 
 inline constexpr std::string_view od_rw_unit_disagreement =
     "od: the reader and the writer of an rw object disagree on the unit";
+
+inline constexpr std::string_view od_rw_values_disagreement =
+    "od: the reader and the writer of an rw object disagree on the values";
 
 // Whether the reader `G` and the writer `S` of an rw object, which travel as
 // the same scalar (`od_rw_pair`), agree on the unit: the symbols of the types
@@ -332,6 +420,23 @@ inline constexpr bool od_units_agree = [] {
   return read.empty() || written.empty() || read == written;
 }();
 
+// Whether the reader `G` and the writer `S` of an rw object, which travel as
+// the same scalar (`od_rw_pair`), agree on the values: both read and write the
+// same enumeration, which names them, or neither reads or writes one. A reader
+// of an enumeration and a writer of its carrier do not agree: the writer would
+// take values the labels do not name.
+template<auto G, auto S, typename Ctx>
+inline constexpr bool od_values_agree = [] {
+  using read_type = typename od_read_value<od_result_t<G>>::type;
+  using written_type = typename od_written<od_args_t<S>, Ctx>::type;
+  if constexpr (std::is_enum_v<read_type> || std::is_enum_v<written_type>) {
+    return std::same_as<read_type, written_type>;
+  }
+  else {
+    return true;
+  }
+}();
+
 template<auto F, od_access Access>
 struct read_binding {
   template<typename Ctx>
@@ -340,10 +445,19 @@ struct read_binding {
     static_assert(od_reader<F, Ctx>, od_reader_shape);
     if constexpr (od_reader<F, Ctx>) {
       using value_type = typename od_read_value<od_result_t<F>>::type;
-      return {.access = Access,
-              .type = od_type_of<unwrapped_t<value_type>>,
-              .read = &od_read_thunk<F, Ctx>,
-              .unit = unit_symbol_of<value_type>()};
+      static_assert(od_labelled<value_type>, od_unlabelled_enumeration);
+      if constexpr (od_labelled<value_type>) {
+        return {.access = Access,
+                .type = od_type_of<od_carrier_t<value_type>>,
+                .read = &od_read_thunk<F, Ctx>,
+                .unit = unit_symbol_of<value_type>(),
+                .value_labels = od_value_labels_of<value_type>};
+      }
+      else {
+        return {.access = Access,
+                .type = od_data_type::uint32,
+                .diagnosed = true};
+      }
     }
     else {
       return {.access = Access,
@@ -361,10 +475,19 @@ struct write_binding {
     static_assert(od_writer<S, Ctx>, od_writer_shape);
     if constexpr (od_writer<S, Ctx>) {
       using value_type = typename od_written<od_args_t<S>, Ctx>::type;
-      return {.access = od_access::wo,
-              .type = od_type_of<unwrapped_t<value_type>>,
-              .write = &od_write_thunk<S, Ctx>,
-              .unit = unit_symbol_of<value_type>()};
+      static_assert(od_labelled<value_type>, od_unlabelled_enumeration);
+      if constexpr (od_labelled<value_type>) {
+        return {.access = od_access::wo,
+                .type = od_type_of<od_carrier_t<value_type>>,
+                .write = &od_write_thunk<S, Ctx>,
+                .unit = unit_symbol_of<value_type>(),
+                .value_labels = od_value_labels_of<value_type>};
+      }
+      else {
+        return {.access = od_access::wo,
+                .type = od_data_type::uint32,
+                .diagnosed = true};
+      }
     }
     else {
       return {.access = od_access::wo,
@@ -389,15 +512,29 @@ struct rw_binding {
       using written_type = typename od_written<od_args_t<S>, Ctx>::type;
       constexpr bool agree = od_units_agree<G, S, Ctx>;
       static_assert(agree, od_rw_unit_disagreement);
+      constexpr bool same_values = od_values_agree<G, S, Ctx>;
+      static_assert(same_values, od_rw_values_disagreement);
+      // Agreeing on the values, both read and write the same enumeration,
+      // if any.
+      constexpr bool labelled = !same_values || od_labelled<read_type>;
+      static_assert(labelled, od_unlabelled_enumeration);
 
-      constexpr auto read_unit = unit_symbol_of<read_type>();
-      return {.access = od_access::rw,
-              .type = od_type_of<unwrapped_t<read_type>>,
-              .read = &od_read_thunk<G, Ctx>,
-              .write = &od_write_thunk<S, Ctx>,
-              .unit = read_unit.empty() ? unit_symbol_of<written_type>()
-                                        : read_unit,
-              .diagnosed = !agree};
+      if constexpr (same_values && od_labelled<read_type>) {
+        constexpr auto read_unit = unit_symbol_of<read_type>();
+        return {.access = od_access::rw,
+                .type = od_type_of<od_carrier_t<read_type>>,
+                .read = &od_read_thunk<G, Ctx>,
+                .write = &od_write_thunk<S, Ctx>,
+                .unit = read_unit.empty() ? unit_symbol_of<written_type>()
+                                          : read_unit,
+                .value_labels = od_value_labels_of<read_type>,
+                .diagnosed = !agree};
+      }
+      else {
+        return {.access = od_access::rw,
+                .type = od_data_type::uint32,
+                .diagnosed = true};
+      }
     }
     else {
       return {.access = od_access::rw,
@@ -462,11 +599,21 @@ struct array_binding {
     static_assert(od_array_reader<F, Ctx>, od_array_shape);
     if constexpr (od_array_reader<F, Ctx>) {
       using elements = od_elements<od_result_t<F>>;
-      return {.access = od_access::ro,
-              .type = od_type_of<unwrapped_t<typename elements::type>>,
-              .read = &od_array_element_thunk<F, Ctx>,
-              .count = &od_array_count_thunk<Ctx, elements::count>,
-              .unit = unit_symbol_of<typename elements::type>()};
+      using element_type = typename elements::type;
+      static_assert(od_labelled<element_type>, od_unlabelled_enumeration);
+      if constexpr (od_labelled<element_type>) {
+        return {.access = od_access::ro,
+                .type = od_type_of<od_carrier_t<element_type>>,
+                .read = &od_array_element_thunk<F, Ctx>,
+                .count = &od_array_count_thunk<Ctx, elements::count>,
+                .unit = unit_symbol_of<element_type>(),
+                .value_labels = od_value_labels_of<element_type>};
+      }
+      else {
+        return {.access = od_access::ro,
+                .type = od_data_type::uint32,
+                .diagnosed = true};
+      }
     }
     else {
       return {.access = od_access::ro,
@@ -479,15 +626,20 @@ struct array_binding {
 } // namespace detail
 
 // The variable templates below bind an object in an `od_row` to typed
-// handlers. The object's type is the scalar the handler's value travels as,
-// its unit the symbol of the type of that value (`emb::unit_symbol_of`), if
-// it names one, and its access is the builder's; the row's context type is
-// deduced from the row. A handler that does not fit its builder is reported
-// at the row.
+// handlers. The object's type is the scalar the handler's value travels as
+// (`od_carrier_t`), its unit the symbol of the type of that value
+// (`emb::unit_symbol_of`), if it names one, its table of values that of the
+// labels of the value's type, if it is an enumeration, which must label its
+// values (`emb::enum_with_labels`), and its access is the builder's; the
+// row's context type is deduced from the row. A handler that does not fit its
+// builder is reported at the row. A writer of an enumeration gets only the
+// values its labels name: another value answers `value_range_exceeded`,
+// 0609 0030h, and another type `data_type_mismatch`, 0607 0010h.
 //
 // `od_ro<F>` and `od_const<F>` bind a reader (`od_reader`), `od_wo<S>` a
 // writer (`od_writer`), `od_rw<G, S>` a reader and a writer of the same
-// scalar (`od_rw_pair`) whose units agree (`detail::od_units_agree`),
+// scalar (`od_rw_pair`) whose units agree (`detail::od_units_agree`) and
+// that read and write the same enumeration or none (`detail::od_values_agree`),
 // `od_exec<F>` a command (`od_command`), a `uint32` object written to run it,
 // whose value the command does not get, and `od_string<F>` a string
 // (`od_string_reader`) as an array of its characters: subindex 00h reads its

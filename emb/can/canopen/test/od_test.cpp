@@ -4,11 +4,13 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 
 #include <emb/can/canopen/od.hpp>
 #include <emb/can/canopen/od_description.hpp>
 #include <emb/can/canopen/od_dictionary.hpp>
 #include <emb/can/canopen/od_handlers.hpp>
+#include <emb/meta/enum_labels.hpp>
 #include <emb/units.hpp>
 
 namespace {
@@ -569,6 +571,191 @@ consteval bool test_ro_array()
 }
 
 static_assert(test_ro_array());
+
+// -- Enumerations --
+
+// A gear of a drive, its values with a gap, labelled for a host.
+enum class gear : std::uint8_t { park, drive, reverse = 4 };
+
+consteval std::span<emb::enum_label<gear> const> enum_labels(gear)
+{
+  static constexpr emb::enum_label<gear> labels[] = {
+      {gear::park, "park", {"Park", "Стоянка"}},
+      {gear::drive, "drive", {"Drive", "Вперёд"}},
+      {gear::reverse, "reverse", {"Reverse", "Назад"}},
+  };
+  return labels;
+}
+
+// A tilt, below zero and without a gap.
+enum class tilt : std::int8_t { left = -1, level, right };
+
+consteval std::span<emb::enum_label<tilt> const> enum_labels(tilt)
+{
+  static constexpr emb::enum_label<tilt> labels[] = {
+      {tilt::left, "left", {"Left", "Влево"}},
+      {tilt::level, "level", {"Level", "Ровно"}},
+      {tilt::right, "right", {"Right", "Вправо"}},
+  };
+  return labels;
+}
+
+// An enumeration without labels, and one too wide for the bus.
+enum class unlabelled : std::uint8_t { a };
+enum class wide : std::uint64_t { a };
+
+constexpr gear read_gear(ctx const& c)
+{
+  return static_cast<gear>(static_cast<std::uint8_t>(c.value));
+}
+
+constexpr void write_gear(ctx& c, gear g)
+{
+  c.value = static_cast<float>(std::to_underlying(g));
+}
+
+constexpr std::expected<tilt, sdo_abort_code> read_tilt(ctx const& c)
+{
+  if (c.fail) return std::unexpected(sdo_abort_code::no_data_available);
+  return tilt::left;
+}
+
+constexpr void write_tilt(ctx& c, tilt t)
+{
+  c.value = static_cast<float>(std::to_underlying(t));
+}
+
+constexpr std::array<gear, 2> gears()
+{
+  return {gear::drive, gear::reverse};
+}
+
+constexpr void write_u32(ctx& c, std::uint32_t v)
+{
+  c.value = static_cast<float>(v);
+}
+
+constexpr unlabelled read_unlabelled()
+{
+  return unlabelled::a;
+}
+
+constexpr wide read_wide()
+{
+  return wide::a;
+}
+
+// An enumeration travels as its carrier, its underlying value widened to 32
+// bits of its signedness.
+static_assert(od_enumeration<gear>);
+static_assert(od_enumeration<tilt>);
+static_assert(od_enumeration<unlabelled>);
+static_assert(!od_enumeration<wide>);
+static_assert(!od_enumeration<std::uint32_t>);
+static_assert(std::same_as<od_carrier_t<gear>, std::uint32_t>);
+static_assert(std::same_as<od_carrier_t<tilt>, std::int32_t>);
+static_assert(std::same_as<od_carrier_t<std::int16_t>, std::int16_t>);
+static_assert(std::same_as<od_carrier_t<emb::units::hz_f32>, float>);
+
+consteval bool test_enumeration_values()
+{
+  if (to_od_value(gear::reverse) != od_value{std::uint32_t{4}}) return false;
+  if (to_od_value(tilt::left) != od_value{std::int32_t{-1}}) return false;
+  od_value const four{std::uint32_t{4}};
+  od_value const minus_one{std::int32_t{-1}};
+  od_value const past_a_byte{std::uint32_t{260}};
+  od_value const byte{std::uint8_t{4}};
+  if (from_od_value<gear>(four) != gear::reverse) return false;
+  if (from_od_value<tilt>(minus_one) != tilt::left) return false;
+  // 260 is not taken for the 4 its low byte holds, nor a uint8 for a gear.
+  return !from_od_value<gear>(past_a_byte) && !from_od_value<gear>(byte);
+}
+
+static_assert(test_enumeration_values());
+
+// The shapes of the handlers take an enumeration of at most 32 bits, labelled
+// or not: the builders ask for the labels.
+static_assert(od_reader<read_gear, ctx>);
+static_assert(od_reader<read_tilt, ctx>);
+static_assert(od_reader<read_unlabelled, ctx>);
+static_assert(!od_reader<read_wide, ctx>);
+static_assert(od_writer<write_gear, ctx>);
+static_assert(od_array_reader<gears, ctx>);
+static_assert(od_rw_pair<read_gear, write_gear, ctx>);
+static_assert(detail::od_values_agree<read_gear, write_gear, ctx>);
+// A gear and a uint32 travel as one scalar but disagree on the values: od_rw
+// refuses the pair with a message of its own.
+static_assert(od_rw_pair<read_gear, write_u32, ctx>);
+static_assert(!detail::od_values_agree<read_gear, write_u32, ctx>);
+static_assert(!detail::od_values_agree<read_tilt, write_gear, ctx>);
+static_assert(detail::od_values_agree<read_value, write_freq, ctx>);
+static_assert(detail::od_rw_values_disagreement
+              != detail::od_rw_type_disagreement);
+
+// The binding of an enumeration takes the type of its carrier and the table
+// of its labels; a number has none.
+static_assert(bind<od_ro<read_gear>>().type == od_data_type::uint32);
+static_assert(bind<od_ro<read_tilt>>().type == od_data_type::int32);
+static_assert(bind<od_wo<write_gear>>().type == od_data_type::uint32);
+static_assert(bind<od_rw<read_gear, write_gear>>().type
+              == od_data_type::uint32);
+static_assert(bind<od_ro_array<gears>>().type == od_data_type::uint32);
+static_assert(bind<od_ro<read_gear>>().value_labels.size() == 3);
+static_assert(bind<od_ro<read_gear>>().value_labels[2].value == 4);
+static_assert(bind<od_ro<read_gear>>().value_labels[2].name == "reverse");
+static_assert(bind<od_ro<read_gear>>().value_labels[2].title
+              == emb::i18n{"Reverse", "Назад"});
+static_assert(bind<od_ro<read_tilt>>().value_labels[0].value == -1);
+static_assert(bind<od_wo<write_gear>>().value_labels.size() == 3);
+static_assert(bind<od_rw<read_gear, write_gear>>().value_labels.size() == 3);
+static_assert(bind<od_ro_array<gears>>().value_labels.size() == 3);
+static_assert(bind<od_ro<read_value>>().value_labels.empty());
+static_assert(bind<od_ro<read_gear>>().unit.empty());
+static_assert(!bind<od_ro<read_gear>>().diagnosed);
+
+// A reader gives the carrier; a writer takes only the values the labels
+// name, checked in the carrier, and another type is a mismatch.
+consteval bool test_enumerations()
+{
+  ctx c;
+  auto const write = bind<od_wo<write_gear>>().write;
+  auto const exceeded = std::unexpected(sdo_abort_code::value_range_exceeded);
+  if (!write(c, 0, od_value{std::uint32_t{4}}) || c.value != 4.f) return false;
+  if (bind<od_ro<read_gear>>().read(c, 0) != od_read_result{std::uint32_t{4}}) {
+    return false;
+  }
+  // 260 would be a reverse once cut to its byte, and 2 lies in the gap.
+  if (write(c, 0, od_value{std::uint32_t{260}}) != exceeded) return false;
+  if (write(c, 0, od_value{std::uint32_t{2}}) != exceeded) return false;
+  if (write(c, 0, od_value{std::uint8_t{1}})
+      != std::unexpected(sdo_abort_code::data_type_mismatch)) {
+    return false;
+  }
+  if (c.value != 4.f) return false;
+
+  // Without a gap, the bounds tell the values named.
+  auto const write_tilted = bind<od_wo<write_tilt>>().write;
+  if (!write_tilted(c, 0, od_value{std::int32_t{-1}}) || c.value != -1.f) {
+    return false;
+  }
+  if (write_tilted(c, 0, od_value{std::int32_t{2}}) != exceeded) return false;
+  if (write_tilted(c, 0, od_value{std::int32_t{-2}}) != exceeded) return false;
+
+  // A reader of std::expected passes its error through.
+  if (bind<od_ro<read_tilt>>().read(c, 0) != od_read_result{std::int32_t{-1}}) {
+    return false;
+  }
+  c.fail = true;
+  if (bind<od_ro<read_tilt>>().read(c, 0)
+      != std::unexpected(sdo_abort_code::no_data_available)) {
+    return false;
+  }
+
+  auto const second = bind<od_ro_array<gears>>().read(c, 1);
+  return second == od_read_result{std::uint32_t{4}};
+}
+
+static_assert(test_enumerations());
 
 // -- Dictionary --
 
@@ -1177,6 +1364,29 @@ static_assert(as_view(described_policies)
                             "\"access\":\"const\",\"value_table\":1}\n"));
 static_assert(occurrences(as_view(described_policies), "\"value_table\":1,")
               == 5);
+
+// An object of an enumeration names its values with the labels of the
+// enumeration.
+// clang-format off
+inline constexpr od_row<ctx> geared[] = {
+    {{0x5002, 0x01}, titled("b.gear"), od_ro<read_gear>},
+    {{0x4003, 0x00}, titled("a.mode"), mode_record()},
+};
+// clang-format on
+
+constexpr auto described_gears =
+    make_description<geared, areas, groups, "Test device">();
+
+static_assert(
+    as_view(described_gears)
+        .contains("{\"type\":\"value_label\",\"value_table\":2,\"value\":4,"
+                  "\"name\":\"reverse\",\"title\":\"Reverse\","
+                  "\"title_ru\":\"Назад\"}\n"));
+static_assert(as_view(described_gears)
+                  .ends_with("\"path\":\"b.gear\",\"title\":\"b.gear\","
+                             "\"title_ru\":\"b.gear\",\"class\":\"watch\","
+                             "\"datatype\":\"uint32\",\"access\":\"ro\","
+                             "\"value_table\":2}\n"));
 
 // -- Checks --
 

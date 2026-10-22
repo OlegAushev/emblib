@@ -212,9 +212,10 @@ struct od_label {
 // which code finds the value, and its title, in each language. A table of
 // value labels names the values of an object in increasing order, and the
 // object takes those values only: a host shows the title of a value in place
-// of the number and offers the values named when it writes one. An
-// enumeration gives the labels of its values (`emb::enum_labels_of`). Like
-// the label of a row, a table exists at compile time only.
+// of the number and offers the values named when it writes one. A builder
+// makes the table of an object whose value is an enumeration from the labels
+// of the enumeration (`emb::enum_labels_of`). Like the label of a row, a
+// table exists at compile time only.
 struct od_value_label {
   std::int64_t value;
   std::string_view name;
@@ -286,9 +287,10 @@ struct od_field_label {
 // as the builder knows it: that of the type its handler reads or writes
 // (`emb::unit_symbol_of`), or the unit of a settings parameter; the unit of
 // the row's label, if any, takes its place. `value_labels` is the table of the
-// values the object takes (`od_value_label`), if they are named: of an array,
-// the table of its elements, and of a record, of its members that inherit its
-// value. `command` marks a command, which
+// values the object takes (`od_value_label`), if they are named, as the
+// builder knows it: that of the enumeration its handler reads or writes; of
+// an array, the table of its elements, and of a record, of its members that
+// inherit its value. `command` marks a command, which
 // is written to run it, and `signature`, if it has a value, is the word that
 // must be written; `text` marks an array of characters. `diagnosed` is set by
 // a builder that has already reported an error, so that `make_dictionary`

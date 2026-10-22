@@ -116,6 +116,25 @@ consteval auto actual_unit_message()
 }
 
 // Whether the reader `Actual` reads the actual value of a parameter of type
+// `T` as that type: as that very enumeration if either reads or is one, so
+// that the actual value has the values the record names, and otherwise as the
+// scalar that `T` travels as (`od_carrier_t`). A reader of `hz_f32` fits a
+// parameter of type `float`; a reader of a `std::uint32_t` fits no parameter
+// of an enumeration, nor a reader of an enumeration a parameter of
+// `std::uint32_t`, though both travel as a `uint32`.
+template<auto Actual, typename T>
+consteval bool od_reads_as()
+{
+  using value_type = typename od_read_value<od_result_t<Actual>>::type;
+  if constexpr (std::is_enum_v<value_type> || std::is_enum_v<T>) {
+    return std::same_as<value_type, T>;
+  }
+  else {
+    return std::same_as<od_carrier_t<value_type>, od_carrier_t<T>>;
+  }
+}
+
+// Whether the reader `Actual` reads the actual value of a parameter of type
 // `T` and unit `unit` in that unit: the type of the value it returns names no
 // unit, or the symbol of `T`, or `unit`. A reader of `rpm_f32` fits a
 // parameter of type `rpm_f32` whose unit is "rpm/s", one of `hz_f32` a
@@ -179,8 +198,8 @@ concept od_settings_access =
 // A record of a parameter carries `catalog`, so `make_dictionary` checks that
 // each exposed parameter has exactly one record and each hidden one none.
 // Binding a declaration that the schema does not hold, a hidden parameter, or
-// an `Actual` of another type or unit (`detail::od_reads_in_unit`) is
-// reported at the row. A value of a type no
+// an `Actual` of another type (`detail::od_reads_as`) or unit
+// (`detail::od_reads_in_unit`) is reported at the row. A value of a type no
 // parameter can hold is refused with `data_type_mismatch`.
 template<auto SectionOf, auto MakeApplier>
   requires od_settings_access<SectionOf, MakeApplier>
@@ -371,18 +390,16 @@ class od_settings {
        .inherits = true},
   };
 
-  // Whether `Actual` is nullptr, or a reader whose value travels as the
-  // scalar `type` names.
-  template<auto Actual>
-  static consteval bool reads_as(od_data_type type)
+  // Whether `Actual` is nullptr, or a reader that reads the actual value of
+  // a parameter of type `T` as that type (`detail::od_reads_as`).
+  template<auto Actual, typename T>
+  static consteval bool reads_as()
   {
     if constexpr (std::is_null_pointer_v<decltype(Actual)>) {
       return true;
     }
     else if constexpr (od_reader<Actual, context_type>) {
-      using value_type =
-          typename detail::od_read_value<detail::od_result_t<Actual>>::type;
-      return od_type_of<unwrapped_t<value_type>> == type;
+      return detail::od_reads_as<Actual, T>();
     }
     else {
       return false;
@@ -412,7 +429,7 @@ class od_settings {
       constexpr bool shown = !known || param::desc.expose;
       constexpr auto type =
           od_type_of<settings::scalar_t<typename param::type>>;
-      constexpr bool fits = reads_as<Actual>(type);
+      constexpr bool fits = reads_as<Actual, typename param::type>();
       constexpr bool in_unit = !fits || reads_in_unit_of<Decl, Actual>();
       constexpr bool actual = !std::is_null_pointer_v<decltype(Actual)>;
       static_assert(shown, detail::not_exposed_message<param::name>());

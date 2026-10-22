@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <expected>
+#include <span>
 #include <string>
 #include <string_view>
 
@@ -7,6 +8,7 @@
 #include <emb/can/canopen/od_dictionary.hpp>
 #include <emb/can/canopen/od_handlers.hpp>
 #include <emb/can/canopen/od_settings.hpp>
+#include <emb/meta/enum_labels.hpp>
 #include <emb/settings/section.hpp>
 #include <emb/test/mock/ram_storage.hpp>
 #include <emb/units.hpp>
@@ -136,6 +138,23 @@ constexpr emb::units::eradps_f32 actual_eradps()
   return emb::units::eradps_f32{10.0f};
 }
 
+// A mode of the drive, labelled for a host, that travels as a uint32.
+enum class drive_mode : std::uint32_t { idle, run };
+
+consteval std::span<emb::enum_label<drive_mode> const> enum_labels(drive_mode)
+{
+  static constexpr emb::enum_label<drive_mode> labels[] = {
+      {drive_mode::idle, "idle", {"Idle", "Ожидание"}},
+      {drive_mode::run, "run", {"Run", "Работа"}},
+  };
+  return labels;
+}
+
+constexpr drive_mode actual_mode()
+{
+  return drive_mode::run;
+}
+
 using bridge = od_settings<section_of, make_applier>;
 
 // -- Error mapping --
@@ -177,6 +196,15 @@ static_assert(detail::actual_type_message<"drive.freq">().view()
 static_assert(detail::actual_unit_message<"drive.freq">().view()
               == "od: the actual value of settings parameter 'drive.freq' is "
                  "read in another unit");
+
+// The actual value is read as the type of its parameter: as the scalar it
+// travels as, whatever wraps it, or as that very enumeration where either is
+// one. A reader of an enumeration fits no parameter of its carrier.
+static_assert(detail::od_reads_as<actual_freq, emb::units::hz_f32>());
+static_assert(detail::od_reads_as<actual_hz, float>());
+static_assert(detail::od_reads_as<actual_pole_pairs, std::int32_t>());
+static_assert(!detail::od_reads_as<actual_freq, std::int32_t>());
+static_assert(!detail::od_reads_as<actual_mode, std::uint32_t>());
 
 // The actual value is read in the unit of its parameter: in a type that names
 // no unit, in the type of the parameter, or in the parameter's unit, which
