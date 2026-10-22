@@ -1324,6 +1324,19 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   alternatives of `od_value`, one to one. Rejected: four characters to an
   element, which keeps the traffic of before but makes the elements words
   of text, and a type `char`, which CiA 301 does not have.
+- **The inverter names the values of its objects** (2026-10-22).
+  `model.pwm_mode` was a `uint32` whose upper bound counted the
+  alternatives of the modulator by hand and whose value the config reader
+  cast to `pmsm::pwm_mode`. It is a parameter of `pmsm::pwm_mode` now,
+  which labels its nine modes beside its declaration, a static assertion
+  holding the labels to the alternatives; its bounds are the first and the
+  last mode, the casts went, and its descriptor, its identifier included,
+  is that of the `uint32` before, so the value stored stays. With the
+  bridge and the section, the description names the modes at 3165h, the
+  policy at 07h of every parameter and the codes of 2100h:03, and the
+  inverter answers 08000024h where it showed a number standing for no
+  data: at 2100h:03 before the first refusal, and at 3000h without a
+  record. The types on the bus do not change.
 - **No record is no data** (2026-10-22). The state of the section at
   3000h answered a load that restored nothing with the defaults of its
   report — FFFFFFFFh for the slot, 0 for the number, false for the schema,
@@ -1794,6 +1807,25 @@ them:
 `system.uptime` stays at 5000h:01. Subindex 00h of each new index reads
 the number of its objects; paths and titles do not change, and a host
 that reads the description finds the objects where they now are.
+
+Naming the values, on 2026-10-22 (§10), changed what a tool shows:
+
+- **Values are named.** The description gives the titles of the nine
+  PWM modes of `model.pwm_mode`, 3165h, of the apply policy at 07h of
+  every parameter, "On command" and "On restart", and of the five codes
+  of `settings.last_refusal`, 2100h:03, so that a tool shows a title
+  where it showed a number and offers the named values when it writes
+  one. `model.pwm_mode` keeps the value it has stored: its identifier is
+  the one before.
+- **No data is no longer a number.** 2100h:03 answers 08000024h until the
+  first refusal, where it read 0. At 3000h, after a load that restored no
+  record, 07h, 08h, 0Ah and 0Ch–10h answer 08000024h, where they read
+  FFFFFFFFh, 0, false and zeros; 05h, and 06h on flash, answer it while
+  the section has no record — until the first save on a clean medium and
+  after an erase — where they read 0. 09h tells whether a record was
+  restored, and 0Bh whether the medium refused a read, as before.
+- **The types on the bus do not change**, and 2000h:00 gives a new
+  fingerprint.
 
 ## 10b. What applying taught us
 
