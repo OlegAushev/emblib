@@ -564,19 +564,25 @@ a parameter:
 | 02h | ro | the value applied |
 | 03h | ro | the value stored |
 | 04h–06h | const | the default, the lower and the upper bound |
-| 07h | const u8 | the policy: 0 on command, 1 on restart |
+| 07h | const u8 | the policy: 0 on command, 1 on restart, named by the labels of `apply_policy` |
 | 08h | wo u32 | applies the parameter |
 | 09h | wo u32 | discards its value requested |
 | 0Ah | ro | the actual value, with `param<Decl, Actual>` only |
 
+The record of a parameter of an enumeration travels as its carrier and
+names its values by the labels of the enumeration, which its members that
+show a value inherit with the type.
+
 `apply_all`, `discard_all` and `last_refusal` serve `od_exec` and `od_ro`;
 `last_refusal`, 2100h:03, shows the abort of the last refusal of an
-application or a save. `od_section_status` reads the state of the section,
-3000h, through the same function of the context as the bridge.
-A refusal answers with `to_sdo_abort`: what nothing applies on
-command with `unsupported_access`, a failed check with
-`parameter_incompatibility`, a change not admitted or values that wait to
-be saved with `state_error`.
+application or a save, as an `od_refusal`, whose labels name it, and
+answers 08000024h while there was none. `od_section_status` reads the state
+of the section, 3000h, through the same function of the context as the
+bridge. A refusal answers with `to_sdo_abort`, the code `to_refusal` maps it
+to: what nothing applies on command with `unsupported_access`, a failed
+check with `parameter_incompatibility`, a change not admitted or values
+that wait to be saved with `state_error`, a failing medium with
+`data_store_error`.
 
 The mapping of a key to a parameter stays hand-maintained on purpose: OD
 indices are an external contract frozen for tools and EDS. Moving them
@@ -1312,6 +1318,26 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   alternatives of `od_value`, one to one. Rejected: four characters to an
   element, which keeps the traffic of before but makes the elements words
   of text, and a type `char`, which CiA 301 does not have.
+- **The codes of a refusal are an enumeration** (2026-10-22).
+  `last_refusal` returned a `uint32`, zero while there was no refusal, and
+  a host saw a number it had to look up among the aborts. The codes are
+  now `od_refusal`, an enumeration of `std::uint32_t` beside
+  `to_sdo_abort`, whose labels name them for a host: exactly the five
+  aborts that answer a refusal, their values taken from `sdo_abort_code`,
+  so that each code is typed once. `to_refusal` maps a refusal to apply or
+  to save onto its code by a switch without a default, so that a refusal
+  added without a code does not compile, and `to_sdo_abort` of a refusal
+  is a cast of it. `last_refusal` returns `std::optional<od_refusal>`, and
+  no refusal yet is no data, 08000024h. The values are codes of aborts, not
+  the refusals themselves: the object reports the abort that answered the
+  last refusal, which a host matches with the answer to its command, and
+  one code names a refusal to apply and one to save alike, as
+  `parameter_incompatibility` and `state_error` do. Rejected: the
+  enumeration inside `od_settings`, where each specialization would have a
+  type of its own; the name `refusal`, which `settings::refusal`, a
+  variant of both refusals, already takes; a value `none`, a number that a
+  host would take for a code; and the refusals as values, which a host
+  would have to map to the aborts it was answered with.
 - **A parameter may be an enumeration** (2026-10-22). A choice such as the
   PWM mode was a `uint32` parameter whose upper bound was written by hand
   from the number of modes and whose value code cast to its enumeration:

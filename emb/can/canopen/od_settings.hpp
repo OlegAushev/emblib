@@ -16,6 +16,7 @@
 #include "od_handlers.hpp"
 
 #include <emb/meta/alternative_of.hpp>
+#include <emb/meta/enum_labels.hpp>
 #include <emb/meta/fixed_string.hpp>
 #include <emb/meta/typelist.hpp>
 #include <emb/meta/unit_symbol.hpp>
@@ -43,37 +44,99 @@ constexpr sdo_abort_code to_sdo_abort(settings::error error)
   return sdo_abort_code::general_error;
 }
 
-// Returns the abort code that answers a refusal to apply settings: a
-// parameter that nothing applies on command is not accessed so, a check that
-// fails is a parameter incompatibility, and a change the application does not
-// admit now waits for another device state.
-constexpr sdo_abort_code to_sdo_abort(settings::apply_refusal refusal)
+// The scoped enumeration `od_refusal` defines the aborts that answer a refusal
+// of the settings to apply or to save, and its values are those codes
+// (`sdo_abort_code`): what `od_settings::last_refusal` reports, as a `uint32`,
+// is the abort that answered the last refusal, which a host matches with the
+// answer to its command. One value thus names a refusal to apply and a refusal
+// to save alike, as `parameter_incompatibility` and `state_error` do. Its
+// labels name the values for a host.
+enum class od_refusal : std::uint32_t {
+  // A parameter that nothing applies on command, but a restart.
+  unsupported_access = std::to_underlying(sdo_abort_code::unsupported_access),
+  // An index that names no parameter.
+  object_not_found = std::to_underlying(sdo_abort_code::object_not_found),
+  // Values that fail their check.
+  parameter_incompatibility =
+      std::to_underlying(sdo_abort_code::parameter_incompatibility),
+  // A medium that failed to store the values.
+  data_store_error = std::to_underlying(sdo_abort_code::data_store_error),
+  // A change that the device does not admit in its state, or a save of values
+  // that wait to be applied.
+  state_error = std::to_underlying(sdo_abort_code::state_error),
+};
+
+// Returns the labels of the values of `od_refusal`, by increasing code.
+consteval std::span<enum_label<od_refusal> const> enum_labels(od_refusal)
+{
+  static constexpr enum_label<od_refusal> labels[] = {
+      {od_refusal::unsupported_access,
+       "unsupported_access",
+       {"Applies only after a restart",
+        "Применяется только после перезапуска"}},
+      {od_refusal::object_not_found,
+       "object_not_found",
+       {"Unknown parameter", "Неизвестный параметр"}},
+      {od_refusal::parameter_incompatibility,
+       "parameter_incompatibility",
+       {"Check failed", "Проверка не пройдена"}},
+      {od_refusal::data_store_error,
+       "data_store_error",
+       {"Medium failed", "Отказ носителя"}},
+      {od_refusal::state_error,
+       "state_error",
+       {"Not admitted in this state, or values wait to be applied",
+        "Не допускается в этом состоянии, или значения ждут применения"}},
+  };
+  return labels;
+}
+
+// Returns the code that answers a refusal to apply settings: a parameter that
+// nothing applies on command is not accessed so, a check that fails is a
+// parameter incompatibility, and a change the application does not admit now
+// waits for another device state. A refusal added without a code does not
+// compile: the switch names every refusal.
+constexpr od_refusal to_refusal(settings::apply_refusal refusal)
 {
   switch (refusal) {
   case settings::apply_refusal::unknown_parameter:
-    return sdo_abort_code::object_not_found;
+    return od_refusal::object_not_found;
   case settings::apply_refusal::not_applicable:
-    return sdo_abort_code::unsupported_access;
+    return od_refusal::unsupported_access;
   case settings::apply_refusal::invalid:
-    return sdo_abort_code::parameter_incompatibility;
-  case settings::apply_refusal::not_admitted:
-    return sdo_abort_code::state_error;
+    return od_refusal::parameter_incompatibility;
+  case settings::apply_refusal::not_admitted: return od_refusal::state_error;
   }
-  return sdo_abort_code::general_error;
+  std::unreachable();
 }
 
-// Returns the abort code that answers a refusal to save settings: values
-// that wait to be applied are a device state, values that fail their check
-// a parameter incompatibility, and a failing medium a store error.
-constexpr sdo_abort_code to_sdo_abort(settings::save_refusal refusal)
+// Returns the code that answers a refusal to save settings: values that wait
+// to be applied are a device state, values that fail their check a parameter
+// incompatibility, and a failing medium a store error. A refusal added
+// without a code does not compile.
+constexpr od_refusal to_refusal(settings::save_refusal refusal)
 {
   switch (refusal) {
-  case settings::save_refusal::unapplied: return sdo_abort_code::state_error;
+  case settings::save_refusal::unapplied: return od_refusal::state_error;
   case settings::save_refusal::invalid:
-    return sdo_abort_code::parameter_incompatibility;
-  case settings::save_refusal::medium: return sdo_abort_code::data_store_error;
+    return od_refusal::parameter_incompatibility;
+  case settings::save_refusal::medium: return od_refusal::data_store_error;
   }
-  return sdo_abort_code::general_error;
+  std::unreachable();
+}
+
+// Returns the abort code that answers a refusal to apply settings, the value
+// of `to_refusal`.
+constexpr sdo_abort_code to_sdo_abort(settings::apply_refusal refusal)
+{
+  return static_cast<sdo_abort_code>(std::to_underlying(to_refusal(refusal)));
+}
+
+// Returns the abort code that answers a refusal to save settings, the value
+// of `to_refusal`.
+constexpr sdo_abort_code to_sdo_abort(settings::save_refusal refusal)
+{
+  return static_cast<sdo_abort_code>(std::to_underlying(to_refusal(refusal)));
 }
 
 namespace detail {
@@ -185,14 +248,19 @@ concept od_settings_access =
 //   04h  const      the default
 //   05h  const      the lower bound
 //   06h  const      the upper bound
-//   07h  const u8   the apply policy: 0 on command, 1 on restart
+//   07h  const u8   the apply policy: 0 on command, 1 on restart, named
+//                   by the labels of `settings::apply_policy`
 //   08h  wo u32     applies the parameter, as `section::apply` does
 //   09h  wo u32     discards its value requested, as `section::discard` does
 //   0Ah  ro         the actual value, with `Actual` only
 //
+// The record of a parameter of an enumeration names its values by the labels
+// of the enumeration, which its members that show a value inherit.
+//
 // `apply_all` and `discard_all` are commands for `od_exec`, `last_refusal` a
 // reader for `od_ro`: the abort that answered the last refusal of an
-// application or of a save, zero if there was none. A refusal answers a
+// application or of a save, as an `od_refusal`, or nothing, which the object
+// answers with `no_data_available`, if there was none. A refusal answers a
 // command with the abort of `to_sdo_abort`.
 //
 // A record of a parameter carries `catalog`, so `make_dictionary` checks that
@@ -382,7 +450,9 @@ class od_settings {
       {.name = "max",
        .title = {"Upper bound", "Верхняя граница"},
        .inherits = true},
-      {.name = "policy", .title = {"Apply policy", "Политика применения"}},
+      {.name = "policy",
+       .title = {"Apply policy", "Политика применения"},
+       .value_labels = detail::od_value_labels_of<settings::apply_policy>},
       {.name = "apply", .title = {"Apply", "Применить"}, .command = true},
       {.name = "discard", .title = {"Discard", "Отбросить"}, .command = true},
       {.name = "actual",
@@ -446,6 +516,7 @@ class od_settings {
                       actual ? 11 : 10),
               .label = {.path = Decl.desc.name, .title = Decl.title},
               .unit = Decl.unit,
+              .value_labels = detail::od_value_labels_of<typename param::type>,
               .diagnosed = !(known && shown && fits && in_unit)};
     }
   };
@@ -471,12 +542,11 @@ public:
     SectionOf(ctx).discard_all();
   }
 
-  static constexpr std::uint32_t last_refusal(context_type& ctx)
+  static constexpr std::optional<od_refusal> last_refusal(context_type& ctx)
   {
     auto const refused = SectionOf(ctx).last_refusal();
-    if (!refused) return 0;
-    return std::to_underlying(
-        refused->visit([](auto reason) { return to_sdo_abort(reason); }));
+    if (!refused) return std::nullopt;
+    return refused->visit([](auto reason) { return to_refusal(reason); });
   }
 };
 

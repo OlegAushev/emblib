@@ -19,6 +19,18 @@ using namespace emb::can::canopen;
 using enum od_data_type;
 namespace settings = emb::settings;
 
+// A mode of the drive, labelled for a host, that travels as a uint32.
+enum class drive_mode : std::uint32_t { idle, run };
+
+consteval std::span<emb::enum_label<drive_mode> const> enum_labels(drive_mode)
+{
+  static constexpr emb::enum_label<drive_mode> labels[] = {
+      {drive_mode::idle, "idle", {"Idle", "Ожидание"}},
+      {drive_mode::run, "run", {"Run", "Работа"}},
+  };
+  return labels;
+}
+
 inline constexpr auto drive_phase_swap =
     settings::param("drive.phase_swap",
                     false,
@@ -50,13 +62,20 @@ inline constexpr auto drive_slope =
                     {.title = {"Speed slope", "Темп изменения скорости"},
                      .unit = "rpm/s",
                      .apply = settings::apply_policy::on_command});
+// A parameter of an enumeration, which names its values.
+inline constexpr auto drive_mode_param =
+    settings::param("drive.mode",
+                    drive_mode::idle,
+                    {.title = {"Drive mode", "Режим привода"},
+                     .apply = settings::apply_policy::on_command});
 
 inline constexpr auto schema = settings::make_schema(drive_phase_swap,
                                                      motor_p,
                                                      drive_freq,
                                                      prod_serial,
                                                      prod_secret,
-                                                     drive_slope);
+                                                     drive_slope,
+                                                     drive_mode_param);
 
 using fram = emb::test::ram_storage<512>;
 inline constexpr settings::placement fram_placement{.magic = 0x47464354u,
@@ -138,18 +157,6 @@ constexpr emb::units::eradps_f32 actual_eradps()
   return emb::units::eradps_f32{10.0f};
 }
 
-// A mode of the drive, labelled for a host, that travels as a uint32.
-enum class drive_mode : std::uint32_t { idle, run };
-
-consteval std::span<emb::enum_label<drive_mode> const> enum_labels(drive_mode)
-{
-  static constexpr emb::enum_label<drive_mode> labels[] = {
-      {drive_mode::idle, "idle", {"Idle", "Ожидание"}},
-      {drive_mode::run, "run", {"Run", "Работа"}},
-  };
-  return labels;
-}
-
 constexpr drive_mode actual_mode()
 {
   return drive_mode::run;
@@ -183,6 +190,23 @@ static_assert(to_sdo_abort(settings::save_refusal::invalid)
               == sdo_abort_code::parameter_incompatibility);
 static_assert(to_sdo_abort(settings::save_refusal::medium)
               == sdo_abort_code::data_store_error);
+
+// The codes of a refusal are the aborts that answer it, typed once in
+// sdo_abort_code; one code names a refusal to apply and one to save alike.
+static_assert(std::to_underlying(od_refusal::unsupported_access) == 0x06010000);
+static_assert(std::to_underlying(od_refusal::object_not_found) == 0x06020000);
+static_assert(std::to_underlying(od_refusal::parameter_incompatibility)
+              == 0x06040043);
+static_assert(std::to_underlying(od_refusal::data_store_error) == 0x08000020);
+static_assert(std::to_underlying(od_refusal::state_error) == 0x08000022);
+static_assert(to_refusal(settings::apply_refusal::not_admitted)
+              == od_refusal::state_error);
+static_assert(to_refusal(settings::save_refusal::unapplied)
+              == od_refusal::state_error);
+static_assert(to_refusal(settings::apply_refusal::invalid)
+              == to_refusal(settings::save_refusal::invalid));
+static_assert(emb::enum_labels_of<od_refusal>().size() == 5);
+static_assert(emb::enum_labels_of<od_refusal>()[4].name() == "state_error");
 
 static_assert(detail::to_settings_value(od_value{1.5f})
               == settings::value{1.5f});
@@ -221,7 +245,7 @@ static_assert(
 // -- Catalogs --
 
 static_assert(bridge::catalog.what == "settings parameter");
-static_assert(bridge::catalog.names.size() == 6);
+static_assert(bridge::catalog.names.size() == 7);
 static_assert(bridge::catalog.names[1] == "motor.p");
 static_assert(bridge::catalog.exposed[3]);
 static_assert(!bridge::catalog.exposed[4]);
@@ -266,6 +290,18 @@ static_assert(bind<bridge::param<drive_slope>>().unit == "rpm/s");
 static_assert(!bind<bridge::param<drive_freq, actual_hz>>().diagnosed);
 static_assert(!bind<bridge::param<drive_slope, actual_rpm>>().diagnosed);
 
+// The record of a parameter of an enumeration travels as its carrier and
+// names its values; the actual value is read as the enumeration itself. The
+// policy of every record is named.
+static_assert(bind<bridge::param<drive_mode_param>>().type == uint32);
+static_assert(bind<bridge::param<drive_mode_param>>().value_labels.size() == 2);
+static_assert(bind<bridge::param<motor_p>>().value_labels.empty());
+static_assert(!bind<bridge::param<drive_mode_param, actual_mode>>().diagnosed);
+static_assert(detail::od_reads_as<actual_mode, drive_mode>());
+static_assert(!detail::od_reads_as<actual_pole_pairs, drive_mode>());
+static_assert(bind<bridge::param<motor_p>>().field_labels[7].value_labels.size()
+              == 2);
+
 // -- Records --
 
 inline constexpr od_area areas[] = {
@@ -287,6 +323,7 @@ inline constexpr od_row<ctx> records[] = {
     {{0x3102, 0x00}, {},                                                             bridge::param<drive_freq, actual_freq>},
     {{0x3103, 0x00}, {},                                                             bridge::param<prod_serial>},
     {{0x3104, 0x00}, {},                                                             bridge::param<drive_slope, actual_rpm>},
+    {{0x3105, 0x00}, {},                                                             bridge::param<drive_mode_param, actual_mode>},
     {{0x3001, 0x01}, {"settings.apply_all", {"Apply all", "Применить все"}},         od_exec<bridge::apply_all>},
     {{0x3001, 0x02}, {"settings.discard_all", {"Discard all", "Отбросить все"}},     od_exec<bridge::discard_all>},
     {{0x3001, 0x03}, {"settings.last_refusal", {"Last refusal", "Последний отказ"}}, od_ro<bridge::last_refusal>},
@@ -380,6 +417,44 @@ static_assert(
         .contains(R"({"type":"field","layout":1,"sub":"0x0A","name":"actual",)"
                   R"("title":"Actual value","title_ru":"Фактическое значение",)"
                   R"("access":"ro","inherits":true})"
+                  "\n"));
+
+// The values are named: the policy of every record, first, by the members of
+// the layouts; then the last refusal and the mode of the drive, by key.
+static_assert(occurrences(as_view(description), R"("type":"value_label")")
+              == 2 + 5 + 2);
+static_assert(
+    as_view(description)
+        .contains(R"({"type":"value_label","value_table":0,"value":0,)"
+                  R"("name":"on_command","title":"On command",)"
+                  R"("title_ru":"По команде"})"
+                  "\n"));
+static_assert(
+    as_view(description)
+        .contains(R"({"type":"value_label","value_table":1,"value":134217762,)"
+                  R"("name":"state_error",)"
+                  R"("title":"Not admitted in this state, or values wait to )"
+                  R"(be applied","title_ru":"Не допускается в этом )"
+                  R"(состоянии, или значения ждут применения"})"
+                  "\n"));
+static_assert(
+    as_view(description)
+        .contains(R"({"type":"field","layout":0,"sub":"0x07","name":"policy",)"
+                  R"("title":"Apply policy","title_ru":"Политика применения",)"
+                  R"("datatype":"uint8","access":"const","value_table":0})"
+                  "\n"));
+static_assert(
+    as_view(description)
+        .contains(R"("path":"settings.last_refusal","title":"Last refusal",)"
+                  R"("title_ru":"Последний отказ","class":"control",)"
+                  R"("datatype":"uint32","access":"ro","value_table":1})"
+                  "\n"));
+static_assert(
+    as_view(description)
+        .contains(R"({"type":"record","index":"0x3105","path":"drive.mode",)"
+                  R"("title":"Drive mode","title_ru":"Режим привода",)"
+                  R"("class":"parameters","datatype":"uint32",)"
+                  R"("value_table":2,"layout":1})"
                   "\n"));
 
 // Reads and writes the dictionary as a server would, through `c`.
@@ -502,6 +577,12 @@ consteval bool test_commands()
   auto _ = c.section.load(c.memory);
   client od{dictionary, c};
 
+  // Before any refusal, the last refusal has no value to show.
+  if (od.read({0x3001, 0x03})
+      != std::unexpected(sdo_abort_code::no_data_available)) {
+    return false;
+  }
+
   if (!od.write({0x3100, 0x01}, od_value{true})) return false;
   if (!od.write({0x3101, 0x01}, od_value{std::int32_t{7}})) return false;
   if (!od.exec({0x3001, 0x01})) return false;
@@ -522,7 +603,38 @@ consteval bool test_commands()
   return od.read({0x3001, 0x03}) == od_read_result{std::uint32_t{0x08000022}};
 }
 
+// A parameter of an enumeration takes the values named within its bounds,
+// which are its first and last ones, and its record reads them as its
+// carrier.
+consteval bool test_a_record_of_an_enumeration()
+{
+  ctx c;
+  auto _ = c.section.load(c.memory);
+  client od{dictionary, c};
+
+  if (od.read({0x3105, 0x01}) != od_read_result{std::uint32_t{0}}) {
+    return false;
+  }
+  if (od.read({0x3105, 0x06}) != od_read_result{std::uint32_t{1}}) {
+    return false;
+  }
+  if (od.read({0x3105, 0x0A}) != od_read_result{std::uint32_t{1}}) {
+    return false;
+  }
+  if (!od.write({0x3105, 0x01}, od_value{std::uint32_t{1}})) return false;
+  auto const exceeded = std::unexpected(sdo_abort_code::value_range_exceeded);
+  if (od.write({0x3105, 0x01}, od_value{std::uint32_t{2}}) != exceeded) {
+    return false;
+  }
+  if (od.write({0x3105, 0x01}, od_value{std::uint32_t{257}}) != exceeded) {
+    return false;
+  }
+  if (!od.exec({0x3105, 0x08})) return false;
+  return c.section.get<drive_mode_param>() == drive_mode::run;
+}
+
 static_assert(test_a_record_shows_its_parameter());
+static_assert(test_a_record_of_an_enumeration());
 static_assert(test_a_record_applies_its_parameter());
 static_assert(test_commands());
 
