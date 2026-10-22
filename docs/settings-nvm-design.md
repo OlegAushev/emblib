@@ -1324,6 +1324,16 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   alternatives of `od_value`, one to one. Rejected: four characters to an
   element, which keeps the traffic of before but makes the elements words
   of text, and a type `char`, which CiA 301 does not have.
+- **The inverter reads its Hall readings in their types** (2026-10-22).
+  The group `hall` at 5070h gave the sector and the inputs as `float32`, 0
+  to 5 and 0 or 1, and without telemetry of the sensor NaN for the speed,
+  the angle, the sector and the inputs and 0 for the objects of the
+  emulator, which read as angles that agree. The sector is an
+  `emb::hall::sector` now, a `uint32` that the description names by the
+  labels of the sectors, the inputs are booleans, and every object of the
+  group answers 08000024h without telemetry, its reader returning
+  `std::optional`. Rejected: NaN for no data, which a host has to know to
+  test for and which neither an integer nor a boolean holds.
 - **The inverter names the values of its objects** (2026-10-22).
   `model.pwm_mode` was a `uint32` whose upper bound counted the
   alternatives of the modulator by hand and whose value the config reader
@@ -1826,6 +1836,17 @@ Naming the values, on 2026-10-22 (§10), changed what a tool shows:
   restored, and 0Bh whether the medium refused a read, as before.
 - **The types on the bus do not change**, and 2000h:00 gives a new
   fingerprint.
+
+Reading the Hall group in its types, on 2026-10-22 (§10), changed:
+
+- **5070h:03, `hall.sector`, is a `uint32`** that the description names
+  "A (001)" to "CA (101)", the inputs high in the sector and its Hall code,
+  where it was a `float32` from 0 to 5; **5070h:04–06**, the inputs, are
+  booleans, where they were `float32` 0 or 1.
+- **Without telemetry of the Hall sensor, every object of the group**,
+  5070h:01–09, answers 08000024h, where the speed, the angle, the sector
+  and the inputs read NaN and the objects of the emulator 0.
+- 2000h:00 gives a new fingerprint.
 
 ## 10b. What applying taught us
 
