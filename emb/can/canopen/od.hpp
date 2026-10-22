@@ -207,6 +207,20 @@ struct od_label {
   std::string_view unit = {};
 };
 
+// The struct `od_value_label` labels, for a host, a value that an object may
+// take: the value, its name, a segment of a path unique in its table, by
+// which code finds the value, and its title, in each language. A table of
+// value labels names the values of an object in increasing order, and the
+// object takes those values only: a host shows the title of a value in place
+// of the number and offers the values named when it writes one. An
+// enumeration gives the labels of its values (`emb::enum_labels_of`). Like
+// the label of a row, a table exists at compile time only.
+struct od_value_label {
+  std::int64_t value;
+  std::string_view name;
+  i18n title;
+};
+
 // An object's handlers. `arg` is the argument its row binds, e.g. the index
 // of a settings parameter; the handlers of an array's element get the
 // element's position instead, its subindex less one.
@@ -244,16 +258,20 @@ struct od_field {
 // layout, for a host: `name`, a segment of a path unique in the layout, the
 // title, in each language, whether the member holds the record's value
 // (`inherits`), as the requested value of a settings parameter does, and so
-// takes the record's type and unit, and whether it is a command (`command`),
-// with the word that must be written (`signature`), if any. A label written
-// by hand must tell the truth about its field: nothing checks that a command
-// is written to run it or that its signature is the one its handler checks.
+// takes the record's type, unit and table of values, whether it is a command
+// (`command`), with the word that must be written (`signature`), if any, and
+// the table of the values the member takes (`value_labels`), if they are
+// named. A label written by hand must tell the truth about its field: nothing
+// checks that a command is written to run it, that its signature is the one
+// its handler checks, or that its handler reads only the values its table
+// names.
 struct od_field_label {
   std::string_view name;
   i18n title;
   bool inherits = false;
   bool command = false;
   std::optional<std::uint32_t> signature{};
+  std::span<od_value_label const> value_labels{};
 };
 
 // The class template `od_binding` describes what serves an object: its access
@@ -267,7 +285,10 @@ struct od_field_label {
 // has none of its own. `unit` is the symbol of the unit of the object's value
 // as the builder knows it: that of the type its handler reads or writes
 // (`emb::unit_symbol_of`), or the unit of a settings parameter; the unit of
-// the row's label, if any, takes its place. `command` marks a command, which
+// the row's label, if any, takes its place. `value_labels` is the table of the
+// values the object takes (`od_value_label`), if they are named: of an array,
+// the table of its elements, and of a record, of its members that inherit its
+// value. `command` marks a command, which
 // is written to run it, and `signature`, if it has a value, is the word that
 // must be written; `text` marks an array of characters. `diagnosed` is set by
 // a builder that has already reported an error, so that `make_dictionary`
@@ -300,6 +321,7 @@ struct od_binding {
   std::span<od_field_label const> field_labels{};
   od_label label{};
   std::string_view unit{};
+  std::span<od_value_label const> value_labels{};
   bool command = false;
   std::optional<std::uint32_t> signature{};
   bool text = false;

@@ -8,6 +8,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "../od.hpp"
@@ -26,7 +27,7 @@ constexpr void append_hex(std::string& out, unsigned value, int digits)
 }
 
 // Appends `value` in decimal digits.
-constexpr void append_decimal(std::string& out, std::size_t value)
+constexpr void append_decimal(std::string& out, std::uint64_t value)
 {
   char digits[20]{};
   auto count = 0uz;
@@ -37,6 +38,16 @@ constexpr void append_decimal(std::string& out, std::size_t value)
   while (count != 0) {
     out += digits[--count];
   }
+}
+
+// Appends `value` in decimal digits, after a minus sign if it is negative.
+constexpr void append_value(std::string& out, std::int64_t value)
+{
+  if (value < 0) out += '-';
+  append_decimal(out,
+                 value < 0
+                     ? std::uint64_t{0} - static_cast<std::uint64_t>(value)
+                     : static_cast<std::uint64_t>(value));
 }
 
 // Whether every field of `label` is empty, as the label of a row whose
@@ -295,6 +306,126 @@ constexpr std::string_view handler_error(od_access access,
   return {};
 }
 
+// Whether a member of the record `binding` inherits its value.
+template<typename Ctx>
+constexpr bool inherits_value(od_binding<Ctx> const& binding)
+{
+  for (auto const& label : binding.field_labels) {
+    if (label.inherits) return true;
+  }
+  return false;
+}
+
+// Returns "value -1" for the value -1 of a table of values.
+constexpr std::string value_name(std::int64_t value)
+{
+  std::string out = "value ";
+  append_value(out, value);
+  return out;
+}
+
+// Returns "values 0 and 2" for the values 0 and 2 of a table of values.
+constexpr std::string values_name(std::int64_t first, std::int64_t second)
+{
+  std::string out = "values ";
+  append_value(out, first);
+  out += " and ";
+  append_value(out, second);
+  return out;
+}
+
+// Whether `value` is a value of the integer type that `type` names. No value
+// is one of a `boolean` or a `float32`, which have no table of values.
+constexpr bool fits(od_data_type type, std::int64_t value)
+{
+  switch (type) {
+  case od_data_type::int8: return std::in_range<std::int8_t>(value);
+  case od_data_type::int16: return std::in_range<std::int16_t>(value);
+  case od_data_type::int32: return std::in_range<std::int32_t>(value);
+  case od_data_type::uint8: return std::in_range<std::uint8_t>(value);
+  case od_data_type::uint16: return std::in_range<std::uint16_t>(value);
+  case od_data_type::uint32: return std::in_range<std::uint32_t>(value);
+  case od_data_type::boolean:
+  case od_data_type::float32: return false;
+  }
+  return false;
+}
+
+// Returns the rule that a table of values breaks by being given to an object
+// or a member of type `type`, a command if `command` and an array of
+// characters if `text`, or an empty view if it breaks none: the values of a
+// command are not used, a character is no choice, a boolean has its own two
+// values, and a float32 is no integer.
+constexpr std::string_view table_error(od_data_type type,
+                                       bool command,
+                                       bool text)
+{
+  if (command) return "a command has no table of values";
+  if (text) return "an array of characters has no table of values";
+  if (type == od_data_type::boolean) return "a boolean has no table of values";
+  if (type == od_data_type::float32) return "a float32 has no table of values";
+  return {};
+}
+
+// Returns the rule that `values`, a table of values, breaks by being given
+// to an object or a member of type `type`, or an empty string if it breaks
+// none: each value is one of the type.
+constexpr std::string values_fit_error(std::span<od_value_label const> values,
+                                       od_data_type type)
+{
+  for (auto const& label : values) {
+    if (!fits(type, label.value)) {
+      return value_name(label.value)
+           + " does not fit "
+           + std::string{type_name(type)};
+    }
+  }
+  return {};
+}
+
+// Returns the rule that `values`, a table of values, breaks, or an empty
+// string if it breaks none: each value is named as a segment of a path and
+// titled, the values strictly increase, and no two of them have the same
+// name, or the same title in one language; in two languages a title may be
+// the same, as an abbreviation is. The rules depend on the table alone, so a
+// table that objects or members share is checked once
+// (`check_value_tables`).
+constexpr std::string value_labels_error(std::span<od_value_label const> values)
+{
+  for (auto i = 0uz; i < values.size(); ++i) {
+    auto const& label = values[i];
+    if (!is_segment(label.name)) {
+      return value_name(label.value)
+           + ": the name must be a letter followed by letters, digits or "
+             "underscores";
+    }
+    if (auto const what = title_error(label.title); !what.empty()) {
+      return value_name(label.value) + ": " + std::string{what};
+    }
+    if (i > 0 && values[i - 1].value >= label.value) {
+      return value_name(label.value)
+           + " follows "
+           + value_name(values[i - 1].value)
+           + ": the values must increase";
+    }
+    for (auto j = 0uz; j < i; ++j) {
+      auto const& other = values[j];
+      if (other.name == label.name) {
+        return values_name(other.value, label.value) + " have the same name";
+      }
+      if (other.title.en == label.title.en) {
+        return values_name(other.value, label.value)
+             + " have the same title in English";
+      }
+      if (other.title.ru == label.title.ru) {
+        return values_name(other.value, label.value)
+             + " have the same title in Russian";
+      }
+    }
+  }
+  return {};
+}
+
 // Returns "member 03h" for the member at subindex `sub`.
 constexpr std::string member_name(std::size_t sub)
 {
@@ -340,8 +471,11 @@ constexpr std::string field_labels_error(std::span<od_field_label const> labels)
 
 // The rules of the labels of the members of a record that depend on the
 // record: a label for each field, a member that inherits the record's value
-// of the record's type, and no unit for a record without such a member, which
-// the unit would not apply to.
+// of the record's type, no unit for a record without such a member, which the
+// unit would not apply to, and a table of values only for a member that
+// inherits nothing, whose type takes one (`table_error`) and holds each of
+// its values. A member that inherits the record's value takes the record's
+// table, and the unit of a member is only ever the record's.
 template<typename Ctx>
 constexpr std::string check_field_labels(od_row<Ctx> const& row)
 {
@@ -371,6 +505,24 @@ constexpr std::string check_field_labels(od_row<Ctx> const& row)
                      "a record without a member that inherits its value has "
                      "no unit");
   }
+  for (auto i = 0uz; i < labels.size(); ++i) {
+    auto const& values = labels[i].value_labels;
+    if (values.empty()) continue;
+    if (labels[i].inherits) {
+      return row_error(row,
+                       member_name(i)
+                           + " inherits the record's values and has no table "
+                             "of its own");
+    }
+    auto const type = binding.layout[i].type;
+    if (auto const what = table_error(type, labels[i].command, false);
+        !what.empty()) {
+      return row_error(row, member_name(i) + ": " + std::string{what});
+    }
+    if (auto const what = values_fit_error(values, type); !what.empty()) {
+      return row_error(row, member_name(i) + ": " + what);
+    }
+  }
   return {};
 }
 
@@ -395,6 +547,54 @@ constexpr std::string check_shared_labels(od_row<Ctx> const (&rows)[N])
     checked[count++] = labels;
     if (auto const what = field_labels_error(labels); !what.empty()) {
       return row_error(row, what);
+    }
+  }
+  return {};
+}
+
+// Checks the tables of values by `value_labels_error`, once for each table,
+// which rows and the labels of members may share, and reports a broken one at
+// the first row that has it, and at its member. A table is told apart from
+// another by its address, and the tables of the members of records that
+// share their labels are visited once.
+template<typename Ctx, std::size_t N>
+constexpr std::string check_value_tables(od_row<Ctx> const (&rows)[N])
+{
+  std::vector<std::span<od_value_label const>> checked;
+  std::vector<std::span<od_field_label const>> visited;
+  auto const first_time = [&](std::span<od_value_label const> values) {
+    bool const seen = std::ranges::any_of(
+        checked,
+        [&](std::span<od_value_label const> other) {
+          return other.data() == values.data() && other.size() == values.size();
+        });
+    if (!seen) checked.push_back(values);
+    return !seen;
+  };
+
+  for (auto const& row : rows) {
+    auto const& values = row.binding.value_labels;
+    if (!values.empty() && first_time(values)) {
+      if (auto const what = value_labels_error(values); !what.empty()) {
+        return row_error(row, what);
+      }
+    }
+
+    auto const& labels = row.binding.field_labels;
+    if (labels.empty()) continue;
+    bool const seen = std::ranges::any_of(
+        visited,
+        [&](std::span<od_field_label const> other) {
+          return other.data() == labels.data() && other.size() == labels.size();
+        });
+    if (seen) continue;
+    visited.push_back(labels);
+    for (auto i = 0uz; i < labels.size(); ++i) {
+      auto const& member_values = labels[i].value_labels;
+      if (member_values.empty() || !first_time(member_values)) continue;
+      if (auto const what = value_labels_error(member_values); !what.empty()) {
+        return row_error(row, member_name(i) + ": " + what);
+      }
     }
   }
   return {};
@@ -516,6 +716,37 @@ constexpr std::string check_unit(od_row<Ctx> const& row)
   return {};
 }
 
+// The rules of the table of values of a row: an object, an array or a record
+// whose type takes one (`table_error`), a record only if a member inherits
+// its value, which is what the table names, no unit, which a named value does
+// not need, and each value one of the type. The rules of the table alone are
+// checked once for each table (`check_value_tables`).
+template<typename Ctx>
+constexpr std::string check_values(od_row<Ctx> const& row)
+{
+  auto const& binding = row.binding;
+  auto const& values = binding.value_labels;
+
+  if (values.empty()) return {};
+  if (auto const what =
+          table_error(binding.type, binding.command, binding.text);
+      !what.empty()) {
+    return row_error(row, what);
+  }
+  if (!binding.layout.empty() && !inherits_value(binding)) {
+    return row_error(row,
+                     "a record without a member that inherits its value has "
+                     "no table of values");
+  }
+  if (!unit_of(row).empty()) {
+    return row_error(row, "values that a table names have no unit");
+  }
+  if (auto const what = values_fit_error(values, binding.type); !what.empty()) {
+    return row_error(row, what);
+  }
+  return {};
+}
+
 template<typename Ctx, std::size_t A, std::size_t G>
 constexpr std::string check_row(od_row<Ctx> const& row,
                                 od_area const (&areas)[A],
@@ -531,6 +762,7 @@ constexpr std::string check_row(od_row<Ctx> const& row,
   }
   if (auto error = check_label(row, groups); !error.empty()) return error;
   if (auto error = check_unit(row); !error.empty()) return error;
+  if (auto error = check_values(row); !error.empty()) return error;
 
   if (!binding.layout.empty() && binding.count != nullptr) {
     return row_error(row, "a binding is a record or an array, not both");
@@ -790,10 +1022,10 @@ constexpr std::string check_catalogs(od_row<Ctx> const (&rows)[N])
 // Returns an empty string if the rows, the areas and the groups make a valid
 // dictionary, or else the first rule they break: rules of the areas, then of
 // the groups, then of a single row in source order, then those of the labels
-// of the members of records, once for each set of labels, then those of two
-// rows,
-// keys before paths before handlers, then catalog coverage, and last that
-// every group has a row. Returns an empty string as well if a builder has
+// of the members of records, once for each set of labels, then those of the
+// tables of values, once for each table, then those of two rows, keys before
+// paths before handlers, then catalog coverage, and last that every group has
+// a row. Returns an empty string as well if a builder has
 // already reported an error in some row. Keys and paths are checked over
 // sorted rows, catalogs in one pass each; only the rows outside a catalog are
 // compared in pairs, for their handlers.
@@ -813,6 +1045,7 @@ constexpr std::string od_check(od_row<Ctx> const (&rows)[N],
     }
   }
   if (auto error = check_shared_labels(rows); !error.empty()) return error;
+  if (auto error = check_value_tables(rows); !error.empty()) return error;
   if (auto error = check_keys(rows); !error.empty()) return error;
   if (auto error = check_paths(rows); !error.empty()) return error;
   if (auto error = check_handlers(rows); !error.empty()) return error;

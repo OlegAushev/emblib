@@ -37,14 +37,16 @@ void od_description_has_no_fingerprint();
 //
 // on one line, the fingerprint being that of the dictionary
 // (`od_dictionary::fingerprint`), the hash of every line after the header.
-// A line for each group follows, then one for each member of each layout of
-// a record, then one for each object, array or record, by key
-// (`detail::od_describe`). The text is canonical: no spaces between the
-// tokens of a line, keys in a fixed order, no escapes in strings, which the
-// rules of `detail::od_check` keep free of what would need one, hexadecimal
-// numbers as strings of fixed width, flags only when set, and a newline after
-// every line. Two builds of the same dictionary thus describe it byte for
-// byte the same.
+// A line for each group follows, then one for each label of a value, by
+// table of values, then one for each member of each layout of a record, then
+// one for each object, array or record, by key (`detail::od_describe`); a
+// member, an object, an array or a record whose values a table names refers
+// to it by its number. The text is canonical: no spaces between the tokens of
+// a line, keys in a fixed order, no escapes in strings, which the rules of
+// `detail::od_check` keep free of what would need one, hexadecimal numbers as
+// strings of fixed width, decimal numbers without leading zeros, flags only
+// when set, and a newline after every line. Two builds of the same dictionary
+// thus describe it byte for byte the same.
 //
 // `Rows`, `Areas` and `Groups` must be those of `make_dictionary`, and the
 // program is ill-formed if they break a rule of `detail::od_check`, if

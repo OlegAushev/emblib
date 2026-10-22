@@ -997,6 +997,187 @@ static_assert(as_view(described_layouts)
                             "\"title_ru\":\"a.byte\",\"class\":\"parameters\","
                             "\"datatype\":\"uint8\",\"layout\":1}\n"));
 
+// -- Description: values --
+
+constexpr od_read_result read_byte(ctx&, std::uint16_t)
+{
+  return od_value{std::uint8_t{1}};
+}
+
+constexpr od_read_result read_level(ctx&, std::uint16_t)
+{
+  return od_value{std::int16_t{-1}};
+}
+
+// The values of a policy, of a mode and of a level, named by hand; a level
+// may be below zero or past a byte.
+inline constexpr od_value_label policies[] = {
+    {0, "on_command", {"On command", "По команде"}},
+    {1, "on_restart", {"On restart", "После перезапуска"}},
+};
+
+inline constexpr od_value_label modes[] = {
+    {0, "off", {"Off", "Выкл."}},
+    {1, "on", {"On", "Вкл."}},
+};
+
+inline constexpr od_value_label levels[] = {
+    {-1, "low", {"Low", "Низкий"}},
+    {300, "high", {"High", "Высокий"}},
+};
+
+// The values of `modes` in an array of their own: the same table for a host.
+inline constexpr od_value_label same_modes[] = {modes[0], modes[1]};
+
+// A record of a named uint8 whose member 02h, a policy, names values of its
+// own.
+inline constexpr od_field<ctx> mode_layout[] = {
+    {.access = od_access::const_, .type = uint8, .read = &read_last_subindex},
+    {.access = od_access::ro, .type = uint8, .read = &read_byte},
+    {.access = od_access::const_, .type = uint8, .read = &read_byte},
+};
+
+inline constexpr od_field_label mode_labels[] = {
+    {.name = "highest_subindex",
+     .title = {"Highest subindex", "Наибольший подындекс"}},
+    {.name = "value", .title = {"Value", "Значение"}, .inherits = true},
+    {.name = "policy",
+     .title = {"Policy", "Политика"},
+     .value_labels = policies},
+};
+
+consteval od_binding<ctx>
+mode_record(std::span<od_field_label const> labels = mode_labels)
+{
+  return {.access = od_access::ro,
+          .type = uint8,
+          .layout = mode_layout,
+          .field_labels = labels,
+          .value_labels = same_modes};
+}
+
+inline constexpr od_binding<ctx> level_object{.access = od_access::ro,
+                                              .type = int16,
+                                              .read = &read_level,
+                                              .value_labels = levels};
+
+inline constexpr od_binding<ctx> mode_array{.access = od_access::ro,
+                                            .type = uint8,
+                                            .read = &read_byte,
+                                            .count = &read_last_subindex,
+                                            .value_labels = modes};
+
+// The rows of named values, not in the order of their keys.
+// clang-format off
+inline constexpr od_row<ctx> valued[] = {
+    {{0x5002, 0x01}, titled("b.level"), level_object},
+    {{0x5003, 0x00}, titled("b.modes"), mode_array},
+    {{0x4003, 0x00}, titled("a.mode"),  mode_record()},
+};
+// clang-format on
+
+inline constexpr od_row<ctx> revalued[] = {valued[2], valued[0], valued[1]};
+
+// The body of the description of `valued`: the labels of the values after
+// the groups, by table and by value, the tables numbered as the members of
+// the layouts and then the rows by key first name them, each once, though
+// `modes` and `same_modes` are two arrays; then the members and the rows,
+// each that has a table referring to it.
+inline constexpr std::string_view valued_body =
+    "{\"type\":\"group\",\"name\":\"a\",\"title\":\"Group A\","
+    "\"title_ru\":\"Группа А\"}\n"
+    "{\"type\":\"group\",\"name\":\"b\",\"title\":\"Group B\","
+    "\"title_ru\":\"Группа Б\"}\n"
+    "{\"type\":\"value_label\",\"value_table\":0,\"value\":0,"
+    "\"name\":\"on_command\",\"title\":\"On command\","
+    "\"title_ru\":\"По команде\"}\n"
+    "{\"type\":\"value_label\",\"value_table\":0,\"value\":1,"
+    "\"name\":\"on_restart\",\"title\":\"On restart\","
+    "\"title_ru\":\"После перезапуска\"}\n"
+    "{\"type\":\"value_label\",\"value_table\":1,\"value\":0,\"name\":\"off\","
+    "\"title\":\"Off\",\"title_ru\":\"Выкл.\"}\n"
+    "{\"type\":\"value_label\",\"value_table\":1,\"value\":1,\"name\":\"on\","
+    "\"title\":\"On\",\"title_ru\":\"Вкл.\"}\n"
+    "{\"type\":\"value_label\",\"value_table\":2,\"value\":-1,\"name\":\"low\","
+    "\"title\":\"Low\",\"title_ru\":\"Низкий\"}\n"
+    "{\"type\":\"value_label\",\"value_table\":2,\"value\":300,"
+    "\"name\":\"high\",\"title\":\"High\",\"title_ru\":\"Высокий\"}\n"
+    "{\"type\":\"field\",\"layout\":0,\"sub\":\"0x00\","
+    "\"name\":\"highest_subindex\",\"title\":\"Highest subindex\","
+    "\"title_ru\":\"Наибольший подындекс\",\"datatype\":\"uint8\","
+    "\"access\":\"const\"}\n"
+    "{\"type\":\"field\",\"layout\":0,\"sub\":\"0x01\",\"name\":\"value\","
+    "\"title\":\"Value\",\"title_ru\":\"Значение\",\"access\":\"ro\","
+    "\"inherits\":true}\n"
+    "{\"type\":\"field\",\"layout\":0,\"sub\":\"0x02\",\"name\":\"policy\","
+    "\"title\":\"Policy\",\"title_ru\":\"Политика\",\"datatype\":\"uint8\","
+    "\"access\":\"const\",\"value_table\":0}\n"
+    "{\"type\":\"record\",\"index\":\"0x4003\",\"path\":\"a.mode\","
+    "\"title\":\"a.mode\",\"title_ru\":\"a.mode\",\"class\":\"parameters\","
+    "\"datatype\":\"uint8\",\"value_table\":1,\"layout\":0}\n"
+    "{\"type\":\"object\",\"index\":\"0x5002\",\"sub\":\"0x01\","
+    "\"path\":\"b.level\",\"title\":\"b.level\",\"title_ru\":\"b.level\","
+    "\"class\":\"watch\",\"datatype\":\"int16\",\"access\":\"ro\","
+    "\"value_table\":2}\n"
+    "{\"type\":\"array\",\"index\":\"0x5003\",\"path\":\"b.modes\","
+    "\"title\":\"b.modes\",\"title_ru\":\"b.modes\",\"class\":\"watch\","
+    "\"datatype\":\"uint8\",\"access\":\"ro\",\"value_table\":1}\n";
+
+constexpr auto valued_description =
+    make_description<valued, areas, groups, "Test device">();
+
+static_assert(as_view(valued_description).starts_with(described_header_start));
+static_assert(as_view(valued_description).ends_with(valued_body));
+static_assert(valued_description.size()
+              == described_header_start.size() + 11 + valued_body.size());
+static_assert(od_description_fingerprint(valued_description)
+              == fnv1a(valued_body));
+static_assert(make_dictionary<valued, areas, groups>().fingerprint()
+              == fnv1a(valued_body));
+static_assert(
+    as_view(make_description<revalued, areas, groups, "Test device">())
+    == as_view(valued_description));
+
+// Layouts that differ in the table of a member are two; those whose labels
+// are two arrays of the same content are one.
+inline constexpr od_field_label same_mode_labels[] = {mode_labels[0],
+                                                      mode_labels[1],
+                                                      mode_labels[2]};
+
+inline constexpr od_field_label other_mode_labels[] = {
+    mode_labels[0],
+    mode_labels[1],
+    {.name = "policy", .title = {"Policy", "Политика"}, .value_labels = modes},
+};
+
+// clang-format off
+inline constexpr od_row<ctx> policy_layouts[] = {
+    {{0x4003, 0x00}, titled("a.mode"),  mode_record()},
+    {{0x4004, 0x00}, titled("a.same"),  mode_record(same_mode_labels)},
+    {{0x4005, 0x00}, titled("a.other"), mode_record(other_mode_labels)},
+    {{0x5002, 0x01}, titled("b.level"), level_object},
+};
+// clang-format on
+
+constexpr auto described_policies =
+    make_description<policy_layouts, areas, groups, "Test device">();
+
+static_assert(occurrences(as_view(described_policies), "\"type\":\"field\"")
+              == 6);
+static_assert(occurrences(as_view(described_policies), "\"layout\":0}") == 2);
+static_assert(occurrences(as_view(described_policies), "\"layout\":1}") == 1);
+// The tables: `policies`, then `modes` of the other layout, which is also the
+// table of the three records, then `levels`.
+static_assert(occurrences(as_view(described_policies),
+                          "\"type\":\"value_label\"")
+              == 6);
+static_assert(as_view(described_policies)
+                  .contains("\"name\":\"policy\",\"title\":\"Policy\","
+                            "\"title_ru\":\"Политика\",\"datatype\":\"uint8\","
+                            "\"access\":\"const\",\"value_table\":1}\n"));
+static_assert(occurrences(as_view(described_policies), "\"value_table\":1,")
+              == 5);
+
 // -- Checks --
 
 // The one group of the tables below.
@@ -1475,5 +1656,194 @@ consteval od_binding<ctx> diagnosed()
 static_assert(check_two({{0x0FFF, 0x01}, titled("a.c"), od_ro<read_value>},
                         {{0x2000, 0x02}, titled("a.d"), diagnosed()})
                   .empty());
+
+// -- Checks: values --
+
+// Checks the object at 2000h:00, of the path "a.c" and the unit `unit`, bound
+// by `binding` and its values named by `values`.
+consteval std::string check_table(od_binding<ctx> binding,
+                                  std::span<od_value_label const> values,
+                                  std::string_view unit = {})
+{
+  binding.value_labels = values;
+  od_row<ctx> const rows[] = {
+      {{0x2000, 0x00}, {"a.c", {"C", "Ц"}, unit}, binding}};
+  return detail::od_check(rows, areas, group_a);
+}
+
+consteval od_binding<ctx> raw_reader(od_data_type type)
+{
+  return raw(od_access::ro, type, true, false);
+}
+
+inline constexpr od_value_label bytes_past[] = {
+    {0, "zero", {"Zero", "Ноль"}},
+    {256, "past", {"Past a byte", "За байтом"}},
+};
+
+inline constexpr od_value_label signed_bytes[] = {
+    {-128, "lowest", {"Lowest", "Наименьшее"}},
+    {127, "highest", {"Highest", "Наибольшее"}},
+};
+
+// An object, an array or a record of an integer may name its values, each a
+// value of the type.
+static_assert(check_table(raw_reader(uint8), modes).empty());
+static_assert(check_table(raw_reader(int8), signed_bytes).empty());
+static_assert(check_table(raw_reader(int16), levels).empty());
+static_assert(check_table(mode_array, modes).empty());
+static_assert(check_table(mode_record(), modes).empty());
+static_assert(check_table(raw_reader(uint8), bytes_past)
+              == "od: 2000h:00 a.c: value 256 does not fit uint8");
+static_assert(check_table(raw_reader(uint32), levels)
+              == "od: 2000h:00 a.c: value -1 does not fit uint32");
+static_assert(check_table(mode_record(), bytes_past)
+              == "od: 2000h:00 a.c: value 256 does not fit uint8");
+// No table for a float32, a boolean, a command or an array of characters, nor
+// for an array of float32.
+static_assert(check_table(raw_reader(float32), modes)
+              == "od: 2000h:00 a.c: a float32 has no table of values");
+static_assert(check_table(raw_reader(boolean), modes)
+              == "od: 2000h:00 a.c: a boolean has no table of values");
+static_assert(check_table(od_exec<command>, modes)
+              == "od: 2000h:00 a.c: a command has no table of values");
+static_assert(check_table(od_string<text>, modes)
+              == "od: 2000h:00 a.c: an array of characters has no table of "
+                 "values");
+static_assert(check_table(od_ro_array<samples>, modes)
+              == "od: 2000h:00 a.c: a float32 has no table of values");
+// A named value needs no unit.
+static_assert(check_table(raw_reader(uint8), modes, "V")
+              == "od: 2000h:00 a.c: values that a table names have no unit");
+
+// The labels of `byte_layout` whose member 01h holds no value of the record.
+inline constexpr od_field_label byte_plain_labels[] = {
+    byte_labels[0],
+    {.name = "value", .title = {"Value", "Значение"}},
+    byte_labels[2],
+};
+
+// A record names the values of its members that inherit its value, and so
+// has a table only if one does.
+static_assert(check_table({.access = od_access::ro,
+                           .type = uint8,
+                           .layout = byte_layout,
+                           .field_labels = byte_plain_labels},
+                          modes)
+              == "od: 2000h:00 a.c: a record without a member that inherits "
+                 "its value has no table of values");
+
+// A member names its values, unless it inherits those of the record, in a
+// type that takes a table, each a value of the type.
+static_assert(check_labels(relabelled(2,
+                                      {.name = "arg",
+                                       .title = {"A", "А"},
+                                       .value_labels = modes}))
+                  .empty());
+static_assert(check_labels(relabelled(1,
+                                      {.name = "value",
+                                       .title = {"V", "З"},
+                                       .inherits = true,
+                                       .value_labels = modes}))
+              == "od: 2000h:00 a.c: member 01h inherits the record's values "
+                 "and has no table of its own");
+static_assert(
+    check_labels(relabelled(
+        1,
+        {.name = "value", .title = {"V", "З"}, .value_labels = modes}))
+    == "od: 2000h:00 a.c: member 01h: a float32 has no table of values");
+static_assert(check_labels(relabelled(2,
+                                      {.name = "arg",
+                                       .title = {"A", "А"},
+                                       .command = true,
+                                       .value_labels = modes}))
+              == "od: 2000h:00 a.c: member 02h: a command has no table of "
+                 "values");
+static_assert(check_labels(relabelled(
+                  2,
+                  {.name = "arg", .title = {"A", "А"}, .value_labels = levels}))
+              == "od: 2000h:00 a.c: member 02h: value -1 does not fit uint16");
+
+// Checks the values `first` and `second` of a uint8 object at 2000h:00.
+consteval std::string check_two_values(od_value_label first,
+                                       od_value_label second)
+{
+  od_value_label const values[] = {first, second};
+  return check_table(raw_reader(uint8), values);
+}
+
+// A table names each value as a segment of a path, titles it, and holds the
+// values in increasing order, no two with the same name or with the same
+// title in one language: two titles "A (001)" are a copy not corrected. The
+// title of a value may be the same in both languages, as an abbreviation is.
+
+static_assert(check_two_values({0, "svpwm", {"SVPWM", "SVPWM"}},
+                               {1, "dpwm0", {"DPWM0", "DPWM0"}})
+                  .empty());
+static_assert(check_two_values({0, "a", {"A", "А"}}, {1, "2nd", {"B", "Б"}})
+              == "od: 2000h:00 a.c: value 1: the name must be a letter "
+                 "followed by letters, digits or underscores");
+static_assert(check_two_values({0, "a", {"A", "А"}}, {1, "b", {"B", ""}})
+              == "od: 2000h:00 a.c: value 1: the title must not be empty in "
+                 "any language");
+static_assert(check_two_values({0, "a", {"A", "А"}}, {1, "b", {"B\"", "Б"}})
+              == "od: 2000h:00 a.c: value 1: the title must be UTF-8 without "
+                 "quotation marks, backslashes or control characters");
+static_assert(check_two_values({1, "b", {"B", "Б"}}, {0, "a", {"A", "А"}})
+              == "od: 2000h:00 a.c: value 0 follows value 1: the values must "
+                 "increase");
+static_assert(check_two_values({1, "a", {"A", "А"}}, {1, "b", {"B", "Б"}})
+              == "od: 2000h:00 a.c: value 1 follows value 1: the values must "
+                 "increase");
+static_assert(check_two_values({0, "a", {"A", "А"}}, {1, "a", {"B", "Б"}})
+              == "od: 2000h:00 a.c: values 0 and 1 have the same name");
+static_assert(check_two_values({0, "a", {"A (001)", "А (001)"}},
+                               {1, "ab", {"A (001)", "АБ (011)"}})
+              == "od: 2000h:00 a.c: values 0 and 1 have the same title in "
+                 "English");
+static_assert(check_two_values({0, "a", {"A", "Один"}}, {1, "b", {"B", "Один"}})
+              == "od: 2000h:00 a.c: values 0 and 1 have the same title in "
+                 "Russian");
+
+// A table is checked once, and a broken one is reported at the first row that
+// names its values with it, as at the first record whose member does.
+inline constexpr od_value_label misnamed[] = {{0, "2nd", {"A", "А"}}};
+
+inline constexpr od_field_label misnamed_labels[] = {
+    mode_labels[0],
+    mode_labels[1],
+    {.name = "policy",
+     .title = {"Policy", "Политика"},
+     .value_labels = misnamed},
+};
+
+consteval std::string check_shared_tables()
+{
+  // clang-format off
+  static constexpr od_row<ctx> rows[] = {
+      {{0x5002, 0x01}, titled("a.first"),  {.access = od_access::ro, .type = int16, .read = &read_level, .value_labels = misnamed}},
+      {{0x5002, 0x02}, titled("a.second"), {.access = od_access::ro, .type = uint8, .read = &read_byte, .value_labels = misnamed}},
+  };
+  // clang-format on
+  return detail::od_check(rows, areas, group_a);
+}
+
+consteval std::string check_shared_member_tables()
+{
+  // clang-format off
+  static constexpr od_row<ctx> rows[] = {
+      {{0x4001, 0x00}, titled("a.first"),  mode_record(misnamed_labels)},
+      {{0x4002, 0x00}, titled("a.second"), mode_record(misnamed_labels)},
+  };
+  // clang-format on
+  return detail::od_check(rows, areas, group_a);
+}
+
+static_assert(check_shared_tables()
+              == "od: 5002h:01 a.first: value 0: the name must be a letter "
+                 "followed by letters, digits or underscores");
+static_assert(check_shared_member_tables()
+              == "od: 4001h:00 a.first: member 02h: value 0: the name must be "
+                 "a letter followed by letters, digits or underscores");
 
 } // namespace
