@@ -139,13 +139,15 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `error`
   - [x] `image`
 - [x] `emb/settings/param.hpp`
-  - [x] `apply_policy`
+  - [x] `apply_policy` (и `enum_labels(apply_policy)`, вручную 2026-10-22)
   - [x] `descriptor`
   - [x] `detail::parameter_default_outside_range`,
     `detail::parameter_min_above_max`, `detail::parameter_title_missing`,
     `detail::parameter_unit_repeats_symbol`,
-    `detail::parameter_unit_meaningless`
-  - [x] `detail::lowest`, `detail::highest`, `detail::identify`
+    `detail::parameter_unit_meaningless`,
+    `detail::parameter_value_unlabelled` (вручную 2026-10-22)
+  - [x] `detail::lowest`, `detail::highest`, `detail::identify`,
+    `detail::labelled_between` (вручную 2026-10-22)
   - [x] `options` (и поля `title`, `unit`), `declaration` (и поля `title`,
     `unit`), `param`
 - [x] `emb/settings/record.hpp`
@@ -186,8 +188,10 @@ emblib не попал. Такие файлы помечены «песочни�
 - [x] `emb/settings/value.hpp`
   - [x] `scalar_kind`
   - [x] `value`, `cell`
-  - [x] `some_value`, `some_wrapped_value`, `some_parameter_type`
-  - [x] `scalar_t`, `kind_of`
+  - [x] `some_value`, `some_wrapped_value`, `some_parameter_type`,
+    `some_enum_value` (вручную 2026-10-22)
+  - [x] `scalar_t` (и `detail::scalar` без комментария: его покрывает
+    псевдоним), `kind_of`
   - [x] `held_kind`
   - [x] `to_value`, `from_value`, `to_cell`, `from_cell` (у `to_value` и
     `to_cell` по две перегрузки, у каждой свой комментарий)

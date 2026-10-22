@@ -1,6 +1,8 @@
 #pragma once
 
 #include <emb/meta/alternative_of.hpp>
+#include <emb/meta/enum_carrier32.hpp>
+#include <emb/meta/enum_labels.hpp>
 #include <emb/meta/wrapper.hpp>
 
 #include <bit>
@@ -62,16 +64,43 @@ static_assert(std::to_underlying(scalar_kind::float32) == 3);
 template<typename T>
 concept some_wrapped_value = some_wrapper<T> && some_value<unwrapped_t<T>>;
 
-// The concept `some_parameter_type<T>` is satisfied if and only if `T`
-// satisfies `some_value` or `some_wrapped_value`, i.e. `T` is a type that a
-// parameter may have.
+// The concept `some_enum_value<T>` is satisfied if and only if `T` is a
+// scoped enumeration that labels its values (`emb::enum_with_labels`) and
+// whose values a 32-bit carrier holds (`emb::enum_carrier32_t`). A parameter
+// of such a `T` is stored and transported as its carrier, a `std::uint32_t`
+// or a `std::int32_t` as the underlying type of `T` is unsigned or signed,
+// and takes only the values that its labels name (`param`).
 template<typename T>
-concept some_parameter_type = some_value<T> || some_wrapped_value<T>;
+concept some_enum_value =
+    enum_with_labels<T> && requires { typename enum_carrier32_t<T>; };
+
+// The concept `some_parameter_type<T>` is satisfied if and only if `T`
+// satisfies `some_value`, `some_wrapped_value` or `some_enum_value`, i.e. `T`
+// is a type that a parameter may have.
+template<typename T>
+concept some_parameter_type =
+    some_value<T> || some_wrapped_value<T> || some_enum_value<T>;
+
+namespace detail {
+
+template<typename T>
+struct scalar {
+  using type = unwrapped_t<T>;
+};
+
+template<some_enum_value T>
+struct scalar<T> {
+  using type = enum_carrier32_t<T>;
+};
+
+} // namespace detail
 
 // Scalar type in which a parameter of type `T` is stored and transported:
-// `T` itself if `T` satisfies `some_value`, otherwise `T::value_type`.
+// `T` itself if `T` satisfies `some_value`, its carrier
+// (`emb::enum_carrier32_t`) if `T` satisfies `some_enum_value`, otherwise
+// `T::value_type`.
 template<some_parameter_type T>
-using scalar_t = unwrapped_t<T>;
+using scalar_t = typename detail::scalar<T>::type;
 
 // The `scalar_kind` of a parameter of type `T`, i.e. the enumerator that
 // names `scalar_t<T>`.
@@ -88,12 +117,17 @@ constexpr scalar_kind held_kind(value const& v)
 // -- Typed value <-> type-erased value --
 
 // Returns `v` in type-erased form: a `value` that holds `v` itself if `T`
-// satisfies `some_value`, otherwise `value_of(v)`.
+// satisfies `some_value`, the underlying value of `v` in its carrier if `T`
+// satisfies `some_enum_value`, otherwise `value_of(v)`.
 template<some_parameter_type T>
 constexpr value to_value(T const& v)
 {
   if constexpr (some_value<T>) {
     return value{v};
+  }
+  else if constexpr (some_enum_value<T>) {
+    scalar_t<T> const carried = std::to_underlying(v);
+    return value{carried};
   }
   else {
     return value{value_of(v)};
@@ -103,11 +137,16 @@ constexpr value to_value(T const& v)
 // Converts `v` back to the parameter type `T`. If `v` holds a value of type
 // `scalar_t<T>`, returns `T` constructed from it; otherwise returns
 // `std::nullopt`: a value of another scalar type is neither converted nor
-// reinterpreted.
+// reinterpreted. An enumeration is returned only if the value is one of its
+// underlying type, and `std::nullopt` otherwise: 260 does not become 4 for an
+// enumeration of `std::uint8_t`.
 template<some_parameter_type T>
 constexpr std::optional<T> from_value(value const& v)
 {
   if (auto const* p = std::get_if<scalar_t<T>>(&v)) {
+    if constexpr (some_enum_value<T>) {
+      if (!std::in_range<std::underlying_type_t<T>>(*p)) return std::nullopt;
+    }
     return T(*p);
   }
   return std::nullopt;
@@ -117,7 +156,8 @@ constexpr std::optional<T> from_value(value const& v)
 
 // Returns the cell that encodes `v`: `false` and `true` as 0 and 1, any other
 // scalar as its bit pattern, as if by `std::bit_cast<cell>`. A wrapper is
-// encoded as its scalar, `value_of(v)`.
+// encoded as its scalar, `value_of(v)`, and an enumeration as its underlying
+// value in its carrier.
 template<some_parameter_type T>
 constexpr cell to_cell(T const& v)
 {
@@ -125,6 +165,9 @@ constexpr cell to_cell(T const& v)
   scalar const s = [&] {
     if constexpr (some_value<T>) {
       return v;
+    }
+    else if constexpr (some_enum_value<T>) {
+      return scalar{std::to_underlying(v)};
     }
     else {
       return value_of(v);
@@ -143,7 +186,9 @@ constexpr cell to_cell(T const& v)
 // of `to_cell`. Every bit pattern decodes to a scalar: for `bool`, any
 // non-zero `c` decodes as `true`; for any other scalar, `c` is its bit
 // pattern, so a `float` may decode as NaN. If `T` is a wrapper, returns `T`
-// constructed from that scalar.
+// constructed from that scalar, and if `T` is an enumeration, the value of `T`
+// that the scalar converts to: a value its labels name if the scalar lies in
+// the bounds of the parameter, as an image keeps every cell.
 template<some_parameter_type T>
 constexpr T from_cell(cell c)
 {

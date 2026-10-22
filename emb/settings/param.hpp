@@ -1,10 +1,12 @@
 #pragma once
 
 #include <emb/i18n.hpp>
+#include <emb/meta/enum_labels.hpp>
 #include <emb/meta/unit_symbol.hpp>
 #include <emb/settings/value.hpp>
 
 #include <limits>
+#include <span>
 #include <string_view>
 #include <type_traits>
 #include <utility>
@@ -28,6 +30,19 @@ enum class apply_policy : std::uint8_t {
   // is built: a change takes effect only after a restart.
   on_restart,
 };
+
+// Returns the labels of the values of `apply_policy`, by which a transport
+// names the policy of a parameter for people.
+consteval std::span<enum_label<apply_policy> const> enum_labels(apply_policy)
+{
+  static constexpr enum_label<apply_policy> labels[] = {
+      {apply_policy::on_command, "on_command", {"On command", "По команде"}},
+      {apply_policy::on_restart,
+       "on_restart",
+       {"On restart", "После перезапуска"}},
+  };
+  return labels;
+}
 
 // Type-erased description of one parameter, the same structure whatever the
 // type of the parameter. `def`, `min` and `max` are cells encoded under
@@ -71,29 +86,59 @@ namespace detail {
 // `param` calls them to reject a declaration at its call: for a default
 // outside the bounds, a lower bound above the upper one, an exposed
 // parameter without a title in each language, a unit that only repeats the
-// symbol of the type, and a unit given to a `bool`.
+// symbol of the type, a unit given to a `bool` or to an enumeration, and a
+// value of an enumeration between the bounds that its labels do not name.
 void parameter_default_outside_range();
 void parameter_min_above_max();
 void parameter_title_missing();
 void parameter_unit_repeats_symbol();
 void parameter_unit_meaningless();
+void parameter_value_unlabelled();
 
 // Returns `T` constructed from the lowest finite value of `scalar_t<T>`. The
 // constructor of a wrapper may clamp it, e.g. that of `emb::clamped` to its
-// lower limit.
+// lower limit. For an enumeration, returns the lowest value its labels name.
 template<some_parameter_type T>
 constexpr T lowest()
 {
-  return T(std::numeric_limits<scalar_t<T>>::lowest());
+  if constexpr (some_enum_value<T>) {
+    return enum_labels_of<T>().front().value();
+  }
+  else {
+    return T(std::numeric_limits<scalar_t<T>>::lowest());
+  }
 }
 
 // Returns `T` constructed from the highest finite value of `scalar_t<T>`. The
 // constructor of a wrapper may clamp it, e.g. that of `emb::clamped` to its
-// upper limit.
+// upper limit. For an enumeration, returns the highest value its labels name.
 template<some_parameter_type T>
 constexpr T highest()
 {
-  return T(std::numeric_limits<scalar_t<T>>::max());
+  if constexpr (some_enum_value<T>) {
+    return enum_labels_of<T>().back().value();
+  }
+  else {
+    return T(std::numeric_limits<scalar_t<T>>::max());
+  }
+}
+
+// Whether the labels of the enumeration `T` name every value from `lo` to
+// `hi`, as they must between the bounds of a parameter: a write is checked
+// against the bounds only, so a value between them without a label would
+// pass.
+template<some_enum_value T>
+consteval bool labelled_between(T lo, T hi)
+{
+  auto const low = static_cast<std::int64_t>(std::to_underlying(lo));
+  auto const high = static_cast<std::int64_t>(std::to_underlying(hi));
+  std::int64_t named = 0;
+  for (auto const& label : enum_labels_of<T>()) {
+    auto const value =
+        static_cast<std::int64_t>(std::to_underlying(label.value()));
+    if (low <= value && value <= high) ++named;
+  }
+  return named == high - low + 1;
 }
 
 // Returns the identifier of the parameter named `name` of the scalar kind
@@ -134,13 +179,16 @@ struct options {
   // does not describe the parameter, e.g. "rpm/s" for a slope held as an
   // `rpm_f32`: it replaces the symbol of the type
   // (`emb::unit_symbol_of<T>()`). `param` rejects a unit equal to that
-  // symbol, which would only repeat it, and any unit of a `bool`.
+  // symbol, which would only repeat it, and any unit of a `bool` or of an
+  // enumeration, whose values are named instead.
   std::string_view unit{};
   // Lower and upper bound of the value, inclusive. If left out, each is the
   // widest `T` admits: the lowest or the highest finite value of
-  // `scalar_t<T>`, converted to `T`. A wrapper that clamps, e.g.
+  // `scalar_t<T>`, converted to `T`, and for an enumeration the lowest or the
+  // highest value its labels name. A wrapper that clamps, e.g.
   // `emb::clamped`, thus brings its own bounds, and a floating-point
-  // parameter rejects infinities.
+  // parameter rejects infinities. The labels of an enumeration must name
+  // every value between the bounds.
   T min = detail::lowest<T>();
   T max = detail::highest<T>();
   // Apply policy of the parameter, `apply_policy::on_restart` if left out: a
@@ -201,11 +249,15 @@ concept some_declaration = detail::is_declaration<std::remove_cvref_t<T>>;
 //
 // The type of the parameter is that of `def`, so a literal must have that
 // type exactly: `0.05f`, not `0.05`, and `std::int32_t{1}`, not `1`, an `int`,
-// which on some targets is not `std::int32_t`. Compilation fails at the call
-// if `opts.min` is above `opts.max`, if `def` lies outside
-// [`opts.min`, `opts.max`], if the parameter is exposed without a title in
-// each language, or if `opts.unit` repeats the symbol of `T` or is given to a
-// `bool`.
+// which on some targets is not `std::int32_t`. A parameter of an enumeration,
+// e.g. `param("model.pwm_mode", pwm_mode::svpwm, {...})`, is stored as its
+// carrier (`scalar_t`) and its identifier is that of a parameter of the
+// carrier of the same name. Compilation fails at the call if `opts.min` is
+// above `opts.max`, if `def` lies outside [`opts.min`, `opts.max`], if the
+// parameter is exposed without a title in each language, if `opts.unit`
+// repeats the symbol of `T` or is given to a `bool` or to an enumeration, or
+// if the labels of an enumeration do not name every value from `opts.min` to
+// `opts.max`.
 template<some_parameter_type T>
 consteval declaration<T> param(std::string_view name,
                                T def,
@@ -221,13 +273,19 @@ consteval declaration<T> param(std::string_view name,
   if (!in_range(kind, to_cell(def), min, max)) {
     detail::parameter_default_outside_range();
   }
+  if constexpr (some_enum_value<T>) {
+    if (!detail::labelled_between(opts.min, opts.max)) {
+      detail::parameter_value_unlabelled();
+    }
+  }
   if (opts.expose && (opts.title.en.empty() || opts.title.ru.empty())) {
     detail::parameter_title_missing();
   }
   if (!opts.unit.empty() && opts.unit == unit_symbol_of<T>()) {
     detail::parameter_unit_repeats_symbol();
   }
-  if (!opts.unit.empty() && kind == scalar_kind::boolean) {
+  if (!opts.unit.empty()
+      && (kind == scalar_kind::boolean || some_enum_value<T>)) {
     detail::parameter_unit_meaningless();
   }
 

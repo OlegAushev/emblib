@@ -1,7 +1,9 @@
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <span>
 
+#include <emb/meta/enum_labels.hpp>
 #include <emb/settings/record.hpp>
 #include <emb/units.hpp>
 
@@ -433,5 +435,58 @@ static_assert(test_a_count_past_the_span_is_not_whole());
 static_assert(test_a_richer_record_is_whole_where_it_fits());
 static_assert(test_a_record_from_another_schema());
 static_assert(test_a_value_outside_todays_range_is_refused());
+
+// -- Enumerations --
+
+enum class pwm : std::uint8_t { svpwm, dpwm0, dpwm1 };
+
+consteval std::span<enum_label<pwm> const> enum_labels(pwm)
+{
+  static constexpr enum_label<pwm> labels[] = {
+      {pwm::svpwm, "svpwm", {"SVPWM", "SVPWM"}},
+      {pwm::dpwm0, "dpwm0", {"DPWM0", "DPWM0"}},
+      {pwm::dpwm1, "dpwm1", {"DPWM1", "DPWM1"}},
+  };
+  return labels;
+}
+
+inline constexpr auto model_pwm_mode =
+    param("model.pwm_mode", pwm::dpwm0, {.title = {"PWM mode", "Режим ШИМ"}});
+
+inline constexpr auto enum_schema = make_schema(motor_p, model_pwm_mode);
+
+// A cell of an enumeration loads as any cell: a value in its bounds is
+// restored, and one past them, as a firmware with more modes may have stored,
+// is refused before the typed access could form the enumeration from it.
+consteval bool test_an_enumeration_loads_within_its_bounds()
+{
+  image<enum_schema> values;
+  if (!values.set<model_pwm_mode>(pwm::dpwm1)) return false;
+  std::array<std::byte, record_size(enum_schema.count)> buffer{};
+  encode_record(buffer, values, magic, 1);
+
+  image<enum_schema> read;
+  auto const report = decode_record(buffer, magic, read);
+  if (!report.valid || report.loaded != 2) return false;
+  if (read.get<model_pwm_mode>() != pwm::dpwm1) return false;
+
+  constexpr auto at =
+      record_header_size
+      + (*enum_schema.index_of("model.pwm_mode") * record_cell_size);
+  namespace bytes = settings::detail;
+  bytes::put_u32(buffer, at + 4, to_cell(std::uint32_t{7}));
+  bytes::put_u32(buffer,
+                 buffer.size() - 4,
+                 bytes::crc32(std::span<std::byte const>{buffer}.first(
+                     buffer.size() - 4)));
+
+  image<enum_schema> refused;
+  auto const again = decode_record(buffer, magic, refused);
+  return again.valid
+      && again.rejected == 1
+      && refused.get<model_pwm_mode>() == pwm::dpwm0;
+}
+
+static_assert(test_an_enumeration_loads_within_its_bounds());
 
 } // namespace

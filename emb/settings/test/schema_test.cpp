@@ -1,7 +1,10 @@
 #include <array>
+#include <cstdint>
+#include <span>
 #include <type_traits>
 
 #include <emb/math/clamped.hpp>
+#include <emb/meta/enum_labels.hpp>
 #include <emb/settings/schema.hpp>
 #include <emb/units.hpp>
 
@@ -180,5 +183,81 @@ inline constexpr auto renamed_for_people =
           {.title = {"Torque while stopping", "Момент при остановке"},
            .apply = apply_policy::on_command});
 static_assert(renamed_for_people.desc == drive_stopping_torque.desc);
+
+// -- Enumerations --
+
+// A mode of modulation, every value labelled.
+enum class pwm : std::uint8_t { svpwm, dpwm0, dpwm1 };
+
+consteval std::span<enum_label<pwm> const> enum_labels(pwm)
+{
+  static constexpr enum_label<pwm> labels[] = {
+      {pwm::svpwm, "svpwm", {"SVPWM", "SVPWM"}},
+      {pwm::dpwm0, "dpwm0", {"DPWM0", "DPWM0"}},
+      {pwm::dpwm1, "dpwm1", {"DPWM1", "DPWM1"}},
+  };
+  return labels;
+}
+
+// A gear, with a gap in its values.
+enum class gear : std::uint8_t { park, drive, reverse = 4 };
+
+consteval std::span<enum_label<gear> const> enum_labels(gear)
+{
+  static constexpr enum_label<gear> labels[] = {
+      {gear::park, "park", {"Park", "Стоянка"}},
+      {gear::drive, "drive", {"Drive", "Вперёд"}},
+      {gear::reverse, "reverse", {"Reverse", "Назад"}},
+  };
+  return labels;
+}
+
+inline constexpr auto model_pwm_mode = param(
+    "model.pwm_mode",
+    pwm::svpwm,
+    {.title = {"PWM mode", "Режим ШИМ"}, .apply = apply_policy::on_command});
+
+// The same parameter declared as the uint32 it is stored as.
+inline constexpr auto model_pwm_number =
+    param("model.pwm_mode",
+          std::uint32_t{0},
+          {.title = {"PWM mode", "Режим ШИМ"},
+           .max = std::uint32_t{2},
+           .apply = apply_policy::on_command});
+
+// A parameter of an enumeration is stored as its carrier, and its bounds are
+// the first and the last value labelled: the descriptor, and so the
+// identifier of a stored value, are those of the uint32 it was declared as,
+// and a value stored before still matches.
+static_assert(model_pwm_mode.desc.kind == scalar_kind::uint32);
+static_assert(model_pwm_mode.desc.id
+              == emb::settings::detail::identify("model.pwm_mode",
+                                                 scalar_kind::uint32));
+static_assert(model_pwm_mode.desc == model_pwm_number.desc);
+static_assert(model_pwm_mode.desc.min == to_cell(std::uint32_t{0}));
+static_assert(model_pwm_mode.desc.max == to_cell(std::uint32_t{2}));
+static_assert(model_pwm_mode.unit.empty());
+
+// Bounds narrower than the labels, a value between them each, or past a gap
+// of the labels.
+inline constexpr auto narrowed =
+    param("model.pwm_discontinuous",
+          pwm::dpwm0,
+          {.title = {"Discontinuous PWM", "Разрывная ШИМ"}, .min = pwm::dpwm0});
+inline constexpr auto drive_gear =
+    param("drive.gear",
+          gear::park,
+          {.title = {"Gear", "Передача"}, .max = gear::drive});
+static_assert(narrowed.desc.min == to_cell(std::uint32_t{1}));
+static_assert(narrowed.desc.max == to_cell(std::uint32_t{2}));
+static_assert(drive_gear.desc.max == to_cell(std::uint32_t{1}));
+
+inline constexpr auto enum_schema =
+    make_schema(model_pwm_mode, narrowed, drive_gear);
+
+static_assert(std::same_as<parameter<enum_schema, model_pwm_mode>::type, pwm>);
+static_assert(parameter<enum_schema, model_pwm_mode>::default_value
+              == pwm::svpwm);
+static_assert(parameter<enum_schema, drive_gear>::default_value == gear::park);
 
 } // namespace

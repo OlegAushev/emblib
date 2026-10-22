@@ -1,8 +1,11 @@
+#include <cstdint>
 #include <optional>
+#include <span>
 #include <type_traits>
 #include <variant>
 
 #include <emb/math/clamped.hpp>
+#include <emb/meta/enum_labels.hpp>
 #include <emb/settings/value.hpp>
 #include <emb/units.hpp>
 
@@ -242,5 +245,79 @@ static_assert(test_raw_round_trip());
 static_assert(test_raw_bool_is_not_a_bit_cast());
 static_assert(test_erased_raw_conversions());
 static_assert(test_in_range());
+
+// -- Enumerations --
+
+// A mode, its values labelled with a gap before the last one.
+enum class mode : std::uint8_t { off, slow, fast, turbo = 7 };
+
+consteval std::span<enum_label<mode> const> enum_labels(mode)
+{
+  static constexpr enum_label<mode> labels[] = {
+      {mode::off, "off", {"Off", "Выкл."}},
+      {mode::slow, "slow", {"Slow", "Медленно"}},
+      {mode::fast, "fast", {"Fast", "Быстро"}},
+      {mode::turbo, "turbo", {"Turbo", "Форсаж"}},
+  };
+  return labels;
+}
+
+// A tilt, below zero: its underlying type is signed.
+enum class tilt : std::int16_t { left = -1, level, right };
+
+consteval std::span<enum_label<tilt> const> enum_labels(tilt)
+{
+  static constexpr enum_label<tilt> labels[] = {
+      {tilt::left, "left", {"Left", "Влево"}},
+      {tilt::level, "level", {"Level", "Ровно"}},
+      {tilt::right, "right", {"Right", "Вправо"}},
+  };
+  return labels;
+}
+
+// Labelled, but too wide for a cell; and not labelled.
+enum class wide : std::uint64_t { a };
+
+consteval std::span<enum_label<wide> const> enum_labels(wide)
+{
+  static constexpr enum_label<wide> labels[] = {{wide::a, "a", {"A", "А"}}};
+  return labels;
+}
+
+enum class unlabelled : std::uint8_t { a };
+
+// A parameter may be an enumeration that labels its values and fits a cell;
+// it is stored as its carrier, of the signedness of its underlying type.
+static_assert(some_enum_value<mode>);
+static_assert(some_parameter_type<mode>);
+static_assert(some_parameter_type<tilt>);
+static_assert(!some_parameter_type<wide>);
+static_assert(!some_parameter_type<unlabelled>);
+static_assert(std::same_as<scalar_t<mode>, std::uint32_t>);
+static_assert(std::same_as<scalar_t<tilt>, std::int32_t>);
+static_assert(kind_of<mode> == scalar_kind::uint32);
+static_assert(kind_of<tilt> == scalar_kind::int32);
+
+consteval bool test_enumerations()
+{
+  if (to_value(mode::turbo) != value{std::uint32_t{7}}) return false;
+  if (to_value(tilt::left) != value{std::int32_t{-1}}) return false;
+  if (from_value<mode>(value{std::uint32_t{7}}) != mode::turbo) return false;
+  if (from_value<tilt>(value{std::int32_t{-1}}) != tilt::left) return false;
+  // A value outside the underlying type is not cut to its width, nor is
+  // another scalar converted.
+  if (from_value<mode>(value{std::uint32_t{263}})) return false;
+  if (from_value<tilt>(value{std::int32_t{40000}})) return false;
+  if (from_value<mode>(value{std::int32_t{7}})) return false;
+
+  if (to_cell(mode::turbo) != 7u) return false;
+  if (to_cell(tilt::left) != 0xFFFFFFFFu) return false;
+  if (from_cell<mode>(to_cell(mode::fast)) != mode::fast) return false;
+  if (from_cell<tilt>(to_cell(tilt::left)) != tilt::left) return false;
+  return to_value(scalar_kind::uint32, to_cell(mode::turbo))
+      == to_value(mode::turbo);
+}
+
+static_assert(test_enumerations());
 
 } // namespace

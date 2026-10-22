@@ -125,9 +125,10 @@ reached by index only may be declared in the `make_schema` call.
 The type comes from the default, so a literal needs its suffix — `param("x",
 0.05)` does not compile. Per-parameter checks (default within bounds, min
 below max, a title for an exposed parameter, a unit that neither repeats the
-type's symbol nor is given to a `bool`) live in `param()` so that a bad
-declaration is reported on its own line; cross-parameter ones (duplicate
-name, identifier collision) live in `make_schema`.
+type's symbol nor is given to a `bool` or an enumeration, and a label for
+every value of an enumeration between the bounds) live in `param()` so that
+a bad declaration is reported on its own line; cross-parameter ones
+(duplicate name, identifier collision) live in `make_schema`.
 
 The title, in English and in Russian (`emb::i18n`), and the unit are for
 people: a transport shows them. A parameter `expose`d to a transport must
@@ -137,6 +138,18 @@ type that names none, e.g. a `float` threshold in volts, or replaces one that
 does not describe the parameter, e.g. "rpm/s" for a slope held as an
 `rpm_f32`. Both are kept in the declaration, outside the descriptor: the
 schema keeps its descriptors in the image, and the texts stay out of it.
+
+A parameter may be an enumeration: a scoped one that labels its values for
+people (`emb::enum_with_labels`, `emb/meta/enum_labels.hpp`), e.g.
+`param("model.pwm_mode", pmsm::pwm_mode::svpwm, {...})`. It is stored and
+transported as its carrier, `emb::enum_carrier32_t`, a `uint32` or an
+`int32` as its underlying type is unsigned or signed, so its scalar kind and
+identifier are the carrier's: declared in place of a `uint32` of the same
+name, it keeps the value stored. Its bounds default to the first and the
+last value labelled. `param()` rejects bounds between which a value has no
+label, since a write is checked against the bounds only, and any unit: the
+labels name the values instead. The labels stay out of the image; a cell
+becomes the enumeration only within the bounds, which a load checks first.
 
 No offset and no size: every value occupies one four-byte cell, so a
 parameter's index *is* its position in the RAM image, and the image is a
@@ -1299,6 +1312,25 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   alternatives of `od_value`, one to one. Rejected: four characters to an
   element, which keeps the traffic of before but makes the elements words
   of text, and a type `char`, which CiA 301 does not have.
+- **A parameter may be an enumeration** (2026-10-22). A choice such as the
+  PWM mode was a `uint32` parameter whose upper bound was written by hand
+  from the number of modes and whose value code cast to its enumeration:
+  nothing tied the bound to the enumeration, and a transport showed a
+  number. A parameter may now be a scoped enumeration that labels its values
+  (`emb::enum_with_labels`). It is stored as its carrier, a 32-bit integer
+  of the signedness of its underlying type (`emb::enum_carrier32_t`), so its
+  kind and identifier are the carrier's, and a value stored under a `uint32`
+  of the same name still matches. Its bounds default to the first and the
+  last value labelled; `param()` rejects bounds between which a value has no
+  label, as the image checks a write against the bounds only, and a unit,
+  which the labels make needless. `from_value` gives nothing for a value
+  outside the underlying type rather than one cut to its width.
+  `apply_policy` labels its values, for a transport to show. Rejected: a
+  check of every write against the labels in the image, which would put the
+  values of each enumeration in the image for what the bounds already
+  enforce once the labels between them leave no gap; and an enumeration
+  stored in the width of its underlying type, which would change its kind,
+  and so the identifier of a parameter declared before as a `uint32`.
 - **The values a host watches take an index per group** (2026-10-21).
   5000h held them all, a block of 10h subindices for each group, 37
   objects on 121 subindices. CiA 301 allows it, as subindex 00h of a

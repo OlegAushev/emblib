@@ -1,6 +1,9 @@
+#include <cstdint>
+#include <span>
 #include <type_traits>
 
 #include <emb/math/clamped.hpp>
+#include <emb/meta/enum_labels.hpp>
 #include <emb/settings/image.hpp>
 #include <emb/units.hpp>
 
@@ -197,5 +200,52 @@ static_assert(test_typed_access());
 static_assert(test_erased_access());
 static_assert(test_unchanged_write());
 static_assert(test_cells());
+
+// -- Enumerations --
+
+enum class pwm : std::uint8_t { svpwm, dpwm0, dpwm1 };
+
+consteval std::span<enum_label<pwm> const> enum_labels(pwm)
+{
+  static constexpr enum_label<pwm> labels[] = {
+      {pwm::svpwm, "svpwm", {"SVPWM", "SVPWM"}},
+      {pwm::dpwm0, "dpwm0", {"DPWM0", "DPWM0"}},
+      {pwm::dpwm1, "dpwm1", {"DPWM1", "DPWM1"}},
+  };
+  return labels;
+}
+
+inline constexpr auto model_pwm_mode = param(
+    "model.pwm_mode",
+    pwm::dpwm0,
+    {.title = {"PWM mode", "Режим ШИМ"}, .apply = apply_policy::on_command});
+
+inline constexpr auto enum_schema = make_schema(model_pwm_mode);
+
+// The code reads and writes the enumeration; a protocol writes its carrier,
+// which the bounds check before the enumeration is formed from it.
+consteval bool test_enumerations()
+{
+  image<enum_schema> values;
+  if (values.get<model_pwm_mode>() != pwm::dpwm0) return false;
+  if (!values.set<model_pwm_mode>(pwm::dpwm1)) return false;
+  if (values.get<model_pwm_mode>() != pwm::dpwm1) return false;
+
+  if (!values.set_at(0, value{std::uint32_t{0}})) return false;
+  if (values.get<model_pwm_mode>() != pwm::svpwm) return false;
+  auto const read = values.get_at(0);
+  if (!read || *read != value{std::uint32_t{0}}) return false;
+
+  // Past the bounds, and past a byte where its low byte names dpwm0.
+  auto const past = values.set_at(0, value{std::uint32_t{3}});
+  if (past || past.error() != error::out_of_range) return false;
+  auto const wrapped = values.set_at(0, value{std::uint32_t{257}});
+  if (wrapped || wrapped.error() != error::out_of_range) return false;
+  auto const mismatch = values.set_at(0, value{std::int32_t{1}});
+  if (mismatch || mismatch.error() != error::type_mismatch) return false;
+  return values.get<model_pwm_mode>() == pwm::svpwm;
+}
+
+static_assert(test_enumerations());
 
 } // namespace
