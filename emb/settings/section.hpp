@@ -139,7 +139,7 @@ class section {
   image<Schema> stored_;
   image<Schema> applied_;
   load_result last_load_;
-  std::uint32_t sequence_ = 0;
+  std::optional<std::uint32_t> sequence_;
   std::optional<refusal> last_refusal_;
   std::optional<store_type> store_;
 
@@ -162,7 +162,9 @@ public:
     last_load_ = store_->load(requested_);
     stored_ = requested_;
     applied_ = requested_;
-    sequence_ = last_load_.record.seq;
+    sequence_ = last_load_.record.valid
+                  ? std::optional<std::uint32_t>{last_load_.record.seq}
+                  : std::nullopt;
     return last_load_;
   }
 
@@ -202,24 +204,26 @@ public:
   // `store::wipe` does. The values requested and applied are left as they
   // are; after a successful wipe, `unsaved()` compares the values requested
   // with the defaults, which the next startup would load, and `sequence()`
-  // returns zero.
+  // returns nothing.
   constexpr std::expected<void, error_type> wipe()
   {
     ASSUME(store_.has_value());
     auto const result = store_->wipe();
     if (result) {
       stored_ = image<Schema>{};
-      sequence_ = 0;
+      sequence_.reset();
     }
     return result;
   }
 
   // Returns the sequence number of the record that the section last restored
-  // or wrote, or zero if there is none. `load` sets it to the number of the
-  // record restored, or to zero if none was; a successful `save` sets it to
-  // the number of the record written, and a successful `wipe` to zero; a
-  // failed `save` or `wipe` leaves it unchanged. Before the first `load`, it
-  // is zero.
+  // or wrote, or nothing if there is none: before the first `load`, after a
+  // `load` that restored no record and after a successful `wipe`. `load` sets
+  // it to the number of the record restored, or to nothing if none was; a
+  // successful `save` sets it to the number of the record written; a failed
+  // `save` or `wipe` leaves it unchanged. It is no number rather than zero,
+  // as the numbers wrap around through zero, which numbers a record like any
+  // other.
   //
   // A save numbers its record from the newest whole record on the medium,
   // not from `sequence()`: with the number of that record plus the distance,
@@ -227,7 +231,7 @@ public:
   // with one if the medium holds no whole record. The distance exceeds one by
   // the number of slots that the save stepped over because they were not
   // erased, e.g. because they hold the debris of failed saves.
-  constexpr std::uint32_t sequence() const
+  constexpr std::optional<std::uint32_t> sequence() const
   {
     return sequence_;
   }

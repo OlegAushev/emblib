@@ -227,7 +227,7 @@ consteval bool test_load_from_an_empty_medium()
   if (result.record.valid) return false;
   if (settings.last_load().record.valid) return false;
   if (settings.get<motor_p>() != 11) return false;
-  if (settings.sequence() != 0) return false;
+  if (settings.sequence()) return false;
   if (settings.unsaved()) return false;
   if (settings.unapplied()) return false;
   if (settings.restart_required()) return false;
@@ -478,7 +478,7 @@ consteval bool test_a_save_keeps_what_runs()
   if (settings.last_refusal() != refusal{save_refusal::unapplied}) {
     return false;
   }
-  if (settings.sequence() != 0) return false;
+  if (settings.sequence()) return false;
 
   if (!settings.apply_all(applier)) return false;
   if (!settings.set<motor_p>(std::int32_t{7})) return false;
@@ -487,7 +487,7 @@ consteval bool test_a_save_keeps_what_runs()
     return false;
   }
   if (settings.last_refusal() != refusal{save_refusal::invalid}) return false;
-  if (settings.sequence() != 0) return false;
+  if (settings.sequence()) return false;
 
   // The rules see a value that waits for a restart.
   if (!settings.set<motor_p>(std::int32_t{13})) return false;
@@ -496,7 +496,7 @@ consteval bool test_a_save_keeps_what_runs()
 
   refusing accepts;
   if (!settings.save(accepts)) return false;
-  if (settings.sequence() != 1) return false;
+  if (settings.sequence() != 1u) return false;
   if (settings.unsaved()) return false;
 
   // A medium that fails says how.
@@ -549,7 +549,7 @@ consteval bool test_save_and_restart()
     // Saved is not applied: the restart is still owed.
     if (!settings.save(accepts)) return false;
     if (settings.unsaved()) return false;
-    if (settings.sequence() != 1) return false;
+    if (settings.sequence() != 1u) return false;
     if (!settings.restart_required()) return false;
 
     if (!settings.set<motor_p>(std::int32_t{8})) return false;
@@ -564,7 +564,7 @@ consteval bool test_save_and_restart()
   if (!result.record.valid) return false;
   if (restarted.last_load().record.seq != 1) return false;
   if (restarted.get<motor_p>() != 7) return false;
-  if (restarted.sequence() != 1) return false;
+  if (restarted.sequence() != 1u) return false;
   if (restarted.unsaved()) return false;
   if (restarted.unapplied()) return false;
   if (restarted.restart_required()) return false;
@@ -734,12 +734,12 @@ consteval bool test_wipe_leaves_the_image()
   memory.set_power_budget(0);
   if (settings.wipe()) return false;
   if (settings.unsaved()) return false;
-  if (settings.sequence() != 1) return false;
+  if (settings.sequence() != 1u) return false;
   memory.set_power_budget(fram::unlimited);
 
   if (!settings.wipe()) return false;
   if (settings.get<drive_runout>() != 300) return false;
-  if (settings.sequence() != 0) return false;
+  if (settings.sequence()) return false;
   if (!settings.unsaved()) return false;
   // What was applied stays applied.
   if (settings.applied().get<drive_runout>() != 300) return false;
@@ -761,16 +761,19 @@ consteval bool test_wipe_leaves_the_image()
 }
 
 // `sequence()` is the number of a record on the medium: the one a load
-// restored or a save wrote, zero if there is none. A failed save wrote
-// nothing and leaves it, and the save after a load that could not read
-// numbers past the records on the medium, not past zero.
+// restored or a save wrote, and nothing before the first load, after a load
+// that restored no record, a load that could not read included, and after a
+// wipe. A failed save wrote nothing and leaves it, and the save after a load
+// that could not read numbers past the records on the medium, not past
+// zero.
 consteval bool test_sequence_follows_the_medium()
 {
   fram memory;
   refusing accepts;
   test_section settings;
+  if (settings.sequence()) return false;
   auto _ = settings.load(memory);
-  if (settings.sequence() != 0) return false;
+  if (settings.sequence()) return false;
 
   for (auto seq = 1u; seq <= 3; ++seq) {
     if (!settings.save(accepts)) return false;
@@ -780,36 +783,36 @@ consteval bool test_sequence_follows_the_medium()
   test_section restarted;
   auto _ = restarted.load(memory);
   if (restarted.last_load().record.seq != 3) return false;
-  if (restarted.sequence() != 3) return false;
+  if (restarted.sequence() != 3u) return false;
 
   journal applier;
   if (!restarted.set<drive_runout>(std::uint32_t{300})) return false;
   if (!restarted.apply_all(applier)) return false;
   memory.set_power_budget(0);
   if (restarted.save(accepts)) return false;
-  if (restarted.sequence() != 3) return false;
+  if (restarted.sequence() != 3u) return false;
   if (!restarted.unsaved()) return false;
 
   memory.set_power_budget(fram::unlimited);
   if (!restarted.save(accepts)) return false;
-  if (restarted.sequence() != 4) return false;
+  if (restarted.sequence() != 4u) return false;
 
   memory.set_read_fault(true);
   test_section blind;
   auto _ = blind.load(memory);
   if (!blind.last_load().read_failed) return false;
-  if (blind.sequence() != 0) return false;
+  if (blind.sequence()) return false;
 
   memory.set_read_fault(false);
   if (!blind.save(accepts)) return false;
-  if (blind.sequence() != 5) return false;
+  if (blind.sequence() != 5u) return false;
 
   test_section again;
   auto _ = again.load(memory);
   if (again.sequence() != blind.sequence()) return false;
 
   if (!again.wipe()) return false;
-  if (again.sequence() != 0) return false;
+  if (again.sequence()) return false;
 
   return true;
 }

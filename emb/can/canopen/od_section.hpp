@@ -60,7 +60,7 @@ public:
 
   static constexpr std::uint32_t sequence(context_type& ctx)
   {
-    return SectionOf(ctx).sequence();
+    return SectionOf(ctx).sequence().value_or(0);
   }
 
   // Returns the number of blocks that the saves since the section was last
@@ -69,7 +69,7 @@ public:
   static constexpr std::uint32_t erase_cycles(context_type& ctx)
   {
     if constexpr (section_type::storage_type::needs_erase) {
-      return SectionOf(ctx).sequence() / slots_per_block();
+      return SectionOf(ctx).sequence().value_or(0) / slots_per_block();
     }
     else {
       return 0;

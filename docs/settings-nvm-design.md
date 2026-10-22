@@ -1318,6 +1318,14 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   alternatives of `od_value`, one to one. Rejected: four characters to an
   element, which keeps the traffic of before but makes the elements words
   of text, and a type `char`, which CiA 301 does not have.
+- **No sequence number without a record** (2026-10-22). `section::sequence()`
+  returned zero before the first load, after a load that restored no record
+  and after a wipe, the same zero that numbers a record once the numbers
+  wrap around through it (§5), so a client could not tell no record from
+  record 0. It returns `std::optional<std::uint32_t>`, empty in those three
+  cases; a failed save or wipe still leaves it as it was. Rejected: a flag
+  beside the number, which a client would have to read before trusting the
+  number.
 - **The codes of a refusal are an enumeration** (2026-10-22).
   `last_refusal` returned a `uint32`, zero while there was no refusal, and
   a host saw a number it had to look up among the aborts. The codes are
