@@ -87,6 +87,12 @@ emblib не попал. Такие файлы помечены «песочни�
     концепт)
 - [x] `emb/meta/alternative_of.hpp`
   - [x] `is_alternative_of`, `is_alternative_of_v`, `alternative_of`
+- [ ] `emb/meta/enum_carrier32.hpp`
+  - [ ] `enum_carrier32_t` (и `detail::fits_carrier32`) — вручную 2026-10-22
+- [ ] `emb/meta/enum_labels.hpp`
+  - [ ] `enum_label`, `enum_with_labels`, `enum_labels_of` (и
+    `detail::enum_labels_empty`, `detail::enum_values_not_increasing`,
+    `detail::enum_names_repeated`) — вручную 2026-10-22
 - [x] `emb/meta/fixed_string.hpp`
   - [x] `fixed_string` (правило вывода и `detail::concat_chars` без
     комментариев)

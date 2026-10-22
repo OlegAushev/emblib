@@ -2,6 +2,8 @@
 
 #include <array>
 #include <cassert>
+#include <cstdint>
+#include <span>
 #include <string_view>
 
 namespace {
@@ -181,5 +183,113 @@ static_assert(!unit_with_symbol<float>);
 static_assert(unit_symbol_of<volts>() == "V");
 static_assert(unit_symbol_of<meters>().empty());
 static_assert(unit_symbol_of<float>().empty());
+
+// -- enum label tests --
+
+// Labels three of its values, the last one apart from the others, and leaves
+// one without a label.
+enum class mode : std::uint8_t { off, slow, fast = 4, unlabelled = 7 };
+
+consteval std::span<enum_label<mode> const> enum_labels(mode)
+{
+  static constexpr enum_label<mode> labels[] = {
+      {mode::off, "off", {"Off", "Выкл."}},
+      {mode::slow, "slow", {"Slow", "Медленно"}},
+      {mode::fast, "fast", {"Fast", "Быстро"}},
+  };
+  return labels;
+}
+
+// Labels a negative value: its underlying type is signed.
+enum class level : std::int16_t { low = -2, high = 3 };
+
+consteval std::span<enum_label<level> const> enum_labels(level)
+{
+  static constexpr enum_label<level> labels[] = {
+      {level::low, "low", {"Low", "Низкий"}},
+      {level::high, "high", {"High", "Высокий"}},
+  };
+  return labels;
+}
+
+// A scoped enumeration without labels.
+enum class bare { a };
+
+// Returns its table as a span of labels that are not const.
+enum class mutable_table { a };
+
+consteval std::span<enum_label<mutable_table>> enum_labels(mutable_table)
+{
+  return {};
+}
+
+// An unscoped enumeration.
+enum plain { p };
+
+static_assert(enum_with_labels<mode>);
+static_assert(enum_with_labels<level>);
+static_assert(!enum_with_labels<bare>);
+static_assert(!enum_with_labels<mutable_table>);
+static_assert(!enum_with_labels<plain>);
+static_assert(!enum_with_labels<int>);
+
+static_assert(enum_labels_of<mode>().size() == 3);
+static_assert(enum_labels_of<mode>()[0].value() == mode::off);
+static_assert(enum_labels_of<mode>()[2].value() == mode::fast);
+static_assert(enum_labels_of<mode>()[1].name() == "slow");
+static_assert(enum_labels_of<mode>()[1].title() == i18n{"Slow", "Медленно"});
+static_assert(enum_labels_of<level>().front().value() == level::low);
+static_assert(enum_labels_of<level>().back().value() == level::high);
+
+// Returns the name of `m`, or an empty view if `m` has no label: an immediate
+// function reads labels.
+consteval std::string_view name_of(mode m)
+{
+  for (auto const& label : enum_labels_of<mode>()) {
+    if (label.value() == m) return label.name();
+  }
+  return {};
+}
+
+static_assert(name_of(mode::fast) == "fast");
+static_assert(name_of(mode::unlabelled).empty());
+
+// Returns the English title of `e`: reading a label makes this function
+// template an immediate function, which a constant expression may call.
+template<typename E>
+constexpr std::string_view english_title_of(E e)
+{
+  for (auto const& label : enum_labels_of<E>()) {
+    if (label.value() == e) return label.title().en;
+  }
+  return {};
+}
+
+static_assert(english_title_of(level::high) == "High");
+static_assert(english_title_of(mode::off) == "Off");
+
+// -- enum carrier tests --
+
+enum class by_u8 : std::uint8_t { a };
+enum class by_i8 : std::int8_t { a };
+enum class by_i16 : std::int16_t { a };
+enum class by_int { a };
+enum class by_u32 : std::uint32_t { a };
+enum class by_u64 : std::uint64_t { a };
+enum class by_bool : bool { no, yes };
+enum class by_char : char { a };
+
+template<typename E>
+concept carried = requires { typename enum_carrier32_t<E>; };
+
+static_assert(std::same_as<enum_carrier32_t<by_u8>, std::uint32_t>);
+static_assert(std::same_as<enum_carrier32_t<by_i8>, std::int32_t>);
+static_assert(std::same_as<enum_carrier32_t<by_i16>, std::int32_t>);
+static_assert(std::same_as<enum_carrier32_t<by_int>, std::int32_t>);
+static_assert(std::same_as<enum_carrier32_t<by_u32>, std::uint32_t>);
+static_assert(!carried<by_u64>);
+static_assert(!carried<by_bool>);
+static_assert(!carried<by_char>);
+static_assert(!carried<int>);
 
 } // namespace
