@@ -546,8 +546,8 @@ using setting = emb::can::canopen::od_settings<settings_of, applier_of>;
 namespace params = settings::params;
 
 inline constexpr emb::can::canopen::od_row<context> rows[] = {
-  {{0x3100, 0x00}, {}, setting::param<params::drive::phase_swap>},
-  {{0x3107, 0x00}, {}, setting::param<params::drive::pwm_frequency, pwm_frequency_actual>},
+  {{0x3120, 0x00}, {}, setting::param<params::drive::phase_swap>},
+  {{0x3127, 0x00}, {}, setting::param<params::drive::pwm_frequency, pwm_frequency_actual>},
   // ...
 };
 ```
@@ -1324,6 +1324,24 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   alternatives of `od_value`, one to one. Rejected: four characters to an
   element, which keeps the traffic of before but makes the elements words
   of text, and a type `char`, which CiA 301 does not have.
+- **The node id is the inverter's first parameter** (2026-10-23). The
+  server took its node id as a template parameter, so an inverter had one
+  address per image. emblib takes it as a value now, and the inverter
+  reads it from the parameter `canopen.node_id`, a `uint32` from 1 to 127,
+  default 1, applied on restart: the server is built after the settings
+  load. Its record is 3100h, the first of the parameters, and the other 67
+  records moved one block of 20h up, to 3120h–3242h; no host reads the
+  dictionary by its addresses yet. A value stored before keeps its
+  parameter, whose identifier comes from its name, not from its index;
+  the new parameter loads its default, and `params_defaulted` shows until
+  the first save. The group is `canopen`: the node id is a notion of
+  CANopen, not of CAN, and its likely neighbours, the periods of the
+  heartbeat and of the PDOs and the timeouts of the RPDOs, are CANopen's
+  too; the name enters the identifier of the value stored, so it is not
+  to change. Rejected: 3240h, the first free block, which kept the
+  addresses but put the node id last; `can` for the group, inexact for a
+  node id; `comm`, which would be ambiguous once a second interface came,
+  with a path of only two segments.
 - **The inverter reads its Hall readings in their types** (2026-10-22).
   The group `hall` at 5070h gave the sector and the inputs as `float32`, 0
   to 5 and 0 or 1, and without telemetry of the sensor NaN for the speed,
@@ -1846,6 +1864,34 @@ Reading the Hall group in its types, on 2026-10-22 (§10), changed:
 - **Without telemetry of the Hall sensor, every object of the group**,
   5070h:01–09, answers 08000024h, where the speed, the angle, the sector
   and the inputs read NaN and the objects of the emulator 0.
+- 2000h:00 gives a new fingerprint.
+
+Taking the node id from the settings, on 2026-10-23 (§10), changed:
+
+- **3100h, `canopen.node_id`**, is the inverter's CANopen node id, a
+  `uint32` from 1 to 127, default 1, applied on restart. It is written at
+  3100h:01 and takes effect after a save and a reset, 2101h:02; until
+  then 3100h:02 keeps the id in use, 3000h:11 reads true and 3100h:08
+  answers 06010000h.
+- **The parameters moved one block of 20h up**, under the same names:
+
+  | Block | Was | Is |
+  |---|---|---|
+  | drive, with `model.torque_slope` and `model.speed_slope` | 3100h–3107h | 3120h–3127h |
+  | protection | 3120h–3129h | 3140h–3149h |
+  | motor | 3140h–3144h | 3160h–3164h |
+  | model | 3160h–3167h | 3180h–3187h |
+  | controllers | 3180h–3187h | 31A0h–31A7h |
+  | mras | 31A0h–31A2h | 31C0h–31C2h |
+  | current_sensor | 31C0h–31C3h | 31E0h–31E3h |
+  | hall | 31E0h–31EDh | 3200h–320Dh |
+  | hall_calibration | 3200h–3203h | 3220h–3223h |
+  | temperature_sensor | 3220h–3222h | 3240h–3242h |
+
+- **The values stored stay.** The first start of the new firmware loads
+  the 67 values into their new records; the node id, missing from the
+  record (3000h:10 reads 1), takes its default, and `params_defaulted`
+  shows until the first save.
 - 2000h:00 gives a new fingerprint.
 
 ## 10b. What applying taught us
