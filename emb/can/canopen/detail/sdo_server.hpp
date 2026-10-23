@@ -19,18 +19,25 @@ namespace can {
 namespace canopen {
 namespace detail {
 
-template<std::uint8_t NodeId, typename Ctx>
+template<typename Ctx>
 class sdo_server {
 public:
   static constexpr std::size_t tsdo_queue_capacity = 16;
 
-  sdo_server(transport& bus, od_view<Ctx> dictionary, Ctx& ctx)
-      : bus_(bus), dictionary_(dictionary), ctx_(ctx)
+  sdo_server(transport& bus, node_id node, od_view<Ctx> dictionary, Ctx& ctx)
+      : bus_(bus),
+        rsdo_cob_id_(cob_id_of<cob_type::rsdo>(node)),
+        tsdo_cob_id_(cob_id_of<cob_type::tsdo>(node)),
+        dictionary_(dictionary),
+        ctx_(ctx)
   {
     bus_.add_filter(format_t::standard, rsdo_cob_id_, 0x7FF);
   }
 
-  sdo_server(transport& bus, od_view<Ctx> dictionary, Ctx&& ctx) = delete;
+  sdo_server(transport& bus,
+             node_id node,
+             od_view<Ctx> dictionary,
+             Ctx&& ctx) = delete;
 
   sdo_server(sdo_server const&) = delete;
   sdo_server& operator=(sdo_server const&) = delete;
@@ -79,9 +86,6 @@ public:
   }
 
 private:
-  static constexpr id_t rsdo_cob_id_ = cob_id_of<cob_type::rsdo, NodeId>();
-  static constexpr id_t tsdo_cob_id_ = cob_id_of<cob_type::tsdo, NodeId>();
-
   std::expected<expedited_sdo, sdo_abort_code>
   read_expedited(od_entry<Ctx> const& entry, expedited_sdo const& rsdo)
   {
@@ -131,6 +135,8 @@ private:
   }
 
   transport& bus_;
+  id_t rsdo_cob_id_;
+  id_t tsdo_cob_id_;
   od_view<Ctx> dictionary_;
   Ctx& ctx_;
   emb::inplace_queue<payload_t, tsdo_queue_capacity> tsdo_queue_;

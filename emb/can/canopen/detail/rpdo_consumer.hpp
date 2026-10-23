@@ -16,10 +16,10 @@ namespace can {
 namespace canopen {
 namespace detail {
 
-template<std::uint8_t NodeId, std::size_t N>
+template<std::size_t N>
 class rpdo_consumer {
 public:
-  explicit rpdo_consumer(transport& bus) : bus_(bus) {}
+  rpdo_consumer(transport& bus, node_id node) : bus_(bus), node_(node) {}
 
   rpdo_consumer(rpdo_consumer const&) = delete;
   rpdo_consumer& operator=(rpdo_consumer const&) = delete;
@@ -40,7 +40,7 @@ public:
       id = CobId.value;
     }
     else {
-      id = cob_id_of<cob_type::rpdo, I, NodeId>();
+      id = cob_id_of<cob_type::rpdo, I>(node_);
     }
     if (s.cob_id != id) {
       // A previous HW filter (if any) persists in the bus; the slot moves to
@@ -105,6 +105,7 @@ private:
   };
 
   transport& bus_;
+  node_id node_;
   std::array<slot, N> slots_;
 };
 

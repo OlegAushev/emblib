@@ -27,7 +27,6 @@ namespace can {
 namespace canopen {
 
 struct server_options {
-  std::uint8_t node_id;
   std::size_t tpdo_count = 4;
   std::size_t rpdo_count = 4;
   std::size_t rx_queue_capacity = 32;
@@ -35,22 +34,22 @@ struct server_options {
 
 template<server_options Opt, typename Ctx>
 class server {
-  static_assert(valid_node_id<Opt.node_id>, "node id must be in [1, 127]");
-
 public:
   server(emb::delegate<std::chrono::milliseconds()> clock,
          transport& bus,
+         node_id node,
          od_view<Ctx> dictionary,
          Ctx& ctx)
       : clock_(clock),
         bus_(bus),
-        hb_producer_(bus),
+        nmt_(node),
+        hb_producer_(bus, node),
         sync_producer_(bus),
         hb_consumer_(bus),
-        emcy_(bus),
-        sdo_(bus, dictionary, ctx),
-        tpdo_(bus),
-        rpdo_(bus)
+        emcy_(bus, node),
+        sdo_(bus, node, dictionary, ctx),
+        tpdo_(bus, node),
+        rpdo_(bus, node)
   {
     bus_.subscribe(emb::make_delegate<&server::enqueue_rx>(this));
 
@@ -60,6 +59,7 @@ public:
 
   server(emb::delegate<std::chrono::milliseconds()> clock,
          transport& bus,
+         node_id node,
          od_view<Ctx> dictionary,
          Ctx&& ctx) = delete;
 
@@ -164,12 +164,12 @@ public:
     on_reset_communication_ = handler;
   }
 
-  template<std::uint8_t Remote>
-  bool watch_heartbeat(std::chrono::milliseconds timeout,
-                       emb::delegate<void(std::uint8_t)> on_lost)
+  bool watch_heartbeat(node_id remote,
+                       std::chrono::milliseconds timeout,
+                       emb::delegate<void(node_id)> on_lost)
   {
     auto now = clock_();
-    return hb_consumer_.watch<Remote>(timeout, on_lost, now);
+    return hb_consumer_.watch(remote, timeout, on_lost, now);
   }
 
   // ---- emcy ----
@@ -236,14 +236,14 @@ private:
 
   emb::spsc_queue<frame_t, Opt.rx_queue_capacity> rx_queue_;
 
-  detail::nmt_slave<Opt.node_id> nmt_;
-  detail::hb_producer<Opt.node_id> hb_producer_;
+  detail::nmt_slave nmt_;
+  detail::hb_producer hb_producer_;
   detail::sync_producer sync_producer_;
   detail::hb_consumer hb_consumer_;
-  detail::emcy_producer<Opt.node_id> emcy_;
-  detail::sdo_server<Opt.node_id, Ctx> sdo_;
-  detail::tpdo_producer<Opt.node_id, Opt.tpdo_count> tpdo_;
-  detail::rpdo_consumer<Opt.node_id, Opt.rpdo_count> rpdo_;
+  detail::emcy_producer emcy_;
+  detail::sdo_server<Ctx> sdo_;
+  detail::tpdo_producer<Opt.tpdo_count> tpdo_;
+  detail::rpdo_consumer<Opt.rpdo_count> rpdo_;
 
   emb::delegate<void(nmt_state)> on_nmt_change_;
   emb::delegate<void()> on_reset_node_;

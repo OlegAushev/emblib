@@ -24,13 +24,12 @@ public:
   hb_consumer(hb_consumer const&) = delete;
   hb_consumer& operator=(hb_consumer const&) = delete;
 
-  template<std::uint8_t Remote>
-  bool watch(std::chrono::milliseconds timeout,
-             emb::delegate<void(std::uint8_t)> on_lost,
+  bool watch(node_id remote,
+             std::chrono::milliseconds timeout,
+             emb::delegate<void(node_id)> on_lost,
              std::chrono::milliseconds now)
   {
-    static_assert(valid_node_id<Remote>, "node id must be in [1, 127]");
-    constexpr id_t cob_id = cob_id_of<cob_type::heartbeat, Remote>();
+    id_t const cob_id = cob_id_of<cob_type::heartbeat>(remote);
 
     // update existing watch on this cob_id
     for (auto& w : watches_) {
@@ -44,7 +43,7 @@ public:
 
     // register new
     if (!watches_.try_push_back({.cob_id = cob_id,
-                                 .remote = Remote,
+                                 .remote = remote,
                                  .timeout = timeout,
                                  .last_rx = now,
                                  .lost = false,
@@ -65,13 +64,13 @@ public:
 private:
   struct watch_slot {
     id_t cob_id = 0;
-    std::uint8_t remote = 0;
+    node_id remote;
 
     std::chrono::milliseconds timeout{0};
     std::chrono::milliseconds last_rx{0};
     bool lost = false;
 
-    emb::delegate<void(std::uint8_t)> on_lost;
+    emb::delegate<void(node_id)> on_lost;
   };
 
   transport& bus_;

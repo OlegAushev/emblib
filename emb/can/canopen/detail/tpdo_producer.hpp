@@ -15,10 +15,10 @@ namespace can {
 namespace canopen {
 namespace detail {
 
-template<std::uint8_t NodeId, std::size_t N>
+template<std::size_t N>
 class tpdo_producer {
 public:
-  explicit tpdo_producer(transport& bus) : bus_(bus) {}
+  tpdo_producer(transport& bus, node_id node) : bus_(bus), node_(node) {}
 
   template<std::size_t I, pdo_id CobId>
   void setup(tpdo_config const& cfg, std::chrono::milliseconds now)
@@ -32,7 +32,7 @@ public:
       s.cob_id = CobId.value;
     }
     else {
-      s.cob_id = cob_id_of<cob_type::tpdo, I, NodeId>();
+      s.cob_id = cob_id_of<cob_type::tpdo, I>(node_);
     }
   }
 
@@ -65,6 +65,7 @@ private:
   };
 
   transport& bus_;
+  node_id node_;
   std::array<slot, N> slots_;
 };
 

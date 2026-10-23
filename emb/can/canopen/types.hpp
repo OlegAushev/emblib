@@ -5,6 +5,7 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <type_traits>
 #include <utility>
 
@@ -29,8 +30,54 @@ constexpr T from_payload(payload_t const& payload)
   return std::bit_cast<T>(payload);
 }
 
-template<std::uint8_t Id>
-concept valid_node_id = Id >= 1 && Id <= 127;
+namespace detail {
+
+// Fails the constant evaluation that calls it, and the diagnostic names it:
+// it is neither `constexpr` nor defined. The constructor of `node_id` calls it
+// for a value outside [1, 127].
+void node_id_out_of_range();
+
+} // namespace detail
+
+// The class `node_id` holds the id of a CANopen node, from 1 to 127. A
+// constant constructs one, checked at compile time, and `make` a value known
+// at run time, so an id outside the range never reaches the arithmetic of
+// COB-IDs.
+class node_id {
+public:
+  static constexpr unsigned min = 1;
+  static constexpr unsigned max = 127;
+
+  // Constructs the id `value`. Compilation fails here if `value` is outside
+  // [1, 127]; a value known only at run time goes through `make`.
+  explicit consteval node_id(unsigned value)
+      : value_(static_cast<std::uint8_t>(value))
+  {
+    if (!make(value)) detail::node_id_out_of_range();
+  }
+
+  // Returns the id `value`, or `std::nullopt` if `value` is outside
+  // [1, 127].
+  static constexpr std::optional<node_id> make(unsigned value)
+  {
+    if (value < min || value > max) return std::nullopt;
+    return node_id(unchecked{}, static_cast<std::uint8_t>(value));
+  }
+
+  constexpr std::uint8_t get() const
+  {
+    return value_;
+  }
+
+  friend constexpr bool operator==(node_id, node_id) = default;
+
+private:
+  struct unchecked {};
+
+  constexpr node_id(unchecked, std::uint8_t value) : value_(value) {}
+
+  std::uint8_t value_;
+};
 
 enum class nmt_state : std::uint8_t {
   initializing = 0x00,
@@ -90,23 +137,21 @@ constexpr id_t cob_id_of()
   return cob_function_codes[std::to_underlying(Service)];
 }
 
-template<cob_type Service, std::uint8_t NodeId>
+template<cob_type Service>
   requires peer_cob<Service>
-constexpr id_t cob_id_of()
+constexpr id_t cob_id_of(node_id node)
 {
-  static_assert(valid_node_id<NodeId>, "node id must be in [1, 127]");
-  return cob_function_codes[std::to_underlying(Service)] + NodeId;
+  return cob_function_codes[std::to_underlying(Service)] + node.get();
 }
 
-template<cob_type Pdo, std::size_t I, std::uint8_t NodeId>
+template<cob_type Pdo, std::size_t I>
   requires pdo_cob<Pdo>
-constexpr id_t cob_id_of()
+constexpr id_t cob_id_of(node_id node)
 {
   static_assert(I >= 1 && I <= 4, "predefined COB-ID exists only for PDO 1..4");
-  static_assert(valid_node_id<NodeId>, "node id must be in [1, 127]");
   return cob_function_codes[std::to_underlying(Pdo)]
        + static_cast<id_t>(0x100 * (I - 1))
-       + NodeId;
+       + node.get();
 }
 
 // Error codes of CiA 301 that the server sends in an EMCY.

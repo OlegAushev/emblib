@@ -13,35 +13,36 @@ namespace can {
 namespace canopen {
 namespace detail {
 
-template<std::uint8_t NodeId>
 class nmt_slave {
 public:
+  explicit constexpr nmt_slave(node_id node) : node_(node) {}
+
   static constexpr id_t cob_id()
   {
     return cob_id_;
   }
 
-  bool match(frame_t const& frame) const
+  constexpr bool match(frame_t const& frame) const
   {
     return frame.id == cob_id();
   }
 
-  nmt_state state() const
+  constexpr nmt_state state() const
   {
     return state_;
   }
 
-  void set_state(nmt_state s)
+  constexpr void set_state(nmt_state s)
   {
     state_ = s;
   }
 
-  std::optional<nmt_command> decode(frame_t const& frame) const
+  constexpr std::optional<nmt_command> decode(frame_t const& frame) const
   {
     if (frame.len < 2) return std::nullopt;
     std::uint8_t cs = frame.payload[0];
     std::uint8_t target = frame.payload[1];
-    if (target != 0 && target != NodeId) return std::nullopt;
+    if (target != 0 && target != node_.get()) return std::nullopt;
 
     switch (cs) {
     case 0x01: return nmt_command::start;
@@ -55,6 +56,7 @@ public:
 
 private:
   static constexpr id_t cob_id_ = cob_id_of<cob_type::nmt>();
+  node_id node_;
   nmt_state state_ = nmt_state::initializing;
 };
 
