@@ -1,5 +1,6 @@
 #pragma once
 
+#include <emb/assert.hpp>
 #include <emb/i18n.hpp>
 #include <emb/meta/enum_labels.hpp>
 #include <emb/meta/unit_symbol.hpp>
@@ -80,20 +81,6 @@ struct descriptor {
 };
 
 namespace detail {
-
-// The functions below fail the constant evaluation that calls them, and the
-// diagnostic names the function: they are neither `constexpr` nor defined.
-// `param` calls them to reject a declaration at its call: for a default
-// outside the bounds, a lower bound above the upper one, an exposed
-// parameter without a title in each language, a unit that only repeats the
-// symbol of the type, a unit given to a `bool` or to an enumeration, and a
-// value of an enumeration between the bounds that its labels do not name.
-void parameter_default_outside_range();
-void parameter_min_above_max();
-void parameter_title_missing();
-void parameter_unit_repeats_symbol();
-void parameter_unit_meaningless();
-void parameter_value_unlabelled();
 
 // Returns `T` constructed from the lowest finite value of `scalar_t<T>`. The
 // constructor of a wrapper may clamp it, e.g. that of `emb::clamped` to its
@@ -268,25 +255,25 @@ consteval declaration<T> param(std::string_view name,
   auto const max = to_cell(opts.max);
 
   if (!less_equal(kind, min, max)) {
-    detail::parameter_min_above_max();
+    EMB_PANIC("the lower bound of a parameter is above the upper one");
   }
   if (!in_range(kind, to_cell(def), min, max)) {
-    detail::parameter_default_outside_range();
+    EMB_PANIC("the default of a parameter is outside its bounds");
   }
   if constexpr (some_enum_value<T>) {
     if (!detail::labelled_between(opts.min, opts.max)) {
-      detail::parameter_value_unlabelled();
+      EMB_PANIC("a value of the enumeration between the bounds has no label");
     }
   }
   if (opts.expose && (opts.title.en.empty() || opts.title.ru.empty())) {
-    detail::parameter_title_missing();
+    EMB_PANIC("an exposed parameter needs a title in each language");
   }
   if (!opts.unit.empty() && opts.unit == unit_symbol_of<T>()) {
-    detail::parameter_unit_repeats_symbol();
+    EMB_PANIC("the unit only repeats the symbol of the type");
   }
   if (!opts.unit.empty()
       && (kind == scalar_kind::boolean || some_enum_value<T>)) {
-    detail::parameter_unit_meaningless();
+    EMB_PANIC("a bool or an enumeration takes no unit");
   }
 
   return {descriptor{.name = name,

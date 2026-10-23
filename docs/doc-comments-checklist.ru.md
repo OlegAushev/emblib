@@ -10,10 +10,12 @@ emblib не попал. Такие файлы помечены «песочни�
 
 ## Начатые
 
-- [x] `emb/assert.hpp`
+- [ ] `emb/assert.hpp`
   - [x] `ASSUME`
   - [x] `emb::ensure_failed`
   - [x] `emb::ensure`
+  - [ ] `EMB_PANIC` (и шаблон `emb::ensure_failed<Message>`) — вручную
+    2026-10-23
 - [x] `emb/concurrent/double_buffer.hpp`
   - [x] `double_buffer`
 - [x] `emb/container/circular_buffer.hpp`
@@ -90,9 +92,7 @@ emblib не попал. Такие файлы помечены «песочни�
 - [ ] `emb/meta/enum_carrier32.hpp`
   - [ ] `enum_carrier32_t` (и `detail::fits_carrier32`) — вручную 2026-10-22
 - [ ] `emb/meta/enum_labels.hpp`
-  - [ ] `enum_label`, `enum_with_labels`, `enum_labels_of` (и
-    `detail::enum_labels_empty`, `detail::enum_values_not_increasing`,
-    `detail::enum_names_repeated`) — вручную 2026-10-22
+  - [ ] `enum_label`, `enum_with_labels`, `enum_labels_of` — вручную 2026-10-22
 - [x] `emb/meta/fixed_string.hpp`
   - [x] `fixed_string` (правило вывода и `detail::concat_chars` без
     комментариев)
@@ -141,11 +141,6 @@ emblib не попал. Такие файлы помечены «песочни�
 - [x] `emb/settings/param.hpp`
   - [x] `apply_policy` (и `enum_labels(apply_policy)`, вручную 2026-10-22)
   - [x] `descriptor`
-  - [x] `detail::parameter_default_outside_range`,
-    `detail::parameter_min_above_max`, `detail::parameter_title_missing`,
-    `detail::parameter_unit_repeats_symbol`,
-    `detail::parameter_unit_meaningless`,
-    `detail::parameter_value_unlabelled` (вручную 2026-10-22)
   - [x] `detail::lowest`, `detail::highest`, `detail::identify`,
     `detail::labelled_between` (вручную 2026-10-22)
   - [x] `options` (и поля `title`, `unit`), `declaration` (и поля `title`,
@@ -166,8 +161,6 @@ emblib не попал. Такие файлы помечены «песочни�
     комментарии написаны вручную 2026-10-17
   - [ ] `some_rule`, `detail::is_inputs_of`, `all_hold` — вручную 2026-10-17
 - [x] `emb/settings/schema.hpp`
-  - [x] `detail::duplicate_parameter_name`, `detail::parameter_id_collision`
-    (`detail::unknown_parameter_message` без комментария)
   - [x] `basic_schema`
   - [x] `make_schema`
   - [x] `schema_t`, `type_at`

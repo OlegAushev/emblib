@@ -3,6 +3,8 @@
 #include <cassert>
 #include <exception>
 
+#include <emb/meta/fixed_string.hpp>
+
 // The macro `ASSUME` states a precondition or invariant `expr` that the
 // caller guarantees, e.g. that a container is not empty when its `front()` is
 // called. If `NDEBUG` is not defined, `ASSUME(expr)` expands to
@@ -33,6 +35,16 @@ namespace emb {
   std::terminate();
 }
 
+// Handles a failed check like `ensure_failed()`, but a call to it reached
+// during constant evaluation names `Message` in the diagnostic, as the
+// template argument of a function that is not `constexpr`. At run time it
+// calls `std::terminate`. A program calls it through `EMB_PANIC`.
+template<fixed_string Message>
+[[noreturn]] void ensure_failed() noexcept
+{
+  std::terminate();
+}
+
 // Checks the invariant `pred`: if `pred` is `false`, calls `ensure_failed()`,
 // which calls `std::terminate`; otherwise there are no effects. Unlike
 // `ASSUME`, the check is made whether or not `NDEBUG` is defined.
@@ -52,3 +64,14 @@ constexpr void ensure(bool pred)
 }
 
 } // namespace emb
+
+// The macro `EMB_PANIC` marks a point that a correct program does not reach,
+// for the reason `message`, a string literal. In a context that requires a
+// constant expression, reaching it makes the program ill-formed, and the
+// diagnostic shows `message`. Elsewhere, e.g. in a `constexpr` function called
+// at run time or in the initializer of a variable that is not `constexpr`, it
+// calls `std::terminate`. GCC shows a character of `message` outside ASCII as
+// an octal escape.
+//
+// `EMB_PANIC(message)` is an expression of type `void`.
+#define EMB_PANIC(message) ::emb::ensure_failed<message>()

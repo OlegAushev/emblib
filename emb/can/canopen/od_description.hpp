@@ -12,20 +12,12 @@
 #include "od.hpp"
 #include "od_dictionary.hpp"
 
+#include <emb/assert.hpp>
 #include <emb/meta/fixed_string.hpp>
 
 namespace emb {
 namespace can {
 namespace canopen {
-
-namespace detail {
-
-// Fails the constant evaluation that calls it, and the diagnostic names it:
-// `od_description_fingerprint` calls it for a text without the header of a
-// description.
-void od_description_has_no_fingerprint();
-
-} // namespace detail
 
 // Returns the description, for a host, of the dictionary that
 // `make_dictionary<Rows, Areas, Groups>()` makes, on the device named
@@ -97,21 +89,22 @@ consteval auto make_description()
 
 // Returns the fingerprint that the header of `description` states, as
 // `make_description` writes it, for a `static_assert` that it is the
-// dictionary's. Constant evaluation fails if the text holds no fingerprint.
+// dictionary's. If the text holds no fingerprint, constant evaluation fails
+// and a call at run time terminates (`EMB_PANIC`).
 constexpr std::uint32_t od_description_fingerprint(std::string_view description)
 {
   constexpr std::string_view key = "\"fingerprint\":\"0x";
   auto const at = description.find(key);
   if (at == std::string_view::npos
       || at + key.size() + 8 > description.size()) {
-    detail::od_description_has_no_fingerprint();
+    EMB_PANIC("od: the text holds no fingerprint");
   }
   std::uint32_t fingerprint = 0;
   for (auto const c : description.substr(at + key.size(), 8)) {
     auto const digit = c >= '0' && c <= '9' ? c - '0'
                      : c >= 'A' && c <= 'F' ? c - 'A' + 10
                                             : -1;
-    if (digit < 0) detail::od_description_has_no_fingerprint();
+    if (digit < 0) EMB_PANIC("od: the text holds no fingerprint");
     fingerprint = fingerprint * 16 + static_cast<std::uint32_t>(digit);
   }
   return fingerprint;

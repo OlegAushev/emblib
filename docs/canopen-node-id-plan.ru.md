@@ -47,10 +47,9 @@ clang 22 через `clang-check`. Двенадцать негативных п�
   `std::runtime_format`. Диапазон проверяет только `make`, конструктор
   зовёт его, так что отдельного предиката нет. Открыты `min` и `max`: по ним
   задаются границы настройки. Конструктор отказывает так же, как `param` в
-  настройках: вызывает объявленную, но не constexpr функцию
-  (`emb/settings/param.hpp:84-95`); `throw` в consteval под
-  `-fno-exceptions` не компилируется (§8 плана словаря). Отвергнутые
-  варианты:
+  настройках: через `EMB_PANIC` (`emb/assert.hpp`), чью причину диагностика
+  показывает в строке ошибки; `throw` в consteval под `-fno-exceptions` не
+  компилируется (§8 плана словаря). Отвергнутые варианты:
   - фабрика `literal(v)`, как в cannet: имя говорит, как выглядит
     аргумент, а нужна константа — `literal(base + 2)` тоже работает;
   - `literal<V>()` со `static_assert`;
@@ -164,15 +163,6 @@ clang 22 через `clang-check`. Двенадцать негативных п�
 ### 2.1 `node_id` (`types.hpp`)
 
 ```cpp
-namespace detail {
-
-// Fails the constant evaluation that calls it, and the diagnostic names it:
-// it is neither `constexpr` nor defined. The constructor of `node_id` calls it
-// for a value outside [1, 127].
-void node_id_out_of_range();
-
-} // namespace detail
-
 // The class `node_id` holds the id of a CANopen node, from 1 to 127. A
 // constant constructs one, checked at compile time, and `make` a value known
 // at run time, so an id outside the range never reaches the arithmetic of
@@ -187,7 +177,7 @@ public:
   explicit consteval node_id(unsigned value)
       : value_(static_cast<std::uint8_t>(value))
   {
-    if (!make(value)) detail::node_id_out_of_range();
+    if (!make(value)) EMB_PANIC("node_id: the id must be in [1, 127]");
   }
 
   // Returns the id `value`, or `std::nullopt` if `value` is outside
@@ -217,7 +207,7 @@ private:
 Диапазон проверяет только `make`; конструктор зовёт его. `make` проверяет
 значение до сужения до `uint8_t`, поэтому `make(261)` даёт `nullopt`, а не
 5. Конструктор сужает раньше проверки, но для значения вне диапазона
-вычисление обрывается на `node_id_out_of_range()`, и объекта нет:
+вычисление обрывается на `EMB_PANIC`, и объекта нет:
 `node_id{300}` не компилируется, а не даёт 44.
 
 Конструктор `explicit`, поэтому `node_id x = 1;` и `f(1)` не компилируются.
@@ -473,9 +463,9 @@ emb::can::canopen::node_id read_node_id(image const& from)
        RSDO и TSDO, а сервер передаёт ему ещё и Node-ID;
      - в §4.2 «600h + NodeId» становится «600h + Node-ID»;
      - `canopen-od-plan.ru.md` исторический, его не трогать;
-   - докомментарии `node_id` и `detail::node_id_out_of_range` — в стиле
-     cppreference. `types.hpp` и `server.hpp` в
-     `doc-comments-checklist.ru.md` пока не пройдены;
+   - докомментарии `node_id` и `detail::node_id_out_of_range` (позже его
+     заменил `EMB_PANIC`, раздел 8) — в стиле cppreference. `types.hpp` и
+     `server.hpp` в `doc-comments-checklist.ru.md` пока не пройдены;
    - в теле коммита — почему Node-ID уходит из шаблона, со ссылкой на
      8aedb30.
 2. **etk** `refactor(canopen): give the server its node id at run time`, с
@@ -576,7 +566,7 @@ rev-a-release):
 
 | Проба | Ошибка |
 |---|---|
-| `node_id{0}`, `node_id{128}`, `node_id{300}` | `call to non-'constexpr' function 'void emb::can::canopen::detail::node_id_out_of_range()'` |
+| `node_id{0}`, `node_id{128}`, `node_id{300}` | `call to non-'constexpr' function 'void emb::ensure_failed() [with fixed_string<...auto...> Message = fixed_string<36>{"node_id: the id must be in [1, 127]"}]'` |
 | `node_id{v}`, `v` — время выполнения | `call to consteval function 'emb::can::canopen::node_id(v)' is not a constant expression` |
 | `node_id x = 5;` | `conversion from 'int' to non-scalar type 'const emb::can::canopen::node_id' requested` |
 | `f(v)` для `f(node_id)` и `std::uint8_t v` | `could not convert 'v' from 'uint8_t' {aka 'unsigned char'} to 'emb::can::canopen::node_id'` |
@@ -630,8 +620,8 @@ rev-a-release):
 ## 6. Ловушки
 
 - **`throw` в consteval** под `-fno-exceptions` не компилируется (§8 плана
-  словаря). Конструктор отказывает вызовом
-  `detail::node_id_out_of_range()`, как `param` в настройках.
+  словаря). Конструктор отказывает через `EMB_PANIC`, как `param` в
+  настройках.
 - **Признак типа не видит `consteval`.** `std::is_constructible_v<node_id,
   std::uint8_t>` — true: признак смотрит на объявления, а не на то,
   вычислимо ли выражение при компиляции. Что `node_id{v}` с переменной не
@@ -707,3 +697,9 @@ clang считает `od.cpp` за 1 944 576 шагов constexpr против 1
   68 составных объектов, 24 группы, 157 строк, 2 448 байт записей, размер
   описания и число шагов constexpr.
 - Шаги 0 и 5 добавились к плану по ходу работы.
+- После плана отказ при компиляции идёт через `EMB_PANIC` из
+  `emb/assert.hpp`, у `node_id` и во всей emblib, а не через вызов
+  объявленной, но не определённой функции: причину диагностика показывает
+  текстом в строке ошибки, и своя функция на каждую причину не нужна.
+  Пробы `node_id{0}`, `node_id{128}` и `node_id{300}` раздела 5
+  перепроверены с новым текстом ошибки.

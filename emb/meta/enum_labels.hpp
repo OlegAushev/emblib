@@ -1,5 +1,6 @@
 #pragma once
 
+#include <emb/assert.hpp>
 #include <emb/i18n.hpp>
 
 #include <concepts>
@@ -85,18 +86,6 @@ concept enum_with_labels = std::is_scoped_enum_v<E> && requires {
   { enum_labels(E{}) } -> std::same_as<std::span<enum_label<E> const>>;
 };
 
-namespace detail {
-
-// The functions below fail the constant evaluation that calls them, and the
-// diagnostic names the function: they are neither `constexpr` nor defined.
-// `enum_labels_of` calls them for a table without labels, one whose values do
-// not strictly increase, and one that gives a name twice.
-void enum_labels_empty();
-void enum_values_not_increasing();
-void enum_names_repeated();
-
-} // namespace detail
-
 // Returns the table of the labels of the values of `E`, as its hook
 // `enum_labels` returns it, after checking it: the table is not empty, its
 // values, compared as their underlying type, strictly increase, and no two
@@ -109,16 +98,18 @@ template<enum_with_labels E>
 consteval std::span<enum_label<E> const> enum_labels_of()
 {
   auto const labels = enum_labels(E{});
-  if (labels.empty()) detail::enum_labels_empty();
+  if (labels.empty()) EMB_PANIC("the table of labels is empty");
   for (auto i = 1uz; i < labels.size(); ++i) {
     if (std::to_underlying(labels[i - 1].value())
         >= std::to_underlying(labels[i].value())) {
-      detail::enum_values_not_increasing();
+      EMB_PANIC("the values of the labels do not strictly increase");
     }
   }
   for (auto i = 0uz; i < labels.size(); ++i) {
     for (auto j = 0uz; j < i; ++j) {
-      if (labels[j].name() == labels[i].name()) detail::enum_names_repeated();
+      if (labels[j].name() == labels[i].name()) {
+        EMB_PANIC("two labels have the same name");
+      }
     }
   }
   return labels;

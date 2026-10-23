@@ -9,6 +9,7 @@
 #include <type_traits>
 #include <utility>
 
+#include <emb/assert.hpp>
 #include <emb/can.hpp>
 #include <emb/delegate.hpp>
 
@@ -30,15 +31,6 @@ constexpr T from_payload(payload_t const& payload)
   return std::bit_cast<T>(payload);
 }
 
-namespace detail {
-
-// Fails the constant evaluation that calls it, and the diagnostic names it:
-// it is neither `constexpr` nor defined. The constructor of `node_id` calls it
-// for a value outside [1, 127].
-void node_id_out_of_range();
-
-} // namespace detail
-
 // The class `node_id` holds the id of a CANopen node, from 1 to 127. A
 // constant constructs one, checked at compile time, and `make` a value known
 // at run time, so an id outside the range never reaches the arithmetic of
@@ -53,7 +45,7 @@ public:
   explicit consteval node_id(unsigned value)
       : value_(static_cast<std::uint8_t>(value))
   {
-    if (!make(value)) detail::node_id_out_of_range();
+    if (!make(value)) EMB_PANIC("node_id: the id must be in [1, 127]");
   }
 
   // Returns the id `value`, or `std::nullopt` if `value` is outside

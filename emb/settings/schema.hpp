@@ -1,5 +1,6 @@
 #pragma once
 
+#include <emb/assert.hpp>
 #include <emb/meta/fixed_string.hpp>
 #include <emb/meta/typelist.hpp>
 #include <emb/settings/param.hpp>
@@ -18,14 +19,6 @@ namespace emb {
 namespace settings {
 
 namespace detail {
-
-// `duplicate_parameter_name` and `parameter_id_collision` fail the constant
-// evaluation that calls them, and the diagnostic names the function: they are
-// neither `constexpr` nor defined. `make_schema` calls the first if two
-// parameters have the same name and the second if two parameters with
-// different names have the same identifier.
-void duplicate_parameter_name();
-void parameter_id_collision();
 
 // The name that the declaration `Decl` gives its parameter, as a
 // `fixed_string`, for the messages of failed `static_assert`s.
@@ -111,8 +104,7 @@ struct basic_schema {
 //
 // The program is ill-formed if two parameters have the same name, even with
 // different types, or if two parameters with different names have the same
-// identifier; the diagnostic names `detail::duplicate_parameter_name` or
-// `detail::parameter_id_collision`, respectively.
+// identifier, and the diagnostic says which.
 template<some_parameter_type... Ts>
 consteval basic_schema<typelist<Ts...>, sizeof...(Ts)>
 make_schema(declaration<Ts> const&... params)
@@ -133,7 +125,7 @@ make_schema(declaration<Ts> const&... params)
   for (auto i = 0uz; i < n; ++i)
     for (auto j = i + 1; j < n; ++j)
       if (schema.parameters[i].name == schema.parameters[j].name) {
-        detail::duplicate_parameter_name();
+        EMB_PANIC("two parameters have the same name");
       }
 
   // Identifiers are what a stored record is matched by, so a hash collision
@@ -141,7 +133,7 @@ make_schema(declaration<Ts> const&... params)
   for (auto i = 1uz; i < n; ++i)
     if (schema.parameters[schema.by_id[i]].id
         == schema.parameters[schema.by_id[i - 1]].id) {
-      detail::parameter_id_collision();
+      EMB_PANIC("two parameters with different names have the same identifier");
     }
 
   return schema;
