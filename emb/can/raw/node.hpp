@@ -46,7 +46,7 @@ public:
                                  .timed_out = false,
                                  .handler = handler,
                                  .on_timeout = on_timeout});
-    emb::ensure(ok);
+    if (!ok) emb::panic();
     bus_.add_filter(format, id, mask);
   }
 
@@ -62,7 +62,7 @@ public:
                                  .period = period,
                                  .last_tx = now_,
                                  .provider = provider});
-    emb::ensure(ok);
+    if (!ok) emb::panic();
   }
 
   void run(std::chrono::milliseconds since_boot)

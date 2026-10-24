@@ -23,44 +23,43 @@
 
 namespace emb {
 
-// Handles a failed `ensure` check by calling `std::terminate`. The effect at
-// run time is that of the terminate handler installed with
-// `std::set_terminate`, or `std::abort` if none is installed.
+// Terminates the program by calling `std::terminate`. A call to `panic` marks
+// a point that a correct program does not reach, typically the branch of a
+// failed check: `if (index >= size) emb::panic();`. Unlike `ASSUME`, such a
+// check is made whether or not `NDEBUG` is defined.
 //
-// `ensure_failed` is not `constexpr`, so a call to it reached during constant
-// evaluation, e.g. `ensure(false)` in a `constexpr` initializer, makes the
-// program ill-formed.
-[[noreturn]] inline void ensure_failed() noexcept
+// `panic` is not `constexpr`, so a call to it reached during constant
+// evaluation makes the program ill-formed in a context that requires a
+// constant expression, e.g. a `constexpr` initializer. Elsewhere, e.g. in the
+// initializer of a variable that is not `constexpr`, the call is evaluated at
+// run time and terminates.
+//
+// The effect at run time is that of the terminate handler installed with
+// `std::set_terminate`, or `std::abort` if none is installed; a program
+// installs one to halt the device as appropriate (e.g. breakpoint and spin,
+// watchdog reset).
+[[noreturn]] inline void panic() noexcept
 {
   std::terminate();
 }
 
-// Handles a failed check like `ensure_failed()`, but a call to it reached
-// during constant evaluation names `Message` in the diagnostic, as the
-// template argument of a function that is not `constexpr`. At run time it
-// calls `std::terminate`. A program calls it through `EMB_PANIC`.
+// Terminates like `panic()`, but a call to it reached during constant
+// evaluation names `Message` in the diagnostic, as the template argument of a
+// function that is not `constexpr`. A program calls it through `EMB_PANIC`.
 template<fixed_string Message>
-[[noreturn]] void ensure_failed() noexcept
+[[noreturn]] void panic() noexcept
 {
   std::terminate();
 }
 
-// Checks the invariant `pred`: if `pred` is `false`, calls `ensure_failed()`,
-// which calls `std::terminate`; otherwise there are no effects. Unlike
-// `ASSUME`, the check is made whether or not `NDEBUG` is defined.
+// Checks `pred`: `ensure(pred)` is `if (!pred) panic();`.
 //
-// In a context that requires a constant expression, a `false` `pred` makes
-// the program ill-formed. Elsewhere, e.g. in the initializer of a variable
-// that is not `constexpr`, the call is evaluated at run time and terminates.
-//
-// The effect of a failed check is that of the terminate handler; a program
-// installs one with `std::set_terminate` to halt the device as appropriate
-// (e.g. breakpoint and spin, watchdog reset).
+// Deprecated: write `if (!pred) emb::panic();`, which names the condition of
+// the failure instead of the one that holds.
+[[deprecated("write `if (!pred) emb::panic();`")]]
 constexpr void ensure(bool pred)
 {
-  if (!pred) {
-    ensure_failed();
-  }
+  if (!pred) panic();
 }
 
 } // namespace emb
@@ -74,4 +73,4 @@ constexpr void ensure(bool pred)
 // an octal escape.
 //
 // `EMB_PANIC(message)` is an expression of type `void`.
-#define EMB_PANIC(message) ::emb::ensure_failed<message>()
+#define EMB_PANIC(message) ::emb::panic<message>()

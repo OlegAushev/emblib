@@ -12,9 +12,9 @@ emblib не попал. Такие файлы помечены «песочни�
 
 - [ ] `emb/assert.hpp`
   - [x] `ASSUME`
-  - [x] `emb::ensure_failed`
-  - [x] `emb::ensure`
-  - [ ] `EMB_PANIC` (и шаблон `emb::ensure_failed<Message>`) — вручную
+  - [x] `emb::panic` (бывший `emb::ensure_failed`)
+  - [x] `emb::ensure` (устаревший)
+  - [ ] `EMB_PANIC` (и шаблон `emb::panic<Message>`) — вручную
     2026-10-23
 - [x] `emb/concurrent/double_buffer.hpp`
   - [x] `double_buffer`
