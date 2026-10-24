@@ -20,8 +20,8 @@ constexpr auto make(std::expected<int, error> e)
 constexpr std::expected<int, error> sum(std::expected<int, error> a,
                                         std::expected<int, error> b)
 {
-  auto const x = TRY(a);
-  return x + TRY(b);
+  auto const x = EMB_TRY(a);
+  return x + EMB_TRY(b);
 }
 
 constexpr bool test_value()
@@ -46,7 +46,7 @@ constexpr bool test_lvalue_not_consumed()
 {
   auto e = make(42);
   auto f = [](std::expected<int, error>& x) -> std::expected<int, error> {
-    return TRY(x);
+    return EMB_TRY(x);
   };
   auto r = f(e);
   assert(r.has_value() && *r == 42);
@@ -57,7 +57,7 @@ constexpr bool test_lvalue_not_consumed()
 constexpr std::expected<void, error> run(std::expected<void, error> step,
                                          int& counter)
 {
-  TRY(step);
+  EMB_TRY(step);
   ++counter;
   return {};
 }
@@ -76,7 +76,7 @@ constexpr std::expected<void, error> run(std::expected<void, error> step,
 
 constexpr std::expected<int, wide_error> widen(std::expected<int, error> e)
 {
-  return TRY(e);
+  return EMB_TRY(e);
 }
 
 [[maybe_unused]] constexpr bool test_error_conversion()
@@ -95,7 +95,7 @@ struct move_only {
 
 constexpr std::expected<move_only, error> forward_move_only(int v)
 {
-  return TRY(
+  return EMB_TRY(
       [](int x) -> std::expected<move_only, error> { return move_only{x}; }(v));
 }
 

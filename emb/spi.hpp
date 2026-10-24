@@ -64,10 +64,10 @@ using result = std::expected<void, typename Dev::error_type>;
 // Chip select held for a scope:
 //
 //   emb::spi::selection const cs{dev_, cs_timing};
-//   TRY(dev_.write(header));
+//   EMB_TRY(dev_.write(header));
 //   return dev_.read(buf);
 //
-// CS is released on every exit path, including the early return TRY hides.
+// CS is released on every exit path, including the early return EMB_TRY hides.
 template<some_device Dev>
 class [[nodiscard]] selection {
 public:

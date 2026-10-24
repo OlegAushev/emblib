@@ -12,7 +12,7 @@ namespace emb {
 //   auto relock = emb::scope_exit([] { lock(); });
 //
 // The callback fires on every exit path, including early returns (e.g. from
-// TRY). Call release() to dismiss it.
+// EMB_TRY). Call release() to dismiss it.
 template<typename Callback>
   requires std::invocable<Callback&>
 class [[nodiscard]] scope_exit {
