@@ -1,8 +1,8 @@
 #pragma once
 
-#include <emb/assert.hpp>
 #include <emb/meta/fixed_string.hpp>
 #include <emb/meta/typelist.hpp>
+#include <emb/panic.hpp>
 #include <emb/settings/param.hpp>
 
 #include <algorithm>

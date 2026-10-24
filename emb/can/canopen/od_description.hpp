@@ -12,8 +12,8 @@
 #include "od.hpp"
 #include "od_dictionary.hpp"
 
-#include <emb/assert.hpp>
 #include <emb/meta/fixed_string.hpp>
+#include <emb/panic.hpp>
 
 namespace emb {
 namespace can {

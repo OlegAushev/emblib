@@ -1,7 +1,7 @@
 #pragma once
 
-#include <emb/assert.hpp>
 #include <emb/i18n.hpp>
+#include <emb/panic.hpp>
 
 #include <concepts>
 #include <span>

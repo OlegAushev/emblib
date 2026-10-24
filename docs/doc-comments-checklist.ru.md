@@ -10,12 +10,6 @@ emblib не попал. Такие файлы помечены «песочни�
 
 ## Начатые
 
-- [ ] `emb/assert.hpp`
-  - [x] `emb::panic` (бывший `emb::ensure_failed`)
-  - [x] `emb::ensure` (устаревший)
-  - [ ] `EMB_PANIC` (и шаблон `emb::panic<Message>`) — вручную
-    2026-10-23
-  - [ ] `EMB_PRE` (вместо `ASSUME`) — вручную 2026-10-24
 - [x] `emb/concurrent/double_buffer.hpp`
   - [x] `double_buffer`
 - [x] `emb/container/circular_buffer.hpp`
@@ -135,6 +129,12 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `test_any`, `test_all`, `test` (`runtime::` и шаблонные)
   - [x] `clear_w1`, `clear_w0` (`runtime::` и шаблонные)
   - [x] `bits`, `modify`
+- [ ] `emb/panic.hpp` (бывший `emb/assert.hpp`)
+  - [x] `emb::panic` (бывший `emb::ensure_failed`)
+  - [x] `emb::ensure` (устаревший)
+  - [ ] `EMB_PANIC` (и шаблон `emb::panic<Message>`) — вручную
+    2026-10-23
+  - [ ] `EMB_PRE` (вместо `ASSUME`) — вручную 2026-10-24
 - [x] `emb/settings/image.hpp`
   - [x] `error`
   - [x] `image`

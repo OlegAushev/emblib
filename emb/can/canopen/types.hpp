@@ -9,9 +9,9 @@
 #include <type_traits>
 #include <utility>
 
-#include <emb/assert.hpp>
 #include <emb/can.hpp>
 #include <emb/delegate.hpp>
+#include <emb/panic.hpp>
 
 namespace emb {
 namespace can {

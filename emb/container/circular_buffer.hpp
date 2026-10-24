@@ -1,6 +1,6 @@
 #pragma once
 
-#include <emb/assert.hpp>
+#include <emb/panic.hpp>
 
 #include <array>
 #include <memory>

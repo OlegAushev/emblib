@@ -1,9 +1,9 @@
 #pragma once
 
-#include <emb/assert.hpp>
 #include <emb/i18n.hpp>
 #include <emb/meta/enum_labels.hpp>
 #include <emb/meta/unit_symbol.hpp>
+#include <emb/panic.hpp>
 #include <emb/settings/value.hpp>
 
 #include <limits>

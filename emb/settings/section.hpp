@@ -1,9 +1,9 @@
 #pragma once
 
-#include <emb/assert.hpp>
 #include <emb/meta/typelist.hpp>
 #include <emb/meta/unroll.hpp>
 #include <emb/nvm/storage.hpp>
+#include <emb/panic.hpp>
 #include <emb/settings/image.hpp>
 #include <emb/settings/param.hpp>
 #include <emb/settings/rule.hpp>
