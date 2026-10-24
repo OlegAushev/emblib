@@ -185,7 +185,7 @@ public:
   constexpr std::expected<void, section_save_failure<error_type>>
   save(C& checker)
   {
-    ASSUME(store_.has_value());
+    EMB_PRE(store_.has_value());
     using failure = section_save_failure<error_type>;
 
     if (unapplied()) return refuse(failure{save_refusal::unapplied});
@@ -207,7 +207,7 @@ public:
   // returns nothing.
   constexpr std::expected<void, error_type> wipe()
   {
-    ASSUME(store_.has_value());
+    EMB_PRE(store_.has_value());
     auto const result = store_->wipe();
     if (result) {
       stored_ = image<Schema>{};

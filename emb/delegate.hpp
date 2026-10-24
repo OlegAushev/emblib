@@ -83,7 +83,7 @@ public:
 
   constexpr R operator()(Args... args) const
   {
-    ASSUME(stub_ != nullptr);
+    EMB_PRE(stub_ != nullptr);
     return stub_(obj_, std::forward<Args>(args)...);
   }
 

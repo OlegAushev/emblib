@@ -164,25 +164,25 @@ public:
 
   [[nodiscard]] constexpr reference front()
   {
-    ASSUME(size_ != 0);
+    EMB_PRE(size_ != 0);
     return *slot_ptr(front_);
   }
 
   [[nodiscard]] constexpr const_reference front() const
   {
-    ASSUME(size_ != 0);
+    EMB_PRE(size_ != 0);
     return *slot_ptr(front_);
   }
 
   [[nodiscard]] constexpr reference back()
   {
-    ASSUME(size_ != 0);
+    EMB_PRE(size_ != 0);
     return *slot_ptr(index_of(size_ - 1));
   }
 
   [[nodiscard]] constexpr const_reference back() const
   {
-    ASSUME(size_ != 0);
+    EMB_PRE(size_ != 0);
     return *slot_ptr(index_of(size_ - 1));
   }
 
@@ -191,13 +191,13 @@ public:
   // `back()`.
   [[nodiscard]] constexpr reference operator[](size_type i)
   {
-    ASSUME(i < size_);
+    EMB_PRE(i < size_);
     return *slot_ptr(index_of(i));
   }
 
   [[nodiscard]] constexpr const_reference operator[](size_type i) const
   {
-    ASSUME(i < size_);
+    EMB_PRE(i < size_);
     return *slot_ptr(index_of(i));
   }
 
@@ -275,7 +275,7 @@ public:
 
   constexpr void pop_front()
   {
-    ASSUME(size_ != 0);
+    EMB_PRE(size_ != 0);
     destroy_slot(front_);
     front_ = (front_ + 1) % capacity_;
     --size_;
@@ -283,7 +283,7 @@ public:
 
   constexpr void pop_back()
   {
-    ASSUME(size_ != 0);
+    EMB_PRE(size_ != 0);
     destroy_slot(index_of(size_ - 1));
     --size_;
   }

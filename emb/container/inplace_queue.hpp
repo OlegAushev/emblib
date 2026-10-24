@@ -160,25 +160,25 @@ public:
 
   [[nodiscard]] constexpr reference front()
   {
-    ASSUME(size_ != 0);
+    EMB_PRE(size_ != 0);
     return *slot_ptr(front_);
   }
 
   [[nodiscard]] constexpr const_reference front() const
   {
-    ASSUME(size_ != 0);
+    EMB_PRE(size_ != 0);
     return *slot_ptr(front_);
   }
 
   [[nodiscard]] constexpr reference back()
   {
-    ASSUME(size_ != 0);
+    EMB_PRE(size_ != 0);
     return *slot_ptr(index_of(size_ - 1));
   }
 
   [[nodiscard]] constexpr const_reference back() const
   {
-    ASSUME(size_ != 0);
+    EMB_PRE(size_ != 0);
     return *slot_ptr(index_of(size_ - 1));
   }
 
@@ -198,7 +198,7 @@ public:
   constexpr void emplace(Args&&... args)
     requires std::is_constructible_v<T, Args...>
   {
-    ASSUME(size_ != capacity_);
+    EMB_PRE(size_ != capacity_);
     std::construct_at(slot_ptr(index_of(size_)), std::forward<Args>(args)...);
     ++size_;
   }
@@ -221,7 +221,7 @@ public:
 
   constexpr void pop()
   {
-    ASSUME(size_ != 0);
+    EMB_PRE(size_ != 0);
     destroy_slot(front_);
     front_ = (front_ + 1) % capacity_;
     --size_;

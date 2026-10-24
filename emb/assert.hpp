@@ -5,28 +5,12 @@
 
 #include <emb/meta/fixed_string.hpp>
 
-// The macro `ASSUME` states a precondition or invariant `expr` that the
-// caller guarantees, e.g. that a container is not empty when its `front()` is
-// called. If `NDEBUG` is not defined, `ASSUME(expr)` expands to
-// `assert(expr)`: `expr` is evaluated and the program is aborted if it is
-// `false`. Otherwise it expands to `[[assume(expr)]]`: `expr` is not
-// evaluated, the compiler may optimize on the assumption that it is `true`,
-// and the behavior is undefined if it would be `false`.
-//
-// `ASSUME(expr);` can be used only as a statement. `expr` must have no side
-// effects, since whether it is evaluated depends on `NDEBUG`.
-#ifdef NDEBUG
-#define ASSUME(expr) [[assume(expr)]]
-#else
-#define ASSUME(expr) assert(expr)
-#endif
-
 namespace emb {
 
 // Terminates the program by calling `std::terminate`. A call to `panic` marks
 // a point that a correct program does not reach, typically the branch of a
-// failed check: `if (index >= size) emb::panic();`. Unlike `ASSUME`, such a
-// check is made whether or not `NDEBUG` is defined.
+// failed check: `if (index >= size) emb::panic();`. Unlike `EMB_PRE`, such a
+// check is made at run time whether or not `NDEBUG` is defined.
 //
 // `panic` is not `constexpr`, so a call to it reached during constant
 // evaluation makes the program ill-formed in a context that requires a
@@ -74,3 +58,33 @@ constexpr void ensure(bool pred)
 //
 // `EMB_PANIC(message)` is an expression of type `void`.
 #define EMB_PANIC(message) ::emb::panic<message>()
+
+// The macro `EMB_PRE` states a precondition `cond` that the caller of a
+// function guarantees, e.g. that a container is not empty when its `front()`
+// is called. It is written at the start of the function's body, where C++26
+// would put `pre(cond)` on the declaration.
+//
+// If `NDEBUG` is not defined, `cond` is evaluated, and if it is `false`,
+// `EMB_PRE` fails as `EMB_PANIC` does, with the reason `"pre: "` followed by
+// the text of `cond`, e.g. `"pre: size_ != 0"`. If `NDEBUG` is defined, `cond`
+// is checked only during constant evaluation: if it is `false` in a context
+// that requires a constant expression, the program is ill-formed as above, and
+// elsewhere the failure is not detected. At run time `EMB_PRE` adds no code,
+// and a call that breaks the precondition behaves as if `EMB_PRE` were absent.
+//
+// `EMB_PRE(cond);` can be used only as a statement. `cond` may contain commas,
+// e.g. `EMB_PRE(std::is_same_v<T, U>)`, and must have no side effects, since
+// whether it is evaluated depends on `NDEBUG`.
+#ifdef NDEBUG
+#define EMB_PRE(...)                                                         \
+  do {                                                                       \
+    if consteval {                                                           \
+      if (!(__VA_ARGS__)) EMB_PANIC("pre: " #__VA_ARGS__);                   \
+    }                                                                        \
+  } while (false)
+#else
+#define EMB_PRE(...)                                                         \
+  do {                                                                       \
+    if (!(__VA_ARGS__)) EMB_PANIC("pre: " #__VA_ARGS__);                     \
+  } while (false)
+#endif

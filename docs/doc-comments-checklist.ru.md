@@ -11,11 +11,11 @@ emblib не попал. Такие файлы помечены «песочни�
 ## Начатые
 
 - [ ] `emb/assert.hpp`
-  - [x] `ASSUME`
   - [x] `emb::panic` (бывший `emb::ensure_failed`)
   - [x] `emb::ensure` (устаревший)
   - [ ] `EMB_PANIC` (и шаблон `emb::panic<Message>`) — вручную
     2026-10-23
+  - [ ] `EMB_PRE` (вместо `ASSUME`) — вручную 2026-10-24
 - [x] `emb/concurrent/double_buffer.hpp`
   - [x] `double_buffer`
 - [x] `emb/container/circular_buffer.hpp`

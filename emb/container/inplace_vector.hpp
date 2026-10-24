@@ -277,37 +277,37 @@ public:
 
   [[nodiscard]] constexpr reference operator[](size_type i)
   {
-    ASSUME(i < size_);
+    EMB_PRE(i < size_);
     return *slot_ptr(i);
   }
 
   [[nodiscard]] constexpr const_reference operator[](size_type i) const
   {
-    ASSUME(i < size_);
+    EMB_PRE(i < size_);
     return *slot_ptr(i);
   }
 
   [[nodiscard]] constexpr reference front()
   {
-    ASSUME(size_ != 0);
+    EMB_PRE(size_ != 0);
     return *slot_ptr(0);
   }
 
   [[nodiscard]] constexpr const_reference front() const
   {
-    ASSUME(size_ != 0);
+    EMB_PRE(size_ != 0);
     return *slot_ptr(0);
   }
 
   [[nodiscard]] constexpr reference back()
   {
-    ASSUME(size_ != 0);
+    EMB_PRE(size_ != 0);
     return *slot_ptr(size_ - 1);
   }
 
   [[nodiscard]] constexpr const_reference back() const
   {
-    ASSUME(size_ != 0);
+    EMB_PRE(size_ != 0);
     return *slot_ptr(size_ - 1);
   }
 
@@ -357,7 +357,7 @@ public:
   constexpr void emplace_back(Args&&... args)
     requires std::is_constructible_v<T, Args...>
   {
-    ASSUME(size_ != capacity_);
+    EMB_PRE(size_ != capacity_);
     std::construct_at(slot_ptr(size_), std::forward<Args>(args)...);
     ++size_;
   }
@@ -380,7 +380,7 @@ public:
 
   constexpr void pop_back()
   {
-    ASSUME(size_ != 0);
+    EMB_PRE(size_ != 0);
     destroy_slot(size_ - 1);
     --size_;
   }
