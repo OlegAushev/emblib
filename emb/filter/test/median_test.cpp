@@ -1,6 +1,8 @@
 #include <emb/filter/median_filter.hpp>
 #include <emb/units.hpp>
 
+#include <cassert>
+
 namespace {
 
 template<typename Filter>

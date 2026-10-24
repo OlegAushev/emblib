@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cassert>
 #include <exception>
 
 #include <emb/meta/fixed_string.hpp>

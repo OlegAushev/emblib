@@ -7,6 +7,7 @@
 #include <emb/signal/bind.hpp>
 #include <emb/signal/proportional.hpp>
 
+#include <cassert>
 #include <cstdint>
 
 namespace {

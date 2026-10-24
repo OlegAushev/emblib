@@ -1,5 +1,7 @@
 #include <emb/container/inplace_stack.hpp>
 
+#include <cassert>
+
 namespace {
 
 template<typename Stack>

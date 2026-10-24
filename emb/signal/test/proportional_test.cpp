@@ -2,6 +2,8 @@
 
 #include <emb/math.hpp>
 
+#include <cassert>
+
 namespace {
 
 using namespace emb::units;

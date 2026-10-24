@@ -1,6 +1,8 @@
 #include <emb/meta/unit_symbol.hpp>
 #include <emb/units.hpp>
 
+#include <cassert>
+
 namespace {
 
 template<typename Unit>

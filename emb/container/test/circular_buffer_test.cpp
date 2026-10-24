@@ -1,5 +1,7 @@
 #include <emb/container/circular_buffer.hpp>
 
+#include <cassert>
+
 namespace {
 
 template<typename CircularBuffer>

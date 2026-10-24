@@ -1,5 +1,7 @@
 #include <emb/container/inplace_queue.hpp>
 
+#include <cassert>
+
 namespace {
 
 template<typename Queue>

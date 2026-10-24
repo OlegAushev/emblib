@@ -1,6 +1,7 @@
 #include <emb/container/inplace_vector.hpp>
 
 #include <algorithm>
+#include <cassert>
 #include <iterator>
 
 namespace {

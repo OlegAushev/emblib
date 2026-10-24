@@ -4,6 +4,7 @@
 #include <emb/signal/bind.hpp>
 #include <emb/signal/proportional.hpp>
 
+#include <cassert>
 #include <cstdint>
 #include <type_traits>
 

@@ -2,6 +2,7 @@
 #include <emb/units.hpp>
 
 #include <algorithm>
+#include <cassert>
 #include <cstddef>
 
 namespace {

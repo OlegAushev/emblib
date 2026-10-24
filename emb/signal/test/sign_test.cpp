@@ -6,6 +6,7 @@
 #include <emb/signal/proportional.hpp>
 #include <emb/units.hpp>
 
+#include <cassert>
 #include <cstdint>
 #include <type_traits>
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cassert>
 #include <emb/algorithm.hpp>
 #include <emb/math.hpp>
 #include <emb/units.hpp>

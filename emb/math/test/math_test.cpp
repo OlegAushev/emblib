@@ -1,6 +1,8 @@
 #include <emb/math.hpp>
 #include <emb/meta/unit_symbol.hpp>
 
+#include <cassert>
+
 namespace {
 
 constexpr bool test_math()

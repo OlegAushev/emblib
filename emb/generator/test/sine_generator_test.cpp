@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 
 namespace {
 

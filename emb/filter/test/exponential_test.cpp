@@ -1,6 +1,8 @@
 #include <emb/filter/exponential_filter.hpp>
 #include <emb/units.hpp>
 
+#include <cassert>
+
 namespace {
 
 template<typename Filter>

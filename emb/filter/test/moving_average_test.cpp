@@ -1,6 +1,7 @@
 #include <emb/filter/moving_average_filter.hpp>
 #include <emb/units.hpp>
 
+#include <cassert>
 #include <cstddef>
 
 namespace {

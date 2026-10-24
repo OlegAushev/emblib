@@ -1,10 +1,10 @@
 #pragma once
 
 #include <emb/algorithm.hpp>
-#include <emb/assert.hpp>
 #include <emb/units.hpp>
 
 #include <algorithm>
+#include <cassert>
 
 namespace emb {
 
