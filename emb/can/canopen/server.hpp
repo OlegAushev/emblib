@@ -92,7 +92,8 @@ public:
 
     std::size_t timed_out = rpdo_.tick(now, nmt_.state());
     for (std::size_t i = 0; i < timed_out; ++i) {
-      emcy_.emit(emcy_code::rpdo_timeout, error_register::communication);
+      emcy_.emit(emcy_code::rpdo_timeout,
+                 error_register::generic | error_register::communication);
     }
 
     tpdo_.tick(now, nmt_.state());
@@ -193,9 +194,28 @@ private:
       handle_nmt_command(frame);
       return;
     }
-    if (sdo_.try_handle(frame)) return;
+    auto const sdo = sdo_.try_handle(frame);
+    if (sdo) return;
+    switch (sdo.error()) {
+    case detail::sdo_refusal::unmatched:
+      break;
+    case detail::sdo_refusal::length_error:
+      return;
+    }
     auto now = clock_();
-    if (rpdo_.try_handle(frame, now, nmt_.state())) return;
+    auto const rpdo = rpdo_.try_handle(frame, now, nmt_.state());
+    if (rpdo) return;
+    switch (rpdo.error()) {
+    case detail::rpdo_refusal::unmatched:
+      break;
+    case detail::rpdo_refusal::length_error:
+      emcy_.emit(emcy_code::pdo_length_error,
+                 error_register::generic | error_register::communication);
+      return;
+    case detail::rpdo_refusal::not_operational:
+    case detail::rpdo_refusal::repeated_length_error:
+      return;
+    }
     hb_consumer_.try_handle(frame, now);
   }
 

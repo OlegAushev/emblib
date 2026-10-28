@@ -19,6 +19,16 @@ namespace can {
 namespace canopen {
 namespace detail {
 
+// The scoped enumeration `sdo_refusal` defines why `sdo_server::try_handle`
+// refused a frame.
+enum class sdo_refusal : std::uint8_t {
+  // The frame is not on the COB-ID of RSDO: the server hands it on.
+  unmatched,
+  // The request is shorter than 8 bytes. It gets no answer, not even an
+  // abort, since its index may lie past its DLC.
+  length_error,
+};
+
 template<typename Ctx>
 class sdo_server {
 public:
@@ -42,12 +52,23 @@ public:
   sdo_server(sdo_server const&) = delete;
   sdo_server& operator=(sdo_server const&) = delete;
 
-  bool try_handle(frame_t const& frame)
+  // Answers the expedited SDO request in `frame` through the queue of
+  // responses, with the value read, the confirmation of a write or an abort;
+  // an abort from the client gets no answer. Fails with `unmatched` if the
+  // frame is not on the COB-ID of RSDO, and with `length_error` if it holds
+  // fewer than 8 bytes.
+  std::expected<void, sdo_refusal> try_handle(frame_t const& frame)
   {
-    if (frame.id != rsdo_cob_id_) return false;
+    if (frame.id != rsdo_cob_id_) {
+      return std::unexpected(sdo_refusal::unmatched);
+    }
+
+    if (frame.len < 8) {
+      return std::unexpected(sdo_refusal::length_error);
+    }
 
     expedited_sdo rsdo = from_payload<expedited_sdo>(frame.payload);
-    if (rsdo.cs == sdo_cs_codes::abort) return true;
+    if (rsdo.cs == sdo_cs_codes::abort) return {};
 
     od_key const key = {static_cast<std::uint16_t>(rsdo.index),
                         static_cast<std::uint8_t>(rsdo.subindex)};
@@ -70,7 +91,7 @@ public:
     if (!tsdo_queue_.full()) {
       tsdo_queue_.push(response);
     }
-    return true;
+    return {};
   }
 
   void drain()

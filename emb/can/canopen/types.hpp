@@ -146,13 +146,19 @@ constexpr id_t cob_id_of(node_id node)
        + node.get();
 }
 
-// Error codes of CiA 301 that the server sends in an EMCY.
+// Error codes of CiA 301 that the server sends in an EMCY, each with the error
+// register 11h: `generic` and `communication`.
 namespace emcy_code {
+inline constexpr std::uint16_t pdo_length_error = 0x8210;
 inline constexpr std::uint16_t rpdo_timeout = 0x8250;
 } // namespace emcy_code
 
-// Bits of the error register, 1001h, that the server sends in an EMCY.
+// Bits of the error register, 1001h, that the server sends in an EMCY. CiA 301
+// (§7.5.2.2, Table 54) sets `generic` on any error, beside the bit of its
+// kind. `emit_emcy` sends the register as it is given: an EMCY 0000h, error
+// reset, may carry none of these bits.
 namespace error_register {
+inline constexpr std::uint8_t generic = 0x01;
 inline constexpr std::uint8_t communication = 0x10;
 } // namespace error_register
 
