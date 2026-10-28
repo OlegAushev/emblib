@@ -10,6 +10,9 @@ class transport {
 public:
   virtual ~transport() = default;
 
+  // Hands `frame` to the driver to transmit. Returns `true` if the driver took
+  // it into its transmit queue, which does not yet put it on the bus, and
+  // `false` if the queue is full: then the frame does not go.
   virtual bool send(frame_t const& frame) = 0;
 
   // Register an RX subscriber. Multiple subscribers may register; each

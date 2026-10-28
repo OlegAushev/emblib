@@ -18,10 +18,12 @@ namespace detail {
 template<std::size_t N>
 class tpdo_producer {
 public:
-  tpdo_producer(transport& bus, node_id node) : bus_(bus), node_(node) {}
+  constexpr tpdo_producer(transport& bus, node_id node) : bus_(bus), node_(node)
+  {
+  }
 
   template<std::size_t I, pdo_id CobId>
-  void setup(tpdo_config const& cfg, std::chrono::milliseconds now)
+  constexpr void setup(tpdo_config const& cfg, std::chrono::milliseconds now)
   {
     static_assert(I >= 1 && I <= N, "TPDO index out of range");
     auto& s = slots_[I - 1];
@@ -36,7 +38,12 @@ public:
     }
   }
 
-  void tick(std::chrono::milliseconds now, nmt_state state)
+  // If the node is operational, sends a frame from the provider of each slot
+  // whose period has passed since its last frame. A slot calls its provider
+  // at most once a period: the period runs from the last frame whether or not
+  // `send` took it, so a frame that `send` refused, the transmit queue being
+  // full, is not sent again, and the next period sends a fresh one.
+  constexpr void tick(std::chrono::milliseconds now, nmt_state state)
   {
     if (state != nmt_state::operational) return;
 
@@ -45,14 +52,12 @@ public:
       if (s.period == std::chrono::milliseconds::zero()) continue;
       if ((now - s.last_tx) < s.period) continue;
 
+      s.last_tx = now;
       frame_t frame = {.format = format_t::standard,
                        .id = s.cob_id,
                        .len = 8,
                        .payload = s.provider()};
-
-      if (bus_.send(frame)) {
-        s.last_tx = now;
-      }
+      bus_.send(frame);
     }
   }
 

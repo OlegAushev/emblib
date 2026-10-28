@@ -6,8 +6,8 @@
 #include <expected>
 
 #include <emb/can.hpp>
-#include <emb/can/bus.hpp>
 #include <emb/delegate.hpp>
+#include <emb/test/mock/can_bus.hpp>
 
 namespace {
 
@@ -15,9 +15,7 @@ using namespace emb::can::canopen;
 using namespace std::chrono_literals;
 using emb::can::format_t;
 using emb::can::frame_t;
-using emb::can::id_t;
 using emb::can::payload_t;
-using emb::can::transport;
 using detail::rpdo_refusal;
 
 constexpr std::unexpected unmatched{rpdo_refusal::unmatched};
@@ -26,23 +24,10 @@ constexpr std::unexpected length_error{rpdo_refusal::length_error};
 constexpr std::unexpected repeated_length_error{
     rpdo_refusal::repeated_length_error};
 
-// A bus on which the consumer only sets its filter.
-class quiet_bus : public transport {
-public:
-  constexpr bool send(frame_t const&) override
-  {
-    return false;
-  }
-
-  constexpr void subscribe(emb::delegate<void(frame_t const&)>) override {}
-
-  constexpr void add_filter(format_t, id_t, id_t) override {}
-};
-
 // RPDO1 of node 1, set up at 0 ms with a timeout of 350 ms, whose handler
-// counts the frames it takes.
+// counts the frames it takes. On its bus the consumer only sets its filter.
 struct rpdo1 {
-  quiet_bus bus;
+  emb::test::can_bus bus;
   detail::rpdo_consumer<1> consumer{bus, node_id{1}};
   int taken = 0;
 
