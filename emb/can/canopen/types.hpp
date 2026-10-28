@@ -182,6 +182,28 @@ private:
   constexpr pdo_id(id_t v, bool c) : value(v), is_custom(c) {}
 };
 
+// The struct `pdo_bits` tells where a signal lies in the frame of a PDO: its
+// first bit and its width. Bit i of the signal is bit `start` + i of the
+// frame, read as a number whose byte j gives bits 8j to 8j + 7.
+struct pdo_bits {
+  std::uint8_t start;
+  std::uint8_t width;
+};
+
+// The scoped enumeration `pdo_encoding` defines how the bits of a signal read
+// as a number: unsigned, or signed in two's complement.
+enum class pdo_encoding : std::uint8_t {
+  unsigned_,
+  signed_
+};
+
+// The scoped enumeration `pdo_role` defines what the bits of a signal are to a
+// host: a value to show, or the counter of the frames of its PDO.
+enum class pdo_role : std::uint8_t {
+  value,
+  counter
+};
+
 struct tpdo_config {
   emb::delegate<payload_t()> provider;
   std::chrono::milliseconds period{0}; // 0 = do not transmit
