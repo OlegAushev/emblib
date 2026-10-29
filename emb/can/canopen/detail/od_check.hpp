@@ -214,6 +214,7 @@ constexpr std::string_view class_name(od_class class_)
   case od_class::about: return "about";
   case od_class::control: return "control";
   case od_class::parameters: return "parameters";
+  case od_class::status: return "status";
   case od_class::watch: return "watch";
   }
   return "?";
@@ -273,6 +274,7 @@ constexpr std::string_view encoding_name(pdo_encoding encoding)
 inline constexpr od_class od_classes[] = {od_class::about,
                                           od_class::control,
                                           od_class::parameters,
+                                          od_class::status,
                                           od_class::watch};
 
 // Whether `text` is a segment of a path: a letter followed by letters, digits

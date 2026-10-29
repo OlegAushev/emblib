@@ -7,11 +7,13 @@ compile time only, and none of them may reach the image.
 A string counts only as a whole: the image is split at its NUL bytes and
 each piece compared, so that a path that begins or ends another one, e.g.
 hall.speed of hall.speed_time_constant, the name of a parameter, which the
-image holds, is not reported. From a description the paths of objects,
-arrays and signals of PDOs are taken, not those of records, which are the
-names of parameters and stay in the image, and the titles, in each
-language, of objects, arrays, records, groups, members of layouts, values,
-PDOs and signals.
+image holds, is not reported. From a description are taken the paths of
+objects, arrays, records and signals of PDOs, though not those of the
+records of the class parameters, which are the names of parameters and stay
+in the image; the names of the members of the layouts of the records of the
+class status, which name the statuses; and the titles, in each language, of
+objects, arrays, records, groups, members of layouts, values, PDOs and
+signals.
 
 A string shorter than 4 bytes is skipped, and the count of those skipped is
 printed: the bytes of numbers split at their zeros make such pieces, as the
@@ -34,16 +36,24 @@ SHORTEST = 4
 
 def description_strings(path):
     with open(path, encoding='utf-8') as f:
-        for number, line in enumerate(f, start=1):
-            entry = json.loads(line)
-            kind = entry.get('type')
-            if kind in ('object', 'array', 'signal') and 'path' in entry:
-                yield entry['path'], f'{path}:{number} path'
-            if kind in ('object', 'array', 'record', 'group', 'field',
-                        'value_label', 'pdo', 'signal'):
-                for key in TITLES:
-                    if key in entry:
-                        yield entry[key], f'{path}:{number} {key}'
+        entries = [json.loads(line) for line in f]
+    # The layouts of the records of statuses, whose members the records follow.
+    statuses = {entry.get('layout') for entry in entries
+                if entry.get('type') == 'record'
+                and entry.get('class') == 'status'}
+    for number, entry in enumerate(entries, start=1):
+        kind = entry.get('type')
+        named = kind in ('object', 'array', 'signal') or (
+            kind == 'record' and entry.get('class') != 'parameters')
+        if named and 'path' in entry:
+            yield entry['path'], f'{path}:{number} path'
+        if kind == 'field' and entry.get('layout') in statuses:
+            yield entry['name'], f'{path}:{number} name'
+        if kind in ('object', 'array', 'record', 'group', 'field',
+                    'value_label', 'pdo', 'signal'):
+            for key in TITLES:
+                if key in entry:
+                    yield entry[key], f'{path}:{number} {key}'
 
 
 def list_strings(path):

@@ -1722,6 +1722,8 @@ static_assert(check_group({"watch", {"Watch", "Наблюдение"}})
               == "od: group 'watch': named as a class");
 static_assert(check_group({"parameters", {"Parameters", "Параметры"}})
               == "od: group 'parameters': named as a class");
+static_assert(check_group({"status", {"Status", "Статус"}})
+              == "od: group 'status': named as a class");
 static_assert(check_group({"a", {"A again", "Снова А"}})
               == "od: group 'a': declared twice");
 static_assert(check_group({"b", {"B", ""}})

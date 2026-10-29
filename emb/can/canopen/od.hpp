@@ -175,6 +175,9 @@ enum class od_class : std::uint8_t {
   // A parameter of the device's settings, the state of their storage, or a
   // calibration constant.
   parameters,
+  // A status of trouble: whether a condition of the device stands, and at
+  // which severity; the device sends it unasked, in an MPDO.
+  status,
   // A value that a host polls to show the device at work.
   watch,
 };

@@ -110,7 +110,7 @@ FLAGS = ('command', 'inherits', 'text')
 NAMED = {
     'datatype': ('boolean', 'int8', 'int16', 'int32', 'uint8', 'uint16',
                  'uint32', 'float32'),
-    'class': ('about', 'control', 'parameters', 'watch'),
+    'class': ('about', 'control', 'parameters', 'status', 'watch'),
     'access': ('rw', 'ro', 'wo', 'const'),
     'direction': ('tx', 'rx'),
     'mapping': ('signals',),
