@@ -362,37 +362,39 @@ static_assert(occurrences(as_view(description), R"("type":"field")")
               == 10 + 11 + 10);
 static_assert(
     as_view(description)
-        .contains(
-            R"({"type":"record","index":"0x3100","path":"drive.phase_swap",)"
-            R"("title":"Phase swap","title_ru":"Перестановка фаз",)"
-            R"("class":"parameters","datatype":"boolean","layout":0})"
-            "\n"));
+        .contains(R"({"type":"record","index":"0x3100","group":"drive",)"
+                  R"("name":"phase_swap","title":"Phase swap",)"
+                  R"("title_ru":"Перестановка фаз","class":"parameters",)"
+                  R"("datatype":"boolean","layout":0})"
+                  "\n"));
 static_assert(
     as_view(description)
-        .contains(R"({"type":"record","index":"0x3101","path":"motor.p",)"
-                  R"("title":"Pole pairs","title_ru":"Число пар полюсов",)"
-                  R"("class":"parameters","datatype":"int32","layout":0})"
+        .contains(R"({"type":"record","index":"0x3101","group":"motor",)"
+                  R"("name":"p","title":"Pole pairs",)"
+                  R"("title_ru":"Число пар полюсов","class":"parameters",)"
+                  R"("datatype":"int32","layout":0})"
+                  "\n"));
+static_assert(
+    as_view(description)
+        .contains(R"({"type":"record","index":"0x3102","group":"drive",)"
+                  R"("name":"freq","title":"Frequency","title_ru":"Частота",)"
+                  R"("class":"parameters","datatype":"float32","unit":"Hz",)"
+                  R"("layout":1})"
+                  "\n"));
+static_assert(
+    as_view(description)
+        .contains(R"({"type":"record","index":"0x3103","group":"prod",)"
+                  R"("name":"serial","title":"Serial number",)"
+                  R"("title_ru":"Серийный номер","class":"parameters",)"
+                  R"("datatype":"uint32","layout":2})"
                   "\n"));
 static_assert(
     as_view(description)
         .contains(
-            R"({"type":"record","index":"0x3102","path":"drive.freq",)"
-            R"("title":"Frequency","title_ru":"Частота","class":"parameters",)"
-            R"("datatype":"float32","unit":"Hz","layout":1})"
-            "\n"));
-static_assert(
-    as_view(description)
-        .contains(R"({"type":"record","index":"0x3103","path":"prod.serial",)"
-                  R"("title":"Serial number","title_ru":"Серийный номер",)"
-                  R"("class":"parameters","datatype":"uint32","layout":2})"
-                  "\n"));
-static_assert(
-    as_view(description)
-        .contains(
-            R"({"type":"record","index":"0x3104","path":"drive.slope",)"
-            R"("title":"Speed slope","title_ru":"Темп изменения скорости",)"
-            R"("class":"parameters","datatype":"float32","unit":"rpm/s",)"
-            R"("layout":1})"
+            R"({"type":"record","index":"0x3104","group":"drive",)"
+            R"("name":"slope","title":"Speed slope",)"
+            R"("title_ru":"Темп изменения скорости","class":"parameters",)"
+            R"("datatype":"float32","unit":"rpm/s","layout":1})"
             "\n"));
 
 // The members that show a value inherit the record's type and unit; those
@@ -445,16 +447,17 @@ static_assert(
                   "\n"));
 static_assert(
     as_view(description)
-        .contains(R"("path":"settings.last_refusal","title":"Last refusal",)"
-                  R"("title_ru":"Последний отказ","class":"control",)"
-                  R"("datatype":"uint32","access":"ro","value_table":1})"
+        .contains(R"("group":"settings","name":"last_refusal",)"
+                  R"("title":"Last refusal","title_ru":"Последний отказ",)"
+                  R"("class":"control","datatype":"uint32","access":"ro",)"
+                  R"("value_table":1})"
                   "\n"));
 static_assert(
     as_view(description)
-        .contains(R"({"type":"record","index":"0x3105","path":"drive.mode",)"
-                  R"("title":"Drive mode","title_ru":"Режим привода",)"
-                  R"("class":"parameters","datatype":"uint32",)"
-                  R"("value_table":2,"layout":1})"
+        .contains(R"({"type":"record","index":"0x3105","group":"drive",)"
+                  R"("name":"mode","title":"Drive mode",)"
+                  R"("title_ru":"Режим привода","class":"parameters",)"
+                  R"("datatype":"uint32","value_table":2,"layout":1})"
                   "\n"));
 
 // Reads and writes the dictionary as a server would, through `c`.

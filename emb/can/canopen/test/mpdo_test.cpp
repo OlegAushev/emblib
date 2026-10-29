@@ -501,7 +501,7 @@ inline constexpr std::string_view described_pdo_lines =
     "\n"
     R"({"type":"pdo","name":"level","title":"Level","title_ru":"Уровень","direction":"tx","number":2,"mapping":"signals","cob_base":"0x280","period_ms":100})"
     "\n"
-    R"({"type":"signal","pdo":"level","start":0,"width":8,"role":"value","path":"level.value","title":"Level","title_ru":"Уровень","encoding":"unsigned"})"
+    R"({"type":"signal","pdo":"level","start":0,"width":8,"role":"value","name":"value","title":"Level","title_ru":"Уровень","encoding":"unsigned"})"
     "\n";
 
 static_assert(as_view(description).ends_with(described_pdo_lines));

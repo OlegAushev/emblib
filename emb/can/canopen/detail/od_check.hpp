@@ -306,6 +306,12 @@ constexpr std::string_view group_of(std::string_view path)
   return path.substr(0, path.find('.'));
 }
 
+// Returns the name of `path`, the part after its first dot.
+constexpr std::string_view name_of(std::string_view path)
+{
+  return path.substr(path.find('.') + 1);
+}
+
 // Whether `text` is valid UTF-8 without a quotation mark, a backslash or a
 // control character (U+0000 to U+001F and U+007F to U+009F): a text that a
 // string of JSON holds as it is, without escapes. Valid UTF-8 encodes each

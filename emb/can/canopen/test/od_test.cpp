@@ -1098,23 +1098,26 @@ inline constexpr std::string_view described_body =
     "{\"type\":\"field\",\"layout\":0,\"sub\":\"0x02\",\"name\":\"arg\","
     "\"title\":\"Argument\",\"title_ru\":\"Аргумент\",\"datatype\":\"uint16\","
     "\"access\":\"ro\"}\n"
-    "{\"type\":\"array\",\"index\":\"0x2000\",\"path\":\"a.text\","
-    "\"title\":\"Text\",\"title_ru\":\"Текст\",\"class\":\"about\","
-    "\"datatype\":\"uint8\",\"access\":\"const\",\"text\":true}\n"
+    "{\"type\":\"array\",\"index\":\"0x2000\",\"group\":\"a\","
+    "\"name\":\"text\",\"title\":\"Text\",\"title_ru\":\"Текст\","
+    "\"class\":\"about\",\"datatype\":\"uint8\",\"access\":\"const\","
+    "\"text\":true}\n"
     "{\"type\":\"object\",\"index\":\"0x2100\",\"sub\":\"0x01\","
-    "\"path\":\"a.save\",\"title\":\"Save\",\"title_ru\":\"Сохранить\","
-    "\"class\":\"control\",\"datatype\":\"uint32\",\"access\":\"wo\","
-    "\"command\":true,\"signature\":\"0x65766173\"}\n"
-    "{\"type\":\"record\",\"index\":\"0x4000\",\"path\":\"a.first\","
-    "\"title\":\"First\",\"title_ru\":\"Первый\",\"class\":\"parameters\","
-    "\"datatype\":\"float32\",\"unit\":\"A\",\"layout\":0}\n"
+    "\"group\":\"a\",\"name\":\"save\",\"title\":\"Save\","
+    "\"title_ru\":\"Сохранить\",\"class\":\"control\",\"datatype\":\"uint32\","
+    "\"access\":\"wo\",\"command\":true,\"signature\":\"0x65766173\"}\n"
+    "{\"type\":\"record\",\"index\":\"0x4000\",\"group\":\"a\","
+    "\"name\":\"first\",\"title\":\"First\",\"title_ru\":\"Первый\","
+    "\"class\":\"parameters\",\"datatype\":\"float32\",\"unit\":\"A\","
+    "\"layout\":0}\n"
     "{\"type\":\"object\",\"index\":\"0x5000\",\"sub\":\"0x01\","
-    "\"path\":\"b.value\",\"title\":\"Value\",\"title_ru\":\"Значение\","
+    "\"group\":\"b\",\"name\":\"value\",\"title\":\"Value\","
+    "\"title_ru\":\"Значение\",\"class\":\"watch\",\"datatype\":\"float32\","
+    "\"access\":\"ro\",\"unit\":\"V\"}\n"
+    "{\"type\":\"array\",\"index\":\"0x5001\",\"group\":\"b\","
+    "\"name\":\"rates\",\"title\":\"Rates\",\"title_ru\":\"Частоты\","
     "\"class\":\"watch\",\"datatype\":\"float32\",\"access\":\"ro\","
-    "\"unit\":\"V\"}\n"
-    "{\"type\":\"array\",\"index\":\"0x5001\",\"path\":\"b.rates\","
-    "\"title\":\"Rates\",\"title_ru\":\"Частоты\",\"class\":\"watch\","
-    "\"datatype\":\"float32\",\"access\":\"ro\",\"unit\":\"Hz\"}\n";
+    "\"unit\":\"Hz\"}\n";
 
 inline constexpr std::string_view described_header_start =
     "{\"type\":\"header\",\"format\":\"emb-canopen-od\",\"version\":1,"
@@ -1256,9 +1259,10 @@ static_assert(
                   "\"signature\":\"0x65766173\"}\n"));
 static_assert(as_view(described_layouts)
                   .contains("{\"type\":\"record\",\"index\":\"0x4002\","
-                            "\"path\":\"a.byte\",\"title\":\"a.byte\","
-                            "\"title_ru\":\"a.byte\",\"class\":\"parameters\","
-                            "\"datatype\":\"uint8\",\"layout\":1}\n"));
+                            "\"group\":\"a\",\"name\":\"byte\","
+                            "\"title\":\"a.byte\",\"title_ru\":\"a.byte\","
+                            "\"class\":\"parameters\",\"datatype\":\"uint8\","
+                            "\"layout\":1}\n"));
 
 // -- Description: values --
 
@@ -1375,16 +1379,18 @@ inline constexpr std::string_view valued_body =
     "{\"type\":\"field\",\"layout\":0,\"sub\":\"0x02\",\"name\":\"policy\","
     "\"title\":\"Policy\",\"title_ru\":\"Политика\",\"datatype\":\"uint8\","
     "\"access\":\"const\",\"value_table\":0}\n"
-    "{\"type\":\"record\",\"index\":\"0x4003\",\"path\":\"a.mode\","
-    "\"title\":\"a.mode\",\"title_ru\":\"a.mode\",\"class\":\"parameters\","
-    "\"datatype\":\"uint8\",\"value_table\":1,\"layout\":0}\n"
+    "{\"type\":\"record\",\"index\":\"0x4003\",\"group\":\"a\","
+    "\"name\":\"mode\",\"title\":\"a.mode\",\"title_ru\":\"a.mode\","
+    "\"class\":\"parameters\",\"datatype\":\"uint8\",\"value_table\":1,"
+    "\"layout\":0}\n"
     "{\"type\":\"object\",\"index\":\"0x5002\",\"sub\":\"0x01\","
-    "\"path\":\"b.level\",\"title\":\"b.level\",\"title_ru\":\"b.level\","
-    "\"class\":\"watch\",\"datatype\":\"int16\",\"access\":\"ro\","
-    "\"value_table\":2}\n"
-    "{\"type\":\"array\",\"index\":\"0x5003\",\"path\":\"b.modes\","
-    "\"title\":\"b.modes\",\"title_ru\":\"b.modes\",\"class\":\"watch\","
-    "\"datatype\":\"uint8\",\"access\":\"ro\",\"value_table\":1}\n";
+    "\"group\":\"b\",\"name\":\"level\",\"title\":\"b.level\","
+    "\"title_ru\":\"b.level\",\"class\":\"watch\",\"datatype\":\"int16\","
+    "\"access\":\"ro\",\"value_table\":2}\n"
+    "{\"type\":\"array\",\"index\":\"0x5003\",\"group\":\"b\","
+    "\"name\":\"modes\",\"title\":\"b.modes\",\"title_ru\":\"b.modes\","
+    "\"class\":\"watch\",\"datatype\":\"uint8\",\"access\":\"ro\","
+    "\"value_table\":1}\n";
 
 constexpr auto valued_description =
     make_description<valued, areas, groups, "Test device">();
@@ -1459,10 +1465,10 @@ static_assert(
                   "\"name\":\"reverse\",\"title\":\"Reverse\","
                   "\"title_ru\":\"Назад\"}\n"));
 static_assert(as_view(described_gears)
-                  .ends_with("\"path\":\"b.gear\",\"title\":\"b.gear\","
-                             "\"title_ru\":\"b.gear\",\"class\":\"watch\","
-                             "\"datatype\":\"uint32\",\"access\":\"ro\","
-                             "\"value_table\":2}\n"));
+                  .ends_with("\"group\":\"b\",\"name\":\"gear\","
+                             "\"title\":\"b.gear\",\"title_ru\":\"b.gear\","
+                             "\"class\":\"watch\",\"datatype\":\"uint32\","
+                             "\"access\":\"ro\",\"value_table\":2}\n"));
 
 // -- Checks --
 
@@ -1835,7 +1841,7 @@ inline constexpr od_row<ctx> plain[] = {
 static_assert(
     as_view(make_description<plain, areas, group_a, "Test device">())
         .ends_with("{\"type\":\"record\",\"index\":\"0x4000\","
-                   "\"path\":\"a.plain\",\"title\":\"a.plain\","
+                   "\"group\":\"a\",\"name\":\"plain\",\"title\":\"a.plain\","
                    "\"title_ru\":\"a.plain\",\"class\":\"parameters\","
                    "\"layout\":0}\n"));
 
@@ -2253,28 +2259,29 @@ inline constexpr std::string_view processed_body =
     "{\"type\":\"field\",\"layout\":0,\"sub\":\"0x02\",\"name\":\"policy\","
     "\"title\":\"Policy\",\"title_ru\":\"Политика\",\"datatype\":\"uint8\","
     "\"access\":\"const\",\"value_table\":0}\n"
-    "{\"type\":\"record\",\"index\":\"0x4003\",\"path\":\"a.mode\","
-    "\"title\":\"a.mode\",\"title_ru\":\"a.mode\",\"class\":\"parameters\","
-    "\"datatype\":\"uint8\",\"value_table\":1,\"layout\":0}\n"
+    "{\"type\":\"record\",\"index\":\"0x4003\",\"group\":\"a\","
+    "\"name\":\"mode\",\"title\":\"a.mode\",\"title_ru\":\"a.mode\","
+    "\"class\":\"parameters\",\"datatype\":\"uint8\",\"value_table\":1,"
+    "\"layout\":0}\n"
     "{\"type\":\"object\",\"index\":\"0x5002\",\"sub\":\"0x01\","
-    "\"path\":\"b.gear\",\"title\":\"b.gear\",\"title_ru\":\"b.gear\","
-    "\"class\":\"watch\",\"datatype\":\"uint32\",\"access\":\"ro\","
-    "\"value_table\":2}\n"
+    "\"group\":\"b\",\"name\":\"gear\",\"title\":\"b.gear\","
+    "\"title_ru\":\"b.gear\",\"class\":\"watch\",\"datatype\":\"uint32\","
+    "\"access\":\"ro\",\"value_table\":2}\n"
     "{\"type\":\"pdo\",\"name\":\"report\",\"title\":\"Report\","
     "\"title_ru\":\"Отчёт\",\"direction\":\"tx\",\"number\":2,"
     "\"mapping\":\"signals\",\"cob_base\":\"0x280\",\"period_ms\":10}\n"
     "{\"type\":\"signal\",\"pdo\":\"report\",\"start\":0,\"width\":3,"
-    "\"role\":\"value\",\"path\":\"report.gear\",\"title\":\"Gear\","
+    "\"role\":\"value\",\"name\":\"gear\",\"title\":\"Gear\","
     "\"title_ru\":\"Передача\",\"encoding\":\"unsigned\","
     "\"value_table\":2}\n"
     "{\"type\":\"signal\",\"pdo\":\"report\",\"start\":3,\"width\":1,"
-    "\"role\":\"value\",\"path\":\"report.on\",\"title\":\"On\","
+    "\"role\":\"value\",\"name\":\"on\",\"title\":\"On\","
     "\"title_ru\":\"Включено\",\"encoding\":\"unsigned\"}\n"
     "{\"type\":\"signal\",\"pdo\":\"report\",\"start\":4,\"width\":2,"
-    "\"role\":\"value\",\"path\":\"report.tilt\",\"title\":\"Tilt\","
+    "\"role\":\"value\",\"name\":\"tilt\",\"title\":\"Tilt\","
     "\"title_ru\":\"Наклон\",\"encoding\":\"signed\",\"value_table\":3}\n"
     "{\"type\":\"signal\",\"pdo\":\"report\",\"start\":16,\"width\":16,"
-    "\"role\":\"value\",\"path\":\"report.voltage\",\"title\":\"Voltage\","
+    "\"role\":\"value\",\"name\":\"voltage\",\"title\":\"Voltage\","
     "\"title_ru\":\"Напряжение\",\"encoding\":\"signed\",\"scale\":\"1/10\","
     "\"unit\":\"V\"}\n"
     "{\"type\":\"signal\",\"pdo\":\"report\",\"start\":56,\"width\":2,"
@@ -2283,10 +2290,10 @@ inline constexpr std::string_view processed_body =
     "\"title_ru\":\"Уставка\",\"direction\":\"rx\",\"number\":5,"
     "\"mapping\":\"signals\",\"cob_id\":\"0x405\",\"timeout_ms\":350}\n"
     "{\"type\":\"signal\",\"pdo\":\"setpoint\",\"start\":0,\"width\":1,"
-    "\"role\":\"value\",\"path\":\"setpoint.stop\",\"title\":\"Stop\","
+    "\"role\":\"value\",\"name\":\"stop\",\"title\":\"Stop\","
     "\"title_ru\":\"Стоп\",\"encoding\":\"unsigned\"}\n"
     "{\"type\":\"signal\",\"pdo\":\"setpoint\",\"start\":8,\"width\":16,"
-    "\"role\":\"value\",\"path\":\"setpoint.level\",\"title\":\"Level\","
+    "\"role\":\"value\",\"name\":\"level\",\"title\":\"Level\","
     "\"title_ru\":\"Уровень\",\"encoding\":\"signed\"}\n";
 
 constexpr auto processed_description =

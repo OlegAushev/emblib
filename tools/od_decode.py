@@ -14,15 +14,16 @@ it breaks, naming its line:
 - the first line, and it alone, is the header, of the format emb-canopen-od
   and version 1;
 - each line is of a kind that the format knows, with the keys of its kind
-  in their order, each value of its form: a path of a group and a name, a
-  hexadecimal number of the digits of its key, a flag only when set, a text
-  that is not empty, a step as a positive fraction in its lowest terms;
+  in their order, each value of its form: a group or a name as a segment,
+  a hexadecimal number of the digits of its key, a flag only when set, a
+  text that is not empty, a step as a positive fraction in its lowest
+  terms;
 - the lines go in their order: the header, the groups in the order of their
   first objects by key, the labels of values by table and by value, the
   members of layouts by layout and by subindex, the objects, arrays and
-  records by key, each path once and in a group that has a line, then the
-  PDOs, the TPDOs first and by number, each followed by its signals by
-  first bit;
+  records by key, each in a group that has a line and named once in it,
+  then the PDOs, the TPDOs first and by number, each followed by its
+  signals by first bit;
 - the tables of values and the layouts are numbered from 0 in the order of
   their first references, each reference names one, each one is referenced,
   and no two are the same;
@@ -33,9 +34,8 @@ it breaks, naming its line:
   predefined forms of the description; a TPDO states a period above 0 and an
   RPDO a timeout;
 - a signal lies within 64 bits, at least one bit wide, and overlaps no
-  other; it has a path and titles exactly if its role is value, the path
-  being the name of its PDO and a name, and unique among all the paths of
-  the description; a PDO has at most one counter, unsigned, of one to eight
+  other; it has a name and titles exactly if its role is value, the name
+  once in its PDO; a PDO has at most one counter, unsigned, of one to eight
   bits;
 - an MPDO in source address mode, of the mapping sam, is a TPDO, one to a
   description, and has no signal, as each of its frames names its object;
@@ -54,18 +54,19 @@ same emblib, and a change to the format changes the tool with it.
 
 --candump decodes the frames of a log of candump by a description that it
 checks first, a frame a line, as a host reads them from the node --node:
-the value of each signal of a PDO by its path; of an MPDO in source address
-mode, the key of its object, the path of the object, of the record and the
-name of the member or of the array, and its value, a status by the name of
-its severity; a frame of a PDO shorter than 8 bytes as refused, an RPDO with
-a reserved bit set or an unnamed value as refused, as the node refuses it,
-an MPDO of another producer or in destination address mode as refused, and
-a frame of a COB-ID that no PDO has, or an MPDO of an object that the
-description does not name, as unknown. A line of the log is a frame as candump -L logs it, "(time) can0
-181#0102", or as candump prints it, "can0 181 [2] 01 02", each with or
-without its time and its interface; an empty line, and one that starts with
-"#", is skipped. --expect compares the decoded frames with a file and fails
-if they differ.
+the value of each signal of a PDO by its path, the name of its PDO and its
+own joined by a dot; of an MPDO in source address mode, the key of its
+object, the path of the object, its group and its name so joined, of the
+record and the name of the member or of the array, and its value, a status
+by the name of its severity; a frame of a PDO shorter than 8 bytes as
+refused, an RPDO with a reserved bit set or an unnamed value as refused, as
+the node refuses it, an MPDO of another producer or in destination address
+mode as refused, and a frame of a COB-ID that no PDO has, or an MPDO of an
+object that the description does not name, as unknown. A line of the log is
+a frame as candump -L logs it, "(time) can0 181#0102", or as candump prints
+it, "can0 181 [2] 01 02", each with or without its time and its interface;
+an empty line, and one that starts with "#", is skipped. --expect compares
+the decoded frames with a file and fails if they differ.
 
 usage: od_decode.py --check FILE.od.jsonl
                     [--candump LOG --node ID [--expect FILE]]
@@ -91,15 +92,15 @@ KEYS = {
     'value_label': 'value_table value name title title_ru',
     'field': 'layout sub name title title_ru datatype? access value_table? '
              'command? signature? inherits?',
-    'object': 'index sub path title title_ru class datatype access unit? '
-              'value_table? command? signature?',
-    'array': 'index path title title_ru class datatype access unit? '
+    'object': 'index sub group name title title_ru class datatype access '
+              'unit? value_table? command? signature?',
+    'array': 'index group name title title_ru class datatype access unit? '
              'value_table? text?',
-    'record': 'index path title title_ru class datatype? unit? value_table? '
-              'layout',
+    'record': 'index group name title title_ru class datatype? unit? '
+              'value_table? layout',
     'pdo': 'name title title_ru direction number mapping cob_id? cob_base? '
            'period_ms? timeout_ms?',
-    'signal': 'pdo start width role path? title? title_ru? encoding scale? '
+    'signal': 'pdo start width role name? title? title_ru? encoding scale? '
               'unit? value_table?',
 }
 
@@ -212,7 +213,7 @@ def value_error(key, value):
         if value in NAMED[key]:
             return None
         return f'must be one of {", ".join(NAMED[key])}'
-    if key in ('name', 'pdo'):
+    if key in ('group', 'name', 'pdo'):
         if re.fullmatch(SEGMENT, value):
             return None
         return 'must be a letter followed by letters, digits or underscores'
@@ -227,11 +228,6 @@ def value_error(key, value):
         if num == den:
             return 'is 1/1, which a signal states by leaving the key out'
         return None
-    if key == 'path':
-        if re.fullmatch(f'{SEGMENT}\\.{SEGMENT}', value):
-            return None
-        return ('must be a group and a name, each a letter followed by '
-                'letters, digits or underscores')
     if key in TEXTS and not value:
         return 'must not be empty'
     return None
@@ -255,7 +251,7 @@ class Checker:
         self.table_uses = []   # tables, in the order of their first references
         self.layouts = []      # per layout: [first line, members, inherits]
         self.layout_uses = []  # layouts, in the order of their first records
-        self.paths = {}        # path: the number of its line
+        self.names = {}        # (group or PDO, name): the number of its line
         self.key = None        # the key of the last row and its name
         self.pdos = {}         # PDO: the number of its line
         self.slot = None       # the order of the last PDO and its slot
@@ -432,11 +428,11 @@ class Checker:
             self.arrays[index] = values
         else:
             self.records[index] = values
-        path = values['path']
-        if path in self.paths:
-            self.fail(f"the path '{path}' is that of line {self.paths[path]}")
-        self.paths[path] = self.number
-        group = path.split('.')[0]
+        group, own = values['group'], values['name']
+        if (group, own) in self.names:
+            self.fail(f"a second '{own}' in group '{group}', after line "
+                      f"{self.names[group, own]}")
+        self.names[group, own] = self.number
         if group not in self.groups:
             self.fail(f"group '{group}' has no line")
         if group not in self.group_uses:
@@ -552,20 +548,17 @@ class Checker:
         current['signals'].append(values)
         self.signals += 1
 
-        labelled = [key for key in ('path', 'title', 'title_ru')
+        labelled = [key for key in ('name', 'title', 'title_ru')
                     if key in values]
         if values['role'] == 'value':
-            for key in ('path', 'title', 'title_ru'):
+            for key in ('name', 'title', 'title_ru'):
                 if key not in values:
                     self.fail(f'{where} has the role value but no "{key}"')
-            path = values['path']
-            if path.split('.')[0] != name:
-                self.fail(f"the path '{path}' is not the name of the PDO "
-                          f"'{name}' and a name")
-            if path in self.paths:
-                self.fail(f"the path '{path}' is that of line "
-                          f"{self.paths[path]}")
-            self.paths[path] = self.number
+            own = values['name']
+            if (name, own) in self.names:
+                self.fail(f"a second signal '{own}' in PDO '{name}', after "
+                          f"line {self.names[name, own]}")
+            self.names[name, own] = self.number
         else:
             if labelled:
                 self.fail(f'{where} is a counter and has no "{labelled[0]}"')
@@ -680,6 +673,12 @@ FRAME = re.compile(
     r'(?P<bytes>(?:\s+[0-9A-Fa-f]{2})*))')
 
 
+def path_of(values):
+    """Returns the path of the object, the array or the record whose line
+    holds `values`: its group and its name joined by a dot."""
+    return f'{values["group"]}.{values["name"]}'
+
+
 class Decoder:
     """The frames of the PDOs of a description, as a host reads them from
     the node `node`."""
@@ -722,7 +721,8 @@ class Decoder:
             raw = word >> start & mask
             if signal['encoding'] == 'signed' and raw >> (width - 1):
                 raw -= 1 << width
-            key = signal.get('path', signal['role'])
+            key = (f'{pdo["name"]}.{signal["name"]}' if 'name' in signal
+                   else signal['role'])
             if 'value_table' in signal:
                 text = self.tables[signal['value_table']].get(raw)
                 if text is None:
@@ -780,19 +780,19 @@ class Decoder:
         dictionary adds to an index of objects have no path."""
         if (index, sub) in self.objects:
             values = self.objects[(index, sub)]
-            return values['path'], values
+            return path_of(values), values
         if index in self.records:
             record = self.records[index]
             members = self.layouts[record['layout']]
             if sub >= len(members):
                 return None
             member = members[sub]
-            path = f'{record["path"]}.{member["name"]}'
+            path = f'{path_of(record)}.{member["name"]}'
             return path, record if 'inherits' in member else member
         if index in self.arrays:
             if sub == 0:
                 return None, {'datatype': 'uint8'}
-            return self.arrays[index]['path'], self.arrays[index]
+            return path_of(self.arrays[index]), self.arrays[index]
         if sub == 0 and any(key[0] == index for key in self.objects):
             return None, {'datatype': 'uint8'}
         return None

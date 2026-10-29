@@ -212,11 +212,12 @@ struct od_group {
   i18n title;
 };
 
-// The struct `od_label` labels an object: `path`, "group.name", by which a
-// host finds it, its title for people, in each language, and the symbol of
-// the unit of its value, empty if it has none. The path and the title are
-// required; `unit` comes last, with a default, as most objects have none.
-// What serves the object does not depend on its label.
+// The struct `od_label` labels an object: `path`, "group.name", the group and
+// the name by which a host finds it, which the description states apart, its
+// title for people, in each language, and the symbol of the unit of its
+// value, empty if it has none. The path and the title are required; `unit`
+// comes last, with a default, as most objects have none. What serves the
+// object does not depend on its label.
 struct od_label {
   std::string_view path;
   i18n title;

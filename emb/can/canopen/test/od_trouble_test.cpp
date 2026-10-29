@@ -313,9 +313,9 @@ inline constexpr std::string_view body =
     "\n"
     R"({"type":"field","layout":0,"sub":"0x04","name":"stall","title":"Stall","title_ru":"Заклинивание","datatype":"uint8","access":"ro","value_table":0})"
     "\n"
-    R"({"type":"record","index":"0x4000","path":"trouble.statuses","title":"Trouble statuses","title_ru":"Статусы неисправностей","class":"status","layout":0})"
+    R"({"type":"record","index":"0x4000","group":"trouble","name":"statuses","title":"Trouble statuses","title_ru":"Статусы неисправностей","class":"status","layout":0})"
     "\n"
-    R"({"type":"object","index":"0x5000","sub":"0x01","path":"drive.mode","title":"Mode","title_ru":"Режим","class":"watch","datatype":"uint32","access":"ro","value_table":1})"
+    R"({"type":"object","index":"0x5000","sub":"0x01","group":"drive","name":"mode","title":"Mode","title_ru":"Режим","class":"watch","datatype":"uint32","access":"ro","value_table":1})"
     "\n";
 
 static_assert(as_view(description).ends_with(body));
