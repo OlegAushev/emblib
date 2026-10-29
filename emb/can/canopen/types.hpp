@@ -229,6 +229,67 @@ enum class pdo_mapping : std::uint8_t {
   sam
 };
 
+// The struct `mpdo_scan` names objects of the dictionary that an MPDO in
+// source address mode sends (`mpdo_scanner`): `count` subindices of the index
+// `index` from `subindex`, a block of them, or by default the one object at
+// `subindex`. A list of them, in any mix of the two forms, is what the MPDO
+// carries, as an array of rows is what a PDO of signals does.
+struct mpdo_scan {
+  std::uint16_t index;
+  std::uint8_t subindex;
+  std::uint8_t count = 1;
+};
+
+namespace detail {
+
+// Whether `Scans` is an array or an `std::array` of the objects of an MPDO:
+// by the kind of the array alone, as `is_pdo_rows` tells the rows of a PDO,
+// since clang 22 remembers the result of a constraint on the type of a member
+// for every list it checks next.
+template<typename Scans>
+struct is_mpdo_scans : std::false_type {};
+
+template<std::size_t N>
+struct is_mpdo_scans<mpdo_scan[N]> : std::true_type {};
+
+template<std::size_t N>
+struct is_mpdo_scans<std::array<mpdo_scan, N>> : std::true_type {};
+
+} // namespace detail
+
+// The concept `some_mpdo_scans<Scans>` is satisfied if and only if `Scans` is
+// an array or an `std::array` of `mpdo_scan`, as an MPDO takes the list of its
+// objects: `std::remove_cvref_t<decltype(Scans)>` of a template argument.
+template<typename Scans>
+concept some_mpdo_scans = detail::is_mpdo_scans<Scans>::value;
+
+// The struct `sam_mpdo` is a frame of an MPDO in source address mode (CiA 301
+// §7.2.3.4.1): the node-ID of its producer, the object that it carries, by
+// index and subindex, and the value of the object, the bytes of its scalar in
+// little-endian order followed by zeros, as the data of an expedited SDO
+// carries it.
+struct sam_mpdo {
+  node_id producer;
+  std::uint16_t index;
+  std::uint8_t subindex;
+  std::array<std::uint8_t, 4> data;
+};
+
+// Returns the payload of the MPDO `frame`: byte 0 the node-ID of its producer,
+// with bit 7 clear, which marks source address mode; bytes 1-2 the index,
+// little-endian; byte 3 the subindex; and bytes 4-7 the data.
+constexpr payload_t to_payload(sam_mpdo const& frame)
+{
+  return {frame.producer.get(),
+          static_cast<std::uint8_t>(frame.index & 0xFF),
+          static_cast<std::uint8_t>(frame.index >> 8),
+          frame.subindex,
+          frame.data[0],
+          frame.data[1],
+          frame.data[2],
+          frame.data[3]};
+}
+
 struct tpdo_config {
   emb::delegate<payload_t()> provider;
   std::chrono::milliseconds period{0}; // 0 = do not transmit

@@ -12,6 +12,7 @@
 
 #include "od.hpp"
 #include "od_handlers.hpp"
+#include "types.hpp"
 
 #include <emb/i18n.hpp>
 #include <emb/meta/enum_labels.hpp>
@@ -302,6 +303,53 @@ struct statuses_binding {
 template<auto& Registry>
   requires detail::od_known_registry<std::remove_cvref_t<decltype(Registry)>>
 inline constexpr detail::statuses_binding<Registry> od_statuses{};
+
+namespace detail {
+
+// The number of runs of live statuses in `live`, the ids that a status of the
+// list has: of ids that follow each other.
+template<std::size_t N>
+consteval std::size_t od_status_runs(std::array<bool, N> const& live)
+{
+  auto runs = 0uz;
+  for (auto id = 0uz; id < N; ++id) {
+    if (live[id] && (id == 0 || !live[id - 1])) ++runs;
+  }
+  return runs;
+}
+
+} // namespace detail
+
+// The variable template `od_statuses_scans<Registry, Index>` is the list of the
+// objects of the record of the statuses of `Registry` at `Index`
+// (`od_statuses`) that an MPDO in source address mode sends: a block
+// `{Index, id + 1, n}` for each run of n live statuses, by id, so one block if
+// no status is retired. Neither 00h nor the stub of a retired status is in
+// it, as they tell a host nothing and would take frames of the round. An
+// application takes the list as that of the PDO (`pdo_of`) and of its source
+// (`mpdo_scanner`), and writes no number of statuses by hand:
+//
+//   inline constexpr auto& statuses_objects =
+//       od_statuses_scans<trouble::registry, od::statuses_index>;
+//
+// The registry is that of `od_statuses`, and its rules hold.
+template<auto& Registry, std::uint16_t Index>
+  requires detail::od_known_registry<std::remove_cvref_t<decltype(Registry)>>
+inline constexpr auto od_statuses_scans = [] {
+  constexpr auto& live = detail::statuses_binding<Registry>::live;
+  std::array<mpdo_scan, detail::od_status_runs(live)> scans{};
+  auto run = 0uz;
+  for (auto id = 0uz; id < live.size(); ++id) {
+    if (!live[id]) continue;
+    if (id == 0 || !live[id - 1]) {
+      scans[run++] = {.index = Index,
+                      .subindex = static_cast<std::uint8_t>(id + 1),
+                      .count = 0};
+    }
+    ++scans[run - 1].count;
+  }
+  return scans;
+}();
 
 } // namespace canopen
 } // namespace can

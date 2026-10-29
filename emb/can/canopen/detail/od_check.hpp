@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <iterator>
 #include <numeric>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -1253,6 +1254,150 @@ constexpr std::string check_signal_tables(std::span<od_mapped_pdo const> pdos)
   return {};
 }
 
+// Renders the key of the object at subindex `sub` of `index` as "4000h:01".
+constexpr std::string key_name(std::uint16_t index, unsigned sub)
+{
+  std::string out;
+  append_hex(out, index, 4);
+  out += "h:";
+  append_hex(out, sub, 2);
+  return out;
+}
+
+// Returns the access of the object at subindex `sub` of the index whose rows
+// are `whole`, a record or an array, which serves the index whole, or else
+// `objects`: that of the field of the record at `sub`, of the count of the
+// array at 00h or of its elements past it, of the row at `sub`, or `const_`
+// for the subindex 00h that the dictionary adds to an index whose rows all
+// start past it. Returns no value if the dictionary serves no object there.
+template<typename Ctx>
+constexpr std::optional<od_access>
+served_access(od_row<Ctx> const* whole,
+              std::span<od_row<Ctx> const* const> objects,
+              unsigned sub)
+{
+  if (whole != nullptr && !whole->binding.layout.empty()) {
+    auto const& layout = whole->binding.layout;
+    if (sub >= layout.size()) return std::nullopt;
+    return layout[sub].access;
+  }
+  if (whole != nullptr) {
+    return sub == 0 ? od_access::const_ : whole->binding.access;
+  }
+  for (auto const* row : objects) {
+    if (row->key.subindex == sub) return row->binding.access;
+  }
+  if (sub == 0 && !objects.empty()) return od_access::const_;
+  return std::nullopt;
+}
+
+// The rules of a block of the list of an MPDO in source address mode,
+// `scan`, which `pdo` sends: it names at least one object and none past
+// subindex FEh, the last that CiA 301 gives an object; each object it names
+// is one that the dictionary made of `rows` serves, a status, as the class of
+// the area of its index tells, which an MPDO sends alone, and one that it lets
+// read. The rows of the index are found once for the block, and its objects
+// are told by the layout of a record, the elements of an array or the
+// subindices of the rows.
+template<typename Ctx, std::size_t N, std::size_t A>
+constexpr std::string check_scan(od_pdo const& pdo,
+                                 mpdo_scan const& scan,
+                                 od_row<Ctx> const (&rows)[N],
+                                 od_area const (&areas)[A])
+{
+  auto const first = unsigned{scan.subindex};
+  if (scan.count == 0) {
+    return pdo_error(
+        pdo,
+        "the block at " + key_name(scan.index, first) + " has no object");
+  }
+  auto const last = first + scan.count - 1u;
+  if (last > 0xFE) {
+    std::string what = "the block of ";
+    append_decimal(what, scan.count);
+    what += " objects at "
+          + key_name(scan.index, first)
+          + " runs past subindex FEh";
+    return pdo_error(pdo, what);
+  }
+
+  od_row<Ctx> const* whole = nullptr;
+  std::vector<od_row<Ctx> const*> objects;
+  for (auto const& row : rows) {
+    if (row.key.index != scan.index) continue;
+    if (!row.binding.layout.empty() || row.binding.count != nullptr) {
+      whole = &row;
+    }
+    else {
+      objects.push_back(&row);
+    }
+  }
+  auto const* const area = area_of(scan.index, areas);
+  if ((whole == nullptr && objects.empty()) || area == nullptr) {
+    return pdo_error(pdo,
+                     key_name(scan.index, first)
+                         + " is no object of the dictionary");
+  }
+  if (area->class_ != od_class::status) {
+    return pdo_error(pdo,
+                     key_name(scan.index, first)
+                         + " is of the class "
+                         + std::string{class_name(area->class_)}
+                         + ", and an MPDO sends statuses alone");
+  }
+  for (auto sub = first; sub <= last; ++sub) {
+    auto const access = served_access<Ctx>(whole, std::span{objects}, sub);
+    if (!access) {
+      return pdo_error(pdo,
+                       key_name(scan.index, sub)
+                           + " is no object of the dictionary");
+    }
+    if (!od_readable(*access)) {
+      return pdo_error(pdo, key_name(scan.index, sub) + " is not readable");
+    }
+  }
+  return {};
+}
+
+// The rules of the list of the objects of `mapped`, an MPDO in source address
+// mode, beside the dictionary made of `rows` and `areas`: the MPDO is a TPDO,
+// as the device sends it; each block obeys `check_scan`; and no two blocks of
+// one index overlap, as an object sent twice in a round would take the
+// frames of others. The rules go by block, not by object: a list of a block
+// costs one search of the rows, however many objects it names.
+template<typename Ctx, std::size_t N, std::size_t A>
+constexpr std::string check_scans(od_mapped_pdo const& mapped,
+                                  od_row<Ctx> const (&rows)[N],
+                                  od_area const (&areas)[A])
+{
+  auto const& pdo = mapped.pdo;
+  auto const& scans = mapped.scans;
+  if (scans.empty()) return {};
+  if (pdo.direction != pdo_direction::tx) {
+    return pdo_error(pdo,
+                     "an MPDO in source address mode is a TPDO: the device "
+                     "sends it");
+  }
+  for (auto b = 0uz; b < scans.size(); ++b) {
+    auto const& scan = scans[b];
+    if (auto error = check_scan(pdo, scan, rows, areas); !error.empty()) {
+      return error;
+    }
+    for (auto j = 0uz; j < b; ++j) {
+      auto const& other = scans[j];
+      if (other.index != scan.index) continue;
+      auto const from =
+          std::max(unsigned{other.subindex}, unsigned{scan.subindex});
+      auto const to = std::min(unsigned{other.subindex} + other.count,
+                               unsigned{scan.subindex} + scan.count);
+      if (from < to) {
+        return pdo_error(pdo, key_name(scan.index, from) + " is sent twice");
+      }
+    }
+  }
+  return {};
+}
+
 // Whether the custom COB-ID `id` is one of the COB-IDs of the predefined form
 // that `pdo` has: its base + a node-ID of 1 to 127.
 constexpr bool in_predefined_form(id_t id, od_pdo const& pdo)
@@ -1286,10 +1431,12 @@ constexpr std::string cob_id_error(od_pdo const& first, od_pdo const& second)
 
 // The rules of two PDOs, in pairs, in source order: no two go in the same
 // direction with the same number, as two would set one slot up, or have the
-// same name, the first segment of the paths of their signals; and no two
-// share a COB-ID. A custom COB-ID is no other's custom one, and none of the
-// COB-IDs of the predefined form of any PDO of the description, of either
-// direction, its base + a node-ID: the node-ID is known at run time only.
+// same name, the first segment of the paths of their signals; no two share a
+// COB-ID; and no two are MPDOs in source address mode, as a device sends one,
+// whose rule of selection would mix their objects up otherwise. A custom
+// COB-ID is no other's custom one, and none of the COB-IDs of the predefined
+// form of any PDO of the description, of either direction, its base + a
+// node-ID: the node-ID is known at run time only.
 constexpr std::string check_pdo_pairs(std::span<od_mapped_pdo const> pdos)
 {
   for (auto p = 0uz; p < pdos.size(); ++p) {
@@ -1309,17 +1456,27 @@ constexpr std::string check_pdo_pairs(std::span<od_mapped_pdo const> pdos)
       if (auto error = cob_id_error(second, first); !error.empty()) {
         return error;
       }
+      if (pdos[p].mapping() == pdo_mapping::sam
+          && pdos[q].mapping() == pdo_mapping::sam) {
+        return pdo_pair_error(first,
+                              second,
+                              "are both MPDOs in source address mode, and a "
+                              "device sends one");
+      }
     }
   }
   return {};
 }
 
-// Returns the first rule that the process data breaks, or an empty string:
-// the rules of each PDO alone and of its signals, in source order, then those
-// of the tables of values of the signals, once for each table, and last
-// those of two PDOs.
-template<std::size_t G>
+// Returns the first rule that the process data breaks beside the dictionary
+// made of `rows`, `areas` and `groups`, or an empty string: the rules of each
+// PDO alone and of its signals or of the list of its objects, in source
+// order, then those of the tables of values of the signals, once for each
+// table, and last those of two PDOs.
+template<typename Ctx, std::size_t N, std::size_t A, std::size_t G>
 constexpr std::string check_process_data(od_process_data const& process_data,
+                                         od_row<Ctx> const (&rows)[N],
+                                         od_area const (&areas)[A],
                                          od_group const (&groups)[G])
 {
   for (auto const& mapped : process_data.pdos) {
@@ -1327,6 +1484,9 @@ constexpr std::string check_process_data(od_process_data const& process_data,
       return error;
     }
     if (auto error = check_signals(mapped); !error.empty()) return error;
+    if (auto error = check_scans(mapped, rows, areas); !error.empty()) {
+      return error;
+    }
   }
   if (auto error = check_signal_tables(process_data.pdos); !error.empty()) {
     return error;
@@ -1371,7 +1531,7 @@ constexpr std::string od_check(od_row<Ctx> const (&rows)[N],
   if (auto error = check_groups_used(rows, groups); !error.empty()) {
     return error;
   }
-  return check_process_data(process_data, groups);
+  return check_process_data(process_data, rows, areas, groups);
 }
 
 } // namespace detail

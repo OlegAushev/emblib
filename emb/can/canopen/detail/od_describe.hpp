@@ -386,9 +386,11 @@ constexpr void put_row(Sink& sink,
 }
 
 // Writes the line of the PDO `mapped`: its name, its title, its direction,
-// its number, what it carries, its COB-ID, custom in `cob_id`, or the base of
-// its predefined form in `cob_base`, which a host adds the node-ID to, and
-// the period of a TPDO or the timeout of an RPDO, in milliseconds.
+// its number, what it carries, `signals` or, of an MPDO in source address
+// mode, `sam`, its COB-ID, custom in `cob_id`, or the base of its predefined
+// form in `cob_base`, which a host adds the node-ID to, and the period of a
+// TPDO or the timeout of an RPDO, in milliseconds. The line does not list the
+// objects of an MPDO: each frame names its own.
 template<typename Sink>
 constexpr void put_pdo(Sink& sink, od_mapped_pdo const& mapped)
 {
@@ -497,9 +499,10 @@ sorted_signals(std::span<od_signal const> signals)
 // key and compared by what a host sees (`same_layout`); a line for each row,
 // in the order of keys; and a line for each PDO, by direction, the TPDOs
 // first, and by number, each followed by a line for each of its signals, by
-// first bit. Neither the order of the rows, of the groups or of the PDOs in
-// their arrays nor that of the rows of a PDO changes the text, and without
-// PDOs it is that of the dictionary alone.
+// first bit, of which an MPDO in source address mode has none. Neither the
+// order of the rows, of the groups or of the PDOs in their arrays nor that of
+// the rows of a PDO changes the text, and without PDOs it is that of the
+// dictionary alone.
 template<typename Sink,
          typename Ctx,
          std::size_t N,

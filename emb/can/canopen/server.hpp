@@ -23,6 +23,7 @@
 #include "detail/sdo_server.hpp"
 #include "detail/sync_producer.hpp"
 #include "detail/tpdo_producer.hpp"
+#include "mpdo.hpp"
 #include "od.hpp"
 #include "od_dictionary.hpp"
 #include "od_process_data.hpp"
@@ -96,6 +97,32 @@ constexpr emb::delegate<void(payload_t const&)> described_handler(T& obj)
 {
   return emb::delegate<void(payload_t const&)>::template bind<
       &described_handle<Mapped, Handler, T>>(&obj);
+}
+
+// Returns the frame that `scanner`, the source of an MPDO in source address
+// mode, gives this period (`mpdo_scanner::next`). An MPDO has no counter, and
+// the thunk takes the slot's counter of frames, which `next` does not, and
+// drops it.
+template<typename Ctx, auto const& Scans>
+constexpr std::optional<payload_t>
+scanned_next(mpdo_scanner<Ctx, Scans>* scanner, std::uint8_t)
+{
+  return scanner->next();
+}
+
+// Returns the source of the slot of an MPDO in source address mode whose
+// objects `scanner` gives: `scanned_next` and `mpdo_scanner::sent` bound to
+// it, and no counter, its mask 0.
+template<typename Ctx, auto const& Scans>
+constexpr tpdo_source scanned_source(mpdo_scanner<Ctx, Scans>& scanner)
+{
+  using scanner_type = mpdo_scanner<Ctx, Scans>;
+  return {
+      .next = emb::delegate<std::optional<payload_t>(
+          std::uint8_t)>::template bind<&scanned_next<Ctx, Scans>>(&scanner),
+      .sent =
+          emb::delegate<void()>::template bind<&scanner_type::sent>(&scanner),
+      .counter_mask = 0};
 }
 
 } // namespace detail
@@ -281,6 +308,38 @@ public:
   // binding to a temporary would leave the slot with a dangling pointer
   template<auto const& Mapped, auto Provider, typename T>
   void setup_tpdo(T const&&) = delete;
+
+  // Sets the slot of the TPDO `Mapped`, an MPDO in source address mode, up
+  // from its description: the `mapped_pdo` of the PDO and the list of its
+  // objects that `pdo_of` makes, the constant that the description of the
+  // dictionary takes too. The slot is that of the number of the PDO, with its
+  // COB-ID and its period. Once a period it sends the frame that `scanner`,
+  // the source of the objects of the same list, gives (`mpdo_scanner::next`),
+  // and tells it of each frame that `send` takes (`mpdo_scanner::sent`); a
+  // period in which it gives none sends nothing, and an MPDO has no counter.
+  // The source is a member of the application that outlives the server, as
+  // its context does. The program is ill-formed if the PDO is no TPDO or if
+  // its number is past the slots or its COB-ID one that `setup_tpdo<I, CobId>`
+  // refuses, and the overload is not viable if `scanner` sends another list
+  // than the PDO. The number, the COB-ID and the period are read from
+  // `Mapped.pdo` in constant expressions only, so that the PDO does not reach
+  // the image, and the slot is written whole, as by any `setup_tpdo`.
+  template<auto const& Mapped, typename C, auto const& Scans>
+    requires(&Scans == &mapped_list<Mapped>)
+  void setup_tpdo(mpdo_scanner<C, Scans>& scanner)
+  {
+    static_assert(Mapped.pdo.direction == pdo_direction::tx,
+                  "setup_tpdo takes a PDO that the device sends");
+    constexpr auto number = Mapped.pdo.number;
+    constexpr auto cob_id = Mapped.pdo.cob_id;
+    constexpr auto period = Mapped.pdo.period;
+    static_assert(number >= 1 && number <= Opt.tpdo_count,
+                  "TPDO index out of range");
+    check_cob_id<number, cob_id>();
+    tpdo_.template setup<number, cob_id>(detail::scanned_source(scanner),
+                                         period,
+                                         clock_());
+  }
 
   // ---- heartbeat / sync / nmt ----
 

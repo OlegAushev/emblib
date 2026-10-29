@@ -173,6 +173,38 @@ constinit trouble_registry raised{};
 static_assert(bind<od_statuses<raised>>().layout.size() == 5);
 static_assert(bind<od_statuses<raised>>().field_labels[4].name == "stall");
 
+// -- The list of an MPDO --
+
+consteval bool is_block(mpdo_scan const& scan,
+                        std::uint16_t index,
+                        std::uint8_t subindex,
+                        std::uint8_t count)
+{
+  return scan.index == index
+      && scan.subindex == subindex
+      && scan.count == count;
+}
+
+// A block for each run of live statuses, by id, at their subindices: two
+// around the retired status 2, one without a hole, and none for 00h or for a
+// hole at id 0.
+static_assert(od_statuses_scans<registry, 0x4000>.size() == 2);
+static_assert(is_block(od_statuses_scans<registry, 0x4000>[0], 0x4000, 1, 2));
+static_assert(is_block(od_statuses_scans<registry, 0x4000>[1], 0x4000, 4, 1));
+static_assert(od_statuses_scans<raised, 0x4100>.size() == 2);
+static_assert(is_block(od_statuses_scans<raised, 0x4100>[1], 0x4100, 4, 1));
+
+constinit emb::trouble::registry<emb::typelist<overheat, overvoltage>, level, 2>
+    unbroken{};
+constinit emb::trouble::registry<emb::typelist<overvoltage, stall>, level, 2>
+    late{};
+
+static_assert(od_statuses_scans<unbroken, 0x4000>.size() == 1);
+static_assert(is_block(od_statuses_scans<unbroken, 0x4000>[0], 0x4000, 1, 2));
+static_assert(od_statuses_scans<late, 0x4000>.size() == 2);
+static_assert(is_block(od_statuses_scans<late, 0x4000>[0], 0x4000, 2, 1));
+static_assert(is_block(od_statuses_scans<late, 0x4000>[1], 0x4000, 4, 1));
+
 // -- Dictionary --
 
 enum class mode : std::uint8_t { idle, run };

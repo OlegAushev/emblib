@@ -37,6 +37,10 @@ it breaks, naming its line:
   being the name of its PDO and a name, and unique among all the paths of
   the description; a PDO has at most one counter, unsigned, of one to eight
   bits;
+- an MPDO in source address mode, of the mapping sam, is a TPDO, one to a
+  description, and has no signal, as each of its frames names its object;
+  a description with one has an object, an array or a record of the class
+  status, which it sends;
 - the fingerprint of the header is the 32-bit FNV-1a hash of the body, of
   every byte after the line of the header: the second implementation of the
   hash that the format provides for.
@@ -50,10 +54,14 @@ same emblib, and a change to the format changes the tool with it.
 
 --candump decodes the frames of a log of candump by a description that it
 checks first, a frame a line, as a host reads them from the node --node:
-the value of each signal of a PDO by its path, a frame of a PDO shorter than
-8 bytes as refused, an RPDO with a reserved bit set or an unnamed value as
-refused, as the node refuses it, and a frame of a COB-ID that no PDO has as
-unknown. A line of the log is a frame as candump -L logs it, "(time) can0
+the value of each signal of a PDO by its path; of an MPDO in source address
+mode, the key of its object, the path of the object, of the record and the
+name of the member or of the array, and its value, a status by the name of
+its severity; a frame of a PDO shorter than 8 bytes as refused, an RPDO with
+a reserved bit set or an unnamed value as refused, as the node refuses it,
+an MPDO of another producer or in destination address mode as refused, and
+a frame of a COB-ID that no PDO has, or an MPDO of an object that the
+description does not name, as unknown. A line of the log is a frame as candump -L logs it, "(time) can0
 181#0102", or as candump prints it, "can0 181 [2] 01 02", each with or
 without its time and its interface; an empty line, and one that starts with
 "#", is skipped. --expect compares the decoded frames with a file and fails
@@ -67,6 +75,7 @@ import difflib
 import json
 import math
 import re
+import struct
 import sys
 from decimal import Decimal
 from fractions import Fraction
@@ -113,7 +122,7 @@ NAMED = {
     'class': ('about', 'control', 'parameters', 'status', 'watch'),
     'access': ('rw', 'ro', 'wo', 'const'),
     'direction': ('tx', 'rx'),
-    'mapping': ('signals',),
+    'mapping': ('signals', 'sam'),
     'role': ('value', 'counter'),
     'encoding': ('unsigned', 'signed'),
 }
@@ -122,6 +131,11 @@ SEGMENT = '[A-Za-z][A-Za-z0-9_]*'
 
 # The highest node-ID, which the predefined form of a PDO adds to its base.
 NODE_MAX = 127
+
+# How the bytes of a value of each datatype read, little-endian, as the data
+# of an expedited SDO and of an MPDO carry it.
+UNPACK = {'boolean': '<B', 'int8': '<b', 'int16': '<h', 'int32': '<i',
+          'uint8': '<B', 'uint16': '<H', 'uint32': '<I', 'float32': '<f'}
 
 
 def is_restricted_cob_id(cob_id):
@@ -250,6 +264,11 @@ class Checker:
         self.cob_bases = []    # predefined forms: (base, slot, line)
         self.described = []    # the PDOs, each with its signals
         self.signals = 0
+        self.sam = None        # the slot of the MPDO in source address mode
+        self.classes = set()   # the classes of the objects, arrays, records
+        self.objects = {}      # (index, sub): the line of the object
+        self.arrays = {}       # index: the line of the array
+        self.records = {}      # index: the line of the record
 
     def fail(self, message, number=None):
         raise Refusal(self.number if number is None else number, message)
@@ -406,6 +425,13 @@ class Checker:
             self.fail(f'{name} after {self.key[1]}: objects, arrays and '
                       f'records go by key, each key once')
         self.key = ((index, sub), name)
+        self.classes.add(values['class'])
+        if kind == 'object':
+            self.objects[(index, sub)] = values
+        elif kind == 'array':
+            self.arrays[index] = values
+        else:
+            self.records[index] = values
         path = values['path']
         if path in self.paths:
             self.fail(f"the path '{path}' is that of line {self.paths[path]}")
@@ -483,9 +509,18 @@ class Checker:
             if 'timeout_ms' not in values:
                 self.fail(f'{slot} must state "timeout_ms", 0 if unwatched')
 
+        if values['mapping'] == 'sam':
+            if direction != 'tx':
+                self.fail(f'{slot}: an MPDO in source address mode is a '
+                          f'TPDO: the device sends it')
+            if self.sam is not None:
+                self.fail(f'{self.sam[0]} and {slot} are both MPDOs in source '
+                          f'address mode, and a device sends one')
+            self.sam = (slot, self.number)
+
         self.pdos[name] = self.number
         self.current = {'name': name, 'slot': slot, 'line': self.number,
-                        'direction': direction,
+                        'direction': direction, 'mapping': values['mapping'],
                         'cob_id': int(values.get('cob_id', '0'), 16),
                         'cob_base': int(values.get('cob_base', '0'), 16),
                         'custom': 'cob_id' in values, 'signals': [],
@@ -500,6 +535,9 @@ class Checker:
                       + (f"after the line of PDO '{current['name']}'"
                          if current else 'before the line of any PDO')
                       + ': the signals of a PDO follow its line')
+        if current['mapping'] == 'sam':
+            self.fail(f"a signal of PDO '{name}', an MPDO in source address "
+                      f"mode, which carries objects rather than signals")
         start, width = values['start'], values['width']
         where = f'the signal at bit {start}'
         if width < 1:
@@ -542,7 +580,8 @@ class Checker:
 
     def end_pdo(self):
         """Checks what only the end of the signals of the last PDO shows."""
-        if self.current is not None and not self.current['signals']:
+        if (self.current is not None and self.current['mapping'] == 'signals'
+                and not self.current['signals']):
             self.fail(f"the PDO '{self.current['name']}' has no signal",
                       self.current['line'])
 
@@ -561,6 +600,10 @@ class Checker:
 
     def finish(self):
         self.end_pdo()
+        if self.sam is not None and 'status' not in self.classes:
+            self.fail(f'{self.sam[0]} is an MPDO in source address mode, but '
+                      f'no object, array or record is of the class status',
+                      self.sam[1])
         for i, (cob_id, slot, number) in enumerate(self.cob_ids):
             for other, other_slot, _ in self.cob_ids[:i]:
                 if other == cob_id:
@@ -642,8 +685,13 @@ class Decoder:
     the node `node`."""
 
     def __init__(self, checker, node):
+        self.node = node
         self.tables = [{label[0]: label[1] for label in labels}
                        for _, labels in checker.tables]
+        self.objects = checker.objects
+        self.arrays = checker.arrays
+        self.records = checker.records
+        self.layouts = [members for _, members, _ in checker.layouts]
         self.pdos = {}
         for pdo in checker.described:
             cob_id = pdo['cob_id'] if pdo['custom'] else pdo['cob_base'] + node
@@ -661,6 +709,8 @@ class Decoder:
         if len(data) < 8:
             return (f'{head}: refused, {counted(len(data), "byte")}: a PDO '
                     f'takes 8')
+        if pdo['mapping'] == 'sam':
+            return f'{head}: {self.sam(data)}'
         word = int.from_bytes(data[:8], 'little')
         covered = 0
         values = []
@@ -694,6 +744,58 @@ class Decoder:
         elif pdo['direction'] == 'rx' and unnamed:
             line += f'; refused: {unnamed}'
         return line
+
+    def sam(self, data):
+        """Returns what the frame of an MPDO in source address mode that
+        carries the bytes `data` says: the key of its object, its path and
+        its value, or why a host does not read it."""
+        if data[0] & 0x80:
+            return (f'refused, byte 0 is {data[0]:02X}h: an MPDO in source '
+                    f'address mode has bit 7 clear')
+        if data[0] != self.node:
+            return f'refused, producer {data[0]}: the node is {self.node}'
+        index, sub = int.from_bytes(data[1:3], 'little'), data[3]
+        key = f'{index:04X}h:{sub:02X}'
+        found = self.object(index, sub)
+        if found is None:
+            return f'{key} unknown'
+        path, values = found
+        datatype = values['datatype']
+        raw = struct.unpack_from(UNPACK[datatype], data, 4)[0]
+        if 'value_table' in values:
+            text = self.tables[values['value_table']].get(raw, f'{raw}?')
+        else:
+            text = f'{raw:.6g}' if datatype == 'float32' else str(raw)
+            if 'unit' in values:
+                text += f' {values["unit"]}'
+        return f'{key} {path}={text}' if path else f'{key}={text}'
+
+    def object(self, index, sub):
+        """Returns the path of the object at `index`:`sub` and the keys of
+        its value, its datatype, table of values and unit, as the description
+        states them, or None if it names no such object. A member of a record
+        is the path of the record and the name of the member, and takes the
+        value of the record if it inherits it; an element of an array is the
+        path of the array; the count of an array and the subindex 00h that the
+        dictionary adds to an index of objects have no path."""
+        if (index, sub) in self.objects:
+            values = self.objects[(index, sub)]
+            return values['path'], values
+        if index in self.records:
+            record = self.records[index]
+            members = self.layouts[record['layout']]
+            if sub >= len(members):
+                return None
+            member = members[sub]
+            path = f'{record["path"]}.{member["name"]}'
+            return path, record if 'inherits' in member else member
+        if index in self.arrays:
+            if sub == 0:
+                return None, {'datatype': 'uint8'}
+            return self.arrays[index]['path'], self.arrays[index]
+        if sub == 0 and any(key[0] == index for key in self.objects):
+            return None, {'datatype': 'uint8'}
+        return None
 
 
 def decode(checker, path, node):

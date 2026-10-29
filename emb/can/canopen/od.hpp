@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <bit>
 #include <compare>
 #include <concepts>
 #include <cstddef>
@@ -128,11 +129,23 @@ inline od_value from_sdo_data(expedited_sdo_data bytes, od_data_type type)
 }
 
 // Returns the data of an expedited SDO that carries `v`: the bytes of its
-// scalar, followed by zeros.
-inline expedited_sdo_data to_sdo_data(od_value v)
+// scalar, followed by zeros. The SDO server and an MPDO in source address
+// mode send a value so. During constant evaluation `std::bit_cast` gives the
+// bytes that `std::memcpy` copies at run time.
+constexpr expedited_sdo_data to_sdo_data(od_value v)
 {
   expedited_sdo_data bytes{};
-  v.visit([&](auto const& x) { std::memcpy(bytes.data(), &x, sizeof(x)); });
+  v.visit([&](auto const& x) {
+    if consteval {
+      auto const raw = std::bit_cast<std::array<std::uint8_t, sizeof(x)>>(x);
+      for (auto i = 0uz; i < raw.size(); ++i) {
+        bytes[i] = raw[i];
+      }
+    }
+    else {
+      std::memcpy(bytes.data(), &x, sizeof(x));
+    }
+  });
   return bytes;
 }
 

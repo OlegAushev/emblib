@@ -63,16 +63,20 @@ struct od_signal {
 };
 
 // The struct `od_mapped_pdo` is a PDO with what it carries, as the description
-// reads it: the PDO and the signals of its rows. A `mapped_pdo` converts to
-// it.
+// reads it: the PDO and either the signals of its rows or, of an MPDO in
+// source address mode, the list of the objects that it sends, the other span
+// empty. A `mapped_pdo` converts to it.
 struct od_mapped_pdo {
   od_pdo const& pdo;
   std::span<od_signal const> signals;
+  std::span<mpdo_scan const> scans;
 
-  // Returns what the PDO carries: the signals of its rows.
+  // Returns what the PDO carries: the objects of an MPDO in source address
+  // mode if it has a list of them, else the signals of its rows. `pdo_of`
+  // refuses an empty list of either, so the span that is not empty tells.
   constexpr pdo_mapping mapping() const
   {
-    return pdo_mapping::signals;
+    return scans.empty() ? pdo_mapping::signals : pdo_mapping::sam;
   }
 };
 
@@ -113,17 +117,23 @@ constexpr id_t cob_base_of(pdo_direction direction, std::size_t number)
 } // namespace detail
 
 // The class template `mapped_pdo` is a PDO whose type knows what it carries,
-// `List`, the array of its rows, as `pdo_of` makes it. The server sets the
-// slot of the PDO up from it, and it converts to the `od_mapped_pdo` that the
-// description reads, so an application writes the PDO and its rows once, in
-// a constant that both take.
+// `List`, the array of its rows or, of an MPDO in source address mode, the
+// list of its objects (`mpdo_scan`), as `pdo_of` makes it. The server sets
+// the slot of the PDO up from it, and it converts to the `od_mapped_pdo` that
+// the description reads, so an application writes the PDO and what it
+// carries once, in a constant that both take.
 template<auto const& List>
 struct mapped_pdo {
   od_pdo pdo;
 
   constexpr operator od_mapped_pdo() const
   {
-    return {.pdo = pdo, .signals = detail::od_signals_of<List>};
+    if constexpr (some_mpdo_scans<std::remove_cvref_t<decltype(List)>>) {
+      return {.pdo = pdo, .signals = {}, .scans = List};
+    }
+    else {
+      return {.pdo = pdo, .signals = detail::od_signals_of<List>, .scans = {}};
+    }
   }
 };
 
@@ -147,6 +157,38 @@ struct mapped_pdo_traits<mapped_pdo<List>> {
 template<auto const& Mapped>
 inline constexpr auto const& mapped_list =
     detail::mapped_pdo_traits<std::remove_cvref_t<decltype(Mapped)>>::list;
+
+// Returns the PDO `pdo`, an MPDO in source address mode, with what it carries,
+// the objects of the list `Scans`, as a `mapped_pdo<Scans>`, whose type knows
+// the list: the server sets the slot of the PDO up from it, with a source of
+// the objects of the same list (`mpdo_scanner`), and the description of the
+// dictionary takes it, as an `od_mapped_pdo`, among the PDOs of its process
+// data. As with the rows of a PDO (`pdo_of` of `pdo.hpp`), an application
+// writes the two once:
+//
+//   inline constexpr auto& statuses_objects =
+//       od_statuses_scans<trouble::registry, 0x4000>;
+//
+//   inline constexpr auto statuses_pdo = pdo_of<statuses_objects>(
+//       {.name = "statuses",
+//        .title = {"Trouble statuses", "Статусы неисправностей"},
+//        .direction = pdo_direction::tx,
+//        .number = 1,
+//        .cob_id = pdo_id::predefined(),
+//        .period = 10ms});
+//
+// The program is ill-formed if `Scans` is empty, as an MPDO sends at least one
+// object. That the objects are statuses, which the dictionary serves and lets
+// read, each once, is a rule of the description (`detail::od_check`), which
+// knows the dictionary.
+template<auto const& Scans>
+  requires some_mpdo_scans<std::remove_cvref_t<decltype(Scans)>>
+consteval mapped_pdo<Scans> pdo_of(od_pdo const& pdo)
+{
+  static_assert(std::size(Scans) != 0,
+                "pdo: an MPDO sends at least one object");
+  return {pdo};
+}
 
 // The struct `od_process_data` gives the description of a dictionary what it
 // states beside the objects: the PDOs, each with what it carries, in any
