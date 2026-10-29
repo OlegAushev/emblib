@@ -2,9 +2,11 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
+#include <numeric>
 #include <span>
 #include <string>
 #include <string_view>
@@ -12,6 +14,9 @@
 #include <vector>
 
 #include "../od.hpp"
+#include "../od_process_data.hpp"
+#include "../types.hpp"
+#include "pdo_check.hpp"
 
 namespace emb {
 namespace can {
@@ -146,6 +151,48 @@ constexpr std::string item_error(od_catalog const& catalog,
   return out;
 }
 
+// Renders a PDO as "TPDO1 drive_status", or as "TPDO1" if it has no name.
+constexpr void append_pdo(std::string& out, od_pdo const& pdo)
+{
+  out += pdo.direction == pdo_direction::tx ? "TPDO" : "RPDO";
+  append_decimal(out, pdo.number);
+  if (!pdo.name.empty()) {
+    out += ' ';
+    out += pdo.name;
+  }
+}
+
+constexpr std::string pdo_error(od_pdo const& pdo, std::string_view what)
+{
+  std::string out = "od: ";
+  append_pdo(out, pdo);
+  out += ": ";
+  out += what;
+  return out;
+}
+
+constexpr std::string pdo_pair_error(od_pdo const& first,
+                                     od_pdo const& second,
+                                     std::string_view what)
+{
+  std::string out = "od: ";
+  append_pdo(out, first);
+  out += " and ";
+  append_pdo(out, second);
+  out += ' ';
+  out += what;
+  return out;
+}
+
+// The error of the signal of `pdo` that starts at bit `start`, named by the
+// bit, as `pdo_check` names it: its path may be what is wrong.
+constexpr std::string signal_error(od_pdo const& pdo,
+                                   unsigned start,
+                                   std::string_view what)
+{
+  return pdo_error(pdo, signal_name(start) + ": " + std::string{what});
+}
+
 constexpr std::string_view type_name(od_data_type type)
 {
   switch (type) {
@@ -182,6 +229,51 @@ constexpr std::string_view access_name(od_access access)
   }
   return "?";
 }
+
+constexpr std::string_view direction_name(pdo_direction direction)
+{
+  switch (direction) {
+  case pdo_direction::tx: return "tx";
+  case pdo_direction::rx: return "rx";
+  }
+  return "?";
+}
+
+constexpr std::string_view mapping_name(pdo_mapping mapping)
+{
+  switch (mapping) {
+  case pdo_mapping::signals: return "signals";
+  case pdo_mapping::sam: return "sam";
+  }
+  return "?";
+}
+
+constexpr std::string_view role_name(pdo_role role)
+{
+  switch (role) {
+  case pdo_role::value: return "value";
+  case pdo_role::counter: return "counter";
+  }
+  return "?";
+}
+
+constexpr std::string_view encoding_name(pdo_encoding encoding)
+{
+  switch (encoding) {
+  case pdo_encoding::unsigned_: return "unsigned";
+  case pdo_encoding::signed_: return "signed";
+  }
+  return "?";
+}
+
+// The classes of objects, each once: a group or a PDO named as one is
+// refused, as a host would take its name for the class. The list is written
+// out, so a class added to `od_class` must be added here too, or the rules
+// that read the list miss it.
+inline constexpr od_class od_classes[] = {od_class::about,
+                                          od_class::control,
+                                          od_class::parameters,
+                                          od_class::watch};
 
 // Whether `text` is a segment of a path: a letter followed by letters, digits
 // and underscores, all ASCII.
@@ -821,10 +913,6 @@ constexpr std::string check_areas(od_area const (&areas)[A])
 template<std::size_t G>
 constexpr std::string check_groups(od_group const (&groups)[G])
 {
-  constexpr od_class classes[] = {od_class::about,
-                                  od_class::control,
-                                  od_class::parameters,
-                                  od_class::watch};
   for (auto i = 0uz; i < G; ++i) {
     auto const& group = groups[i];
     if (!is_segment(group.name)) {
@@ -832,7 +920,7 @@ constexpr std::string check_groups(od_group const (&groups)[G])
                          "the name must be a letter followed by letters, "
                          "digits or underscores");
     }
-    if (std::ranges::contains(classes, group.name, class_name)) {
+    if (std::ranges::contains(od_classes, group.name, class_name)) {
       return group_error(group, "named as a class");
     }
     if (group_position(group.name, groups) != i) {
@@ -1019,20 +1107,248 @@ constexpr std::string check_catalogs(od_row<Ctx> const (&rows)[N])
   return {};
 }
 
+// The rules of a PDO alone: its name is a segment of a path, the first
+// segment of the paths of its signals, and names no group, whose objects a
+// host would mix up with them, and no class; its title obeys `title_error`;
+// its number is that of a PDO of CiA 301, 1 to 512, and only PDOs 1 to 4 have
+// the predefined COB-ID, as `cob_id_of` gives it; a custom COB-ID is one of 11
+// bits, from 001h to 7FFh, as `put_hex` writes three digits of it and would
+// drop the others, and not restricted (`is_restricted_cob_id`); a TPDO has a
+// period above 0, as a slot with none sends nothing, and no timeout, and an
+// RPDO has no period and a timeout of 0, unwatched, or more.
+template<std::size_t G>
+constexpr std::string check_pdo(od_pdo const& pdo, od_group const (&groups)[G])
+{
+  constexpr auto zero = std::chrono::milliseconds::zero();
+  auto const& id = pdo.cob_id;
+
+  if (!is_segment(pdo.name)) {
+    return pdo_error(pdo,
+                     "the name must be a letter followed by letters, digits "
+                     "or underscores");
+  }
+  if (group_position(pdo.name, groups) != G) {
+    return pdo_error(pdo, "named as a group");
+  }
+  if (std::ranges::contains(od_classes, pdo.name, class_name)) {
+    return pdo_error(pdo, "named as a class");
+  }
+  if (auto const what = title_error(pdo.title); !what.empty()) {
+    return pdo_error(pdo, what);
+  }
+  if (pdo.number < 1 || pdo.number > 512) {
+    return pdo_error(pdo, "the number must be from 1 to 512");
+  }
+  if (!id.is_custom && pdo.number > 4) {
+    return pdo_error(pdo, "the predefined COB-ID exists only for PDOs 1 to 4");
+  }
+  if (id.is_custom && (id.value < 0x001 || id.value > 0x7FF)) {
+    return pdo_error(pdo, "the COB-ID must be from 001h to 7FFh");
+  }
+  if (id.is_custom && is_restricted_cob_id(id.value)) {
+    std::string what = "the COB-ID ";
+    append_hex(what, id.value, 3);
+    what += "h is restricted";
+    return pdo_error(pdo, what);
+  }
+  if (pdo.direction == pdo_direction::tx) {
+    if (pdo.timeout != zero) return pdo_error(pdo, "a TPDO has no timeout");
+    if (pdo.period <= zero) {
+      return pdo_error(pdo, "the period must be above 0");
+    }
+  }
+  else {
+    if (pdo.period != zero) return pdo_error(pdo, "an RPDO has no period");
+    if (pdo.timeout < zero) {
+      return pdo_error(pdo, "the timeout must not be negative");
+    }
+  }
+  return {};
+}
+
+// The rules of the signals of a PDO that its rows do not check, as they need
+// the name of the PDO and the rules of a description; the rows obey their
+// own (`pdo_check`), which `pdo_of` checks. The path of a signal of the role
+// `value` is the name of the PDO and a name, each a segment, and no other
+// signal of the PDO has it: no path of a row has a PDO's name for its group,
+// and PDOs have different names, so a path is unique in the whole
+// description. Its title obeys `title_error`; a unit is verbatim
+// (`is_verbatim_text`), and a step `scale_num` / `scale_den` a positive
+// fraction in its lowest terms, as the description writes it, which that of
+// an `emb::scaled` is unless its ratio is negative.
+constexpr std::string check_signals(od_mapped_pdo const& mapped)
+{
+  auto const& pdo = mapped.pdo;
+  auto const& signals = mapped.signals;
+
+  for (auto i = 0uz; i < signals.size(); ++i) {
+    auto const& signal = signals[i];
+    auto const& label = signal.label;
+    auto const start = unsigned{signal.bits.start};
+    if (signal.role == pdo_role::value) {
+      if (!is_path(label.path) || group_of(label.path) != pdo.name) {
+        return signal_error(pdo,
+                            start,
+                            "the path must be the name of the PDO and a name, "
+                            "each a letter followed by letters, digits or "
+                            "underscores");
+      }
+      if (auto const what = title_error(label.title); !what.empty()) {
+        return signal_error(pdo, start, what);
+      }
+      for (auto j = 0uz; j < i; ++j) {
+        if (signals[j].role == pdo_role::value
+            && signals[j].label.path == label.path) {
+          return pdo_error(pdo,
+                           signal_name(signals[j].bits.start)
+                               + " and "
+                               + signal_name(start)
+                               + " have the same path");
+        }
+      }
+    }
+    if (!is_verbatim_text(signal.unit)) {
+      return signal_error(pdo,
+                          start,
+                          "the unit must be UTF-8 without quotation marks, "
+                          "backslashes or control characters");
+    }
+    if (signal.scale_num <= 0
+        || signal.scale_den <= 0
+        || std::gcd(signal.scale_num, signal.scale_den) != 1) {
+      return signal_error(pdo,
+                          start,
+                          "the step must be a positive fraction in its lowest "
+                          "terms");
+    }
+  }
+  return {};
+}
+
+// Checks the tables of values of the signals by `value_labels_error`, once
+// for each table, which signals may share with each other and with the rows,
+// and reports a broken one at the first signal that has it.
+constexpr std::string check_signal_tables(std::span<od_mapped_pdo const> pdos)
+{
+  std::vector<std::span<od_value_label const>> checked;
+  for (auto const& mapped : pdos) {
+    for (auto const& signal : mapped.signals) {
+      auto const& values = signal.value_labels;
+      if (values.empty()) continue;
+      bool const seen =
+          std::ranges::any_of(checked,
+                              [&](std::span<od_value_label const> other) {
+                                return other.data() == values.data()
+                                    && other.size() == values.size();
+                              });
+      if (seen) continue;
+      checked.push_back(values);
+      if (auto const what = value_labels_error(values); !what.empty()) {
+        return signal_error(mapped.pdo, signal.bits.start, what);
+      }
+    }
+  }
+  return {};
+}
+
+// Whether the custom COB-ID `id` is one of the COB-IDs of the predefined form
+// that `pdo` has: its base + a node-ID of 1 to 127.
+constexpr bool in_predefined_form(id_t id, od_pdo const& pdo)
+{
+  if (pdo.cob_id.is_custom) return false;
+  auto const base = cob_base_of(pdo.direction, pdo.number);
+  return id > base && id <= base + node_id::max;
+}
+
+// Returns the rule that `first`, of a custom COB-ID, breaks with `second`, or
+// an empty string: `first` has the COB-ID of `second`, custom, or that of the
+// predefined form of `second` for some node-ID.
+constexpr std::string cob_id_error(od_pdo const& first, od_pdo const& second)
+{
+  auto const id = first.cob_id.value;
+  bool const custom = second.cob_id.is_custom;
+  if (!first.cob_id.is_custom
+      || (custom && second.cob_id.value != id)
+      || (!custom && !in_predefined_form(id, second))) {
+    return {};
+  }
+  std::string what = "share COB-ID ";
+  append_hex(what, id, 3);
+  what += 'h';
+  if (!custom) {
+    what += " on node ";
+    append_decimal(what, id - cob_base_of(second.direction, second.number));
+  }
+  return pdo_pair_error(first, second, what);
+}
+
+// The rules of two PDOs, in pairs, in source order: no two go in the same
+// direction with the same number, as two would set one slot up, or have the
+// same name, the first segment of the paths of their signals; and no two
+// share a COB-ID. A custom COB-ID is no other's custom one, and none of the
+// COB-IDs of the predefined form of any PDO of the description, of either
+// direction, its base + a node-ID: the node-ID is known at run time only.
+constexpr std::string check_pdo_pairs(std::span<od_mapped_pdo const> pdos)
+{
+  for (auto p = 0uz; p < pdos.size(); ++p) {
+    for (auto q = p + 1; q < pdos.size(); ++q) {
+      auto const& first = pdos[p].pdo;
+      auto const& second = pdos[q].pdo;
+      if (first.direction == second.direction
+          && first.number == second.number) {
+        return pdo_pair_error(first, second, "have the same number");
+      }
+      if (first.name == second.name) {
+        return pdo_pair_error(first, second, "have the same name");
+      }
+      if (auto error = cob_id_error(first, second); !error.empty()) {
+        return error;
+      }
+      if (auto error = cob_id_error(second, first); !error.empty()) {
+        return error;
+      }
+    }
+  }
+  return {};
+}
+
+// Returns the first rule that the process data breaks, or an empty string:
+// the rules of each PDO alone and of its signals, in source order, then those
+// of the tables of values of the signals, once for each table, and last
+// those of two PDOs.
+template<std::size_t G>
+constexpr std::string check_process_data(od_process_data const& process_data,
+                                         od_group const (&groups)[G])
+{
+  for (auto const& mapped : process_data.pdos) {
+    if (auto error = check_pdo(mapped.pdo, groups); !error.empty()) {
+      return error;
+    }
+    if (auto error = check_signals(mapped); !error.empty()) return error;
+  }
+  if (auto error = check_signal_tables(process_data.pdos); !error.empty()) {
+    return error;
+  }
+  return check_pdo_pairs(process_data.pdos);
+}
+
 // Returns an empty string if the rows, the areas and the groups make a valid
-// dictionary, or else the first rule they break: rules of the areas, then of
-// the groups, then of a single row in source order, then those of the labels
-// of the members of records, once for each set of labels, then those of the
-// tables of values, once for each table, then those of two rows, keys before
-// paths before handlers, then catalog coverage, and last that every group has
-// a row. Returns an empty string as well if a builder has
-// already reported an error in some row. Keys and paths are checked over
-// sorted rows, catalogs in one pass each; only the rows outside a catalog are
-// compared in pairs, for their handlers.
+// dictionary, and `process_data` valid PDOs beside it, or else the first rule
+// they break: rules of the areas, then of the groups, then of a single row in
+// source order, then those of the labels of the members of records, once for
+// each set of labels, then those of the tables of values, once for each
+// table, then those of two rows, keys before paths before handlers, then
+// catalog coverage, then that every group has a row, and last the rules of
+// the process data (`check_process_data`). Returns an empty string as well if
+// a builder has already reported an error in some row. Keys and paths are
+// checked over sorted rows, catalogs in one pass each; only the rows outside
+// a catalog are compared in pairs, for their handlers, and the PDOs, which
+// are few.
 template<typename Ctx, std::size_t N, std::size_t A, std::size_t G>
 constexpr std::string od_check(od_row<Ctx> const (&rows)[N],
                                od_area const (&areas)[A],
-                               od_group const (&groups)[G])
+                               od_group const (&groups)[G],
+                               od_process_data const& process_data = {})
 {
   for (auto const& row : rows) {
     if (row.binding.diagnosed) return {};
@@ -1050,7 +1366,10 @@ constexpr std::string od_check(od_row<Ctx> const (&rows)[N],
   if (auto error = check_paths(rows); !error.empty()) return error;
   if (auto error = check_handlers(rows); !error.empty()) return error;
   if (auto error = check_catalogs(rows); !error.empty()) return error;
-  return check_groups_used(rows, groups);
+  if (auto error = check_groups_used(rows, groups); !error.empty()) {
+    return error;
+  }
+  return check_process_data(process_data, groups);
 }
 
 } // namespace detail

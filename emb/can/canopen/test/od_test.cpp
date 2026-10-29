@@ -1,7 +1,9 @@
 #include <array>
+#include <chrono>
 #include <cstdint>
 #include <expected>
 #include <optional>
+#include <ratio>
 #include <span>
 #include <string>
 #include <string_view>
@@ -11,6 +13,10 @@
 #include <emb/can/canopen/od_description.hpp>
 #include <emb/can/canopen/od_dictionary.hpp>
 #include <emb/can/canopen/od_handlers.hpp>
+#include <emb/can/canopen/od_process_data.hpp>
+#include <emb/can/canopen/pdo.hpp>
+#include <emb/can/canopen/types.hpp>
+#include <emb/math/scaled.hpp>
 #include <emb/meta/enum_labels.hpp>
 #include <emb/units.hpp>
 
@@ -2125,5 +2131,549 @@ static_assert(check_shared_tables()
 static_assert(check_shared_member_tables()
               == "od: 4001h:00 a.first: member 02h: value 0: the name must be "
                  "a letter followed by letters, digits or underscores");
+
+// -- Description: PDOs --
+
+using namespace std::chrono_literals;
+
+using decivolt =
+    emb::scaled<std::int16_t, emb::units::volt_f32, std::ratio<1, 10>>;
+
+// What a TPDO reads out: a gear, whose values the object b.gear names too, a
+// flag, a tilt, whose values no object names, a voltage and a counter.
+struct report {
+  gear drive_gear;
+  bool on;
+  tilt body_tilt;
+  decivolt voltage;
+  std::uint8_t counter = 0;
+};
+
+// The rows of the report, not in the order of their bits.
+// clang-format off
+inline constexpr pdo_row<report> report_rows[] = {
+{{16, 16}, {"report.voltage", {"Voltage", "Напряжение"}}, pdo_map<&report::voltage>},
+{{ 0,  3}, {"report.gear", {"Gear", "Передача"}},         pdo_map<&report::drive_gear>},
+{{56,  2}, {},                                             pdo_map_counter<&report::counter>},
+{{ 3,  1}, {"report.on", {"On", "Включено"}},             pdo_map<&report::on>},
+{{ 4,  2}, {"report.tilt", {"Tilt", "Наклон"}},           pdo_map<&report::body_tilt>},
+};
+// clang-format on
+
+// What an RPDO sets: a flag and a plain integer.
+struct setpoint {
+  bool stop;
+  std::int16_t level;
+};
+
+// clang-format off
+inline constexpr pdo_row<setpoint> setpoint_rows[] = {
+{{0,  1}, {"setpoint.stop", {"Stop", "Стоп"}},      pdo_map<&setpoint::stop>},
+{{8, 16}, {"setpoint.level", {"Level", "Уровень"}}, pdo_map<&setpoint::level>},
+};
+// clang-format on
+
+// TPDO2 of the predefined form, and RPDO5 of a custom COB-ID.
+inline constexpr od_pdo report_tpdo{.name = "report",
+                                    .title = {"Report", "Отчёт"},
+                                    .direction = pdo_direction::tx,
+                                    .number = 2,
+                                    .cob_id = pdo_id::predefined(),
+                                    .period = 10ms};
+
+inline constexpr od_pdo setpoint_rpdo{.name = "setpoint",
+                                      .title = {"Setpoint", "Уставка"},
+                                      .direction = pdo_direction::rx,
+                                      .number = 5,
+                                      .cob_id = pdo_id::custom(0x405),
+                                      .timeout = 350ms};
+
+inline constexpr auto report_pdo = pdo_of<report_rows>(report_tpdo);
+inline constexpr auto setpoint_pdo = pdo_of<setpoint_rows>(setpoint_rpdo);
+
+// The type of the PDO knows its rows, and the PDO converts to what the
+// description reads: the signals of its rows.
+inline constexpr od_mapped_pdo mapped_report = report_pdo;
+
+static_assert(&mapped_list<report_pdo> == &report_rows);
+static_assert(&mapped_report.pdo == &report_pdo.pdo);
+static_assert(mapped_report.signals.size() == 5);
+static_assert(mapped_report.signals[1].bits.start == 0);
+static_assert(mapped_report.signals[2].role == pdo_role::counter);
+static_assert(mapped_report.signals[0].scale_den == 10);
+static_assert(mapped_report.signals[0].unit == "V");
+static_assert(mapped_report.mapping() == pdo_mapping::signals);
+
+// The PDOs beside the dictionary `geared`, the RPDO first.
+inline constexpr od_mapped_pdo processed_pdos[] = {setpoint_pdo, report_pdo};
+inline constexpr od_process_data processed{.pdos = processed_pdos};
+
+// The body of the description of `geared` with the PDOs: the labels of the
+// tilt, which a signal names first, as table 3, after those of the
+// dictionary, the signal of the gear sharing table 2 with b.gear; and after
+// the objects, the TPDO, then the RPDO, each followed by its signals by first
+// bit. The TPDO states the base of its COB-ID, the RPDO its custom COB-ID; a
+// counter has no path or title, a voltage states its step and unit.
+inline constexpr std::string_view processed_body =
+    "{\"type\":\"group\",\"name\":\"a\",\"title\":\"Group A\","
+    "\"title_ru\":\"Группа А\"}\n"
+    "{\"type\":\"group\",\"name\":\"b\",\"title\":\"Group B\","
+    "\"title_ru\":\"Группа Б\"}\n"
+    "{\"type\":\"value_label\",\"value_table\":0,\"value\":0,"
+    "\"name\":\"on_command\",\"title\":\"On command\","
+    "\"title_ru\":\"По команде\"}\n"
+    "{\"type\":\"value_label\",\"value_table\":0,\"value\":1,"
+    "\"name\":\"on_restart\",\"title\":\"On restart\","
+    "\"title_ru\":\"После перезапуска\"}\n"
+    "{\"type\":\"value_label\",\"value_table\":1,\"value\":0,\"name\":\"off\","
+    "\"title\":\"Off\",\"title_ru\":\"Выкл.\"}\n"
+    "{\"type\":\"value_label\",\"value_table\":1,\"value\":1,\"name\":\"on\","
+    "\"title\":\"On\",\"title_ru\":\"Вкл.\"}\n"
+    "{\"type\":\"value_label\",\"value_table\":2,\"value\":0,\"name\":\"park\","
+    "\"title\":\"Park\",\"title_ru\":\"Стоянка\"}\n"
+    "{\"type\":\"value_label\",\"value_table\":2,\"value\":1,"
+    "\"name\":\"drive\",\"title\":\"Drive\",\"title_ru\":\"Вперёд\"}\n"
+    "{\"type\":\"value_label\",\"value_table\":2,\"value\":4,"
+    "\"name\":\"reverse\",\"title\":\"Reverse\",\"title_ru\":\"Назад\"}\n"
+    "{\"type\":\"value_label\",\"value_table\":3,\"value\":-1,"
+    "\"name\":\"left\",\"title\":\"Left\",\"title_ru\":\"Влево\"}\n"
+    "{\"type\":\"value_label\",\"value_table\":3,\"value\":0,"
+    "\"name\":\"level\",\"title\":\"Level\",\"title_ru\":\"Ровно\"}\n"
+    "{\"type\":\"value_label\",\"value_table\":3,\"value\":1,"
+    "\"name\":\"right\",\"title\":\"Right\",\"title_ru\":\"Вправо\"}\n"
+    "{\"type\":\"field\",\"layout\":0,\"sub\":\"0x00\","
+    "\"name\":\"highest_subindex\",\"title\":\"Highest subindex\","
+    "\"title_ru\":\"Наибольший подындекс\",\"datatype\":\"uint8\","
+    "\"access\":\"const\"}\n"
+    "{\"type\":\"field\",\"layout\":0,\"sub\":\"0x01\",\"name\":\"value\","
+    "\"title\":\"Value\",\"title_ru\":\"Значение\",\"access\":\"ro\","
+    "\"inherits\":true}\n"
+    "{\"type\":\"field\",\"layout\":0,\"sub\":\"0x02\",\"name\":\"policy\","
+    "\"title\":\"Policy\",\"title_ru\":\"Политика\",\"datatype\":\"uint8\","
+    "\"access\":\"const\",\"value_table\":0}\n"
+    "{\"type\":\"record\",\"index\":\"0x4003\",\"path\":\"a.mode\","
+    "\"title\":\"a.mode\",\"title_ru\":\"a.mode\",\"class\":\"parameters\","
+    "\"datatype\":\"uint8\",\"value_table\":1,\"layout\":0}\n"
+    "{\"type\":\"object\",\"index\":\"0x5002\",\"sub\":\"0x01\","
+    "\"path\":\"b.gear\",\"title\":\"b.gear\",\"title_ru\":\"b.gear\","
+    "\"class\":\"watch\",\"datatype\":\"uint32\",\"access\":\"ro\","
+    "\"value_table\":2}\n"
+    "{\"type\":\"pdo\",\"name\":\"report\",\"title\":\"Report\","
+    "\"title_ru\":\"Отчёт\",\"direction\":\"tx\",\"number\":2,"
+    "\"mapping\":\"signals\",\"cob_base\":\"0x280\",\"period_ms\":10}\n"
+    "{\"type\":\"signal\",\"pdo\":\"report\",\"start\":0,\"width\":3,"
+    "\"role\":\"value\",\"path\":\"report.gear\",\"title\":\"Gear\","
+    "\"title_ru\":\"Передача\",\"encoding\":\"unsigned\","
+    "\"value_table\":2}\n"
+    "{\"type\":\"signal\",\"pdo\":\"report\",\"start\":3,\"width\":1,"
+    "\"role\":\"value\",\"path\":\"report.on\",\"title\":\"On\","
+    "\"title_ru\":\"Включено\",\"encoding\":\"unsigned\"}\n"
+    "{\"type\":\"signal\",\"pdo\":\"report\",\"start\":4,\"width\":2,"
+    "\"role\":\"value\",\"path\":\"report.tilt\",\"title\":\"Tilt\","
+    "\"title_ru\":\"Наклон\",\"encoding\":\"signed\",\"value_table\":3}\n"
+    "{\"type\":\"signal\",\"pdo\":\"report\",\"start\":16,\"width\":16,"
+    "\"role\":\"value\",\"path\":\"report.voltage\",\"title\":\"Voltage\","
+    "\"title_ru\":\"Напряжение\",\"encoding\":\"signed\",\"scale\":\"1/10\","
+    "\"unit\":\"V\"}\n"
+    "{\"type\":\"signal\",\"pdo\":\"report\",\"start\":56,\"width\":2,"
+    "\"role\":\"counter\",\"encoding\":\"unsigned\"}\n"
+    "{\"type\":\"pdo\",\"name\":\"setpoint\",\"title\":\"Setpoint\","
+    "\"title_ru\":\"Уставка\",\"direction\":\"rx\",\"number\":5,"
+    "\"mapping\":\"signals\",\"cob_id\":\"0x405\",\"timeout_ms\":350}\n"
+    "{\"type\":\"signal\",\"pdo\":\"setpoint\",\"start\":0,\"width\":1,"
+    "\"role\":\"value\",\"path\":\"setpoint.stop\",\"title\":\"Stop\","
+    "\"title_ru\":\"Стоп\",\"encoding\":\"unsigned\"}\n"
+    "{\"type\":\"signal\",\"pdo\":\"setpoint\",\"start\":8,\"width\":16,"
+    "\"role\":\"value\",\"path\":\"setpoint.level\",\"title\":\"Level\","
+    "\"title_ru\":\"Уровень\",\"encoding\":\"signed\"}\n";
+
+constexpr auto processed_description =
+    make_description<geared, areas, groups, "Test device", processed>();
+
+// The fingerprint, in the header and in the dictionary, is the hash of the
+// whole body, the PDOs included.
+static_assert(
+    as_view(processed_description).starts_with(described_header_start));
+static_assert(as_view(processed_description).ends_with(processed_body));
+static_assert(processed_description.size()
+              == described_header_start.size() + 11 + processed_body.size());
+static_assert(od_description_fingerprint(processed_description)
+              == fnv1a(processed_body));
+static_assert(make_dictionary<geared, areas, groups, processed>().fingerprint()
+              == fnv1a(processed_body));
+
+// Neither the order of the PDOs nor that of the rows of a PDO changes the
+// text.
+// clang-format off
+inline constexpr pdo_row<report> sorted_report_rows[] = {
+    report_rows[1], report_rows[3], report_rows[4], report_rows[0], report_rows[2]};
+// clang-format on
+
+inline constexpr auto sorted_report_pdo =
+    pdo_of<sorted_report_rows>(report_tpdo);
+inline constexpr od_mapped_pdo reordered_pdos[] = {sorted_report_pdo,
+                                                   setpoint_pdo};
+inline constexpr od_process_data reprocessed{.pdos = reordered_pdos};
+
+static_assert(
+    as_view(
+        make_description<geared, areas, groups, "Test device", reprocessed>())
+    == as_view(processed_description));
+
+// Without PDOs the text and the fingerprint are those of the dictionary
+// alone, as they were before process data.
+inline constexpr od_process_data no_pdos{};
+
+static_assert(
+    as_view(make_description<geared, areas, groups, "Test device", no_pdos>())
+    == as_view(described_gears));
+static_assert(as_view(make_description<geared,
+                                       areas,
+                                       groups,
+                                       "Test device",
+                                       detail::od_no_process_data>())
+              == as_view(described_gears));
+static_assert(make_dictionary<geared, areas, groups, no_pdos>().fingerprint()
+              == make_dictionary<geared, areas, groups>().fingerprint());
+
+// `report_tpdo` with what `change` changes.
+consteval od_pdo changed(auto change)
+{
+  od_pdo pdo = report_tpdo;
+  change(pdo);
+  return pdo;
+}
+
+// The fingerprint follows the PDOs: one of another period changes it.
+inline constexpr auto slower_report_pdo =
+    pdo_of<report_rows>(changed([](od_pdo& pdo) { pdo.period = 20ms; }));
+inline constexpr od_mapped_pdo slower_pdos[] = {setpoint_pdo,
+                                                slower_report_pdo};
+inline constexpr od_process_data slower{.pdos = slower_pdos};
+
+static_assert(make_dictionary<geared, areas, groups, slower>().fingerprint()
+              != fnv1a(processed_body));
+
+// The base of the predefined COB-ID of a PDO, which a host adds the node-ID
+// to: 180h + 100h (n - 1) for TPDO n and 200h + 100h (n - 1) for RPDO n.
+static_assert(detail::cob_base_of(pdo_direction::tx, 1) == 0x180);
+static_assert(detail::cob_base_of(pdo_direction::rx, 1) == 0x200);
+static_assert(detail::cob_base_of(pdo_direction::rx, 2) == 0x300);
+static_assert(detail::cob_base_of(pdo_direction::tx, 4) == 0x480);
+static_assert(detail::cob_base_of(pdo_direction::rx, 4) == 0x500);
+
+// -- Checks: PDOs --
+
+// Checks the PDO `pdo` that carries `Rows`, the report by default, beside a
+// dictionary of one object.
+template<auto const& Rows = report_rows>
+consteval std::string check_report(od_pdo const& pdo = report_tpdo)
+{
+  auto const mapped = pdo_of<Rows>(pdo);
+  od_mapped_pdo const pdos[] = {mapped};
+  od_row<ctx> const rows[] = {
+      {{0x2000, 0x01}, titled("a.c"), od_ro<read_value>}};
+  return detail::od_check(rows, areas, group_a, {.pdos = pdos});
+}
+
+// Checks `report_tpdo`, carrying the report, with what `change` changes.
+consteval std::string check_changed(auto change)
+{
+  return check_report(changed(change));
+}
+
+static_assert(check_report().empty());
+static_assert(check_report<setpoint_rows>(setpoint_rpdo).empty());
+
+// A PDO is named as a segment of a path, the first of the paths of its
+// signals, and named as no group and no class.
+static_assert(check_changed([](od_pdo& pdo) { pdo.name = "2nd"; })
+              == "od: TPDO2 2nd: the name must be a letter followed by "
+                 "letters, digits or underscores");
+static_assert(check_changed([](od_pdo& pdo) { pdo.name = ""; })
+              == "od: TPDO2: the name must be a letter followed by letters, "
+                 "digits or underscores");
+static_assert(check_changed([](od_pdo& pdo) { pdo.name = "a"; })
+              == "od: TPDO2 a: named as a group");
+static_assert(check_changed([](od_pdo& pdo) { pdo.name = "watch"; })
+              == "od: TPDO2 watch: named as a class");
+
+// Its title is that of an object.
+static_assert(check_changed([](od_pdo& pdo) { pdo.title = {"Report", ""}; })
+              == "od: TPDO2 report: the title must not be empty in any "
+                 "language");
+static_assert(
+    check_changed([](od_pdo& pdo) { pdo.title = {"\"Report\"", "Отчёт"}; })
+    == "od: TPDO2 report: the title must be UTF-8 without quotation marks, "
+       "backslashes or control characters");
+
+// Its number is from 1 to 512, and of the predefined form from 1 to 4.
+static_assert(check_changed([](od_pdo& pdo) { pdo.number = 0; })
+              == "od: TPDO0 report: the number must be from 1 to 512");
+static_assert(check_changed([](od_pdo& pdo) {
+                pdo.number = 513;
+                pdo.cob_id = pdo_id::custom(0x405);
+              })
+              == "od: TPDO513 report: the number must be from 1 to 512");
+static_assert(check_changed([](od_pdo& pdo) {
+                pdo.number = 512;
+                pdo.cob_id = pdo_id::custom(0x405);
+              }).empty());
+static_assert(check_changed([](od_pdo& pdo) { pdo.number = 4; }).empty());
+static_assert(check_changed([](od_pdo& pdo) { pdo.number = 5; })
+              == "od: TPDO5 report: the predefined COB-ID exists only for "
+                 "PDOs 1 to 4");
+
+// A custom COB-ID has 11 bits and is not restricted.
+consteval std::string check_cob_id(id_t id)
+{
+  return check_changed([&](od_pdo& pdo) {
+    pdo.number = 5;
+    pdo.cob_id = pdo_id::custom(id);
+  });
+}
+
+static_assert(check_cob_id(0x000)
+              == "od: TPDO5 report: the COB-ID must be from 001h to 7FFh");
+static_assert(check_cob_id(0x800)
+              == "od: TPDO5 report: the COB-ID must be from 001h to 7FFh");
+static_assert(check_cob_id(0x001)
+              == "od: TPDO5 report: the COB-ID 001h is restricted");
+static_assert(check_cob_id(0x080)
+              == "od: TPDO5 report: the COB-ID 080h is restricted");
+static_assert(check_cob_id(0x0FF)
+              == "od: TPDO5 report: the COB-ID 0FFh is restricted");
+static_assert(check_cob_id(0x100)
+              == "od: TPDO5 report: the COB-ID 100h is restricted");
+static_assert(check_cob_id(0x180)
+              == "od: TPDO5 report: the COB-ID 180h is restricted");
+static_assert(check_cob_id(0x581)
+              == "od: TPDO5 report: the COB-ID 581h is restricted");
+static_assert(check_cob_id(0x67F)
+              == "od: TPDO5 report: the COB-ID 67Fh is restricted");
+static_assert(check_cob_id(0x6E0)
+              == "od: TPDO5 report: the COB-ID 6E0h is restricted");
+static_assert(check_cob_id(0x7FF)
+              == "od: TPDO5 report: the COB-ID 7FFh is restricted");
+static_assert(check_cob_id(0x181).empty());
+static_assert(check_cob_id(0x580).empty());
+static_assert(check_cob_id(0x680).empty());
+static_assert(check_cob_id(0x700).empty());
+static_assert(!is_restricted_cob_id(0x6DF) && is_restricted_cob_id(0x701));
+
+// A TPDO has a period above 0 and no timeout; an RPDO no period and a
+// timeout of 0 or more.
+static_assert(check_changed([](od_pdo& pdo) { pdo.period = 0ms; })
+              == "od: TPDO2 report: the period must be above 0");
+static_assert(check_changed([](od_pdo& pdo) { pdo.period = -1ms; })
+              == "od: TPDO2 report: the period must be above 0");
+static_assert(check_changed([](od_pdo& pdo) { pdo.timeout = 100ms; })
+              == "od: TPDO2 report: a TPDO has no timeout");
+
+consteval std::string check_rpdo(auto change)
+{
+  od_pdo pdo = setpoint_rpdo;
+  change(pdo);
+  return check_report<setpoint_rows>(pdo);
+}
+
+static_assert(check_rpdo([](od_pdo& pdo) { pdo.timeout = 0ms; }).empty());
+static_assert(check_rpdo([](od_pdo& pdo) { pdo.timeout = -1ms; })
+              == "od: RPDO5 setpoint: the timeout must not be negative");
+static_assert(check_rpdo([](od_pdo& pdo) { pdo.period = 10ms; })
+              == "od: RPDO5 setpoint: an RPDO has no period");
+
+// The path of a signal is the name of its PDO and a name: a path without the
+// name of the PDO, with another first segment or with three is refused.
+inline constexpr std::string_view not_a_signal_path =
+    "od: TPDO2 report: the signal at bit 16: the path must be the name of "
+    "the PDO and a name, each a letter followed by letters, digits or "
+    "underscores";
+
+// clang-format off
+inline constexpr pdo_row<report> unprefixed_rows[] = {
+{{16, 16}, {"voltage", {"Voltage", "Напряжение"}},          pdo_map<&report::voltage>}};
+inline constexpr pdo_row<report> dotted_rows[] = {
+{{16, 16}, {"report.", {"Voltage", "Напряжение"}},         pdo_map<&report::voltage>}};
+inline constexpr pdo_row<report> grouped_rows[] = {
+{{16, 16}, {"a.voltage", {"Voltage", "Напряжение"}},        pdo_map<&report::voltage>}};
+inline constexpr pdo_row<report> foreign_rows[] = {
+{{16, 16}, {"setpoint.voltage", {"Voltage", "Напряжение"}}, pdo_map<&report::voltage>}};
+inline constexpr pdo_row<report> deep_rows[] = {
+{{16, 16}, {"report.a.b", {"Voltage", "Напряжение"}},      pdo_map<&report::voltage>}};
+inline constexpr pdo_row<report> quoted_path_rows[] = {
+{{16, 16}, {"report.\"v\"", {"Voltage", "Напряжение"}},    pdo_map<&report::voltage>}};
+// clang-format on
+
+static_assert(check_report<unprefixed_rows>() == not_a_signal_path);
+static_assert(check_report<dotted_rows>() == not_a_signal_path);
+static_assert(check_report<grouped_rows>() == not_a_signal_path);
+static_assert(check_report<foreign_rows>() == not_a_signal_path);
+static_assert(check_report<deep_rows>() == not_a_signal_path);
+static_assert(check_report<quoted_path_rows>() == not_a_signal_path);
+
+// The title of a signal is that of an object, and no two signals of a PDO
+// have the same path; signals of two PDOs have different paths, as the PDOs
+// have different names.
+// clang-format off
+inline constexpr pdo_row<report> quoted_title_rows[] = {
+{{16, 16}, {"report.voltage", {"Volt\\age", "Напряжение"}}, pdo_map<&report::voltage>}};
+inline constexpr pdo_row<report> same_path_rows[] = {
+{{ 0,  3}, {"report.voltage", {"Gear", "Передача"}},        pdo_map<&report::drive_gear>},
+{{16, 16}, {"report.voltage", {"Voltage", "Напряжение"}},   pdo_map<&report::voltage>}};
+// clang-format on
+
+static_assert(check_report<quoted_title_rows>()
+              == "od: TPDO2 report: the signal at bit 16: the title must be "
+                 "UTF-8 without quotation marks, backslashes or control "
+                 "characters");
+static_assert(check_report<same_path_rows>()
+              == "od: TPDO2 report: the signal at bit 0 and the signal at "
+                 "bit 16 have the same path");
+
+// The codec of the voltage with what `change` changes, as one built by hand
+// could be: its unit, its step and its table of values are the
+// description's to check.
+consteval pdo_codec<report> voltage_codec(auto change)
+{
+  auto codec = pdo_map<&report::voltage>;
+  change(codec);
+  return codec;
+}
+
+inline constexpr od_label voltage_label{"report.voltage",
+                                        {"Voltage", "Напряжение"}};
+
+// clang-format off
+inline constexpr pdo_row<report> quoted_unit_rows[] = {
+{{16, 16}, voltage_label, voltage_codec([](auto& codec) { codec.unit = "V\""; })}};
+inline constexpr pdo_row<report> unreduced_rows[] = {
+{{16, 16}, voltage_label, voltage_codec([](auto& codec) { codec.scale_num = 2; codec.scale_den = 20; })}};
+inline constexpr pdo_row<report> negative_step_rows[] = {
+{{16, 16}, voltage_label, voltage_codec([](auto& codec) { codec.scale_num = -1; })}};
+inline constexpr pdo_row<report> zero_step_rows[] = {
+{{16, 16}, voltage_label, voltage_codec([](auto& codec) { codec.scale_num = 0; codec.scale_den = 1; })}};
+inline constexpr pdo_row<report> misnamed_table_rows[] = {
+{{16, 16}, voltage_label, voltage_codec([](auto& codec) { codec.value_labels = misnamed; })}};
+// clang-format on
+
+static_assert(check_report<quoted_unit_rows>()
+              == "od: TPDO2 report: the signal at bit 16: the unit must be "
+                 "UTF-8 without quotation marks, backslashes or control "
+                 "characters");
+static_assert(check_report<unreduced_rows>()
+              == "od: TPDO2 report: the signal at bit 16: the step must be a "
+                 "positive fraction in its lowest terms");
+static_assert(check_report<negative_step_rows>()
+              == "od: TPDO2 report: the signal at bit 16: the step must be a "
+                 "positive fraction in its lowest terms");
+static_assert(check_report<zero_step_rows>()
+              == "od: TPDO2 report: the signal at bit 16: the step must be a "
+                 "positive fraction in its lowest terms");
+static_assert(check_report<misnamed_table_rows>()
+              == "od: TPDO2 report: the signal at bit 16: value 0: the name "
+                 "must be a letter followed by letters, digits or underscores");
+
+// Checks two PDOs, `first` carrying the report and `second` the setpoint.
+consteval std::string check_pdo_pair(od_pdo const& first, od_pdo const& second)
+{
+  auto const report_mapped = pdo_of<report_rows>(first);
+  auto const setpoint_mapped = pdo_of<setpoint_rows>(second);
+  od_mapped_pdo const pdos[] = {report_mapped, setpoint_mapped};
+  od_row<ctx> const rows[] = {
+      {{0x2000, 0x01}, titled("a.c"), od_ro<read_value>}};
+  return detail::od_check(rows, areas, group_a, {.pdos = pdos});
+}
+
+// `setpoint_rpdo` with what `change` changes.
+consteval od_pdo changed_setpoint(auto change)
+{
+  od_pdo pdo = setpoint_rpdo;
+  change(pdo);
+  return pdo;
+}
+
+// No two PDOs go one way with one number or have the same name; a TPDO and an
+// RPDO may have the same number.
+static_assert(check_pdo_pair(report_tpdo, setpoint_rpdo).empty());
+static_assert(check_pdo_pair(report_tpdo, changed_setpoint([](od_pdo& pdo) {
+                               pdo.number = 2;
+                               pdo.cob_id = pdo_id::predefined();
+                             }))
+                  .empty());
+static_assert(check_pdo_pair(report_tpdo, changed_setpoint([](od_pdo& pdo) {
+                               pdo.direction = pdo_direction::tx;
+                               pdo.number = 2;
+                               pdo.period = 10ms;
+                               pdo.timeout = 0ms;
+                             }))
+              == "od: TPDO2 report and TPDO2 setpoint have the same number");
+
+// clang-format off
+inline constexpr pdo_row<setpoint> renamed_setpoint_rows[] = {
+{{0, 1}, {"report.stop", {"Stop", "Стоп"}}, pdo_map<&setpoint::stop>}};
+// clang-format on
+
+consteval std::string check_same_name()
+{
+  auto const first = pdo_of<report_rows>(report_tpdo);
+  auto const second = pdo_of<renamed_setpoint_rows>(
+      changed_setpoint([](od_pdo& pdo) { pdo.name = "report"; }));
+  od_mapped_pdo const pdos[] = {first, second};
+  od_row<ctx> const rows[] = {
+      {{0x2000, 0x01}, titled("a.c"), od_ro<read_value>}};
+  return detail::od_check(rows, areas, group_a, {.pdos = pdos});
+}
+
+static_assert(check_same_name()
+              == "od: TPDO2 report and RPDO5 report have the same name");
+
+// No two PDOs share a COB-ID: a custom one is no other's custom one, and lies
+// in the predefined form of no PDO, of either direction, for any node-ID.
+consteval std::string check_custom(id_t id)
+{
+  return check_pdo_pair(report_tpdo, changed_setpoint([&](od_pdo& pdo) {
+                          pdo.cob_id = pdo_id::custom(id);
+                        }));
+}
+
+static_assert(check_custom(0x281)
+              == "od: RPDO5 setpoint and TPDO2 report share COB-ID 281h on "
+                 "node 1");
+static_assert(check_custom(0x2FF)
+              == "od: RPDO5 setpoint and TPDO2 report share COB-ID 2FFh on "
+                 "node 127");
+static_assert(check_custom(0x280).empty());
+static_assert(check_custom(0x300).empty());
+static_assert(check_pdo_pair(changed([](od_pdo& pdo) {
+                               pdo.number = 5;
+                               pdo.cob_id = pdo_id::custom(0x405);
+                             }),
+                             setpoint_rpdo)
+              == "od: TPDO5 report and RPDO5 setpoint share COB-ID 405h");
+static_assert(check_pdo_pair(changed([](od_pdo& pdo) {
+                               pdo.number = 5;
+                               pdo.cob_id = pdo_id::custom(0x205);
+                             }),
+                             changed_setpoint([](od_pdo& pdo) {
+                               pdo.number = 1;
+                               pdo.cob_id = pdo_id::predefined();
+                             }))
+              == "od: TPDO5 report and RPDO1 setpoint share COB-ID 205h on "
+                 "node 5");
+
+// The rules of the dictionary come before those of the PDOs.
+consteval std::string check_dictionary_first()
+{
+  auto const mapped =
+      pdo_of<report_rows>(changed([](od_pdo& pdo) { pdo.name = "2nd"; }));
+  od_mapped_pdo const pdos[] = {mapped};
+  od_row<ctx> const rows[] = {
+      {{0x0FFF, 0x01}, titled("a.c"), od_ro<read_value>}};
+  return detail::od_check(rows, areas, group_a, {.pdos = pdos});
+}
+
+static_assert(check_dictionary_first()
+              == "od: 0FFFh:01 a.c: indices below 1000h are reserved");
 
 } // namespace

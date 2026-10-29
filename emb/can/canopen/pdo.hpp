@@ -15,6 +15,7 @@
 #include "detail/pdo_check.hpp"
 #include "od.hpp"
 #include "od_handlers.hpp"
+#include "od_process_data.hpp"
 #include "od_value_cast.hpp"
 #include "types.hpp"
 
@@ -543,6 +544,36 @@ constexpr auto peek_pdo(payload_t const& payload)
   else {
     return detail::member_of<Member>{};
   }
+}
+
+// Returns the PDO `pdo` with what it carries, the message that the rows `Rows`
+// lay out, as a `mapped_pdo<Rows>`, whose type knows the rows: the server
+// sets the slot of the PDO up from it, and the description of the dictionary
+// takes it, as an `od_mapped_pdo`, among the PDOs of its process data
+// (`od_process_data`). An application writes the two once, in an
+// `inline constexpr` variable of a named namespace that both take:
+//
+//   inline constexpr auto drive_status_pdo = pdo_of<drive_status_rows>(
+//       {.name = "drive_status",
+//        .title = {"Drive status", "Состояние привода"},
+//        .direction = pdo_direction::tx,
+//        .number = 1,
+//        .cob_id = pdo_id::predefined(),
+//        .period = 10ms});
+//
+// `pdo` is an argument rather than a template argument, as no template
+// parameter takes the views of text that it holds. The program is ill-formed
+// if `Rows` has no row, as a PDO carries at least one signal, or breaks a rule
+// of the rows of a PDO (`detail::pdo_check`). The rules of the PDO and those
+// of the paths and the texts of its signals, which need the name of the PDO,
+// are the description's (`detail::od_check`).
+template<auto const& Rows>
+  requires some_pdo_rows<std::remove_cvref_t<decltype(Rows)>>
+consteval mapped_pdo<Rows> pdo_of(od_pdo const& pdo)
+{
+  static_assert(std::size(Rows) != 0, "pdo: a PDO carries at least one signal");
+  static_assert(detail::pdo_rows_ok<Rows>);
+  return {pdo};
 }
 
 } // namespace canopen

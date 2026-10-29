@@ -1,13 +1,17 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <span>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "../od.hpp"
+#include "../od_process_data.hpp"
+#include "../types.hpp"
 #include "od_check.hpp"
 
 namespace emb {
@@ -381,16 +385,121 @@ constexpr void put_row(Sink& sink,
   put_end(sink);
 }
 
+// Writes the line of the PDO `mapped`: its name, its title, its direction,
+// its number, what it carries, its COB-ID, custom in `cob_id`, or the base of
+// its predefined form in `cob_base`, which a host adds the node-ID to, and
+// the period of a TPDO or the timeout of an RPDO, in milliseconds.
+template<typename Sink>
+constexpr void put_pdo(Sink& sink, od_mapped_pdo const& mapped)
+{
+  auto const& pdo = mapped.pdo;
+  bool const tx = pdo.direction == pdo_direction::tx;
+  put_start(sink, "pdo");
+  put_string(sink, "name", pdo.name);
+  put_title(sink, pdo.title);
+  put_string(sink, "direction", direction_name(pdo.direction));
+  put_key(sink, "number");
+  put_decimal(sink, pdo.number);
+  put_string(sink, "mapping", mapping_name(mapped.mapping()));
+  if (pdo.cob_id.is_custom) {
+    put_key(sink, "cob_id");
+    put_hex(sink, pdo.cob_id.value, 3);
+  }
+  else {
+    put_key(sink, "cob_base");
+    put_hex(sink, cob_base_of(pdo.direction, pdo.number), 3);
+  }
+  put_key(sink, tx ? "period_ms" : "timeout_ms");
+  put_decimal(
+      sink,
+      static_cast<std::uint64_t>((tx ? pdo.period : pdo.timeout).count()));
+  put_end(sink);
+}
+
+// Writes the line of `signal`, a signal of `pdo`, its table of values
+// numbered among `tables`: where its bits lie, its role, the path and the
+// title of a signal of the role `value`, how its bits read, its step unless
+// it is 1/1, its unit and its table of values, if any.
+template<typename Sink>
+constexpr void put_signal(Sink& sink,
+                          od_pdo const& pdo,
+                          od_signal const& signal,
+                          od_value_tables const& tables)
+{
+  put_start(sink, "signal");
+  put_string(sink, "pdo", pdo.name);
+  put_key(sink, "start");
+  put_decimal(sink, signal.bits.start);
+  put_key(sink, "width");
+  put_decimal(sink, signal.bits.width);
+  put_string(sink, "role", role_name(signal.role));
+  if (signal.role == pdo_role::value) {
+    put_string(sink, "path", signal.label.path);
+    put_title(sink, signal.label.title);
+  }
+  put_string(sink, "encoding", encoding_name(signal.encoding));
+  if (signal.scale_num != 1 || signal.scale_den != 1) {
+    put_key(sink, "scale");
+    sink.put('"');
+    put_signed(sink, signal.scale_num);
+    sink.put('/');
+    put_signed(sink, signal.scale_den);
+    sink.put('"');
+  }
+  put_optional(sink, "unit", signal.unit);
+  put_table(sink, tables, signal.value_labels);
+  put_end(sink);
+}
+
+// Returns the positions of the PDOs `pdos` by direction, the TPDOs first, and
+// by number, PDOs that the two do not tell apart in the order of `pdos`.
+constexpr std::vector<std::size_t>
+sorted_pdos(std::span<od_mapped_pdo const> pdos)
+{
+  std::vector<std::size_t> order(pdos.size());
+  for (auto i = 0uz; i < order.size(); ++i) {
+    order[i] = i;
+  }
+  auto const key = [&](std::size_t i) {
+    return std::pair{pdos[i].pdo.direction, pdos[i].pdo.number};
+  };
+  std::ranges::sort(order, [&](std::size_t a, std::size_t b) {
+    return key(a) < key(b) || (key(a) == key(b) && a < b);
+  });
+  return order;
+}
+
+// Returns the positions of the signals `signals` by their first bits, signals
+// that start at one bit in the order of `signals`.
+constexpr std::vector<std::size_t>
+sorted_signals(std::span<od_signal const> signals)
+{
+  std::vector<std::size_t> order(signals.size());
+  for (auto i = 0uz; i < order.size(); ++i) {
+    order[i] = i;
+  }
+  std::ranges::sort(order, [&](std::size_t a, std::size_t b) {
+    auto const x = signals[a].bits.start;
+    auto const y = signals[b].bits.start;
+    return x < y || (x == y && a < b);
+  });
+  return order;
+}
+
 // Writes the body of the description of the dictionary made of `rows`, whose
-// indices lie in `areas` and whose paths start with the groups of `groups`:
-// a line for each group, in the order of its first row by key; a line for
-// each label of a value, by table and in a table by value, the tables
-// numbered in the order in which the members of the layouts and then the rows
-// first name them and compared by what a host sees (`same_values`); a line
-// for each member of each layout, the layouts numbered in the order of their
-// first records by key and compared by what a host sees (`same_layout`); and
-// a line for each row, in the order of keys. Neither the order of the rows
-// nor that of the groups in their arrays changes the text.
+// indices lie in `areas` and whose paths start with the groups of `groups`,
+// with the PDOs of `process_data` beside it: a line for each group, in the
+// order of its first row by key; a line for each label of a value, by table
+// and in a table by value, the tables numbered in the order in which the
+// members of the layouts, then the rows and last the signals first name them,
+// and compared by what a host sees (`same_values`); a line for each member of
+// each layout, the layouts numbered in the order of their first records by
+// key and compared by what a host sees (`same_layout`); a line for each row,
+// in the order of keys; and a line for each PDO, by direction, the TPDOs
+// first, and by number, each followed by a line for each of its signals, by
+// first bit. Neither the order of the rows, of the groups or of the PDOs in
+// their arrays nor that of the rows of a PDO changes the text, and without
+// PDOs it is that of the dictionary alone.
 template<typename Sink,
          typename Ctx,
          std::size_t N,
@@ -399,7 +508,8 @@ template<typename Sink,
 constexpr void od_describe(Sink& sink,
                            od_row<Ctx> const (&rows)[N],
                            od_area const (&areas)[A],
-                           od_group const (&groups)[G])
+                           od_group const (&groups)[G],
+                           od_process_data const& process_data)
 {
   auto const order = sorted_positions(rows, [](auto const& a, auto const& b) {
     return a.key < b.key;
@@ -433,8 +543,17 @@ constexpr void od_describe(Sink& sink,
     layout_of[i] = k;
   }
 
+  // The PDOs in the order of their lines, and the signals of each.
+  auto const& pdos = process_data.pdos;
+  auto const pdo_order = sorted_pdos(pdos);
+  std::vector<std::vector<std::size_t>> signal_order;
+  for (auto const p : pdo_order) {
+    signal_order.push_back(sorted_signals(pdos[p].signals));
+  }
+
   // The tables of values: those of the members of the layouts, by layout and
-  // by subindex, then those of the rows, by key.
+  // by subindex, then those of the rows, by key, and last those of the
+  // signals, in the order of their lines.
   od_value_tables tables;
   for (auto k = 0uz; k < layouts; ++k) {
     for (auto const& label : rows[first_record[k]].binding.field_labels) {
@@ -443,6 +562,11 @@ constexpr void od_describe(Sink& sink,
   }
   for (auto const i : order) {
     add_table(tables, rows[i].binding.value_labels);
+  }
+  for (auto k = 0uz; k < pdo_order.size(); ++k) {
+    for (auto const s : signal_order[k]) {
+      add_table(tables, pdos[pdo_order[k]].signals[s].value_labels);
+    }
   }
   put_value_labels(sink, tables);
 
@@ -459,6 +583,14 @@ constexpr void od_describe(Sink& sink,
             area_of(rows[i].key.index, areas),
             layout_of[i],
             tables);
+  }
+
+  for (auto k = 0uz; k < pdo_order.size(); ++k) {
+    auto const& mapped = pdos[pdo_order[k]];
+    put_pdo(sink, mapped);
+    for (auto const s : signal_order[k]) {
+      put_signal(sink, mapped.pdo, mapped.signals[s], tables);
+    }
   }
 }
 

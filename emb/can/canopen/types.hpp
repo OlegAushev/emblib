@@ -146,6 +146,22 @@ constexpr id_t cob_id_of(node_id node)
        + node.get();
 }
 
+// Whether `id` may not be the COB-ID of a PDO. The predicate is wider than the
+// restricted COB-IDs of CiA 301 (000h, 001h-07Fh, 101h-180h, 581h-5FFh,
+// 601h-67Fh, 6E0h-6FFh, 701h-77Fh and 780h-7FFh): it holds also for SYNC,
+// 080h, TIME, 100h, and every COB-ID of an EMCY, 081h-0FFh, since the
+// node-ID is known at run time only and does not tell a node's own EMCY from
+// another's. An `id` past 7FFh is not restricted: it is no 11-bit COB-ID at
+// all, which is a rule of its own.
+constexpr bool is_restricted_cob_id(id_t id)
+{
+  return id <= 0x180
+      || (id >= 0x581 && id <= 0x5FF)
+      || (id >= 0x601 && id <= 0x67F)
+      || (id >= 0x6E0 && id <= 0x6FF)
+      || (id >= 0x701 && id <= 0x7FF);
+}
+
 // Error codes of CiA 301 that the server sends in an EMCY, each with the error
 // register 11h: `generic` and `communication`.
 namespace emcy_code {
@@ -202,6 +218,15 @@ enum class pdo_encoding : std::uint8_t {
 enum class pdo_role : std::uint8_t {
   value,
   counter
+};
+
+// The scoped enumeration `pdo_mapping` defines what a PDO carries, as its
+// description states it: `signals`, the members of a message, each in the
+// bits of a signal, or `sam`, an object of the dictionary a frame, in an MPDO
+// in source address mode.
+enum class pdo_mapping : std::uint8_t {
+  signals,
+  sam
 };
 
 struct tpdo_config {

@@ -15,6 +15,7 @@
 #include "detail/od_check.hpp"
 #include "detail/od_describe.hpp"
 #include "od.hpp"
+#include "od_process_data.hpp"
 
 namespace emb {
 namespace can {
@@ -32,17 +33,20 @@ struct od_rows_traits<od_row<Ctx> const[N]> {
 };
 
 // Returns the fingerprint of the dictionary made of `rows`, `areas` and
-// `groups`: the 32-bit FNV-1a hash of the body of its description
-// (`od_describe`), every line after the header, each with its newline. The
-// header of a description states it, and a host compares it with the one the
-// device reads at 2000h:00 to tell whether the description is the device's.
+// `groups`, with the PDOs of `process_data` beside it: the 32-bit FNV-1a hash
+// of the body of their description (`od_describe`), every line after the
+// header, each with its newline, those of the PDOs and their signals
+// included. The header of a description states it, and a host compares it
+// with the one the device reads at 2000h:00 to tell whether the description
+// is the device's.
 template<typename Ctx, std::size_t N, std::size_t A, std::size_t G>
 constexpr std::uint32_t od_fingerprint(od_row<Ctx> const (&rows)[N],
                                        od_area const (&areas)[A],
-                                       od_group const (&groups)[G])
+                                       od_group const (&groups)[G],
+                                       od_process_data const& process_data)
 {
   od_hashing_sink sink;
-  od_describe(sink, rows, areas, groups);
+  od_describe(sink, rows, areas, groups, process_data);
   return sink.hash;
 }
 
@@ -103,10 +107,14 @@ template<typename Ctx,
          std::size_t Arrays>
 class od_dictionary;
 
-template<auto const& Rows, auto const& Areas, auto const& Groups>
+template<auto const& Rows,
+         auto const& Areas,
+         auto const& Groups,
+         auto const& ProcessData = detail::od_no_process_data>
   requires some_od_rows<std::remove_reference_t<decltype(Rows)>>
         && some_od_areas<std::remove_reference_t<decltype(Areas)>>
         && some_od_groups<std::remove_reference_t<decltype(Groups)>>
+        && some_od_process_data<std::remove_reference_t<decltype(ProcessData)>>
 consteval auto make_dictionary();
 
 // The class template `od_dictionary` holds the entries of a dictionary sorted
@@ -138,7 +146,8 @@ public:
   }
 
   // Returns the fingerprint of the dictionary, which the header of its
-  // description states (`detail::od_fingerprint`).
+  // description states: the hash of the description of its objects and of
+  // the PDOs beside them (`detail::od_fingerprint`).
   constexpr std::uint32_t fingerprint() const
   {
     return fingerprint_;
@@ -147,10 +156,15 @@ public:
 private:
   consteval od_dictionary() = default;
 
-  template<auto const& Rows, auto const& Areas, auto const& Groups>
+  template<auto const& Rows,
+           auto const& Areas,
+           auto const& Groups,
+           auto const& ProcessData>
     requires some_od_rows<std::remove_reference_t<decltype(Rows)>>
           && some_od_areas<std::remove_reference_t<decltype(Areas)>>
           && some_od_groups<std::remove_reference_t<decltype(Groups)>>
+          && some_od_process_data<
+                 std::remove_reference_t<decltype(ProcessData)>>
   friend consteval auto make_dictionary();
 
   std::array<od_entry<Ctx>, Entries> entries_{};
@@ -161,33 +175,38 @@ private:
 
 // Returns the dictionary made of `Rows`, a C array of `od_row<Ctx> const`,
 // whose indices lie in `Areas`, a C array of `od_area const`, and whose paths
-// start with the groups of `Groups`, a C array of `od_group const`. Each must
-// be an `inline constexpr` variable of a named namespace: GCC at -O0 emits any
-// other table, the labels in it included. A row whose binding has a layout
-// becomes a record, one whose binding has a count an array, any other an
-// entry. An index whose entries all have a subindex past 00h gets one more,
-// at 00h: a `const` `uint8` that reads the highest subindex of the index, as
-// CiA 301 asks of an object with members. The areas and the groups only
-// check the rows and enter the fingerprint, the hash of the body of the
-// description that `make_description` makes of the same arrays; the
-// dictionary keeps neither. The
-// program is ill-formed if the rows, the areas or the groups break a rule of
-// `detail::od_check`; the diagnostic names the rule and what breaks it, and
-// points at the caller's line. Checking sorts the rows by key and by path;
-// only the rows outside a catalog are compared in pairs, for a handler they
-// share.
-template<auto const& Rows, auto const& Areas, auto const& Groups>
+// start with the groups of `Groups`, a C array of `od_group const`, with the
+// PDOs of `ProcessData`, an `od_process_data const`, beside it, none by
+// default. Each must be an `inline constexpr` variable of a named namespace:
+// GCC at -O0 emits any other table, the labels in it included. A row whose
+// binding has a layout becomes a record, one whose binding has a count an
+// array, any other an entry. An index whose entries all have a subindex past
+// 00h gets one more, at 00h: a `const` `uint8` that reads the highest
+// subindex of the index, as CiA 301 asks of an object with members. The
+// areas, the groups and the process data only check the rows and enter the
+// fingerprint, the hash of the body of the description that
+// `make_description` makes of the same arrays; the dictionary keeps none of
+// them. The program is ill-formed if the rows, the areas, the groups or the
+// process data break a rule of `detail::od_check`; the diagnostic names the
+// rule and what breaks it, and points at the caller's line. Checking sorts
+// the rows by key and by path; only the rows outside a catalog are compared
+// in pairs, for a handler they share, and the PDOs, which are few.
+template<auto const& Rows,
+         auto const& Areas,
+         auto const& Groups,
+         auto const& ProcessData>
   requires some_od_rows<std::remove_reference_t<decltype(Rows)>>
         && some_od_areas<std::remove_reference_t<decltype(Areas)>>
         && some_od_groups<std::remove_reference_t<decltype(Groups)>>
+        && some_od_process_data<std::remove_reference_t<decltype(ProcessData)>>
 consteval auto make_dictionary()
 {
   using traits =
       detail::od_rows_traits<std::remove_reference_t<decltype(Rows)>>;
   using context_type = typename traits::context_type;
 
-  static_assert(detail::od_check(Rows, Areas, Groups).empty(),
-                detail::od_check(Rows, Areas, Groups));
+  static_assert(detail::od_check(Rows, Areas, Groups, ProcessData).empty(),
+                detail::od_check(Rows, Areas, Groups, ProcessData));
 
   constexpr auto records =
       static_cast<std::size_t>(std::ranges::count_if(Rows, [](auto const& row) {
@@ -257,7 +276,8 @@ consteval auto make_dictionary()
 
   std::ranges::sort(dictionary.records_, {}, &od_record<context_type>::index);
   std::ranges::sort(dictionary.arrays_, {}, &od_array<context_type>::index);
-  dictionary.fingerprint_ = detail::od_fingerprint(Rows, Areas, Groups);
+  dictionary.fingerprint_ =
+      detail::od_fingerprint(Rows, Areas, Groups, ProcessData);
   return dictionary;
 }
 

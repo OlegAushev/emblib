@@ -7,10 +7,11 @@ compile time only, and none of them may reach the image.
 A string counts only as a whole: the image is split at its NUL bytes and
 each piece compared, so that a path that begins or ends another one, e.g.
 hall.speed of hall.speed_time_constant, the name of a parameter, which the
-image holds, is not reported. From a description the paths of objects and
-arrays are taken, not those of records, which are the names of parameters
-and stay in the image, and the titles, in each language, of objects,
-arrays, records, groups, members of layouts and values.
+image holds, is not reported. From a description the paths of objects,
+arrays and signals of PDOs are taken, not those of records, which are the
+names of parameters and stay in the image, and the titles, in each
+language, of objects, arrays, records, groups, members of layouts, values,
+PDOs and signals.
 
 A string shorter than 4 bytes is skipped, and the count of those skipped is
 printed: the bytes of numbers split at their zeros make such pieces, as the
@@ -36,10 +37,10 @@ def description_strings(path):
         for number, line in enumerate(f, start=1):
             entry = json.loads(line)
             kind = entry.get('type')
-            if kind in ('object', 'array') and 'path' in entry:
+            if kind in ('object', 'array', 'signal') and 'path' in entry:
                 yield entry['path'], f'{path}:{number} path'
             if kind in ('object', 'array', 'record', 'group', 'field',
-                        'value_label'):
+                        'value_label', 'pdo', 'signal'):
                 for key in TITLES:
                     if key in entry:
                         yield entry[key], f'{path}:{number} {key}'
