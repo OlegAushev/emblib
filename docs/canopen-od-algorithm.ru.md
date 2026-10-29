@@ -29,8 +29,9 @@ etk вне области CiA 301 и текстом в массивах симв
 | `od_dictionary.hpp` | `make_dictionary`, `od_dictionary`, `od_view` |
 | `od_description.hpp` | `make_description`, `od_description_fingerprint` |
 | `detail/sdo_server.hpp` | обработка SDO-запросов |
-| `server.hpp` | сервер CANopen, в котором живёт `sdo_server` |
-| `pdo.hpp` | строка PDO `pdo_row`, кодек `pdo_codec` с построителями `pdo_map` … `pdo_map_counter`, `encode_pdo`, `decode_pdo`, `peek_pdo` (раздел 3.11), `pdo_of` (раздел 3.12) |
+| `server.hpp` | сервер CANopen, в котором живёт `sdo_server`; слоты PDO из описания `setup_tpdo<Mapped, Provider>`, `setup_rpdo<Mapped, Handler>` и их thunk'и (раздел 4.9) |
+| `detail/tpdo_producer.hpp`, `detail/rpdo_consumer.hpp` | слоты TPDO и RPDO, источник слота TPDO `tpdo_source` (раздел 4.9) |
+| `pdo.hpp` | строка PDO `pdo_row`, кодек `pdo_codec` с построителями `pdo_map` … `pdo_map_counter`, `encode_pdo`, `decode_pdo`, `peek_pdo` (раздел 3.11), `pdo_of` (раздел 3.12), кадр приёма `received_pdo` (раздел 4.9) |
 | `detail/pdo_check.hpp` | правила строк PDO и их тексты |
 | `od_process_data.hpp` | описание PDO `od_pdo`, сигнал в описании `od_signal`, PDO со строками `mapped_pdo` и `od_mapped_pdo`, данные процесса `od_process_data` (раздел 3.12) |
 
@@ -1793,6 +1794,91 @@ miniboard — по одному. Хост узнаёт её из 00h, а эле�
 Ответы копятся в `inplace_queue` на 16 кадров; когда очередь полна, ответ
 молча теряется. `drain()` в конце `run()` отправляет их, пока транспорт
 принимает.
+
+### 4.9. Слоты PDO из описания
+
+Сервер настраивает слот PDO из той же константы, которую берёт описание
+словаря (раздел 1.10), — описания PDO вместе с его строками:
+
+```cpp
+server_.setup_tpdo<pdo::drive_status_pdo, &server::create_drive_status>(*this);
+server_.setup_rpdo<pdo::drive_command_pdo, &server::handle_drive_command>(
+    *this);
+```
+
+Номер слота, COB-ID, период TPDO и таймаут RPDO слот берёт из описания
+PDO, а кадр — из его строк, так что сервер и описание не расходятся.
+Провайдер TPDO и обработчик RPDO — функции-члены `obj`, аргументы
+шаблона, как у `emb::delegate::bind`:
+
+- провайдер `Provider` возвращает сообщение PDO, `mapped_message_t<Mapped>`
+  — тип сообщения строк `mapped_list<Mapped>`; провайдер, который
+  возвращает другое сообщение, не компилируется (`static_assert` «the
+  provider returns the message of the PDO»). Кодирует сообщение и ставит
+  в него счётчик сервер: провайдер счётчик не трогает;
+- обработчик `Handler` получает `received_pdo<Rows> const&` — кадр, у
+  которого строки PDO зашиты в тип: `peek<&M::m>()` читает один член без
+  проверок, как `peek_pdo`, а `decode()` возвращает сообщение или отказ,
+  как `decode_pdo`. Обработчик кадров других строк не компилируется
+  (`static_assert` «the handler takes the frames of the PDO»). `node_link`
+  и проверка счётчика RPDO остаются у приложения: аварийный флаг и
+  счётчик действуют и у кадра, который `decode()` отвергает.
+
+Тип провайдера строк не знает: два TPDO с одной структурой сообщения
+приняли бы провайдеры друг друга, а одна константа строк в двух RPDO —
+обработчики. Временный объект — удалённая перегрузка, как у
+`emb::delegate::bind`. `static_assert`ы проверяют направление PDO, номер
+слота в пределах `server_options`, а у COB-ID — то же, что у прежних
+`setup_tpdo<I, CobId>` и `setup_rpdo<I, CobId>`, общей
+`check_cob_id<I, CobId>()`: предопределённая форма — только у PDO 1–4,
+custom — 11 битов и не запрещённый (`is_restricted_cob_id`). Последнюю
+проверку получили и прежние `setup`. Второй `setup` того же номера молча
+заменяет первый: каждый `setup` переписывает слот целиком. Описанный, но
+не настроенный PDO и настроенный, но не описанный не ловит никто.
+
+Номер, `pdo_id`, период и таймаут читаются только в константных
+выражениях и прямо из `Mapped.pdo`: `constexpr auto number =
+Mapped.pdo.number;`. Ссылки или копии описания PDO нет ни в `setup`, ни в
+thunk'ах: GCC при `-O0` выпускает `od_pdo`, которое читают во время
+работы или к которому в функции привязана `constexpr`-ссылка, — вместе с
+наименованием, и `--gc-sections` его не выбрасывает. Так же сеттер
+счётчика thunk берёт в `constexpr` локальную, `constexpr auto set =
+mapped_list<Mapped>[k].codec.set;`, иначе ссылался бы на массив строк.
+
+Thunk'и — шаблоны функций в `server.hpp`:
+`detail::described_next<Mapped, Provider, T>` зовёт провайдер, ставит в
+сообщение значение счётчика слота сеттером строки `pdo_map_counter`, если
+у PDO есть счётчик, и кодирует `encode_pdo`; `detail::described_handle<Mapped,
+Handler, T>` зовёт обработчик с `received_pdo` поверх кадра. Их связывает
+обычный `emb::delegate::bind` (`detail::described_source`,
+`detail::described_handler`), так что слот хранит только обычные делегаты,
+а его тест идёт при компиляции. `detail/tpdo_producer.hpp` и
+`detail/rpdo_consumer.hpp` `pdo.hpp` не включают.
+
+`rpdo_consumer` не меняется: thunk связан в его прежний делегат
+`void(payload_t const&)`, и короткий кадр до обработчика не доходит. Слот
+TPDO рядом с прежним провайдером `payload_t` хранит источник
+`detail::tpdo_source {next, sent, counter_mask}`:
+
+| Источник | `next` | `sent` | `counter_mask` |
+|---|---|---|---|
+| провайдер `payload_t`, `setup<I, CobId>(tpdo_config)` | — (прежнее поле `provider`) | — | 0 |
+| провайдер сообщения, `setup_tpdo<Mapped, Provider>` | `described_next`: кадр для значения счётчика слота | — | маска ширины счётчика PDO, 0 без счётчика |
+
+`tick` раз в период зовёт `next(counter)`, если он есть, иначе прежний
+провайдер, и отдаёт кадр `send`. `last_tx` ставится при любом исходе
+`send`: кадр, от которого `send` отказался, не повторяется, через период
+уйдёт свежий. Если `next` ничего не вернул, кадра в этом периоде нет. Только
+когда `send` принял кадр, слот зовёт `sent`, если он есть, и шагает
+счётчик по маске: `(counter + 1) & counter_mask`. Счётчик поэтому —
+счётчик потока кадров, которые взяла очередь передачи, а не вызовов
+провайдера: кадр после отказа несёт то же значение, что нёс бы
+отвергнутый. Каждый `setup` пишет слот целиком: `setup(tpdo_config)`
+обнуляет `next`, `sent`, счётчик и маску, `setup(tpdo_source)` —
+провайдер, иначе `tick`, который предпочитает `next`, слал бы от прежнего
+источника. Прежний провайдер `payload_t` остаётся для PDO вне описания;
+счётчик такой провайдер штампует сам. Слот TPDO на Cortex-M4 — 48 байт
+вместо 32: два делегата, счётчик и маска.
 
 ## 5. Примеры по шагам
 

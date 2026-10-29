@@ -2,8 +2,13 @@
 
 #include <array>
 #include <chrono>
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
+#include <iterator>
+#include <optional>
+#include <type_traits>
 
 #include <emb/can.hpp>
 #include <emb/can/bus.hpp>
@@ -20,11 +25,80 @@
 #include "detail/tpdo_producer.hpp"
 #include "od.hpp"
 #include "od_dictionary.hpp"
+#include "od_process_data.hpp"
+#include "pdo.hpp"
 #include "types.hpp"
 
 namespace emb {
 namespace can {
 namespace canopen {
+
+namespace detail {
+
+// Whether `Provider` takes a `T*` and returns a `Message`.
+template<auto Provider, typename T, typename Message>
+inline constexpr bool provides = [] {
+  if constexpr (std::is_invocable_v<decltype(Provider), T*>) {
+    return std::same_as<
+        std::remove_cvref_t<std::invoke_result_t<decltype(Provider), T*>>,
+        Message>;
+  }
+  else {
+    return false;
+  }
+}();
+
+// Returns the payload of a frame of the TPDO `Mapped`, a `mapped_pdo` of rows,
+// for the counter of frames `counter`: the message that the provider
+// `Provider` of `obj` returns, its counter, if the PDO has one, set to
+// `counter`, encoded by the rows of the PDO (`encode_pdo`). The setter of the
+// counter is a constant of the thunk, as the rows themselves are of
+// `encode_pdo`: at -O0 a reference to the rows would put them, labels and
+// all, in the image.
+template<auto const& Mapped, auto Provider, typename T>
+constexpr std::optional<payload_t> described_next(T* obj, std::uint8_t counter)
+{
+  auto message = std::invoke(Provider, obj);
+  constexpr auto row = pdo_counter_row<mapped_list<Mapped>>;
+  if constexpr (row < std::size(mapped_list<Mapped>)) {
+    constexpr auto set = mapped_list<Mapped>[row].codec.set;
+    set(message, counter);
+  }
+  return encode_pdo<mapped_list<Mapped>>(message);
+}
+
+// Hands `payload`, a frame of the RPDO `Mapped`, a `mapped_pdo` of rows, to
+// the handler `Handler` of `obj` as a `received_pdo` of the rows of the PDO.
+template<auto const& Mapped, auto Handler, typename T>
+constexpr void described_handle(T* obj, payload_t const& payload)
+{
+  std::invoke(Handler, obj, received_pdo<mapped_list<Mapped>>{payload});
+}
+
+// Returns the source of the slot of the TPDO `Mapped` whose provider is
+// `Provider` of `obj`: `described_next` bound to `obj`, and the mask of the
+// counter of the PDO.
+template<auto const& Mapped, auto Provider, typename T>
+constexpr tpdo_source described_source(T& obj)
+{
+  return {
+      .next =
+          emb::delegate<std::optional<payload_t>(std::uint8_t)>::template bind<
+              &described_next<Mapped, Provider, T>>(&obj),
+      .sent = {},
+      .counter_mask = counter_mask_of<mapped_list<Mapped>>};
+}
+
+// Returns the handler of the slot of the RPDO `Mapped` whose handler is
+// `Handler` of `obj`: `described_handle` bound to `obj`.
+template<auto const& Mapped, auto Handler, typename T>
+constexpr emb::delegate<void(payload_t const&)> described_handler(T& obj)
+{
+  return emb::delegate<void(payload_t const&)>::template bind<
+      &described_handle<Mapped, Handler, T>>(&obj);
+}
+
+} // namespace detail
 
 struct server_options {
   std::size_t tpdo_count = 4;
@@ -114,13 +188,50 @@ public:
   void setup_rpdo(rpdo_config cfg)
   {
     static_assert(I >= 1 && I <= Opt.rpdo_count, "RPDO index out of range");
-    static_assert(CobId.is_custom || I <= 4,
-                  "PDO >= 5 requires pdo_id::custom(...)");
-    static_assert(!CobId.is_custom
-                      || (CobId.value >= 1 && CobId.value <= 0x7FF),
-                  "COB-ID out of 11-bit range");
+    check_cob_id<I, CobId>();
     rpdo_.template setup<I, CobId>(cfg, clock_());
   }
+
+  // Sets the slot of the RPDO `Mapped` up from its description: the
+  // `mapped_pdo` of the PDO and its rows that `pdo_of` makes, the constant
+  // that the description of the dictionary takes too. The slot is that of the
+  // number of the PDO, with its COB-ID and its timeout; it hands each frame
+  // of 8 bytes on its COB-ID to `Handler`, a member function of `obj` that
+  // takes a `received_pdo` of the rows of the PDO, and calls `on_timeout`, if
+  // set, when the RPDO times out. The program is ill-formed if the PDO is no
+  // RPDO, if its number is past the slots or its COB-ID one that
+  // `setup_rpdo<I, CobId>` refuses, or if `Handler` takes the frames of
+  // another PDO. The number, the COB-ID and the timeout are read from
+  // `Mapped.pdo` in constant expressions only, so that neither the PDO nor
+  // its rows reach the image, and the slot is written whole, as by any
+  // `setup_rpdo`.
+  template<auto const& Mapped, auto Handler, typename T>
+    requires some_pdo_rows<std::remove_cvref_t<decltype(mapped_list<Mapped>)>>
+  void setup_rpdo(T& obj, emb::delegate<void()> on_timeout = {})
+  {
+    static_assert(Mapped.pdo.direction == pdo_direction::rx,
+                  "setup_rpdo takes a PDO that the device receives");
+    static_assert(std::is_invocable_v<decltype(Handler),
+                                      T*,
+                                      received_pdo<mapped_list<Mapped>> const&>,
+                  "the handler takes the frames of the PDO, a received_pdo "
+                  "of its rows");
+    constexpr auto number = Mapped.pdo.number;
+    constexpr auto cob_id = Mapped.pdo.cob_id;
+    constexpr auto timeout = Mapped.pdo.timeout;
+    static_assert(number >= 1 && number <= Opt.rpdo_count,
+                  "RPDO index out of range");
+    check_cob_id<number, cob_id>();
+    rpdo_.template setup<number, cob_id>(
+        {.handler = detail::described_handler<Mapped, Handler>(obj),
+         .timeout = timeout,
+         .on_timeout = on_timeout},
+        clock_());
+  }
+
+  // binding to a temporary would leave the slot with a dangling pointer
+  template<auto const& Mapped, auto Handler, typename T>
+  void setup_rpdo(T const&&, emb::delegate<void()> = {}) = delete;
 
   // ---- TPDO ----
 
@@ -128,13 +239,48 @@ public:
   void setup_tpdo(tpdo_config cfg)
   {
     static_assert(I >= 1 && I <= Opt.tpdo_count, "TPDO index out of range");
-    static_assert(CobId.is_custom || I <= 4,
-                  "PDO >= 5 requires pdo_id::custom(...)");
-    static_assert(!CobId.is_custom
-                      || (CobId.value >= 1 && CobId.value <= 0x7FF),
-                  "COB-ID out of 11-bit range");
+    check_cob_id<I, CobId>();
     tpdo_.template setup<I, CobId>(cfg, clock_());
   }
+
+  // Sets the slot of the TPDO `Mapped` up from its description: the
+  // `mapped_pdo` of the PDO and its rows that `pdo_of` makes, the constant
+  // that the description of the dictionary takes too. The slot is that of the
+  // number of the PDO, with its COB-ID and its period. Once a period it
+  // calls `Provider`, a member function of `obj` that returns the message of
+  // the PDO, sets the counter of the message, if the PDO has one, to the
+  // slot's counter of frames, and sends the message encoded by the rows of
+  // the PDO (`encode_pdo`); the counter steps, modulo the width of its signal,
+  // only when `send` takes a frame. The program is ill-formed if the PDO is
+  // no TPDO, if its number is past the slots or its COB-ID one that
+  // `setup_tpdo<I, CobId>` refuses, or if `Provider` returns another message
+  // than that of the PDO. The number, the COB-ID and the period are read from
+  // `Mapped.pdo` in constant expressions only, so that neither the PDO nor
+  // its rows reach the image, and the slot is written whole, as by any
+  // `setup_tpdo`.
+  template<auto const& Mapped, auto Provider, typename T>
+    requires some_pdo_rows<std::remove_cvref_t<decltype(mapped_list<Mapped>)>>
+  void setup_tpdo(T& obj)
+  {
+    static_assert(Mapped.pdo.direction == pdo_direction::tx,
+                  "setup_tpdo takes a PDO that the device sends");
+    static_assert(detail::provides<Provider, T, mapped_message_t<Mapped>>,
+                  "the provider returns the message of the PDO");
+    constexpr auto number = Mapped.pdo.number;
+    constexpr auto cob_id = Mapped.pdo.cob_id;
+    constexpr auto period = Mapped.pdo.period;
+    static_assert(number >= 1 && number <= Opt.tpdo_count,
+                  "TPDO index out of range");
+    check_cob_id<number, cob_id>();
+    tpdo_.template setup<number, cob_id>(
+        detail::described_source<Mapped, Provider>(obj),
+        period,
+        clock_());
+  }
+
+  // binding to a temporary would leave the slot with a dangling pointer
+  template<auto const& Mapped, auto Provider, typename T>
+  void setup_tpdo(T const&&) = delete;
 
   // ---- heartbeat / sync / nmt ----
 
@@ -183,6 +329,22 @@ public:
   }
 
 private:
+  // Checks the COB-ID `CobId` of PDO `I` at compile time: only PDOs 1 to 4
+  // have the predefined COB-ID, and a custom one is of 11 bits and not
+  // restricted (`is_restricted_cob_id`), as it would take the COB-ID of a
+  // service of the node or one that CiA 301 reserves.
+  template<std::size_t I, pdo_id CobId>
+  static consteval void check_cob_id()
+  {
+    static_assert(CobId.is_custom || I <= 4,
+                  "PDO >= 5 requires pdo_id::custom(...)");
+    static_assert(!CobId.is_custom
+                      || (CobId.value >= 1 && CobId.value <= 0x7FF),
+                  "COB-ID out of 11-bit range");
+    static_assert(!CobId.is_custom || !is_restricted_cob_id(CobId.value),
+                  "COB-ID restricted (is_restricted_cob_id)");
+  }
+
   void enqueue_rx(frame_t const& frame)
   {
     (void)rx_queue_.try_push(frame); // drop-newest on full

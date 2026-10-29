@@ -1,9 +1,13 @@
 #include <emb/can/canopen/detail/rpdo_consumer.hpp>
+#include <emb/can/canopen/od_process_data.hpp>
+#include <emb/can/canopen/pdo.hpp>
+#include <emb/can/canopen/server.hpp>
 #include <emb/can/canopen/types.hpp>
 
 #include <chrono>
 #include <cstdint>
 #include <expected>
+#include <type_traits>
 
 #include <emb/can.hpp>
 #include <emb/delegate.hpp>
@@ -170,5 +174,128 @@ consteval bool test_unmatched()
 }
 
 static_assert(test_unmatched());
+
+// -- a slot set up from the description of its PDO ---------------------------
+
+// A flag, a signed level and a counter of two bits.
+struct command {
+  bool stop;
+  std::int8_t level;
+  std::uint8_t counter = 0;
+};
+
+// clang-format off
+inline constexpr pdo_row<command> command_rows[] = {
+{{ 0, 1}, {"command.stop", {"Stop", "Стоп"}},      pdo_map<&command::stop>},
+{{ 8, 8}, {"command.level", {"Level", "Уровень"}}, pdo_map<&command::level>},
+{{56, 2}, {},                                      pdo_map_counter<&command::counter>},
+};
+// clang-format on
+
+inline constexpr auto command_pdo =
+    pdo_of<command_rows>({.name = "command",
+                          .title = {"Command", "Команда"},
+                          .direction = pdo_direction::rx,
+                          .number = 1,
+                          .cob_id = pdo_id::predefined(),
+                          .timeout = 350ms});
+
+// RPDO1 of node 1, set up at 0 ms from the description of its PDO with the
+// server's thunk, whose handler keeps what each frame says: the flag and the
+// counter, which it peeks at, and the message, or why it is refused.
+struct described_rpdo1 {
+  emb::test::can_bus bus;
+  detail::rpdo_consumer<1> consumer{bus, node_id{1}};
+  int taken = 0;
+  bool stop = false;
+  std::uint8_t counter = 0;
+  std::expected<command, pdo_decode_failure> decoded{};
+
+  constexpr described_rpdo1()
+  {
+    consumer.setup<1, pdo_id::predefined()>(
+        {.handler =
+             detail::described_handler<command_pdo, &described_rpdo1::handle>(
+                 *this),
+         .timeout = command_pdo.pdo.timeout,
+         .on_timeout = {}},
+        0ms);
+  }
+
+  constexpr void handle(received_pdo<command_rows> const& rpdo)
+  {
+    ++taken;
+    stop = rpdo.peek<&command::stop>();
+    counter = rpdo.peek<&command::counter>();
+    decoded = rpdo.decode();
+  }
+
+  constexpr std::expected<void, rpdo_refusal> receive(payload_t const& payload,
+                                                      std::uint8_t len = 8)
+  {
+    frame_t const frame{.format = format_t::standard,
+                        .id = cob_id_of<cob_type::rpdo, 1>(node_id{1}),
+                        .len = len,
+                        .payload = payload};
+    return consumer.try_handle(frame, 10ms, nmt_state::operational);
+  }
+};
+
+// The handler gets the frame with the rows of its PDO: what it peeks at and
+// decodes is what peek_pdo and decode_pdo read of the frame by the rows.
+consteval bool test_received()
+{
+  described_rpdo1 r;
+  constexpr payload_t frame = {0x01, 0xFE, 0, 0, 0, 0, 0, 0x02};
+  if (!r.receive(frame) || r.taken != 1) return false;
+  auto const expected = decode_pdo<command_rows>(frame);
+  return r.decoded
+      && expected
+      && r.decoded->stop
+      && r.decoded->level == -2
+      && r.decoded->counter == 2
+      && r.decoded->level == expected->level
+      && r.stop == peek_pdo<&command::stop, command_rows>(frame)
+      && r.counter == peek_pdo<&command::counter, command_rows>(frame)
+      && r.counter == 2;
+}
+
+static_assert(test_received());
+
+// A frame with a reserved bit set reaches the handler, which peeks at its
+// flag and its counter and learns from decode why it is refused; a short
+// frame does not.
+consteval bool test_received_refused()
+{
+  described_rpdo1 r;
+  if (!r.receive({0x03, 0, 0, 0, 0, 0, 0, 0x01})) return false;
+  if (r.taken != 1 || !r.stop || r.counter != 1) return false;
+  if (r.decoded
+      || r.decoded.error().reason != pdo_decode_refusal::reserved_bit) {
+    return false;
+  }
+  return r.receive({0x01, 0, 0, 0, 0, 0, 0, 0}, 2) == length_error
+      && r.taken == 1;
+}
+
+static_assert(test_received_refused());
+
+// The server takes a handler of the frames of the PDO, and no other: one of
+// the frames of other rows does not take them.
+inline constexpr pdo_row<command> other_rows[] = {
+    {{0, 1}, {"other.stop", {"Stop", "Стоп"}}, pdo_map<&command::stop>},
+};
+
+struct handlers {
+  constexpr void handle(received_pdo<command_rows> const&) {}
+  constexpr void handle_other(received_pdo<other_rows> const&) {}
+};
+
+static_assert(std::is_invocable_v<decltype(&handlers::handle),
+                                  handlers*,
+                                  received_pdo<command_rows> const&>);
+static_assert(!std::is_invocable_v<decltype(&handlers::handle_other),
+                                   handlers*,
+                                   received_pdo<command_rows> const&>);
 
 } // namespace

@@ -546,6 +546,70 @@ constexpr auto peek_pdo(payload_t const& payload)
   }
 }
 
+// The class template `received_pdo` is a frame of an RPDO that the rows `Rows`
+// lay out, as the server hands it to the handler of a slot set up from the
+// description of the PDO (`server::setup_rpdo`): the type knows the rows, so
+// that a handler takes the frames of its own PDO only. `peek` reads one
+// member without the checks of `decode` (`peek_pdo`), as the emergency bit
+// and the counter act on a frame that `decode` refuses, and `decode` returns
+// the message, or why the frame is refused (`decode_pdo`). The frame holds 8
+// bytes: a shorter one reaches no handler.
+template<auto const& Rows>
+  requires some_pdo_rows<std::remove_cvref_t<decltype(Rows)>>
+class received_pdo {
+public:
+  constexpr explicit received_pdo(payload_t const& payload) : payload_(payload)
+  {
+  }
+
+  template<auto Member>
+  constexpr auto peek() const
+  {
+    return peek_pdo<Member, Rows>(payload_);
+  }
+
+  constexpr std::expected<pdo_message_t<Rows>, pdo_decode_failure>
+  decode() const
+  {
+    return decode_pdo<Rows>(payload_);
+  }
+
+private:
+  payload_t payload_;
+};
+
+// The type of the message that the PDO `Mapped`, a `mapped_pdo` of rows,
+// carries: what the provider of its TPDO returns.
+template<auto const& Mapped>
+using mapped_message_t = pdo_message_t<mapped_list<Mapped>>;
+
+namespace detail {
+
+// The position of the row of `Rows` of the role `counter`, or the number of
+// rows if the PDO has no counter.
+template<auto const& Rows>
+inline constexpr std::size_t pdo_counter_row = [] {
+  for (auto i = 0uz; i < std::size(Rows); ++i) {
+    if (Rows[i].codec.role == pdo_role::counter) return i;
+  }
+  return std::size(Rows);
+}();
+
+// The mask of the width of the counter of the rows `Rows`, by which a slot
+// steps its counter of frames, or 0 if the PDO has no counter.
+template<auto const& Rows>
+inline constexpr std::uint8_t counter_mask_of = [] {
+  constexpr auto row = pdo_counter_row<Rows>;
+  if constexpr (row < std::size(Rows)) {
+    return static_cast<std::uint8_t>(low_mask(Rows[row].bits.width));
+  }
+  else {
+    return std::uint8_t{0};
+  }
+}();
+
+} // namespace detail
+
 // Returns the PDO `pdo` with what it carries, the message that the rows `Rows`
 // lay out, as a `mapped_pdo<Rows>`, whose type knows the rows: the server
 // sets the slot of the PDO up from it, and the description of the dictionary
