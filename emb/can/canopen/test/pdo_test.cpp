@@ -169,15 +169,15 @@ struct drive_status {
 
 // clang-format off
 inline constexpr pdo_row<drive_status> drive_status_rows[] = {
-{{ 0, 8}, {"drive_status.state", {"Drive state", "Состояние автомата"}},              pdo_map<&drive_status::state>},
-{{ 8, 1}, {"drive_status.pwm_on", {"PWM on", "ШИМ включён"}},                         pdo_map<&drive_status::pwm_on>},
-{{ 9, 1}, {"drive_status.warning", {"Warning", "Предупреждение"}},                    pdo_map<&drive_status::warning>},
-{{10, 1}, {"drive_status.error", {"Error", "Ошибка"}},                                pdo_map<&drive_status::error>},
-{{11, 1}, {"drive_status.critical", {"Critical fault", "Критическая неисправность"}}, pdo_map<&drive_status::critical>},
-{{12, 1}, {"drive_status.emergency", {"Emergency", "Аварийный останов"}},             pdo_map<&drive_status::emergency>},
-{{16, 2}, {"drive_status.control_mode", {"Control mode", "Режим управления"}},        pdo_map<&drive_status::control_mode>},
-{{18, 3}, {"drive_status.model_mode", {"Model mode", "Режим модели"}},                pdo_map<&drive_status::model_mode>},
-{{56, 2}, {},                                                                         pdo_map_counter<&drive_status::counter>},
+{{ 0, 8}, {"state", {"Drive state", "Состояние автомата"}},              pdo_map<&drive_status::state>},
+{{ 8, 1}, {"pwm_on", {"PWM on", "ШИМ включён"}},                         pdo_map<&drive_status::pwm_on>},
+{{ 9, 1}, {"warning", {"Warning", "Предупреждение"}},                    pdo_map<&drive_status::warning>},
+{{10, 1}, {"error", {"Error", "Ошибка"}},                                pdo_map<&drive_status::error>},
+{{11, 1}, {"critical", {"Critical fault", "Критическая неисправность"}}, pdo_map<&drive_status::critical>},
+{{12, 1}, {"emergency", {"Emergency", "Аварийный останов"}},             pdo_map<&drive_status::emergency>},
+{{16, 2}, {"control_mode", {"Control mode", "Режим управления"}},        pdo_map<&drive_status::control_mode>},
+{{18, 3}, {"model_mode", {"Model mode", "Режим модели"}},                pdo_map<&drive_status::model_mode>},
+{{56, 2}, {},                                                            pdo_map_counter<&drive_status::counter>},
 };
 // clang-format on
 
@@ -282,13 +282,13 @@ struct drive_command {
 
 // clang-format off
 inline constexpr pdo_row<drive_command> drive_command_rows[] = {
-{{ 0,  1}, {"drive_command.emergency", {"Emergency stop", "Аварийный останов"}},  pdo_map<&drive_command::emergency>},
-{{ 1,  1}, {"drive_command.power", {"Power", "Питание"}},                         pdo_map<&drive_command::power>},
-{{ 2,  1}, {"drive_command.start", {"Start", "Пуск"}},                            pdo_map<&drive_command::start>},
-{{ 3,  2}, {"drive_command.control_mode", {"Control mode", "Режим управления"}},  pdo_map<&drive_command::control_mode>},
-{{16, 16}, {"drive_command.torque_ref", {"Torque reference", "Задание момента"}}, pdo_map<&drive_command::torque_ref>},
-{{32, 16}, {"drive_command.speed_ref", {"Speed reference", "Задание скорости"}},  pdo_map<&drive_command::speed_ref>},
-{{56,  2}, {},                                                                    pdo_map_counter<&drive_command::counter>},
+{{ 0,  1}, {"emergency", {"Emergency stop", "Аварийный останов"}},  pdo_map<&drive_command::emergency>},
+{{ 1,  1}, {"power", {"Power", "Питание"}},                         pdo_map<&drive_command::power>},
+{{ 2,  1}, {"start", {"Start", "Пуск"}},                            pdo_map<&drive_command::start>},
+{{ 3,  2}, {"control_mode", {"Control mode", "Режим управления"}},  pdo_map<&drive_command::control_mode>},
+{{16, 16}, {"torque_ref", {"Torque reference", "Задание момента"}}, pdo_map<&drive_command::torque_ref>},
+{{32, 16}, {"speed_ref", {"Speed reference", "Задание скорости"}},  pdo_map<&drive_command::speed_ref>},
+{{56,  2}, {},                                                      pdo_map_counter<&drive_command::counter>},
 };
 // clang-format on
 
@@ -399,9 +399,9 @@ struct status_flags {
 
 // clang-format off
 inline constexpr pdo_row<status_flags> status_flags_rows[] = {
-{{ 0, 39}, {"status_flags.flags", {"Status flags", "Флаги статусов"}}, pdo_map<&status_flags::flags>},
-{{48,  2}, {"status_flags.level", {"Level", "Уровень"}},               pdo_map<&status_flags::level>},
-{{56,  2}, {},                                                         pdo_map_counter<&status_flags::counter>},
+{{ 0, 39}, {"flags", {"Status flags", "Флаги статусов"}}, pdo_map<&status_flags::flags>},
+{{48,  2}, {"level", {"Level", "Уровень"}},               pdo_map<&status_flags::level>},
+{{56,  2}, {},                                            pdo_map_counter<&status_flags::counter>},
 };
 // clang-format on
 
@@ -429,17 +429,17 @@ struct page {
   std::uint8_t counter = 0;
 };
 
-inline constexpr std::string_view slot_paths[] = {"page.slot0",
-                                                  "page.slot1",
-                                                  "page.slot2",
-                                                  "page.slot3"};
+inline constexpr std::string_view slot_names[] = {"slot0",
+                                                  "slot1",
+                                                  "slot2",
+                                                  "slot3"};
 
 template<std::size_t... I>
 consteval std::array<pdo_row<page>, sizeof...(I) + 1>
 page_rows_of(std::index_sequence<I...>)
 {
   return {{{{static_cast<std::uint8_t>(3 * I), 3},
-            {slot_paths[I], {"Slot", "Слот"}},
+            {slot_names[I], {"Slot", "Слот"}},
             pdo_map_element<&page::severities, I>}...,
            {{56, 2}, {}, pdo_map_counter<&page::counter>}}};
 }
@@ -486,7 +486,7 @@ struct attitude {
 };
 
 inline constexpr pdo_row<attitude> attitude_rows[] = {
-    {{0, 3}, {"attitude.tilt", {"Tilt", "Наклон"}}, pdo_map<&attitude::tilt>},
+    {{0, 3}, {"tilt", {"Tilt", "Наклон"}}, pdo_map<&attitude::tilt>},
 };
 
 // -1 takes the sign from the top of the signal; 1, in the gap, and -4 are no
@@ -581,7 +581,7 @@ struct members {
   std::uint8_t other_counter = 0;
 };
 
-inline constexpr od_label any{"members.any", {"Any", "Любой"}};
+inline constexpr od_signal_label any{"any", {"Any", "Любой"}};
 
 template<auto const& Rows>
 constexpr bool rule_is(std::string_view text)
@@ -615,7 +615,7 @@ static_assert(rule_is<wider_than_type>(
 
 // The rules of the bits come before those of the label.
 inline constexpr pdo_row<members> wide_bool[] = {
-    {{3, 2}, {"members.flag", {"Flag", "Флаг"}, "V"}, pdo_map<&members::flag>},
+    {{3, 2}, {}, pdo_map<&members::flag>},
 };
 static_assert(rule_is<wide_bool>(
     "pdo: the signal at bit 3 must be from 1 to the bits of its member's "
@@ -695,47 +695,38 @@ inline constexpr pdo_row<members> wide_counter[] = {
 static_assert(rule_is<wide_counter>(
     "pdo: the signal at bit 48 is a counter and takes one to eight bits"));
 
-// A unit in a label, which "%" here would put on a torque of half the rated
-// one to show 0.5 %.
-inline constexpr pdo_row<drive_command> unit_in_label[] = {
-    {{16, 16},
-     {"drive_command.torque_ref", {"Torque reference", "Задание момента"}, "%"},
-     pdo_map<&drive_command::torque_ref>},
+// A label has no unit to give: a signal takes its unit from the type of its
+// member alone, while the unit of a label would replace that of the type, as
+// it does for an object of the dictionary, and "%" would show a torque of
+// half the rated one as 0.5 %.
+template<typename Label>
+concept labels_unit = requires {
+  Label{"torque_ref", {"Torque reference", "Задание момента"}, "%"};
 };
-static_assert(rule_is<unit_in_label>(
-    "pdo: drive_command.torque_ref: a signal takes its unit from the type of "
-    "its member"));
+static_assert(labels_unit<od_label> && !labels_unit<od_signal_label>);
 
-// A label without a path is named by its bit.
-inline constexpr pdo_row<members> unit_of_counter[] = {
-    {{56, 2}, {"", {}, "Hz"}, pdo_map_counter<&members::counter>},
+inline constexpr pdo_row<members> counter_with_name[] = {
+    {{56, 2}, {"counter", {}}, pdo_map_counter<&members::counter>},
 };
-static_assert(rule_is<unit_of_counter>(
-    "pdo: the signal at bit 56: a signal takes its unit from the type of its "
-    "member"));
-
-inline constexpr pdo_row<members> counter_with_path[] = {
-    {{56, 2}, {"members.counter", {}}, pdo_map_counter<&members::counter>},
-};
-static_assert(rule_is<counter_with_path>(
-    "pdo: the signal at bit 56 is a counter and has no path or title"));
+static_assert(rule_is<counter_with_name>(
+    "pdo: the signal at bit 56 is a counter and has no name or title"));
 
 inline constexpr pdo_row<members> counter_with_title[] = {
     {{56, 2}, {"", {"Counter", ""}}, pdo_map_counter<&members::counter>},
 };
 static_assert(rule_is<counter_with_title>(
-    "pdo: the signal at bit 56 is a counter and has no path or title"));
+    "pdo: the signal at bit 56 is a counter and has no name or title"));
 
-inline constexpr pdo_row<members> no_path[] = {
-    {{8, 8}, {}, pdo_map<&members::number>},
+inline constexpr pdo_row<members> no_name[] = {
+    {{8, 8}, {"", {"Number", "Число"}}, pdo_map<&members::number>},
 };
 static_assert(
-    rule_is<no_path>("pdo: the signal at bit 8 needs a path and a title"));
+    rule_is<no_name>("pdo: the signal at bit 8 needs a name and a title"));
 
 inline constexpr pdo_row<members> no_russian_title[] = {
-    {{8, 8}, {"members.number", {"Number", ""}}, pdo_map<&members::number>},
+    {{8, 8}, {"number", {"Number", ""}}, pdo_map<&members::number>},
 };
 static_assert(rule_is<no_russian_title>(
-    "pdo: the signal at bit 8 needs a path and a title"));
+    "pdo: the signal at bit 8 needs a name and a title"));
 
 } // namespace

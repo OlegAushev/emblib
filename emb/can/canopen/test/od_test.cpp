@@ -2160,11 +2160,11 @@ struct report {
 // The rows of the report, not in the order of their bits.
 // clang-format off
 inline constexpr pdo_row<report> report_rows[] = {
-{{16, 16}, {"report.voltage", {"Voltage", "Напряжение"}}, pdo_map<&report::voltage>},
-{{ 0,  3}, {"report.gear", {"Gear", "Передача"}},         pdo_map<&report::drive_gear>},
-{{56,  2}, {},                                             pdo_map_counter<&report::counter>},
-{{ 3,  1}, {"report.on", {"On", "Включено"}},             pdo_map<&report::on>},
-{{ 4,  2}, {"report.tilt", {"Tilt", "Наклон"}},           pdo_map<&report::body_tilt>},
+{{16, 16}, {"voltage", {"Voltage", "Напряжение"}}, pdo_map<&report::voltage>},
+{{ 0,  3}, {"gear", {"Gear", "Передача"}},         pdo_map<&report::drive_gear>},
+{{56,  2}, {},                                     pdo_map_counter<&report::counter>},
+{{ 3,  1}, {"on", {"On", "Включено"}},             pdo_map<&report::on>},
+{{ 4,  2}, {"tilt", {"Tilt", "Наклон"}},           pdo_map<&report::body_tilt>},
 };
 // clang-format on
 
@@ -2176,8 +2176,8 @@ struct setpoint {
 
 // clang-format off
 inline constexpr pdo_row<setpoint> setpoint_rows[] = {
-{{0,  1}, {"setpoint.stop", {"Stop", "Стоп"}},      pdo_map<&setpoint::stop>},
-{{8, 16}, {"setpoint.level", {"Level", "Уровень"}}, pdo_map<&setpoint::level>},
+{{0,  1}, {"stop", {"Stop", "Стоп"}},      pdo_map<&setpoint::stop>},
+{{8, 16}, {"level", {"Level", "Уровень"}}, pdo_map<&setpoint::level>},
 };
 // clang-format on
 
@@ -2394,7 +2394,7 @@ consteval std::string check_changed(auto change)
 static_assert(check_report().empty());
 static_assert(check_report<setpoint_rows>(setpoint_rpdo).empty());
 
-// A PDO is named as a segment of a path, the first of the paths of its
+// A PDO is named as a segment, which a host joins to the names of its
 // signals, and named as no group and no class.
 static_assert(check_changed([](od_pdo& pdo) { pdo.name = "2nd"; })
               == "od: TPDO2 2nd: the name must be a letter followed by "
@@ -2492,53 +2492,44 @@ static_assert(check_rpdo([](od_pdo& pdo) { pdo.timeout = -1ms; })
 static_assert(check_rpdo([](od_pdo& pdo) { pdo.period = 10ms; })
               == "od: RPDO5 setpoint: an RPDO has no period");
 
-// The path of a signal is the name of its PDO and a name: a path without the
-// name of the PDO, with another first segment or with three is refused.
-inline constexpr std::string_view not_a_signal_path =
-    "od: TPDO2 report: the signal at bit 16: the path must be the name of "
-    "the PDO and a name, each a letter followed by letters, digits or "
-    "underscores";
+// The name of a signal is a segment: one with the name of its PDO before it,
+// which a host joins to it itself, one that starts with a digit and one with
+// a quotation mark are refused.
+inline constexpr std::string_view not_a_signal_name =
+    "od: TPDO2 report: the signal at bit 16: the name must be a letter "
+    "followed by letters, digits or underscores";
 
 // clang-format off
-inline constexpr pdo_row<report> unprefixed_rows[] = {
-{{16, 16}, {"voltage", {"Voltage", "Напряжение"}},          pdo_map<&report::voltage>}};
-inline constexpr pdo_row<report> dotted_rows[] = {
-{{16, 16}, {"report.", {"Voltage", "Напряжение"}},         pdo_map<&report::voltage>}};
-inline constexpr pdo_row<report> grouped_rows[] = {
-{{16, 16}, {"a.voltage", {"Voltage", "Напряжение"}},        pdo_map<&report::voltage>}};
-inline constexpr pdo_row<report> foreign_rows[] = {
-{{16, 16}, {"setpoint.voltage", {"Voltage", "Напряжение"}}, pdo_map<&report::voltage>}};
-inline constexpr pdo_row<report> deep_rows[] = {
-{{16, 16}, {"report.a.b", {"Voltage", "Напряжение"}},      pdo_map<&report::voltage>}};
-inline constexpr pdo_row<report> quoted_path_rows[] = {
-{{16, 16}, {"report.\"v\"", {"Voltage", "Напряжение"}},    pdo_map<&report::voltage>}};
+inline constexpr pdo_row<report> prefixed_rows[] = {
+{{16, 16}, {"report.voltage", {"Voltage", "Напряжение"}}, pdo_map<&report::voltage>}};
+inline constexpr pdo_row<report> numbered_rows[] = {
+{{16, 16}, {"2nd", {"Voltage", "Напряжение"}},            pdo_map<&report::voltage>}};
+inline constexpr pdo_row<report> quoted_name_rows[] = {
+{{16, 16}, {"\"v\"", {"Voltage", "Напряжение"}},          pdo_map<&report::voltage>}};
 // clang-format on
 
-static_assert(check_report<unprefixed_rows>() == not_a_signal_path);
-static_assert(check_report<dotted_rows>() == not_a_signal_path);
-static_assert(check_report<grouped_rows>() == not_a_signal_path);
-static_assert(check_report<foreign_rows>() == not_a_signal_path);
-static_assert(check_report<deep_rows>() == not_a_signal_path);
-static_assert(check_report<quoted_path_rows>() == not_a_signal_path);
+static_assert(check_report<prefixed_rows>() == not_a_signal_name);
+static_assert(check_report<numbered_rows>() == not_a_signal_name);
+static_assert(check_report<quoted_name_rows>() == not_a_signal_name);
 
 // The title of a signal is that of an object, and no two signals of a PDO
-// have the same path; signals of two PDOs have different paths, as the PDOs
-// have different names.
+// have the same name; signals of two PDOs may, as the PDOs have different
+// names.
 // clang-format off
 inline constexpr pdo_row<report> quoted_title_rows[] = {
-{{16, 16}, {"report.voltage", {"Volt\\age", "Напряжение"}}, pdo_map<&report::voltage>}};
-inline constexpr pdo_row<report> same_path_rows[] = {
-{{ 0,  3}, {"report.voltage", {"Gear", "Передача"}},        pdo_map<&report::drive_gear>},
-{{16, 16}, {"report.voltage", {"Voltage", "Напряжение"}},   pdo_map<&report::voltage>}};
+{{16, 16}, {"voltage", {"Volt\\age", "Напряжение"}}, pdo_map<&report::voltage>}};
+inline constexpr pdo_row<report> same_name_rows[] = {
+{{ 0,  3}, {"voltage", {"Gear", "Передача"}},        pdo_map<&report::drive_gear>},
+{{16, 16}, {"voltage", {"Voltage", "Напряжение"}},   pdo_map<&report::voltage>}};
 // clang-format on
 
 static_assert(check_report<quoted_title_rows>()
               == "od: TPDO2 report: the signal at bit 16: the title must be "
                  "UTF-8 without quotation marks, backslashes or control "
                  "characters");
-static_assert(check_report<same_path_rows>()
+static_assert(check_report<same_name_rows>()
               == "od: TPDO2 report: the signal at bit 0 and the signal at "
-                 "bit 16 have the same path");
+                 "bit 16 have the same name");
 
 // The codec of the voltage with what `change` changes, as one built by hand
 // could be: its unit, its step and its table of values are the
@@ -2550,8 +2541,8 @@ consteval pdo_codec<report> voltage_codec(auto change)
   return codec;
 }
 
-inline constexpr od_label voltage_label{"report.voltage",
-                                        {"Voltage", "Напряжение"}};
+inline constexpr od_signal_label voltage_label{"voltage",
+                                               {"Voltage", "Напряжение"}};
 
 // clang-format off
 inline constexpr pdo_row<report> quoted_unit_rows[] = {
@@ -2583,11 +2574,13 @@ static_assert(check_report<misnamed_table_rows>()
               == "od: TPDO2 report: the signal at bit 16: value 0: the name "
                  "must be a letter followed by letters, digits or underscores");
 
-// Checks two PDOs, `first` carrying the report and `second` the setpoint.
+// Checks two PDOs, `first` carrying the report and `second` the setpoint, in
+// the rows `Setpoint`.
+template<auto const& Setpoint = setpoint_rows>
 consteval std::string check_pdo_pair(od_pdo const& first, od_pdo const& second)
 {
   auto const report_mapped = pdo_of<report_rows>(first);
-  auto const setpoint_mapped = pdo_of<setpoint_rows>(second);
+  auto const setpoint_mapped = pdo_of<Setpoint>(second);
   od_mapped_pdo const pdos[] = {report_mapped, setpoint_mapped};
   od_row<ctx> const rows[] = {
       {{0x2000, 0x01}, titled("a.c"), od_ro<read_value>}};
@@ -2618,24 +2611,19 @@ static_assert(check_pdo_pair(report_tpdo, changed_setpoint([](od_pdo& pdo) {
                              }))
               == "od: TPDO2 report and TPDO2 setpoint have the same number");
 
+static_assert(check_pdo_pair(report_tpdo, changed_setpoint([](od_pdo& pdo) {
+                               pdo.name = "report";
+                             }))
+              == "od: TPDO2 report and RPDO5 report have the same name");
+
+// The setpoint with a signal named as one of the report, which it may be.
 // clang-format off
-inline constexpr pdo_row<setpoint> renamed_setpoint_rows[] = {
-{{0, 1}, {"report.stop", {"Stop", "Стоп"}}, pdo_map<&setpoint::stop>}};
+inline constexpr pdo_row<setpoint> voltage_setpoint_rows[] = {
+{{8, 16}, {"voltage", {"Voltage", "Напряжение"}}, pdo_map<&setpoint::level>}};
 // clang-format on
 
-consteval std::string check_same_name()
-{
-  auto const first = pdo_of<report_rows>(report_tpdo);
-  auto const second = pdo_of<renamed_setpoint_rows>(
-      changed_setpoint([](od_pdo& pdo) { pdo.name = "report"; }));
-  od_mapped_pdo const pdos[] = {first, second};
-  od_row<ctx> const rows[] = {
-      {{0x2000, 0x01}, titled("a.c"), od_ro<read_value>}};
-  return detail::od_check(rows, areas, group_a, {.pdos = pdos});
-}
-
-static_assert(check_same_name()
-              == "od: TPDO2 report and RPDO5 report have the same name");
+static_assert(
+    check_pdo_pair<voltage_setpoint_rows>(report_tpdo, setpoint_rpdo).empty());
 
 // No two PDOs share a COB-ID: a custom one is no other's custom one, and lies
 // in the predefined form of no PDO, of either direction, for any node-ID.

@@ -423,9 +423,8 @@ constexpr void put_pdo(Sink& sink, od_mapped_pdo const& mapped)
 
 // Writes the line of `signal`, a signal of `pdo`, its table of values
 // numbered among `tables`: where its bits lie, its role, the name and the
-// title of a signal of the role `value`, the name being the second segment
-// of its path, as the line names the PDO, the first, in `pdo`, how its bits
-// read, its step unless it is 1/1, its unit and its table of values, if any.
+// title of a signal of the role `value`, how its bits read, its step unless
+// it is 1/1, its unit and its table of values, if any.
 template<typename Sink>
 constexpr void put_signal(Sink& sink,
                           od_pdo const& pdo,
@@ -440,7 +439,7 @@ constexpr void put_signal(Sink& sink,
   put_decimal(sink, signal.bits.width);
   put_string(sink, "role", role_name(signal.role));
   if (signal.role == pdo_role::value) {
-    put_string(sink, "name", name_of(signal.label.path));
+    put_string(sink, "name", signal.label.name);
     put_title(sink, signal.label.title);
   }
   put_string(sink, "encoding", encoding_name(signal.encoding));

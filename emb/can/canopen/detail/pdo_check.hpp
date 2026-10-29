@@ -38,19 +38,15 @@ constexpr bool fits_width(std::int64_t value, unsigned width, bool is_signed)
 // string if they break none, for a `static_assert` to show, as `od_check` does
 // for the rows of a dictionary. `rows` is an array or an `std::array` of the
 // rows of one PDO (`some_pdo_rows`), and a rule names a signal by its first
-// bit, or by its path where it names a label. Each signal is from 1 to as many
-// bits wide as the type of its member (`max_width`), lies within the 64 bits
-// of the frame and holds the lowest and the highest value that its member
-// names, as its encoding reads them; no two signals overlap, and no two map
-// one member, as their getters tell: a counter has the getter of its member.
-// A PDO has at most one counter, of one to eight bits, as `rolling_counter`
-// and `node_link` count. A label has no unit: a signal takes its unit from the
-// type of its member alone, as its bits are the member's raw value, whose
-// step the type gives, while the unit of a label would replace that of the
-// type, as it does for an object of the dictionary, and disagree with the
-// step. A signal of the role `value` has a path and a title in each language,
-// and a counter none. The form of the path and the texts of the label are for
-// the rules of the description to check, which know the name of the PDO.
+// bit. Each signal is from 1 to as many bits wide as the type of its member
+// (`max_width`), lies within the 64 bits of the frame and holds the lowest
+// and the highest value that its member names, as its encoding reads them; no
+// two signals overlap, and no two map one member, as their getters tell: a
+// counter has the getter of its member. A PDO has at most one counter, of one
+// to eight bits, as `rolling_counter` and `node_link` count. A signal of the
+// role `value` has a name and a title in each language, and a counter none.
+// The form of the name and the texts of the label are for the rules of the
+// description to check, as those of the rows of a dictionary are.
 template<typename Rows>
 constexpr std::string pdo_check(Rows const& rows)
 {
@@ -99,26 +95,19 @@ constexpr std::string pdo_check(Rows const& rows)
            + signal_name(bits.start)
            + " is a counter and takes one to eight bits";
     }
-    if (!label.unit.empty()) {
-      std::string out = "pdo: ";
-      out += label.path.empty() ? signal_name(bits.start)
-                                : std::string{label.path};
-      out += ": a signal takes its unit from the type of its member";
-      return out;
-    }
     if (counter
-        && (!label.path.empty()
+        && (!label.name.empty()
             || !label.title.en.empty()
             || !label.title.ru.empty())) {
       return "pdo: "
            + signal_name(bits.start)
-           + " is a counter and has no path or title";
+           + " is a counter and has no name or title";
     }
     if (!counter
-        && (label.path.empty()
+        && (label.name.empty()
             || label.title.en.empty()
             || label.title.ru.empty())) {
-      return "pdo: " + signal_name(bits.start) + " needs a path and a title";
+      return "pdo: " + signal_name(bits.start) + " needs a name and a title";
     }
   }
   return {};

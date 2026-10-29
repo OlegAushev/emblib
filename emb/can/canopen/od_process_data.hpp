@@ -30,13 +30,14 @@ enum class pdo_direction : std::uint8_t {
 
 // The struct `od_pdo` describes a PDO as the server sets its slot up and the
 // description of the dictionary states it: `name`, by what the PDO carries
-// rather than by its slot, the first segment of the paths of its signals; its
-// title for people, in each language; its direction; its number, that of its
-// slot, from 1; its COB-ID, of the predefined form, a base + the node-ID, or
-// custom; and `period`, at which a TPDO goes, or `timeout`, after which an
-// RPDO that has not come is missed, 0 if the server does not watch it. A TPDO
-// has no timeout and an RPDO no period. Like a row of a dictionary, it exists
-// at compile time only, and `pdo_of` binds it to what the PDO carries.
+// rather than by its slot, which a host joins to the names of its signals;
+// its title for people, in each language; its direction; its number, that
+// of its slot, from 1; its COB-ID, of the predefined form, a base + the
+// node-ID, or custom; and `period`, at which a TPDO goes, or `timeout`, after
+// which an RPDO that has not come is missed, 0 if the server does not watch
+// it. A TPDO has no timeout and an RPDO no period. Like a row of a
+// dictionary, it exists at compile time only, and `pdo_of` binds it to what
+// the PDO carries.
 struct od_pdo {
   std::string_view name;
   i18n title;
@@ -47,13 +48,25 @@ struct od_pdo {
   std::chrono::milliseconds timeout{0};
 };
 
+// The struct `od_signal_label` labels a signal of a PDO for a host: `name`, a
+// segment unique in the PDO, which a host joins to the name of the PDO to
+// find the signal, and its title, in each language. A signal of the role
+// `value` has both, and a counter neither (`detail::pdo_check`). A label has
+// no unit: a signal takes its unit from the type of its member alone, as its
+// bits are the member's raw value, whose step the type gives (`pdo_codec`).
+// Like the label of a row, it exists at compile time only.
+struct od_signal_label {
+  std::string_view name;
+  i18n title;
+};
+
 // The struct `od_signal` is a signal of a PDO as the description reads it: a
 // row of the PDO (`pdo_row`) without its thunks, with the role, the encoding,
 // the unit, the step `scale_num` / `scale_den` and the table of values of its
 // codec.
 struct od_signal {
   pdo_bits bits;
-  od_label label;
+  od_signal_label label;
   pdo_role role;
   pdo_encoding encoding;
   std::string_view unit;

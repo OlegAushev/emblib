@@ -186,7 +186,7 @@ constexpr std::string pdo_pair_error(od_pdo const& first,
 }
 
 // The error of the signal of `pdo` that starts at bit `start`, named by the
-// bit, as `pdo_check` names it: its path may be what is wrong.
+// bit, as `pdo_check` names it: its name may be what is wrong.
 constexpr std::string signal_error(od_pdo const& pdo,
                                    unsigned start,
                                    std::string_view what)
@@ -1116,15 +1116,15 @@ constexpr std::string check_catalogs(od_row<Ctx> const (&rows)[N])
   return {};
 }
 
-// The rules of a PDO alone: its name is a segment of a path, the first
-// segment of the paths of its signals, and names no group, whose objects a
-// host would mix up with them, and no class; its title obeys `title_error`;
-// its number is that of a PDO of CiA 301, 1 to 512, and only PDOs 1 to 4 have
-// the predefined COB-ID, as `cob_id_of` gives it; a custom COB-ID is one of 11
-// bits, from 001h to 7FFh, as `put_hex` writes three digits of it and would
-// drop the others, and not restricted (`is_restricted_cob_id`); a TPDO has a
-// period above 0, as a slot with none sends nothing, and no timeout, and an
-// RPDO has no period and a timeout of 0, unwatched, or more.
+// The rules of a PDO alone: its name is a segment, which a host joins to the
+// names of its signals, and names no group, whose objects a host would mix up
+// with them, and no class; its title obeys `title_error`; its number is that of
+// a PDO of CiA 301, 1 to 512, and only PDOs 1 to 4 have the predefined COB-ID,
+// as `cob_id_of` gives it; a custom COB-ID is one of 11 bits, from 001h to
+// 7FFh, as `put_hex` writes three digits of it and would drop the others, and
+// not restricted (`is_restricted_cob_id`); a TPDO has a period above 0, as a
+// slot with none sends nothing, and no timeout, and an RPDO has no period and a
+// timeout of 0, unwatched, or more.
 template<std::size_t G>
 constexpr std::string check_pdo(od_pdo const& pdo, od_group const (&groups)[G])
 {
@@ -1175,16 +1175,16 @@ constexpr std::string check_pdo(od_pdo const& pdo, od_group const (&groups)[G])
   return {};
 }
 
-// The rules of the signals of a PDO that its rows do not check, as they need
-// the name of the PDO and the rules of a description; the rows obey their
-// own (`pdo_check`), which `pdo_of` checks. The path of a signal of the role
-// `value` is the name of the PDO and a name, each a segment, and no other
-// signal of the PDO has it: no path of a row has a PDO's name for its group,
-// and PDOs have different names, so a path is unique in the whole
-// description. Its title obeys `title_error`; a unit is verbatim
-// (`is_verbatim_text`), and a step `scale_num` / `scale_den` a positive
-// fraction in its lowest terms, as the description writes it, which that of
-// an `emb::scaled` is unless its ratio is negative.
+// The rules of the signals of a PDO that its rows do not check, as they are
+// the rules of a description; the rows obey their own (`pdo_check`), which
+// `pdo_of` checks. The name of a signal of the role `value` is a segment, and
+// no other signal of the PDO has it: as no PDO is named as a group and PDOs
+// have different names, the path that a host makes of the name of the PDO
+// and that of the signal is unique in the whole description. Its title obeys
+// `title_error`; a unit is verbatim (`is_verbatim_text`), and a step
+// `scale_num` / `scale_den` a positive fraction in its lowest terms, as the
+// description writes it, which that of an `emb::scaled` is unless its ratio
+// is negative.
 constexpr std::string check_signals(od_mapped_pdo const& mapped)
 {
   auto const& pdo = mapped.pdo;
@@ -1195,24 +1195,23 @@ constexpr std::string check_signals(od_mapped_pdo const& mapped)
     auto const& label = signal.label;
     auto const start = unsigned{signal.bits.start};
     if (signal.role == pdo_role::value) {
-      if (!is_path(label.path) || group_of(label.path) != pdo.name) {
+      if (!is_segment(label.name)) {
         return signal_error(pdo,
                             start,
-                            "the path must be the name of the PDO and a name, "
-                            "each a letter followed by letters, digits or "
-                            "underscores");
+                            "the name must be a letter followed by letters, "
+                            "digits or underscores");
       }
       if (auto const what = title_error(label.title); !what.empty()) {
         return signal_error(pdo, start, what);
       }
       for (auto j = 0uz; j < i; ++j) {
         if (signals[j].role == pdo_role::value
-            && signals[j].label.path == label.path) {
+            && signals[j].label.name == label.name) {
           return pdo_error(pdo,
                            signal_name(signals[j].bits.start)
                                + " and "
                                + signal_name(start)
-                               + " have the same path");
+                               + " have the same name");
         }
       }
     }
@@ -1437,12 +1436,12 @@ constexpr std::string cob_id_error(od_pdo const& first, od_pdo const& second)
 
 // The rules of two PDOs, in pairs, in source order: no two go in the same
 // direction with the same number, as two would set one slot up, or have the
-// same name, the first segment of the paths of their signals; no two share a
+// same name, which a host joins to the names of their signals; no two share a
 // COB-ID; and no two are MPDOs in source address mode, as a device sends one,
-// whose rule of selection would mix their objects up otherwise. A custom
-// COB-ID is no other's custom one, and none of the COB-IDs of the predefined
-// form of any PDO of the description, of either direction, its base + a
-// node-ID: the node-ID is known at run time only.
+// whose rule of selection would mix their objects up otherwise. A custom COB-ID
+// is no other's custom one, and none of the COB-IDs of the predefined form of
+// any PDO of the description, of either direction, its base + a node-ID: the
+// node-ID is known at run time only.
 constexpr std::string check_pdo_pairs(std::span<od_mapped_pdo const> pdos)
 {
   for (auto p = 0uz; p < pdos.size(); ++p) {

@@ -457,7 +457,7 @@ struct level {
 
 // clang-format off
 inline constexpr pdo_row<level> level_rows[] = {
-{{0, 8}, {"level.value", {"Level", "Уровень"}}, pdo_map<&level::value>},
+{{0, 8}, {"value", {"Level", "Уровень"}}, pdo_map<&level::value>},
 };
 // clang-format on
 

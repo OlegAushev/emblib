@@ -84,21 +84,21 @@ struct pdo_codec : detail::pdo_member_codec<Message> {
 //
 //   inline constexpr pdo_row<drive_command> drive_command_rows[] = {
 //       {{16, 16},
-//        {"drive_command.torque_ref", {"Torque reference", "Задание момента"}},
+//        {"torque_ref", {"Torque reference", "Задание момента"}},
 //        pdo_map<&drive_command::torque_ref>},
 //       {{56, 2}, {}, pdo_map_counter<&drive_command::counter>},
 //   };
 //
 // An array of rows lays the PDO out, and `encode_pdo`, `decode_pdo` and
 // `peek_pdo` work from it at compile time; the bits that no row covers are
-// reserved. The label gives the path and the title of a signal of the role
-// `value`, and a counter has none; no label has a unit, which a signal takes
-// from the type of its member alone (`detail::pdo_check`). Rows exist only at
-// compile time: no path, title or text of a rule reaches the image.
+// reserved. The label gives the name and the title of a signal of the role
+// `value`, and a counter has none (`od_signal_label`); the PDO, which
+// `pdo_of` names, is not named again. Rows exist only at compile time: no
+// name, title or text of a rule reaches the image.
 template<typename Message>
 struct pdo_row {
   pdo_bits bits;
-  od_label label;
+  od_signal_label label;
   pdo_codec<Message> codec;
 };
 
@@ -629,7 +629,7 @@ inline constexpr std::uint8_t counter_mask_of = [] {
 // parameter takes the views of text that it holds. The program is ill-formed
 // if `Rows` has no row, as a PDO carries at least one signal, or breaks a rule
 // of the rows of a PDO (`detail::pdo_check`). The rules of the PDO and those
-// of the paths and the texts of its signals, which need the name of the PDO,
+// of the names and the texts of its signals, which the description writes,
 // are the description's (`detail::od_check`).
 template<auto const& Rows>
   requires some_pdo_rows<std::remove_cvref_t<decltype(Rows)>>
