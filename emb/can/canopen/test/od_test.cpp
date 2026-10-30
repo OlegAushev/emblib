@@ -590,7 +590,7 @@ static_assert(test_ro_array());
 // A gear of a drive, its values with a gap, labelled for a host.
 enum class gear : std::uint8_t { park, drive, reverse = 4 };
 
-consteval std::span<emb::enumerator_info<gear> const> enum_info(gear)
+consteval std::span<emb::enumerator_info<gear> const> enum_info_of(gear)
 {
   static constexpr emb::enumerator_info<gear> info[] = {
       {gear::park, "park", {"Park", "Стоянка"}},
@@ -603,7 +603,7 @@ consteval std::span<emb::enumerator_info<gear> const> enum_info(gear)
 // A tilt, below zero and without a gap.
 enum class tilt : std::int8_t { left = -1, level, right };
 
-consteval std::span<emb::enumerator_info<tilt> const> enum_info(tilt)
+consteval std::span<emb::enumerator_info<tilt> const> enum_info_of(tilt)
 {
   static constexpr emb::enumerator_info<tilt> info[] = {
       {tilt::left, "left", {"Left", "Влево"}},

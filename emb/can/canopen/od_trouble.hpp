@@ -41,7 +41,7 @@ constexpr std::uint8_t severity_value_of(std::optional<Level> level)
 // takes its values from it.
 template<enum_with_info Level>
 inline constexpr auto od_severity_scale = [] {
-  constexpr auto info = enum_info_of<Level>();
+  constexpr auto info = emb::enum_info_of<Level>();
   std::array<od_value_info, info.size() + 1> out{};
   out[0] = {.value = severity_value_of<Level>(std::nullopt),
             .name = "none",
@@ -100,7 +100,7 @@ template<typename Level, std::size_t LevelCount>
 consteval bool od_levels_labelled()
 {
   if constexpr (enum_with_info<Level>) {
-    constexpr auto info = enum_info_of<Level>();
+    constexpr auto info = emb::enum_info_of<Level>();
     if (info.size() != LevelCount) return false;
     for (auto i = 0uz; i < info.size(); ++i) {
       if (std::cmp_not_equal(std::to_underlying(info[i].value()), i)) {

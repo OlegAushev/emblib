@@ -40,7 +40,7 @@ enum class state : std::uint32_t {
   fault
 };
 
-consteval std::span<emb::enumerator_info<state> const> enum_info(state)
+consteval std::span<emb::enumerator_info<state> const> enum_info_of(state)
 {
   static constexpr emb::enumerator_info<state> info[] = {
       {state::init, "init", {"Init", "Инициализация"}},
@@ -64,7 +64,7 @@ enum class control_mode : std::uint32_t {
 };
 
 consteval std::span<emb::enumerator_info<control_mode> const>
-enum_info(control_mode)
+enum_info_of(control_mode)
 {
   static constexpr emb::enumerator_info<control_mode> info[] = {
       {control_mode::torque, "torque", {"Torque", "Момент"}},
@@ -84,7 +84,7 @@ enum class model_mode : std::uint8_t {
 };
 
 consteval std::span<emb::enumerator_info<model_mode> const>
-enum_info(model_mode)
+enum_info_of(model_mode)
 {
   static constexpr emb::enumerator_info<model_mode> info[] = {
       {model_mode::idle, "idle", {"Idle", "Ожидание"}},
@@ -110,7 +110,7 @@ enum class level : std::uint8_t {
   emergency
 };
 
-consteval std::span<emb::enumerator_info<level> const> enum_info(level)
+consteval std::span<emb::enumerator_info<level> const> enum_info_of(level)
 {
   static constexpr emb::enumerator_info<level> info[] = {
       {level::warning, "warning", {"Warning", "Предупреждение"}},
@@ -128,7 +128,7 @@ enum class tilt : std::int8_t {
   up = 2
 };
 
-consteval std::span<emb::enumerator_info<tilt> const> enum_info(tilt)
+consteval std::span<emb::enumerator_info<tilt> const> enum_info_of(tilt)
 {
   static constexpr emb::enumerator_info<tilt> info[] = {
       {tilt::down, "down", {"Down", "Вниз"}},

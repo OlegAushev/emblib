@@ -162,7 +162,7 @@ static_assert(std::is_same_v<unwrapped_t<no_value_of>, no_value_of>);
 // lookup.
 struct volts {
   float value = 0.f;
-  friend constexpr i18n::text unit_symbol(volts)
+  friend constexpr i18n::text unit_symbol_of(volts)
   {
     return {"V", "В"};
   }
@@ -170,7 +170,7 @@ struct volts {
 
 // Names a symbol in one language, as a std::string_view, not as a text.
 struct one_language_symbol {
-  friend constexpr std::string_view unit_symbol(one_language_symbol)
+  friend constexpr std::string_view unit_symbol_of(one_language_symbol)
   {
     return "V";
   }
@@ -178,22 +178,33 @@ struct one_language_symbol {
 
 // Names a symbol, but not as a text.
 struct c_string_symbol {
-  friend constexpr char const* unit_symbol(c_string_symbol)
+  friend constexpr char const* unit_symbol_of(c_string_symbol)
   {
     return "V";
+  }
+};
+
+// Names its symbol through `unit_symbol`, the former name of the hook, which
+// no longer opts a type in.
+struct former_hook_symbol {
+  friend constexpr i18n::text unit_symbol(former_hook_symbol)
+  {
+    return {"V", "В"};
   }
 };
 
 static_assert(unit_with_symbol<volts>);
 static_assert(!unit_with_symbol<one_language_symbol>);
 static_assert(!unit_with_symbol<c_string_symbol>);
+static_assert(!unit_with_symbol<former_hook_symbol>);
 static_assert(!unit_with_symbol<meters>);
 static_assert(!unit_with_symbol<float>);
 
-static_assert(unit_symbol_of<volts>() == i18n::text{"V", "В"});
-static_assert(unit_symbol_of<one_language_symbol>() == i18n::text{});
-static_assert(unit_symbol_of<meters>() == i18n::text{});
-static_assert(unit_symbol_of<float>() == i18n::text{});
+static_assert(emb::unit_symbol_of<volts>() == i18n::text{"V", "В"});
+static_assert(emb::unit_symbol_of<one_language_symbol>() == i18n::text{});
+static_assert(emb::unit_symbol_of<former_hook_symbol>() == i18n::text{});
+static_assert(emb::unit_symbol_of<meters>() == i18n::text{});
+static_assert(emb::unit_symbol_of<float>() == i18n::text{});
 
 // -- enumerator info tests --
 
@@ -201,7 +212,7 @@ static_assert(unit_symbol_of<float>() == i18n::text{});
 // one unlabelled.
 enum class mode : std::uint8_t { off, slow, fast = 4, unlabelled = 7 };
 
-consteval std::span<enumerator_info<mode> const> enum_info(mode)
+consteval std::span<enumerator_info<mode> const> enum_info_of(mode)
 {
   static constexpr enumerator_info<mode> info[] = {
       {mode::off, "off", {"Off", "Выкл."}},
@@ -214,7 +225,7 @@ consteval std::span<enumerator_info<mode> const> enum_info(mode)
 // Labels a negative value: its underlying type is signed.
 enum class level : std::int16_t { low = -2, high = 3 };
 
-consteval std::span<enumerator_info<level> const> enum_info(level)
+consteval std::span<enumerator_info<level> const> enum_info_of(level)
 {
   static constexpr enumerator_info<level> info[] = {
       {level::low, "low", {"Low", "Низкий"}},
@@ -229,9 +240,22 @@ enum class bare { a };
 // Returns its table as a span of `enumerator_info` that is not const.
 enum class mutable_table { a };
 
-consteval std::span<enumerator_info<mutable_table>> enum_info(mutable_table)
+consteval std::span<enumerator_info<mutable_table>> enum_info_of(mutable_table)
 {
   return {};
+}
+
+// Labels its values through `enum_info`, the former name of the hook, which
+// no longer opts an enumeration in.
+enum class former_hook_table { a };
+
+consteval std::span<enumerator_info<former_hook_table> const>
+enum_info(former_hook_table)
+{
+  static constexpr enumerator_info<former_hook_table> info[] = {
+      {former_hook_table::a, "a", {"A", "А"}},
+  };
+  return info;
 }
 
 // An unscoped enumeration.
@@ -241,23 +265,24 @@ static_assert(enum_with_info<mode>);
 static_assert(enum_with_info<level>);
 static_assert(!enum_with_info<bare>);
 static_assert(!enum_with_info<mutable_table>);
+static_assert(!enum_with_info<former_hook_table>);
 static_assert(!enum_with_info<plain>);
 static_assert(!enum_with_info<int>);
 
-static_assert(enum_info_of<mode>().size() == 3);
-static_assert(enum_info_of<mode>()[0].value() == mode::off);
-static_assert(enum_info_of<mode>()[2].value() == mode::fast);
-static_assert(enum_info_of<mode>()[1].name() == "slow");
-static_assert(enum_info_of<mode>()[1].label()
+static_assert(emb::enum_info_of<mode>().size() == 3);
+static_assert(emb::enum_info_of<mode>()[0].value() == mode::off);
+static_assert(emb::enum_info_of<mode>()[2].value() == mode::fast);
+static_assert(emb::enum_info_of<mode>()[1].name() == "slow");
+static_assert(emb::enum_info_of<mode>()[1].label()
               == i18n::text{"Slow", "Медленно"});
-static_assert(enum_info_of<level>().front().value() == level::low);
-static_assert(enum_info_of<level>().back().value() == level::high);
+static_assert(emb::enum_info_of<level>().front().value() == level::low);
+static_assert(emb::enum_info_of<level>().back().value() == level::high);
 
 // Returns the name of `m`, or an empty view if `mode` does not label it: an
 // immediate function reads the info of an enumerator.
 consteval std::string_view name_of(mode m)
 {
-  for (auto const& enumerator : enum_info_of<mode>()) {
+  for (auto const& enumerator : emb::enum_info_of<mode>()) {
     if (enumerator.value() == m) return enumerator.name();
   }
   return {};
@@ -272,7 +297,7 @@ static_assert(name_of(mode::unlabelled).empty());
 template<typename E>
 constexpr std::string_view english_label_of(E e)
 {
-  for (auto const& enumerator : enum_info_of<E>()) {
+  for (auto const& enumerator : emb::enum_info_of<E>()) {
     if (enumerator.value() == e) return enumerator.label().en;
   }
   return {};

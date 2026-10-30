@@ -23,7 +23,7 @@ namespace settings = emb::settings;
 enum class drive_mode : std::uint32_t { idle, run };
 
 consteval std::span<emb::enumerator_info<drive_mode> const>
-enum_info(drive_mode)
+enum_info_of(drive_mode)
 {
   static constexpr emb::enumerator_info<drive_mode> info[] = {
       {drive_mode::idle, "idle", {"Idle", "Ожидание"}},

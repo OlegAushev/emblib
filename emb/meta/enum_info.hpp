@@ -24,12 +24,12 @@ namespace emb {
 // can still reach the image: only a check of the image catches that.
 //
 // A table is an array of them written in braces, which the enumeration's
-// hook `enum_info` returns (see `enum_with_info`):
+// hook `enum_info_of` returns (see `enum_with_info`):
 //
 //   enum class pwm_mode : std::uint8_t { svpwm, dpwm0 };
 //
 //   consteval std::span<emb::enumerator_info<pwm_mode> const>
-//   enum_info(pwm_mode)
+//   enum_info_of(pwm_mode)
 //   {
 //     static constexpr emb::enumerator_info<pwm_mode> info[] = {
 //         {pwm_mode::svpwm, "svpwm", {"SVPWM", "SVPWM"}},
@@ -70,12 +70,13 @@ private:
 };
 
 // The concept `enum_with_info<E>` is satisfied if and only if `E` is a scoped
-// enumeration that labels its values: `enum_info` called unqualified with a
-// value of `E` returns `std::span<enumerator_info<E> const>`, the info of its
-// enumerators. An enumeration opts in as a wrapper does for `value_of` (see
-// `some_wrapper`): by declaring a `consteval` overload of `enum_info` that
-// argument-dependent lookup finds, in the namespace of the enumeration. Code
-// that reads the table takes it from `enum_info_of`, which checks it.
+// enumeration that labels its values: `enum_info_of` called unqualified with
+// a value of `E` returns `std::span<enumerator_info<E> const>`, the info of
+// its enumerators. An enumeration opts in as a wrapper does for `value_of`
+// (see `some_wrapper`): by declaring a `consteval` overload of `enum_info_of`
+// that argument-dependent lookup finds, in the namespace of the enumeration.
+// Code that reads the table takes it from `emb::enum_info_of<E>()`, which
+// checks it.
 //
 // Only a scoped enumeration is admitted: an unscoped one may have no fixed
 // underlying type, and then converting to it a number outside the range of
@@ -84,21 +85,28 @@ private:
 // rule out.
 template<typename E>
 concept enum_with_info = std::is_scoped_enum_v<E> && requires {
-  { enum_info(E{}) } -> std::same_as<std::span<enumerator_info<E> const>>;
+  { enum_info_of(E{}) } -> std::same_as<std::span<enumerator_info<E> const>>;
 };
 
-// Returns the info of the enumerators of `E`, as its hook `enum_info` returns
-// it, after checking it: the table is not empty, its values, compared as
-// their underlying type, strictly increase, and no two enumerators have the
-// same name. Constant evaluation fails otherwise, and the diagnostic names
-// the rule broken. The first element of the table thus holds the lowest value
-// labelled and the last one the highest, and a value has at most one element;
-// values between them may have none. What a name and a label may hold is for
-// the code that shows them to check.
+// Returns the info of the enumerators of `E`, as its hook `enum_info_of`
+// returns it, after checking it: the table is not empty, its values, compared
+// as their underlying type, strictly increase, and no two enumerators have
+// the same name. Constant evaluation fails otherwise, and the diagnostic
+// names the rule broken. The first element of the table thus holds the lowest
+// value labelled and the last one the highest, and a value has at most one
+// element; values between them may have none. What a name and a label may
+// hold is for the code that shows them to check.
+//
+// Call it qualified, as `emb::enum_info_of<E>()`. An enumeration cannot have
+// a friend, so its hook is declared at namespace scope, where it hides this
+// function template from an unqualified call in that namespace, or in one
+// nested in it, if it is declared earlier, even in another header:
+// `enum_info_of<E>()` then does not compile, and `enum_info_of(e)` calls the
+// hook and returns the table unchecked.
 template<enum_with_info E>
 consteval std::span<enumerator_info<E> const> enum_info_of()
 {
-  auto const info = enum_info(E{});
+  auto const info = enum_info_of(E{});
   if (info.empty()) EMB_PANIC("the table of enumerators is empty");
   for (auto i = 1uz; i < info.size(); ++i) {
     if (std::to_underlying(info[i - 1].value())

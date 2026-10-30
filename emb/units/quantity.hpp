@@ -56,10 +56,10 @@ struct quantity {
 
   // Returns the symbol of the unit in each language, the `symbol` of the unit
   // tag, e.g. "V" and "В" for `tags::volt`; declared only if the tag has one.
-  // Generic code calls it unqualified, e.g. through `emb::unit_symbol_of`: as
-  // a friend defined in the class, it is found only by argument-dependent
-  // lookup.
-  friend constexpr i18n::text unit_symbol(quantity)
+  // Generic code asks for it through `emb::unit_symbol_of<T>()`, which calls
+  // it unqualified: as a friend defined in the class, it is found only by
+  // argument-dependent lookup.
+  friend constexpr i18n::text unit_symbol_of(quantity)
     requires requires {
       { Unit::symbol } -> std::convertible_to<i18n::text>;
     }

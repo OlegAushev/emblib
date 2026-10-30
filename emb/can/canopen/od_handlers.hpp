@@ -60,7 +60,7 @@ concept od_labelled = !std::is_enum_v<T> || enum_with_info<T>;
 // for the binding of an object of it.
 template<enum_with_info E>
 inline constexpr auto od_enum_value_table = [] {
-  constexpr auto info = enum_info_of<E>();
+  constexpr auto info = emb::enum_info_of<E>();
   std::array<od_value_info, info.size()> out{};
   for (auto i = 0uz; i < info.size(); ++i) {
     out[i] = {.value = std::to_underlying(info[i].value()),
@@ -83,7 +83,7 @@ inline constexpr std::span<od_value_info const> od_value_table_of<E> =
 // order: all that a writer of `E` keeps of the info of its enumerators.
 template<enum_with_info E>
 inline constexpr auto od_enum_values = [] {
-  constexpr auto info = enum_info_of<E>();
+  constexpr auto info = emb::enum_info_of<E>();
   std::array<enum_carrier32_t<E>, info.size()> out{};
   for (auto i = 0uz; i < info.size(); ++i) {
     out[i] = std::to_underlying(info[i].value());
@@ -437,9 +437,9 @@ inline constexpr std::string_view od_rw_values_disagreement =
 template<auto G, auto S, typename Ctx>
 inline constexpr bool od_units_agree = [] {
   constexpr auto read =
-      unit_symbol_of<typename od_read_value<od_result_t<G>>::type>();
+      emb::unit_symbol_of<typename od_read_value<od_result_t<G>>::type>();
   constexpr auto written =
-      unit_symbol_of<typename od_written<od_args_t<S>, Ctx>::type>();
+      emb::unit_symbol_of<typename od_written<od_args_t<S>, Ctx>::type>();
   return read == i18n::text{} || written == i18n::text{} || read == written;
 }();
 
@@ -473,7 +473,7 @@ struct read_binding {
         return {.access = Access,
                 .type = od_type_of<od_carrier_t<value_type>>,
                 .read = &od_read_thunk<F, Ctx>,
-                .unit = unit_symbol_of<value_type>(),
+                .unit = emb::unit_symbol_of<value_type>(),
                 .value_table = od_value_table_of<value_type>};
       }
       else {
@@ -503,7 +503,7 @@ struct write_binding {
         return {.access = od_access::wo,
                 .type = od_type_of<od_carrier_t<value_type>>,
                 .write = &od_write_thunk<S, Ctx>,
-                .unit = unit_symbol_of<value_type>(),
+                .unit = emb::unit_symbol_of<value_type>(),
                 .value_table = od_value_table_of<value_type>};
       }
       else {
@@ -543,13 +543,13 @@ struct rw_binding {
       static_assert(labelled, od_unlabelled_enumeration);
 
       if constexpr (same_values && od_labelled<read_type>) {
-        constexpr auto read_unit = unit_symbol_of<read_type>();
+        constexpr auto read_unit = emb::unit_symbol_of<read_type>();
         return {.access = od_access::rw,
                 .type = od_type_of<od_carrier_t<read_type>>,
                 .read = &od_read_thunk<G, Ctx>,
                 .write = &od_write_thunk<S, Ctx>,
                 .unit = read_unit == i18n::text{}
-                          ? unit_symbol_of<written_type>()
+                          ? emb::unit_symbol_of<written_type>()
                           : read_unit,
                 .value_table = od_value_table_of<read_type>,
                 .diagnosed = !agree};
@@ -630,7 +630,7 @@ struct array_binding {
                 .type = od_type_of<od_carrier_t<element_type>>,
                 .read = &od_array_element_thunk<F, Ctx>,
                 .count = &od_array_count_thunk<Ctx, elements::count>,
-                .unit = unit_symbol_of<element_type>(),
+                .unit = emb::unit_symbol_of<element_type>(),
                 .value_table = od_value_table_of<element_type>};
       }
       else {

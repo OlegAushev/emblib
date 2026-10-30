@@ -34,7 +34,8 @@ enum class apply_policy : std::uint8_t {
 
 // Returns the info of the enumerators of `apply_policy`, by which a transport
 // names the policy of a parameter for people.
-consteval std::span<enumerator_info<apply_policy> const> enum_info(apply_policy)
+consteval std::span<enumerator_info<apply_policy> const>
+enum_info_of(apply_policy)
 {
   static constexpr enumerator_info<apply_policy> info[] = {
       {apply_policy::on_command, "on_command", {"On command", "По команде"}},
@@ -89,7 +90,7 @@ template<some_parameter_type T>
 constexpr T lowest()
 {
   if constexpr (some_enum_value<T>) {
-    return enum_info_of<T>().front().value();
+    return emb::enum_info_of<T>().front().value();
   }
   else {
     return T(std::numeric_limits<scalar_t<T>>::lowest());
@@ -103,7 +104,7 @@ template<some_parameter_type T>
 constexpr T highest()
 {
   if constexpr (some_enum_value<T>) {
-    return enum_info_of<T>().back().value();
+    return emb::enum_info_of<T>().back().value();
   }
   else {
     return T(std::numeric_limits<scalar_t<T>>::max());
@@ -119,7 +120,7 @@ consteval bool labelled_between(T lo, T hi)
   auto const low = static_cast<std::int64_t>(std::to_underlying(lo));
   auto const high = static_cast<std::int64_t>(std::to_underlying(hi));
   std::int64_t named = 0;
-  for (auto const& enumerator : enum_info_of<T>()) {
+  for (auto const& enumerator : emb::enum_info_of<T>()) {
     auto const value =
         static_cast<std::int64_t>(std::to_underlying(enumerator.value()));
     if (low <= value && value <= high) ++named;
@@ -269,14 +270,15 @@ consteval declaration<T> param(std::string_view name,
   if (opts.expose && !i18n::is_complete(opts.label)) {
     EMB_PANIC("an exposed parameter needs a label in each language");
   }
-  if (opts.unit != i18n::text{} && opts.unit == unit_symbol_of<T>()) {
+  if (opts.unit != i18n::text{} && opts.unit == emb::unit_symbol_of<T>()) {
     EMB_PANIC("the unit only repeats the symbol of the type");
   }
   if (opts.unit != i18n::text{}
       && (kind == scalar_kind::boolean || some_enum_value<T>)) {
     EMB_PANIC("a bool or an enumeration takes no unit");
   }
-  auto const unit = opts.unit == i18n::text{} ? unit_symbol_of<T>() : opts.unit;
+  auto const unit =
+      opts.unit == i18n::text{} ? emb::unit_symbol_of<T>() : opts.unit;
   if (unit != i18n::text{} && !i18n::is_complete(unit)) {
     EMB_PANIC("the unit needs a symbol in each language");
   }

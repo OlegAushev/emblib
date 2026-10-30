@@ -78,9 +78,10 @@ public:
   // Returns "pu", in Russian "о. е.", the symbol of a per-unit value, for a
   // floating-point `clamped` with the bounds -1 and 1 or 0 and 1, i.e. a
   // `signed_pu` or an `unsigned_pu`; declared only for those. Generic code
-  // calls it unqualified, e.g. through `emb::unit_symbol_of`: as a friend
-  // defined in the class, it is found only by argument-dependent lookup.
-  friend constexpr i18n::text unit_symbol(clamped)
+  // asks for it through `emb::unit_symbol_of<T>()`, which calls it
+  // unqualified: as a friend defined in the class, it is found only by
+  // argument-dependent lookup.
+  friend constexpr i18n::text unit_symbol_of(clamped)
     requires std::floating_point<value_type>
           && (lo == value_type{-1} || lo == value_type{0})
           && (hi == value_type{1})

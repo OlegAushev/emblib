@@ -23,7 +23,7 @@ using namespace emb::can::canopen;
 // The levels of the statuses, labelled for a host.
 enum class level : std::uint8_t { warning, fault };
 
-consteval std::span<emb::enumerator_info<level> const> enum_info(level)
+consteval std::span<emb::enumerator_info<level> const> enum_info_of(level)
 {
   static constexpr emb::enumerator_info<level> info[] = {
       {level::warning, "warning", {"Warning", "Предупреждение"}},
@@ -208,7 +208,7 @@ static_assert(is_block(od_statuses_scans<late, 0x4000>[1], 0x4000, 4, 1));
 
 enum class mode : std::uint8_t { idle, run };
 
-consteval std::span<emb::enumerator_info<mode> const> enum_info(mode)
+consteval std::span<emb::enumerator_info<mode> const> enum_info_of(mode)
 {
   static constexpr emb::enumerator_info<mode> info[] = {
       {mode::idle, "idle", {"Idle", "Ожидание"}},

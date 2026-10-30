@@ -108,8 +108,9 @@ static_assert(template_argument<emb::units::volt_f32{1.5f}>
 using text = emb::i18n::text;
 
 // Each unit tag names the symbol of its unit in each language, and a quantity
-// returns it through unit_symbol, found by argument-dependent lookup.
-static_assert(unit_symbol(emb::units::volt_f32{}) == text{"V", "В"});
+// returns it through its hook unit_symbol_of, found by argument-dependent
+// lookup.
+static_assert(unit_symbol_of(emb::units::volt_f32{}) == text{"V", "В"});
 static_assert(emb::unit_with_symbol<emb::units::volt_f32>);
 
 static_assert(emb::unit_symbol_of<emb::units::hz_f32>() == text{"Hz", "Гц"});

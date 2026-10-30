@@ -56,7 +56,7 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `to_rad`, `to_deg`, `to_eradps`, `to_rpm`
   - [x] `norm2pi`, `normpi`, `norm2pi_fast`, `normpi_fast`
 - [x] `emb/math/clamped.hpp`
-  - [x] `clamped` (и друг `unit_symbol` для `signed_pu`/`unsigned_pu`)
+  - [x] `clamped` (и друг `unit_symbol_of` для `signed_pu`/`unsigned_pu`)
   - [x] `signed_pu`, `unsigned_pu`, `signed_pu_f32`, `unsigned_pu_f32`
 - [x] `emb/math/numeric.hpp`
   - [x] `fmod_trivial`, `fmod`
@@ -141,7 +141,7 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `error`
   - [x] `image`
 - [x] `emb/settings/param.hpp`
-  - [x] `apply_policy` (и `enum_info(apply_policy)`, вручную 2026-10-22)
+  - [x] `apply_policy` (и `enum_info_of(apply_policy)`, вручную 2026-10-22)
   - [x] `descriptor`
   - [x] `detail::lowest`, `detail::highest`, `detail::identify`,
     `detail::labelled_between` (вручную 2026-10-22)
@@ -241,7 +241,7 @@ emblib не попал. Такие файлы помечены «песочни�
     `atmosphere_f32`
   - [x] `convert_to` (шесть перегрузок)
 - [x] `emb/units/quantity.hpp`
-  - [x] `quantity` (и друг `unit_symbol`), `some_quantity`, `convert_to`
+  - [x] `quantity` (и друг `unit_symbol_of`), `some_quantity`, `convert_to`
 - [x] `emb/units/relations.hpp`
   - [x] `operator/`
   - [x] `operator*` (две перегрузки)

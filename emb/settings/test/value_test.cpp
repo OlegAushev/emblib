@@ -251,7 +251,7 @@ static_assert(test_in_range());
 // A mode, its values labelled with a gap before the last one.
 enum class mode : std::uint8_t { off, slow, fast, turbo = 7 };
 
-consteval std::span<enumerator_info<mode> const> enum_info(mode)
+consteval std::span<enumerator_info<mode> const> enum_info_of(mode)
 {
   static constexpr enumerator_info<mode> info[] = {
       {mode::off, "off", {"Off", "Выкл."}},
@@ -265,7 +265,7 @@ consteval std::span<enumerator_info<mode> const> enum_info(mode)
 // A tilt, below zero: its underlying type is signed.
 enum class tilt : std::int16_t { left = -1, level, right };
 
-consteval std::span<enumerator_info<tilt> const> enum_info(tilt)
+consteval std::span<enumerator_info<tilt> const> enum_info_of(tilt)
 {
   static constexpr enumerator_info<tilt> info[] = {
       {tilt::left, "left", {"Left", "Влево"}},
@@ -278,7 +278,7 @@ consteval std::span<enumerator_info<tilt> const> enum_info(tilt)
 // Labelled, but too wide for a cell; and not labelled.
 enum class wide : std::uint64_t { a };
 
-consteval std::span<enumerator_info<wide> const> enum_info(wide)
+consteval std::span<enumerator_info<wide> const> enum_info_of(wide)
 {
   static constexpr enumerator_info<wide> info[] = {{wide::a, "a", {"A", "А"}}};
   return info;

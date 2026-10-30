@@ -207,7 +207,7 @@ consteval pdo_member_codec<Message> codec_of()
     static_assert(carried, pdo_unlabelled_enumeration);
     if constexpr (carried) {
       using underlying = std::underlying_type_t<T>;
-      constexpr auto info = enum_info_of<T>();
+      constexpr auto info = emb::enum_info_of<T>();
       return {.get =
                   [](Message const& m) {
                     return raw_of(std::to_underlying(Ref(m)));
@@ -264,12 +264,12 @@ consteval pdo_codec<Message> described(pdo_member_codec<Message> const& core)
 {
   pdo_codec<Message> codec{core};
   if constexpr (is_scaled<T>) {
-    codec.unit = unit_symbol_of<typename T::quantity_type>();
+    codec.unit = emb::unit_symbol_of<typename T::quantity_type>();
     codec.scale_num = T::step_type::num;
     codec.scale_den = T::step_type::den;
   }
   else {
-    codec.unit = unit_symbol_of<T>();
+    codec.unit = emb::unit_symbol_of<T>();
     codec.value_table = od_value_table_of<T>;
   }
   return codec;

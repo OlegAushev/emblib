@@ -192,7 +192,7 @@ static_assert(renamed_for_people.desc == drive_stopping_torque.desc);
 // A mode of modulation, every value labelled.
 enum class pwm : std::uint8_t { svpwm, dpwm0, dpwm1 };
 
-consteval std::span<enumerator_info<pwm> const> enum_info(pwm)
+consteval std::span<enumerator_info<pwm> const> enum_info_of(pwm)
 {
   static constexpr enumerator_info<pwm> info[] = {
       {pwm::svpwm, "svpwm", {"SVPWM", "SVPWM"}},
@@ -205,7 +205,7 @@ consteval std::span<enumerator_info<pwm> const> enum_info(pwm)
 // A gear, with a gap in its values.
 enum class gear : std::uint8_t { park, drive, reverse = 4 };
 
-consteval std::span<enumerator_info<gear> const> enum_info(gear)
+consteval std::span<enumerator_info<gear> const> enum_info_of(gear)
 {
   static constexpr enumerator_info<gear> info[] = {
       {gear::park, "park", {"Park", "Стоянка"}},

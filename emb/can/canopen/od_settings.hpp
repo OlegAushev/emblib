@@ -68,7 +68,7 @@ enum class od_refusal : std::uint32_t {
 };
 
 // Returns the info of the enumerators of `od_refusal`, by increasing code.
-consteval std::span<enumerator_info<od_refusal> const> enum_info(od_refusal)
+consteval std::span<enumerator_info<od_refusal> const> enum_info_of(od_refusal)
 {
   static constexpr enumerator_info<od_refusal> info[] = {
       {od_refusal::unsupported_access,
@@ -208,9 +208,9 @@ template<auto Actual, typename T>
 consteval bool od_reads_in_unit(i18n::text const& unit)
 {
   using value_type = typename od_read_value<od_result_t<Actual>>::type;
-  constexpr auto symbol = unit_symbol_of<value_type>();
+  constexpr auto symbol = emb::unit_symbol_of<value_type>();
   return symbol == i18n::text{}
-      || symbol == unit_symbol_of<T>()
+      || symbol == emb::unit_symbol_of<T>()
       || symbol == unit;
 }
 

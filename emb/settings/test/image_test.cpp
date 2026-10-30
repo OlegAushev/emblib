@@ -205,7 +205,7 @@ static_assert(test_cells());
 
 enum class pwm : std::uint8_t { svpwm, dpwm0, dpwm1 };
 
-consteval std::span<enumerator_info<pwm> const> enum_info(pwm)
+consteval std::span<enumerator_info<pwm> const> enum_info_of(pwm)
 {
   static constexpr enumerator_info<pwm> info[] = {
       {pwm::svpwm, "svpwm", {"SVPWM", "SVPWM"}},
