@@ -263,7 +263,7 @@ consteval declaration<T> param(std::string_view name,
       EMB_PANIC("the enumeration does not label a value between the bounds");
     }
   }
-  if (opts.expose && (opts.label.en.empty() || opts.label.ru.empty())) {
+  if (opts.expose && !i18n::is_complete(opts.label)) {
     EMB_PANIC("an exposed parameter needs a label in each language");
   }
   if (!opts.unit.empty() && opts.unit == unit_symbol_of<T>()) {

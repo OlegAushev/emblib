@@ -49,6 +49,8 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `invclarke_transform`
 - [x] `emb/i18n.hpp`
   - [x] `text`
+  - [x] `language`, `languages`
+  - [x] `is_complete`
 - [x] `emb/math.hpp` — только подключает заголовки `emb/math/`, сущностей нет
 - [x] `emb/math/angle.hpp`
   - [x] `to_rad`, `to_deg`, `to_eradps`, `to_rpm`

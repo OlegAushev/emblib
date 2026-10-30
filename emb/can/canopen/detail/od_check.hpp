@@ -60,10 +60,7 @@ constexpr void append_value(std::string& out, std::int64_t value)
 // gives it must be.
 constexpr bool is_empty(od_object_info const& info)
 {
-  return info.path.empty()
-      && info.label.en.empty()
-      && info.label.ru.empty()
-      && info.unit.empty();
+  return info.path.empty() && info.label == i18n::text{} && info.unit.empty();
 }
 
 // Returns the info of `row`: the one its binding gives, if any, or else its
@@ -358,12 +355,14 @@ constexpr bool is_verbatim_text(std::string_view text)
 // (`is_verbatim_text`).
 constexpr std::string_view label_error(i18n::text const& label)
 {
-  if (label.en.empty() || label.ru.empty()) {
+  if (!i18n::is_complete(label)) {
     return "the label must not be empty in any language";
   }
-  if (!is_verbatim_text(label.en) || !is_verbatim_text(label.ru)) {
-    return "the label must be UTF-8 without quotation marks, backslashes or "
-           "control characters";
+  for (auto const& language : i18n::languages) {
+    if (!is_verbatim_text(label.*language.member)) {
+      return "the label must be UTF-8 without quotation marks, backslashes or "
+             "control characters";
+    }
   }
   return {};
 }
@@ -514,13 +513,12 @@ constexpr std::string value_table_error(std::span<od_value_info const> values)
       if (other.name == info.name) {
         return values_name(other.value, info.value) + " have the same name";
       }
-      if (other.label.en == info.label.en) {
-        return values_name(other.value, info.value)
-             + " have the same label in English";
-      }
-      if (other.label.ru == info.label.ru) {
-        return values_name(other.value, info.value)
-             + " have the same label in Russian";
+      for (auto const& language : i18n::languages) {
+        if (other.label.*language.member == info.label.*language.member) {
+          return values_name(other.value, info.value)
+               + " have the same label in "
+               + std::string{language.name};
+        }
       }
     }
   }

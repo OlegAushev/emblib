@@ -7,6 +7,8 @@
 
 #include "../types.hpp"
 
+#include <emb/i18n.hpp>
+
 namespace emb {
 namespace can {
 namespace canopen {
@@ -94,16 +96,12 @@ constexpr std::string pdo_check(Rows const& rows)
            + signal_name(bits.start)
            + " is a counter and takes one to eight bits";
     }
-    if (counter
-        && (!row.name.empty()
-            || !row.label.en.empty()
-            || !row.label.ru.empty())) {
+    if (counter && (!row.name.empty() || row.label != i18n::text{})) {
       return "pdo: "
            + signal_name(bits.start)
            + " is a counter and has no name or label";
     }
-    if (!counter
-        && (row.name.empty() || row.label.en.empty() || row.label.ru.empty())) {
+    if (!counter && (row.name.empty() || !i18n::is_complete(row.label))) {
       return "pdo: " + signal_name(bits.start) + " needs a name and a label";
     }
   }
