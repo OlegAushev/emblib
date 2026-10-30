@@ -138,12 +138,13 @@ namespace detail {
 // steps of type `Raw`, the raw value, where `Step` is a ratio type, such as
 // `std::ratio`, giving the physical value of one step. E.g. with a `Step` of
 // `std::ratio<1, 10000>`, a physical value of 1.0 is stored as 10000. `Q` is
-// a wrapper (`some_wrapper`) of a floating-point type, e.g. `units::quantity`
-// or `clamped` with floating-point bounds, such as `signed_pu_f32`; an
-// arithmetic type such as `float` is not. `scaled` is trivially copyable and
-// has the size and alignment of `Raw`, and its object representation is that
-// of the raw value, so it can stand in for a `Raw` member of a structure that
-// is converted to and from bytes, e.g. by `std::bit_cast`.
+// a scalar wrapper (`scalar_wrapper`) of a floating-point type, e.g.
+// `units::quantity` or `clamped` with floating-point bounds, such as
+// `signed_pu_f32`; an arithmetic type such as `float` is not. `scaled` is
+// trivially copyable and has the size and alignment of `Raw`, and its object
+// representation is that of the raw value, so it can stand in for a `Raw`
+// member of a structure that is converted to and from bytes, e.g. by
+// `std::bit_cast`.
 //
 // A default-constructed `scaled` has a raw value of zero. Constructing a
 // `scaled` from a quantity, or assigning a quantity to it, converts the
@@ -161,7 +162,7 @@ namespace detail {
 // converts a quantity to a raw value is ill-formed if `Raw` is not a signed
 // or unsigned integer type, or if it is an unsigned type at least as wide as
 // `long long`, such as `std::uint64_t`.
-template<std::integral Raw, some_wrapper Q, some_ratio Step>
+template<std::integral Raw, scalar_wrapper Q, some_ratio Step>
   requires std::floating_point<unwrapped_t<Q>>
 class scaled {
 public:
@@ -209,7 +210,7 @@ private:
 // ratios of equal value give the same type even if they are distinct types,
 // e.g. `std::ratio<3, 30>` and `std::ratio<1, 10>`. For any other `Step`, this
 // holds only if `Step::type` is in lowest terms.
-template<std::integral Raw, some_wrapper Q, some_ratio Step>
+template<std::integral Raw, scalar_wrapper Q, some_ratio Step>
   requires std::floating_point<unwrapped_t<Q>>
 using scaled = detail::scaled<Raw, Q, typename Step::type>;
 

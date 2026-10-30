@@ -16,11 +16,11 @@ namespace can {
 namespace canopen {
 
 // The concept `wraps_od_scalar<T>` is satisfied if and only if `T` is a
-// wrapper (`some_wrapper`) of a scalar that satisfies `od_scalar`, e.g.
+// scalar wrapper (`scalar_wrapper`) of a type that satisfies `od_scalar`, e.g.
 // `emb::units::quantity` or `emb::clamped` of a `float`. A new wrapper needs
 // no change here.
 template<typename T>
-concept wraps_od_scalar = some_wrapper<T> && od_scalar<unwrapped_t<T>>;
+concept wraps_od_scalar = scalar_wrapper<T> && od_scalar<unwrapped_t<T>>;
 
 // The concept `od_enumeration<T>` is satisfied if and only if `T` is an
 // enumeration whose values travel as their carrier, `emb::enum_carrier32_t`:

@@ -73,7 +73,7 @@ private:
 // enumeration that labels its values: `enum_info_of` called unqualified with
 // a value of `E` returns `std::span<enumerator_info<E> const>`, the info of
 // its enumerators. An enumeration opts in as a wrapper does for `value_of`
-// (see `some_wrapper`): by declaring a `consteval` overload of `enum_info_of`
+// (see `scalar_wrapper`): by declaring a `consteval` overload of `enum_info_of`
 // that argument-dependent lookup finds, in the namespace of the enumeration.
 // Code that reads the table takes it from `emb::enum_info_of<E>()`, which
 // checks it.
