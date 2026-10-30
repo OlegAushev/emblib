@@ -170,8 +170,8 @@ static_assert(emb::units::tags::degree_celsius::symbol.ru == "\u00B0C");
 struct untitled_unit {};
 static_assert(
     !emb::unit_with_symbol<emb::units::quantity<float, untitled_unit>>);
-static_assert(emb::unit_symbol_of<emb::units::quantity<float, untitled_unit>>()
-              == text{});
+static_assert(
+    emb::unit_symbol_of<emb::units::quantity<float, untitled_unit>>().empty());
 
 // A tag whose symbol is in one language, a std::string_view, as before the
 // symbols took one in each, leaves its unit without one too.

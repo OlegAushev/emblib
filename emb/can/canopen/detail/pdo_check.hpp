@@ -96,7 +96,7 @@ constexpr std::string pdo_check(Rows const& rows)
            + signal_name(bits.start)
            + " is a counter and takes one to eight bits";
     }
-    if (counter && (!row.name.empty() || row.label != i18n::text{})) {
+    if (counter && (!row.name.empty() || !row.label.empty())) {
       return "pdo: "
            + signal_name(bits.start)
            + " is a counter and has no name or label";

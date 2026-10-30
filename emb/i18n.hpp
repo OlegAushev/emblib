@@ -18,6 +18,14 @@ struct text {
   std::string_view en;
   std::string_view ru;
 
+  // Whether the text is empty in each language, as `text{}` is, e.g. the
+  // symbol of the unit of a type that names none. A text empty in only some
+  // of the languages is neither empty nor complete (`is_complete`).
+  [[nodiscard]] constexpr bool empty() const
+  {
+    return *this == text{};
+  }
+
   friend constexpr bool operator==(text const&, text const&) = default;
 };
 

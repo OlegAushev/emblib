@@ -270,16 +270,15 @@ consteval declaration<T> param(std::string_view name,
   if (opts.expose && !i18n::is_complete(opts.label)) {
     EMB_PANIC("an exposed parameter needs a label in each language");
   }
-  if (opts.unit != i18n::text{} && opts.unit == emb::unit_symbol_of<T>()) {
+  if (!opts.unit.empty() && opts.unit == emb::unit_symbol_of<T>()) {
     EMB_PANIC("the unit only repeats the symbol of the type");
   }
-  if (opts.unit != i18n::text{}
+  if (!opts.unit.empty()
       && (kind == scalar_kind::boolean || some_enum_value<T>)) {
     EMB_PANIC("a bool or an enumeration takes no unit");
   }
-  auto const unit =
-      opts.unit == i18n::text{} ? emb::unit_symbol_of<T>() : opts.unit;
-  if (unit != i18n::text{} && !i18n::is_complete(unit)) {
+  auto const unit = opts.unit.empty() ? emb::unit_symbol_of<T>() : opts.unit;
+  if (!unit.empty() && !i18n::is_complete(unit)) {
     EMB_PANIC("the unit needs a symbol in each language");
   }
 

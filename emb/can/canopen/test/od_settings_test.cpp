@@ -288,12 +288,12 @@ static_assert(bind<bridge::param<motor_p>>().layout[1].access == od_access::rw);
 // A record is named as its parameter: by the parameter's name and label.
 static_assert(bind<bridge::param<motor_p>>().info.path == "motor.p");
 static_assert(bind<bridge::param<motor_p>>().info.label == motor_p.label);
-static_assert(bind<bridge::param<motor_p>>().info.unit == emb::i18n::text{});
+static_assert(bind<bridge::param<motor_p>>().info.unit.empty());
 
 // The record's unit is the parameter's: the symbol of its type, or the unit
 // that replaces it.
 static_assert(bind<bridge::param<drive_freq>>().unit == hertz);
-static_assert(bind<bridge::param<motor_p>>().unit == emb::i18n::text{});
+static_assert(bind<bridge::param<motor_p>>().unit.empty());
 static_assert(bind<bridge::param<drive_slope>>().unit == rpm_per_second);
 static_assert(!bind<bridge::param<drive_freq, actual_hz>>().diagnosed);
 static_assert(!bind<bridge::param<drive_slope, actual_rpm>>().diagnosed);

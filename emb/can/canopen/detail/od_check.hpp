@@ -60,9 +60,7 @@ constexpr void append_value(std::string& out, std::int64_t value)
 // gives it must be.
 constexpr bool is_empty(od_object_info const& info)
 {
-  return info.path.empty()
-      && info.label == i18n::text{}
-      && info.unit == i18n::text{};
+  return info.path.empty() && info.label.empty() && info.unit.empty();
 }
 
 // Returns the info of `row`: the one its binding gives, if any, or else its
@@ -79,7 +77,7 @@ template<typename Ctx>
 constexpr i18n::text const& unit_of(od_row<Ctx> const& row)
 {
   auto const& unit = info_of(row).unit;
-  return unit == i18n::text{} ? row.binding.unit : unit;
+  return unit.empty() ? row.binding.unit : unit;
 }
 
 // Renders a row as "3100h:00 drive.phase_swap", or as "3100h:00" if it has no
@@ -374,7 +372,7 @@ constexpr std::string_view label_error(i18n::text const& label)
 // (`is_verbatim_text`). No unit, `i18n::text{}`, breaks none.
 constexpr std::string_view unit_error(i18n::text const& unit)
 {
-  if (unit == i18n::text{}) return {};
+  if (unit.empty()) return {};
   if (!i18n::is_complete(unit)) {
     return "the unit must not be empty in any language";
   }
@@ -619,7 +617,7 @@ constexpr std::string check_field_info(od_row<Ctx> const& row)
     }
     inherited = inherited || info[i].inherits;
   }
-  if (!inherited && unit_of(row) != i18n::text{}) {
+  if (!inherited && !unit_of(row).empty()) {
     return row_error(row,
                      "a record without a member that inherits its value has "
                      "no unit");
@@ -815,7 +813,7 @@ constexpr std::string check_unit(od_row<Ctx> const& row)
   auto const& binding = row.binding;
   auto const& unit = unit_of(row);
 
-  if (unit == i18n::text{}) return {};
+  if (unit.empty()) return {};
   if (auto const what = unit_error(unit); !what.empty()) {
     return row_error(row, what);
   }
@@ -855,7 +853,7 @@ constexpr std::string check_values(od_row<Ctx> const& row)
                      "a record without a member that inherits its value has "
                      "no table of values");
   }
-  if (unit_of(row) != i18n::text{}) {
+  if (!unit_of(row).empty()) {
     return row_error(row, "values that a table names have no unit");
   }
   if (auto const what = values_fit_error(values, binding.type); !what.empty()) {

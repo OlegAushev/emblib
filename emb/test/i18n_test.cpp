@@ -22,10 +22,12 @@ static_assert(!is_complete({"Voltage", ""}));
 static_assert(!is_complete({"", "Напряжение"}));
 static_assert(!is_complete({}));
 
-// A text empty in each language is `text{}`, which the rules that require
-// no text compare with.
-static_assert(text{"", ""} == text{});
-static_assert(text{"Voltage", ""} != text{});
-static_assert(text{"", "Напряжение"} != text{});
+// A text is empty if it is empty in each language, as `text{}` is; a text
+// empty in only some of them is neither empty nor complete.
+static_assert(text{}.empty());
+static_assert(text{"", ""}.empty());
+static_assert(!text{"Voltage", ""}.empty());
+static_assert(!text{"", "Напряжение"}.empty());
+static_assert(!text{"Voltage", "Напряжение"}.empty());
 
 } // namespace

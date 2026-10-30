@@ -187,7 +187,7 @@ constexpr void put_label(Sink& sink, i18n::text const& label)
 template<typename Sink>
 constexpr void put_unit(Sink& sink, i18n::text const& unit)
 {
-  if (unit != i18n::text{}) put_text(sink, "unit", unit);
+  if (!unit.empty()) put_text(sink, "unit", unit);
 }
 
 // Writes the start of a line of a description: `{"type":"kind"`.

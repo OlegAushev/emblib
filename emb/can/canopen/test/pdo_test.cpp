@@ -539,7 +539,7 @@ static_assert(speed_ref.unit == emb::i18n::text{"rpm", "об/мин"});
 static_assert(speed_ref.scale_num == 1 && speed_ref.scale_den == 1);
 
 inline constexpr auto state = pdo_map<&drive_status::state>;
-static_assert(state.unit == emb::i18n::text{});
+static_assert(state.unit.empty());
 static_assert(state.scale_num == 1 && state.scale_den == 1);
 static_assert(state.value_table.data()
               == detail::od_value_table_of<drive::state>.data());
@@ -555,12 +555,12 @@ static_assert(tilt.max_width == 8);
 static_assert(tilt.lowest_named == -1 && tilt.highest_named == 2);
 
 inline constexpr auto pwm_on = pdo_map<&drive_status::pwm_on>;
-static_assert(pwm_on.unit == emb::i18n::text{} && pwm_on.value_table.empty());
+static_assert(pwm_on.unit.empty() && pwm_on.value_table.empty());
 static_assert(pwm_on.scale_num == 1 && pwm_on.scale_den == 1);
 static_assert(pwm_on.max_width == 1 && pwm_on.takes == nullptr);
 
 inline constexpr auto flags = pdo_map<&status_flags::flags>;
-static_assert(flags.unit == emb::i18n::text{} && flags.value_table.empty());
+static_assert(flags.unit.empty() && flags.value_table.empty());
 static_assert(flags.encoding == pdo_encoding::unsigned_);
 static_assert(flags.max_width == 64 && flags.takes == nullptr);
 
@@ -570,7 +570,7 @@ inline constexpr auto counter = pdo_map_counter<&electrical_status::counter>;
 static_assert(counter.role == pdo_role::counter);
 static_assert(counter.get == pdo_map<&electrical_status::counter>.get);
 static_assert(counter.max_width == 8);
-static_assert(counter.unit == emb::i18n::text{} && counter.value_table.empty());
+static_assert(counter.unit.empty() && counter.value_table.empty());
 
 // -- the rules of the rows of a PDO -------------------------------------------
 

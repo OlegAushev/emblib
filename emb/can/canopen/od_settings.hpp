@@ -209,7 +209,7 @@ consteval bool od_reads_in_unit(i18n::text const& unit)
 {
   using value_type = typename od_read_value<od_result_t<Actual>>::type;
   constexpr auto symbol = emb::unit_symbol_of<value_type>();
-  return symbol == i18n::text{}
+  return symbol.empty()
       || symbol == emb::unit_symbol_of<T>()
       || symbol == unit;
 }

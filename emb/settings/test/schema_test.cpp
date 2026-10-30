@@ -157,8 +157,8 @@ static_assert(drive_runout_speed.label.en == "Runout speed");
 static_assert(drive_runout_speed.label.ru == "Скорость выбега");
 static_assert(drive_runout_speed.unit == i18n::text{"rpm", "об/мин"});
 static_assert(drive_stopping_torque.unit == i18n::text{"pu", "о. е."});
-static_assert(motor_p.unit == i18n::text{});
-static_assert(drive_phase_swap.unit == i18n::text{});
+static_assert(motor_p.unit.empty());
+static_assert(drive_phase_swap.unit.empty());
 
 // A unit replaces the symbol of a type that names none, or one that does not
 // describe the parameter.
@@ -239,7 +239,7 @@ static_assert(model_pwm_mode.desc.id
 static_assert(model_pwm_mode.desc == model_pwm_number.desc);
 static_assert(model_pwm_mode.desc.min == to_cell(std::uint32_t{0}));
 static_assert(model_pwm_mode.desc.max == to_cell(std::uint32_t{2}));
-static_assert(model_pwm_mode.unit == i18n::text{});
+static_assert(model_pwm_mode.unit.empty());
 
 // Bounds narrower than the values labelled, a value between them each, or
 // past a gap in the values labelled.

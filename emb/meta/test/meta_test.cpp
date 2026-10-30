@@ -214,10 +214,10 @@ static_assert(!unit_with_symbol<meters>);
 static_assert(!unit_with_symbol<float>);
 
 static_assert(emb::unit_symbol_of<volts>() == i18n::text{"V", "В"});
-static_assert(emb::unit_symbol_of<one_language_symbol>() == i18n::text{});
-static_assert(emb::unit_symbol_of<former_hook_symbol>() == i18n::text{});
-static_assert(emb::unit_symbol_of<meters>() == i18n::text{});
-static_assert(emb::unit_symbol_of<float>() == i18n::text{});
+static_assert(emb::unit_symbol_of<one_language_symbol>().empty());
+static_assert(emb::unit_symbol_of<former_hook_symbol>().empty());
+static_assert(emb::unit_symbol_of<meters>().empty());
+static_assert(emb::unit_symbol_of<float>().empty());
 
 // -- enumerator info tests --
 

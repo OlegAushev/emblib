@@ -440,7 +440,7 @@ inline constexpr bool od_units_agree = [] {
       emb::unit_symbol_of<typename od_read_value<od_result_t<G>>::type>();
   constexpr auto written =
       emb::unit_symbol_of<typename od_written<od_args_t<S>, Ctx>::type>();
-  return read == i18n::text{} || written == i18n::text{} || read == written;
+  return read.empty() || written.empty() || read == written;
 }();
 
 // Whether the reader `G` and the writer `S` of an rw object, which travel as
@@ -548,7 +548,7 @@ struct rw_binding {
                 .type = od_type_of<od_carrier_t<read_type>>,
                 .read = &od_read_thunk<G, Ctx>,
                 .write = &od_write_thunk<S, Ctx>,
-                .unit = read_unit == i18n::text{}
+                .unit = read_unit.empty()
                           ? emb::unit_symbol_of<written_type>()
                           : read_unit,
                 .value_table = od_value_table_of<read_type>,
