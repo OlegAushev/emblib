@@ -883,7 +883,7 @@ enum class pdo_direction : std::uint8_t { tx, rx };
 // One PDO, as the server sets it up and the description states it.
 struct od_pdo {
   std::string_view name; // "drive_status": the first segment of its paths
-  i18n title;
+  i18n label;
   pdo_direction direction;
   std::size_t number;
   pdo_id cob_id;
@@ -1002,7 +1002,7 @@ struct od_process_data {
   также 080h (SYNC), 100h (TIME) и весь диапазон EMCY 081h–0FFh: Node-ID
   известен только во время работы, поэтому свой EMCY отдельно не выделить.
   Документирующий комментарий говорит, что предикат шире CiA 301.
-- Правила текстов (решение 8): наименование PDO и сигнала — `title_error`,
+- Правила текстов (решение 8): наименование PDO и сигнала — `label_error`,
   единица — `is_verbatim_text`, каждая новая таблица значений —
   `value_table_error` (T49–T51). Одиночные отказы — `EMB_PANIC`, как в
   `node_id` и `enum_info_of`.
@@ -1013,7 +1013,7 @@ struct od_process_data {
 // pdo_layouts.hpp
 inline constexpr auto drive_status_pdo = pdo_of<drive_status_rows>(
     {.name = "drive_status",
-     .title = {"Drive status", "Состояние привода"},
+     .label = {"Drive status", "Состояние привода"},
      .direction = pdo_direction::tx,
      .number = 1, // 2 from commit J
      .cob_id = pdo_id::predefined(),
@@ -1232,7 +1232,7 @@ inline constexpr /* ... */ od_statuses = /* ... */;
   (`od_handlers.hpp`), раскладка и читатели — шаблоны по `Ctx`.
 - Раскладка строится через `emb::trouble::for_each` по списку статусов:
   член id + 1 — `ro`, `uint8`, читает
-  `severity_value_of(Registry.severity(S{}))`, метка — `name` и `title`
+  `severity_value_of(Registry.severity(S{}))`, метка — `name` и `label`
   статуса, таблица — шкала. Член-заглушка на дыре в id читает 0, имя
   `retired_<id>`, наименование «Retired status <id>» / «Снятый статус
   <id>»; имена собираются в статических массивах (шаблон переменной, не
@@ -1392,7 +1392,7 @@ inline constexpr auto& statuses_objects =
 
 inline constexpr auto statuses_pdo = pdo_of<statuses_objects>(
     {.name = "statuses",
-     .title = {"Trouble statuses", "Статусы неисправностей"},
+     .label = {"Trouble statuses", "Статусы неисправностей"},
      .direction = pdo_direction::tx,
      .number = 1,
      .cob_id = pdo_id::predefined(),

@@ -86,7 +86,7 @@ adpt-etk-inverter.
 - **путь** — имя, по которому объект находят хост и диагностика:
   «группа.имя», например `electrical.Vdc`; у параметра настроек — его имя
   в схеме; описание пишет группу и имя двумя ключами, `group` и `name`;
-- **наименование** (`title`) — как объект называется для людей, на
+- **наименование** (`label`) — как объект называется для людей, на
   каждом языке (`emb::i18n`: `en`, `ru`); подпись — другое: слово, которое
   требует команда;
 - **группа** (`od_group`) — объявленный первый сегмент путей и его
@@ -286,7 +286,7 @@ od_write_result (*)(Ctx&, std::uint16_t arg, od_value);  // od_write_fn<Ctx>
 не повторяет.
 
 Значения объекта может назвать таблица значений — массив сведений о
-значениях `od_value_info{value, name, title}` по возрастанию значения.
+значениях `od_value_info{value, name, label}` по возрастанию значения.
 Значение —
 `std::int64_t`, чтобы вместить и `uint32`, и `int32`; имя — сегмент пути
 (T49), по которому значение находит код хоста; наименование — на каждом
@@ -307,7 +307,7 @@ od_write_result (*)(Ctx&, std::uint16_t arg, od_value);  // od_write_fn<Ctx>
 Класс объекта (`od_class`: `about`, `control`, `parameters`, `status`,
 `watch`) строка тоже не называет: его задаёт таблица областей
 `od_area{first, last, class_}`, и индекс строки должен лежать в одной из
-них (T33). Группы объявляет таблица `od_group{name, title}`: имя группы —
+них (T33). Группы объявляет таблица `od_group{name, label}`: имя группы —
 первый сегмент пути её объектов, наименование — то, под чем хост их
 показывает. Обе таблицы приложение передаёт `make_dictionary` вместе со
 строками, и в образ они не попадают:
@@ -413,7 +413,7 @@ inline constexpr pdo_row<drive_command> drive_command_rows[] = {
 | Поле | Что значит |
 |---|---|
 | `bits` | `pdo_bits{start, width}`: первый бит сигнала и ширина; бит i сигнала — бит `start` + i кадра, а кадр — 64-битное число, байт j которого даёт биты 8j…8j + 7 |
-| `name`, `title` | имя и наименование сигнала: имя PDO, которое называет `pdo_of`, строка не повторяет, а единицы у неё нет — её даёт тип члена (раздел 3.11); у счётчика оба пусты |
+| `name`, `label` | имя и наименование сигнала: имя PDO, которое называет `pdo_of`, строка не повторяет, а единицы у неё нет — её даёт тип члена (раздел 3.11); у счётчика оба пусты |
 | `codec` | `pdo_codec<Message>`: кодек члена и то, что о члене скажет описание, — роль, символ единицы, шаг `scale_num` / `scale_den` и таблица значений |
 
 Кодек — значение построителя: `pdo_map<&Message::m>` — член `m`,
@@ -441,7 +441,7 @@ PDO описывает одна константа: описание PDO `od_pdo
 ```cpp
 inline constexpr auto drive_status_pdo = pdo_of<drive_status_rows>(
     {.name = "drive_status",
-     .title = {"Drive status", "Состояние привода"},
+     .label = {"Drive status", "Состояние привода"},
      .direction = pdo_direction::tx,
      .number = 1,
      .cob_id = pdo_id::predefined(),
@@ -451,7 +451,7 @@ inline constexpr auto drive_status_pdo = pdo_of<drive_status_rows>(
 | Поле `od_pdo` | Что значит |
 |---|---|
 | `name` | имя PDO — сегмент по содержимому PDO, а не по слоту, которое хост ставит перед именами его сигналов, `drive_status.state` |
-| `title` | наименование на каждом языке |
+| `label` | наименование на каждом языке |
 | `direction` | `pdo_direction::tx` — TPDO, его шлёт устройство; `rx` — RPDO, его устройство принимает |
 | `number` | номер PDO, номер его слота, с 1 |
 | `cob_id` | `pdo_id::predefined()` — предопределённая форма CiA 301, база + Node-ID, только у PDO 1–4; `pdo_id::custom(id)` — свой COB-ID |
@@ -517,7 +517,7 @@ MPDO в режиме источника несёт вместо сигналов
 Шкала — таблица каждого члена после 00h, и хост показывает степень
 словом.
 
-Имя и наименование члена статуса — `name` и `title` статуса, так что
+Имя и наименование члена статуса — `name` и `label` статуса, так что
 полный путь статуса — путь составного объекта и имя статуса,
 `trouble.statuses.ov_dc`. id — адрес статуса на шине и в словаре, и
 снятый статус оставляет в id дыру, а не сдвигает следующие. На подындекс
@@ -547,7 +547,7 @@ MPDO в режиме источника несёт вместо сигналов
 |---|---|
 | перечисление уровней называет не каждый уровень реестра от 0 или называет другое значение | `the enumeration of the levels of the statuses must label each level of the registry, from 0, and no other value` |
 | id статуса не меньше 254: последний подындекс — FEh | `the ids of the statuses must be below 254: a status takes subindex id + 1, and the last is FEh` |
-| статус не называет `name` или `title` | `each status must state its name and its title, which label its member` |
+| статус не называет `name` или `label` | `each status must state its name and its label, which describe its member` |
 
 `emb::enum_info_of` допускает пропуски значений, а без первой проверки
 член отдал бы степень, которой нет в шкале. Имена и наименования членов
@@ -817,7 +817,7 @@ rw object disagree on the values`. Читатель перечисления и 
    схеме; `catalog` — каталог параметров, то есть имена и флаги `expose`
    всех параметров схемы; `layout` — раскладка для этого типа,
    записываемости и `Actual`; `info` — путь, то есть имя параметра в
-   схеме, и наименование из объявления (`.title`), поэтому строка
+   схеме, и наименование из объявления (`.label`), поэтому строка
    параметра пишет сведения пустыми: `{ключ, {}, param<decl>}`; `unit` —
    единица параметра из объявления: `.unit` или символ его типа;
    `value_table` — у параметра перечисления таблица его энумераторов, которую
@@ -1014,8 +1014,8 @@ dictionary{table};`. `constinit` гарантирует, что вид иниц�
 | T28 | имя группы — не буква, за которой идут буквы, цифры и подчёркивания | `group '1b': the name must be a letter followed by letters, digits or underscores` |
 | T29 | имя группы — имя класса из списка `detail::od_classes` | `group 'watch': named as a class` |
 | T30 | имя группы объявлено второй раз | `group 'a': declared twice` |
-| T31 | наименование группы пусто на одном из языков | `group 'b': the title must not be empty in any language` |
-| T32 | наименование группы — не текст без экранирования (см. ниже) | `group 'b': the title must be UTF-8 without quotation marks, backslashes or control characters` |
+| T31 | наименование группы пусто на одном из языков | `group 'b': the label must not be empty in any language` |
+| T32 | наименование группы — не текст без экранирования (см. ниже) | `group 'b': the label must be UTF-8 without quotation marks, backslashes or control characters` |
 
 Проверки одной строки, по порядку (текст идёт после `od: <строка>: `):
 
@@ -1026,8 +1026,8 @@ dictionary{table};`. `constinit` гарантирует, что вид иниц�
 | T34 | сведения об объекте даёт и строка, и привязка | `the row describes the object, but its binding does too` |
 | T2 | путь — не два сегмента через точку, каждый — буква, за которой идут буквы, цифры и подчёркивания | `the path must be a group and a name, each a letter followed by letters, digits or underscores` |
 | T35 | группа пути не объявлена | `group 'x' is not declared` |
-| T36 | наименование пусто на одном из языков | `the title must not be empty in any language` |
-| T37 | наименование — не текст без экранирования (см. ниже) | `the title must be UTF-8 without quotation marks, backslashes or control characters` |
+| T36 | наименование пусто на одном из языков | `the label must not be empty in any language` |
+| T37 | наименование — не текст без экранирования (см. ниже) | `the label must be UTF-8 without quotation marks, backslashes or control characters` |
 | T39 | единица — не текст без экранирования | `the unit must be UTF-8 without quotation marks, backslashes or control characters` |
 | T40 | единица в сведениях равна единице привязки, символу типа значения | `the unit 'Hz' repeats the symbol of the value's type` |
 | T41 | единица есть у команды, у массива символов или у объекта `boolean` | `a command has no unit` / `an array of characters has no unit` / `a boolean has no unit` |
@@ -1059,7 +1059,7 @@ T3 и T4 проверяют обычную строку, T16–T19 — сост�
 |---|---|---|
 | T43 | имя члена — не буква, за которой идут буквы, цифры и подчёркивания | `member 01h: the name must be a letter followed by letters, digits or underscores` |
 | T44 | у двух членов одно имя | `members 00h and 02h have the same name` |
-| T45 | наименование члена пусто на одном из языков или не текст без экранирования | `member 01h: the title must not be empty in any language` / `member 01h: the title must be UTF-8 …` |
+| T45 | наименование члена пусто на одном из языков или не текст без экранирования | `member 01h: the label must not be empty in any language` / `member 01h: the label must be UTF-8 …` |
 | T48 | подпись у члена, который не команда | `member 02h has a signature but is no command` |
 
 T42, T46 и T47 заменяют защиту T15: тип, который хост видит у члена,
@@ -1094,8 +1094,8 @@ T42, T46 и T47 заменяют защиту T15: тип, который хос
 | # | Ошибка, если | Текст |
 |---|---|---|
 | T49 | имя значения — не буква, за которой идут буквы, цифры и подчёркивания | `value 1: the name must be a letter followed by letters, digits or underscores` |
-| T51 | наименование значения пусто на одном из языков или не текст без экранирования | `value 1: the title must not be empty in any language` / `value 1: the title must be UTF-8 …` |
-| T50 | значения не возрастают строго; у двух значений одно имя или одно наименование на одном языке | `value 0 follows value 1: the values must increase` / `values 0 and 2 have the same name` / `values 0 and 1 have the same title in English` (`in Russian`) |
+| T51 | наименование значения пусто на одном из языков или не текст без экранирования | `value 1: the label must not be empty in any language` / `value 1: the label must be UTF-8 …` |
+| T50 | значения не возрастают строго; у двух значений одно имя или одно наименование на одном языке | `value 0 follows value 1: the values must increase` / `values 0 and 2 have the same name` / `values 0 and 1 have the same label in English` (`in Russian`) |
 
 Таблица одна на объект, но строки и члены могут её делить: таблицы
 различаются адресом, как наборы сведений о членах, а члены записей с
@@ -1171,7 +1171,7 @@ T38, группы без строк. Последний проход отмеч�
 |---|---|---|
 | T56 | имя PDO — не буква, за которой идут буквы, цифры и подчёркивания | `the name must be a letter followed by letters, digits or underscores` |
 | T57 | имя PDO — имя объявленной группы или класса из `detail::od_classes` | `named as a group` / `named as a class` |
-| T58 | наименование PDO пусто на одном из языков или не текст без экранирования | `the title must not be empty in any language` / `the title must be UTF-8 …` |
+| T58 | наименование PDO пусто на одном из языков или не текст без экранирования | `the label must not be empty in any language` / `the label must be UTF-8 …` |
 | T59 | номер не от 1 до 512 — PDO 1400h–15FFh и 1800h–19FFh CiA 301 | `the number must be from 1 to 512` |
 | T60 | предопределённый COB-ID у PDO с номером больше 4 | `the predefined COB-ID exists only for PDOs 1 to 4` |
 | T61 | custom COB-ID не от 001h до 7FFh | `the COB-ID must be from 001h to 7FFh` |
@@ -1184,7 +1184,7 @@ T38, группы без строк. Последний проход отмеч�
 | # | Ошибка, если | Текст |
 |---|---|---|
 | T64 | имя сигнала роли `value` — не буква, за которой идут буквы, цифры и подчёркивания | `the name must be a letter followed by letters, digits or underscores` |
-| T65 | наименование сигнала роли `value` пусто на одном из языков или не текст без экранирования | `the title must not be empty in any language` / `the title must be UTF-8 …` |
+| T65 | наименование сигнала роли `value` пусто на одном из языков или не текст без экранирования | `the label must not be empty in any language` / `the label must be UTF-8 …` |
 | T66 | у двух сигналов PDO одно имя (текст — после `od: <PDO>: `) | `the signal at bit 0 and the signal at bit 16 have the same name` |
 | T67 | единица сигнала — не текст без экранирования | `the unit must be UTF-8 without quotation marks, backslashes or control characters` |
 | T68 | шаг сигнала — не положительная несократимая дробь | `the step must be a positive fraction in its lowest terms` |
@@ -1320,30 +1320,30 @@ JSON на строку. `Rows`, `Areas`, `Groups` и `ProcessData` — те же
 | `type` | Что описывает | Ключи после `type`, по порядку |
 |---|---|---|
 | `header` | заголовок, первая строка | `format` (`emb-canopen-od`), `version` (1), `device`, `fingerprint` |
-| `group` | группу | `name`, `title`, `title_ru` |
-| `value` | значение таблицы значений | `value_table`, `value`, `name`, `title`, `title_ru` |
-| `field` | член раскладки составного объекта | `layout`, `sub`, `name`, `title`, `title_ru`, `datatype`, `access`, `value_table`, `command`, `signature`, `inherits` |
-| `object` | объект | `index`, `sub`, `group`, `name`, `title`, `title_ru`, `class`, `datatype`, `access`, `unit`, `value_table`, `command`, `signature` |
-| `array` | массив | `index`, `group`, `name`, `title`, `title_ru`, `class`, `datatype`, `access`, `unit`, `value_table`, `text` |
-| `record` | составной объект | `index`, `group`, `name`, `title`, `title_ru`, `class`, `datatype`, `unit`, `value_table`, `layout` |
-| `pdo` | PDO | `name`, `title`, `title_ru`, `direction` (`tx`/`rx`), `number`, `mapping` (`signals`/`sam`), `cob_id` или `cob_base`, `period_ms` у TPDO или `timeout_ms` у RPDO |
-| `signal` | сигнал PDO | `pdo`, `start`, `width`, `role` (`value`/`counter`), `name`, `title`, `title_ru`, `encoding` (`unsigned`/`signed`), `scale`, `unit`, `value_table` |
+| `group` | группу | `name`, `label_en`, `label_ru` |
+| `value` | значение таблицы значений | `value_table`, `value`, `name`, `label_en`, `label_ru` |
+| `field` | член раскладки составного объекта | `layout`, `sub`, `name`, `label_en`, `label_ru`, `datatype`, `access`, `value_table`, `command`, `signature`, `inherits` |
+| `object` | объект | `index`, `sub`, `group`, `name`, `label_en`, `label_ru`, `class`, `datatype`, `access`, `unit`, `value_table`, `command`, `signature` |
+| `array` | массив | `index`, `group`, `name`, `label_en`, `label_ru`, `class`, `datatype`, `access`, `unit`, `value_table`, `text` |
+| `record` | составной объект | `index`, `group`, `name`, `label_en`, `label_ru`, `class`, `datatype`, `unit`, `value_table`, `layout` |
+| `pdo` | PDO | `name`, `label_en`, `label_ru`, `direction` (`tx`/`rx`), `number`, `mapping` (`signals`/`sam`), `cob_id` или `cob_base`, `period_ms` у TPDO или `timeout_ms` у RPDO |
+| `signal` | сигнал PDO | `pdo`, `start`, `width`, `role` (`value`/`counter`), `name`, `label_en`, `label_ru`, `encoding` (`unsigned`/`signed`), `scale`, `unit`, `value_table` |
 
 Заголовок etk и строки каждого вида:
 
 ```
 {"type":"header","format":"emb-canopen-od","version":1,"device":"ADPT-ETK Inverter","fingerprint":"0x…"}
-{"type":"group","name":"electrical","title":"Electrical quantities","title_ru":"Электрические величины"}
-{"type":"field","layout":0,"sub":"0x01","name":"requested","title":"Requested value","title_ru":"Запрошенное значение","access":"rw","inherits":true}
-{"type":"array","index":"0x2001","group":"device","name":"name","title":"Device name","title_ru":"Наименование устройства","class":"about","datatype":"uint8","access":"const","text":true}
-{"type":"object","index":"0x2101","sub":"0x01","group":"settings","name":"save_all_parameters","title":"Save all parameters","title_ru":"Сохранить все параметры","class":"control","datatype":"uint32","access":"wo","command":true,"signature":"0x65766173"}
-{"type":"record","index":"0x3161","group":"motor","name":"R","title":"Stator resistance","title_ru":"Сопротивление статора","class":"parameters","datatype":"float32","unit":"Ω","layout":0}
-{"type":"field","layout":2,"sub":"0x17","name":"ov_dc","title":"DC overvoltage","title_ru":"Повышенное напряжение DC","datatype":"uint8","access":"ro","value_table":1}
-{"type":"record","index":"0x4000","group":"trouble","name":"statuses","title":"Trouble statuses","title_ru":"Статусы неисправностей","class":"status","layout":2}
-{"type":"object","index":"0x5010","sub":"0x01","group":"electrical","name":"Vdc","title":"DC voltage","title_ru":"Напряжение DC","class":"watch","datatype":"float32","access":"ro","unit":"V"}
-{"type":"pdo","name":"statuses","title":"Trouble statuses","title_ru":"Статусы неисправностей","direction":"tx","number":1,"mapping":"sam","cob_base":"0x180","period_ms":10}
-{"type":"pdo","name":"electrical_status","title":"Electrical status","title_ru":"Электрические величины","direction":"tx","number":3,"mapping":"signals","cob_base":"0x380","period_ms":10}
-{"type":"signal","pdo":"electrical_status","start":0,"width":16,"role":"value","name":"dc_voltage","title":"DC voltage","title_ru":"Напряжение DC","encoding":"signed","scale":"1/10","unit":"V"}
+{"type":"group","name":"electrical","label_en":"Electrical quantities","label_ru":"Электрические величины"}
+{"type":"field","layout":0,"sub":"0x01","name":"requested","label_en":"Requested value","label_ru":"Запрошенное значение","access":"rw","inherits":true}
+{"type":"array","index":"0x2001","group":"device","name":"name","label_en":"Device name","label_ru":"Наименование устройства","class":"about","datatype":"uint8","access":"const","text":true}
+{"type":"object","index":"0x2101","sub":"0x01","group":"settings","name":"save_all_parameters","label_en":"Save all parameters","label_ru":"Сохранить все параметры","class":"control","datatype":"uint32","access":"wo","command":true,"signature":"0x65766173"}
+{"type":"record","index":"0x3161","group":"motor","name":"R","label_en":"Stator resistance","label_ru":"Сопротивление статора","class":"parameters","datatype":"float32","unit":"Ω","layout":0}
+{"type":"field","layout":2,"sub":"0x17","name":"ov_dc","label_en":"DC overvoltage","label_ru":"Повышенное напряжение DC","datatype":"uint8","access":"ro","value_table":1}
+{"type":"record","index":"0x4000","group":"trouble","name":"statuses","label_en":"Trouble statuses","label_ru":"Статусы неисправностей","class":"status","layout":2}
+{"type":"object","index":"0x5010","sub":"0x01","group":"electrical","name":"Vdc","label_en":"DC voltage","label_ru":"Напряжение DC","class":"watch","datatype":"float32","access":"ro","unit":"V"}
+{"type":"pdo","name":"statuses","label_en":"Trouble statuses","label_ru":"Статусы неисправностей","direction":"tx","number":1,"mapping":"sam","cob_base":"0x180","period_ms":10}
+{"type":"pdo","name":"electrical_status","label_en":"Electrical status","label_ru":"Электрические величины","direction":"tx","number":3,"mapping":"signals","cob_base":"0x380","period_ms":10}
+{"type":"signal","pdo":"electrical_status","start":0,"width":16,"role":"value","name":"dc_voltage","label_en":"DC voltage","label_ru":"Напряжение DC","encoding":"signed","scale":"1/10","unit":"V"}
 {"type":"signal","pdo":"electrical_status","start":56,"width":2,"role":"counter","encoding":"unsigned"}
 ```
 
@@ -1400,11 +1400,11 @@ PDO: `pdo` — имя PDO, `start` и `width` — первый бит и шир�
 
 Строка `value` называет одно значение таблицы значений: `value_table`
 — номер таблицы, `value` — значение, `name` — его имя, сегмент пути, по
-которому значение находит код хоста, `title` и `title_ru` — наименования.
+которому значение находит код хоста, `label_en` и `label_ru` — наименования.
 Например, значение политики применения:
 
 ```
-{"type":"value","value_table":0,"value":0,"name":"on_command","title":"On command","title_ru":"По команде"}
+{"type":"value","value_table":0,"value":0,"name":"on_command","label_en":"On command","label_ru":"По команде"}
 ```
 
 Ключ `value_table` у члена, объекта, массива, составного объекта или
@@ -1730,7 +1730,7 @@ Ninja и Makefile.
 | две строки не отображают один член: их `get` разные | `pdo: the signal at bit 1 maps the member of the signal at bit 0` |
 | счётчик не больше одного | `pdo: a PDO has at most one counter` |
 | счётчик — от 1 до 8 битов, как у `rolling_counter` и `node_link` | `pdo: the signal at bit 48 is a counter and takes one to eight bits` |
-| имя и наименования на каждом языке есть ровно у роли `value` | `pdo: the signal at bit 56 is a counter and has no name or title`, `pdo: the signal at bit 8 needs a name and a title` |
+| имя и наименования на каждом языке есть ровно у роли `value` | `pdo: the signal at bit 56 is a counter and has no name or label`, `pdo: the signal at bit 8 needs a name and a label` |
 
 Правила проверяются по строкам в их порядке, а у строки — сверху вниз
 по таблице; перекрытие и общий член строка сверяет с каждой строкой до
@@ -2114,7 +2114,7 @@ inline constexpr auto& statuses_objects =
 
 inline constexpr auto statuses_pdo = pdo_of<statuses_objects>(
     {.name = "statuses",
-     .title = {"Trouble statuses", "Статусы неисправностей"},
+     .label = {"Trouble statuses", "Статусы неисправностей"},
      .direction = pdo_direction::tx,
      .number = 1,
      .cob_id = pdo_id::predefined(),
@@ -2485,7 +2485,7 @@ SDO. Цена — запрос на символ вместо запроса н�
 отпечатка, ни в коде хоста. Для людей у объекта отдельное наименование на
 каждом языке: интерфейс хоста русский, и наименования только по-английски
 смешали бы языки в одном окне. Тип наименования, `emb::i18n`, — тот же,
-что у наименований статусов неисправностей etk (`title`): описание
+что у наименований статусов неисправностей etk (`label`): описание
 показывает их наименованиями членов составного объекта статусов (раздел
 1.11).
 
@@ -2516,7 +2516,7 @@ PDO из `pdo`, и `--check` их сверял. Исходник пишет пу
 массив строк — раскладка, которую можно отдать и другому PDO. Строке
 словаря группа по-прежнему нужна: в таблице строки разных групп, а все
 сигналы PDO — его. С 30 октября имя и наименование сигнала — поля самой
-строки, `pdo_row{bits, name, title, codec}`: отдельный тип для них,
+строки, `pdo_row{bits, name, label, codec}`: отдельный тип для них,
 `od_signal_label`, ушёл вместе со словом «метка» (ниже).
 
 Отвергнуто: класс в строке со сверкой с областью — колонка, которая
@@ -2542,6 +2542,20 @@ PDO из `pdo`, и `--check` их сверял. Исходник пишет пу
 `od_value_entry` — «запись» в словаре уже значит `od_entry`, объект, как
 его обслуживает сервер; `od_signal_info` — сведения о сигнале и так
 держит `od_signal`.
+
+Освободившееся слово в тот же день получило наименование: поле `title` у
+групп, PDO, сигналов, сведений, энумераторов, статусов и объявлений
+параметров стало `label`, а ключи описания `title` и `title_ru` — `label_en`
+и `label_ru`. «Метка» в emblib теперь значит то же, что в интерфейсах и в
+описаниях устройств, а `title` — заголовок окна или раздела — словарю не
+нужен. Английский получил суффикс, как русский: `emb::i18n` держит языки
+равноправными членами `en` и `ru`, и хост берёт `label_<язык>` без
+особого случая, а третий язык станет `label_de` рядом с ними, не рядом с
+голым ключом. Глагол остался: перечисление размечает свои значения
+(`emb::enum_with_info`, `od_labelled`, `labelled_between`), а статус —
+свой член. Отвергнуто: `display_name` — точно, но длинно и в коде, и в
+каждой строке описания; ключ `label` для английского без суффикса — хосту
+нужен был бы особый случай.
 
 ### 6.10. Описание строит компилятор, а лежит оно в ELF
 

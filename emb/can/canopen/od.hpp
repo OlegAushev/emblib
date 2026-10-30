@@ -205,30 +205,30 @@ struct od_area {
 };
 
 // The struct `od_group` declares a group of objects: its name, which the path
-// of each of its objects starts with, and its title for people. Every group a
+// of each of its objects starts with, and its label for people. Every group a
 // dictionary declares has objects, and none is named as a class.
 struct od_group {
   std::string_view name;
-  i18n title;
+  i18n label;
 };
 
 // The struct `od_object_info` describes an object for a host: `path`,
 // "group.name", the group and the name by which a host finds it, which the
-// description states apart, its title for people, in each language, and the
+// description states apart, its label for people, in each language, and the
 // symbol of the unit of its value, empty if it has none. The path and the
-// title are required; `unit` comes last, with a default, as most objects have
+// label are required; `unit` comes last, with a default, as most objects have
 // none. What serves the object does not depend on its info.
 struct od_object_info {
   std::string_view path;
-  i18n title;
+  i18n label;
   std::string_view unit = {};
 };
 
 // The struct `od_value_info` describes, for a host, a value that an object may
 // take: the value, its name, a segment of a path unique in its table, by
-// which code finds the value, and its title, in each language. A table of
+// which code finds the value, and its label, in each language. A table of
 // values names the values of an object in increasing order, and the object
-// takes those values only: a host shows the title of a value in place of the
+// takes those values only: a host shows the label of a value in place of the
 // number and offers the values named when it writes one. A builder makes the
 // table of an object whose value is an enumeration from the info of its
 // enumerators (`emb::enum_info_of`). Like the info of a row, a table exists
@@ -236,7 +236,7 @@ struct od_object_info {
 struct od_value_info {
   std::int64_t value;
   std::string_view name;
-  i18n title;
+  i18n label;
 };
 
 // An object's handlers. `arg` is the argument its row binds, e.g. the index
@@ -274,7 +274,7 @@ struct od_field {
 
 // The struct `od_field_info` describes a member of a record, a field of its
 // layout, for a host: `name`, a segment of a path unique in the layout, the
-// title, in each language, whether the member holds the record's value
+// label, in each language, whether the member holds the record's value
 // (`inherits`), as the requested value of a settings parameter does, and so
 // takes the record's type, unit and table of values, whether it is a command
 // (`command`), with the word that must be written (`signature`), if any, and
@@ -285,7 +285,7 @@ struct od_field {
 // names.
 struct od_field_info {
   std::string_view name;
-  i18n title;
+  i18n label;
   bool inherits = false;
   bool command = false;
   std::optional<std::uint32_t> signature{};
@@ -299,7 +299,7 @@ struct od_field_info {
 // exactly if it is writable, and its reader must return the alternative its
 // type travels as. `catalog` is the index space `arg` selects from, if any.
 // `info` describes the object if the builder knows it, as that of a settings
-// parameter knows its path, the name of the parameter, and its title from the
+// parameter knows its path, the name of the parameter, and its label from the
 // schema; the row then has no info of its own. `unit` is the symbol of the
 // unit of the object's value as the builder knows it: that of the type its
 // handler reads or writes (`emb::unit_symbol_of`), or the unit of a settings

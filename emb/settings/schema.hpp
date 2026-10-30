@@ -92,11 +92,11 @@ struct basic_schema {
 // duration:
 //
 //   inline constexpr auto phase_swap =
-//       param("drive.phase_swap", false, {.title = {"Phase swap", "…"}});
+//       param("drive.phase_swap", false, {.label = {"Phase swap", "…"}});
 //   inline constexpr auto pole_pairs =
 //       param("motor.pole_pairs",
 //             std::int32_t{11},
-//             {.title = {"Pole pairs", "…"}, .min = std::int32_t{1}});
+//             {.label = {"Pole pairs", "…"}, .min = std::int32_t{1}});
 //   inline constexpr auto schema = make_schema(phase_swap, pole_pairs);
 //
 // A parameter that is reached only by index, e.g. by a transport, may be

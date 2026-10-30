@@ -16,18 +16,18 @@ namespace settings = emb::settings;
 inline constexpr auto drive_phase_swap =
     settings::param("drive.phase_swap",
                     false,
-                    {.title = {"Phase swap", "Перестановка фаз"},
+                    {.label = {"Phase swap", "Перестановка фаз"},
                      .apply = settings::apply_policy::on_command});
 inline constexpr auto motor_p =
     settings::param("motor.p",
                     std::int32_t{11},
-                    {.title = {"Pole pairs", "Число пар полюсов"},
+                    {.label = {"Pole pairs", "Число пар полюсов"},
                      .min = std::int32_t{1},
                      .max = std::int32_t{64}});
 inline constexpr auto prod_serial = settings::param(
     "prod.serial",
     std::uint32_t{0},
-    {.title = {"Serial number", "Серийный номер"}, .writable = false});
+    {.label = {"Serial number", "Серийный номер"}, .writable = false});
 
 inline constexpr auto schema =
     settings::make_schema(drive_phase_swap, motor_p, prod_serial);

@@ -159,9 +159,9 @@ inline constexpr od_field<ctx> record_layout[] = {
 // The info of the members of `record_layout`; the value is the record's.
 inline constexpr od_field_info record_field_info[] = {
     {.name = "highest_subindex",
-     .title = {"Highest subindex", "Наибольший подындекс"}},
-    {.name = "value", .title = {"Value", "Значение"}, .inherits = true},
-    {.name = "arg", .title = {"Argument", "Аргумент"}},
+     .label = {"Highest subindex", "Наибольший подындекс"}},
+    {.name = "value", .label = {"Value", "Значение"}, .inherits = true},
+    {.name = "arg", .label = {"Argument", "Аргумент"}},
 };
 
 consteval od_binding<ctx> record(std::uint16_t arg)
@@ -710,7 +710,7 @@ static_assert(bind<od_ro_array<gears>>().type == od_data_type::uint32);
 static_assert(bind<od_ro<read_gear>>().value_table.size() == 3);
 static_assert(bind<od_ro<read_gear>>().value_table[2].value == 4);
 static_assert(bind<od_ro<read_gear>>().value_table[2].name == "reverse");
-static_assert(bind<od_ro<read_gear>>().value_table[2].title
+static_assert(bind<od_ro<read_gear>>().value_table[2].label
               == emb::i18n{"Reverse", "Назад"});
 static_assert(bind<od_ro<read_tilt>>().value_table[0].value == -1);
 static_assert(bind<od_wo<write_gear>>().value_table.size() == 3);
@@ -848,8 +848,8 @@ inline constexpr od_group groups[] = {
     {"b", {"Group B", "Группа Б"}},
 };
 
-// The info of an object of the tables below, titled after its path.
-consteval od_object_info titled(std::string_view path)
+// The info of an object of the tables below, labelled after its path.
+consteval od_object_info labelled(std::string_view path)
 {
   return {path, {path, path}};
 }
@@ -863,11 +863,11 @@ consteval bool test_dictionary()
                                            .arg = 7};
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x5000, 0x02}, titled("b.value"),                          od_ro<read_value>},
-      {{0x2100, 0x01}, titled("a.command"),                        od_exec<command>},
-      {{0x5000, 0x01}, titled("b.checked"),                        od_ro<read_checked>},
+      {{0x5000, 0x02}, labelled("b.value"),                          od_ro<read_value>},
+      {{0x2100, 0x01}, labelled("a.command"),                        od_exec<command>},
+      {{0x5000, 0x01}, labelled("b.checked"),                        od_ro<read_checked>},
       {{0x3000, 0x01}, {"a.freq", {"Frequency", "Частота"}},       od_rw<read_freq, write_value>},
-      {{0x3000, 0x02}, titled("a.raw"),                            by_hand},
+      {{0x3000, 0x02}, labelled("a.raw"),                            by_hand},
   };
   // clang-format on
 
@@ -925,9 +925,9 @@ consteval bool test_records()
 {
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x4001, 0x00}, titled("a.second"), record(2)},
-      {{0x5000, 0x01}, titled("b.value"),  od_ro<read_value>},
-      {{0x4000, 0x00}, titled("a.first"),  record(1)},
+      {{0x4001, 0x00}, labelled("a.second"), record(2)},
+      {{0x5000, 0x01}, labelled("b.value"),  od_ro<read_value>},
+      {{0x4000, 0x00}, labelled("a.first"),  record(1)},
   };
   // clang-format on
 
@@ -978,10 +978,10 @@ consteval bool test_arrays()
 {
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x2001, 0x00}, titled("a.word"),    od_string<word>},
-      {{0x5001, 0x00}, titled("b.samples"), od_ro_array<samples>},
-      {{0x5000, 0x01}, titled("b.value"),   od_ro<read_value>},
-      {{0x2000, 0x00}, titled("a.text"),    od_string<text>},
+      {{0x2001, 0x00}, labelled("a.word"),    od_string<word>},
+      {{0x5001, 0x00}, labelled("b.samples"), od_ro_array<samples>},
+      {{0x5000, 0x01}, labelled("b.value"),   od_ro<read_value>},
+      {{0x2000, 0x00}, labelled("a.text"),    od_string<text>},
   };
   // clang-format on
 
@@ -1084,38 +1084,38 @@ inline constexpr od_row<ctx> reordered[] = {described[3],
 // The body of the description of `described`: groups by their first rows,
 // the members of the layout, then the rows by key, each line canonical.
 inline constexpr std::string_view described_body =
-    "{\"type\":\"group\",\"name\":\"a\",\"title\":\"Group A\","
-    "\"title_ru\":\"Группа А\"}\n"
-    "{\"type\":\"group\",\"name\":\"b\",\"title\":\"Group B\","
-    "\"title_ru\":\"Группа Б\"}\n"
+    "{\"type\":\"group\",\"name\":\"a\",\"label_en\":\"Group A\","
+    "\"label_ru\":\"Группа А\"}\n"
+    "{\"type\":\"group\",\"name\":\"b\",\"label_en\":\"Group B\","
+    "\"label_ru\":\"Группа Б\"}\n"
     "{\"type\":\"field\",\"layout\":0,\"sub\":\"0x00\","
-    "\"name\":\"highest_subindex\",\"title\":\"Highest subindex\","
-    "\"title_ru\":\"Наибольший подындекс\",\"datatype\":\"uint8\","
+    "\"name\":\"highest_subindex\",\"label_en\":\"Highest subindex\","
+    "\"label_ru\":\"Наибольший подындекс\",\"datatype\":\"uint8\","
     "\"access\":\"const\"}\n"
     "{\"type\":\"field\",\"layout\":0,\"sub\":\"0x01\",\"name\":\"value\","
-    "\"title\":\"Value\",\"title_ru\":\"Значение\",\"access\":\"rw\","
+    "\"label_en\":\"Value\",\"label_ru\":\"Значение\",\"access\":\"rw\","
     "\"inherits\":true}\n"
     "{\"type\":\"field\",\"layout\":0,\"sub\":\"0x02\",\"name\":\"arg\","
-    "\"title\":\"Argument\",\"title_ru\":\"Аргумент\",\"datatype\":\"uint16\","
-    "\"access\":\"ro\"}\n"
+    "\"label_en\":\"Argument\",\"label_ru\":\"Аргумент\","
+    "\"datatype\":\"uint16\",\"access\":\"ro\"}\n"
     "{\"type\":\"array\",\"index\":\"0x2000\",\"group\":\"a\","
-    "\"name\":\"text\",\"title\":\"Text\",\"title_ru\":\"Текст\","
+    "\"name\":\"text\",\"label_en\":\"Text\",\"label_ru\":\"Текст\","
     "\"class\":\"about\",\"datatype\":\"uint8\",\"access\":\"const\","
     "\"text\":true}\n"
     "{\"type\":\"object\",\"index\":\"0x2100\",\"sub\":\"0x01\","
-    "\"group\":\"a\",\"name\":\"save\",\"title\":\"Save\","
-    "\"title_ru\":\"Сохранить\",\"class\":\"control\",\"datatype\":\"uint32\","
+    "\"group\":\"a\",\"name\":\"save\",\"label_en\":\"Save\","
+    "\"label_ru\":\"Сохранить\",\"class\":\"control\",\"datatype\":\"uint32\","
     "\"access\":\"wo\",\"command\":true,\"signature\":\"0x65766173\"}\n"
     "{\"type\":\"record\",\"index\":\"0x4000\",\"group\":\"a\","
-    "\"name\":\"first\",\"title\":\"First\",\"title_ru\":\"Первый\","
+    "\"name\":\"first\",\"label_en\":\"First\",\"label_ru\":\"Первый\","
     "\"class\":\"parameters\",\"datatype\":\"float32\",\"unit\":\"A\","
     "\"layout\":0}\n"
     "{\"type\":\"object\",\"index\":\"0x5000\",\"sub\":\"0x01\","
-    "\"group\":\"b\",\"name\":\"value\",\"title\":\"Value\","
-    "\"title_ru\":\"Значение\",\"class\":\"watch\",\"datatype\":\"float32\","
+    "\"group\":\"b\",\"name\":\"value\",\"label_en\":\"Value\","
+    "\"label_ru\":\"Значение\",\"class\":\"watch\",\"datatype\":\"float32\","
     "\"access\":\"ro\",\"unit\":\"V\"}\n"
     "{\"type\":\"array\",\"index\":\"0x5001\",\"group\":\"b\","
-    "\"name\":\"rates\",\"title\":\"Rates\",\"title_ru\":\"Частоты\","
+    "\"name\":\"rates\",\"label_en\":\"Rates\",\"label_ru\":\"Частоты\","
     "\"class\":\"watch\",\"datatype\":\"float32\",\"access\":\"ro\","
     "\"unit\":\"Hz\"}\n";
 
@@ -1154,8 +1154,8 @@ static_assert(
     as_view(make_description<reordered, areas, regrouped, "Test device">())
     == as_view(description));
 
-// The fingerprint follows the paths, the classes and the titles: a row
-// renamed, retitled or in an area of another class changes it.
+// The fingerprint follows the paths, the classes and the labels: a row
+// renamed, relabelled or in an area of another class changes it.
 inline constexpr od_area reclassed[] = {
     {0x2000, 0x20FF, od_class::about},
     {0x2100, 0x2FFF, od_class::control},
@@ -1163,7 +1163,7 @@ inline constexpr od_area reclassed[] = {
     {0x5000, 0x5FFF, od_class::watch},
 };
 
-inline constexpr od_row<ctx> retitled[] = {
+inline constexpr od_row<ctx> relabelled[] = {
     described[0],
     described[1],
     described[2],
@@ -1173,8 +1173,9 @@ inline constexpr od_row<ctx> retitled[] = {
 static_assert(
     make_dictionary<described, reclassed, described_groups>().fingerprint()
     != fnv1a(described_body));
-static_assert(make_dictionary<retitled, areas, described_groups>().fingerprint()
-              != fnv1a(described_body));
+static_assert(
+    make_dictionary<relabelled, areas, described_groups>().fingerprint()
+    != fnv1a(described_body));
 
 // -- Description: layouts --
 
@@ -1201,20 +1202,20 @@ inline constexpr od_field<ctx> byte_layout[] = {
 
 inline constexpr od_field_info byte_field_info[] = {
     {.name = "highest_subindex",
-     .title = {"Highest subindex", "Наибольший подындекс"}},
-    {.name = "value", .title = {"Value", "Значение"}, .inherits = true},
+     .label = {"Highest subindex", "Наибольший подындекс"}},
+    {.name = "value", .label = {"Value", "Значение"}, .inherits = true},
     {.name = "save",
-     .title = {"Save", "Сохранить"},
+     .label = {"Save", "Сохранить"},
      .command = true,
      .signature = od_save_signature},
 };
 
 // clang-format off
 inline constexpr od_row<ctx> layouts[] = {
-    {{0x4002, 0x00}, titled("a.byte"),   {.access = od_access::ro, .type = uint8, .layout = byte_layout, .field_info = byte_field_info}},
-    {{0x4001, 0x00}, titled("a.other"),  {.access = od_access::ro, .type = float32, .arg = 2, .layout = other_layout, .field_info = record_field_info}},
-    {{0x4000, 0x00}, titled("a.first"),  record(1)},
-    {{0x5000, 0x01}, titled("b.value"),  od_ro<read_value>},
+    {{0x4002, 0x00}, labelled("a.byte"),   {.access = od_access::ro, .type = uint8, .layout = byte_layout, .field_info = byte_field_info}},
+    {{0x4001, 0x00}, labelled("a.other"),  {.access = od_access::ro, .type = float32, .arg = 2, .layout = other_layout, .field_info = record_field_info}},
+    {{0x4000, 0x00}, labelled("a.first"),  record(1)},
+    {{0x5000, 0x01}, labelled("b.value"),  od_ro<read_value>},
 };
 // clang-format on
 
@@ -1241,26 +1242,26 @@ static_assert(occurrences(as_view(described_layouts), "\"layout\":1}") == 1);
 // the command shows its signature.
 static_assert(as_view(described_layouts)
                   .contains("{\"type\":\"field\",\"layout\":1,\"sub\":\"0x00\","
-                            "\"name\":\"highest_subindex\",\"title\":"
-                            "\"Highest subindex\",\"title_ru\":\"Наибольший "
+                            "\"name\":\"highest_subindex\",\"label_en\":"
+                            "\"Highest subindex\",\"label_ru\":\"Наибольший "
                             "подындекс\",\"datatype\":\"uint8\",\"access\":"
                             "\"const\"}\n"));
 static_assert(as_view(described_layouts)
                   .contains("{\"type\":\"field\",\"layout\":1,\"sub\":\"0x01\","
-                            "\"name\":\"value\",\"title\":\"Value\","
-                            "\"title_ru\":\"Значение\",\"access\":\"const\","
+                            "\"name\":\"value\",\"label_en\":\"Value\","
+                            "\"label_ru\":\"Значение\",\"access\":\"const\","
                             "\"inherits\":true}\n"));
 static_assert(
     as_view(described_layouts)
         .contains("{\"type\":\"field\",\"layout\":1,\"sub\":\"0x02\","
-                  "\"name\":\"save\",\"title\":\"Save\","
-                  "\"title_ru\":\"Сохранить\",\"datatype\":\"uint32\","
+                  "\"name\":\"save\",\"label_en\":\"Save\","
+                  "\"label_ru\":\"Сохранить\",\"datatype\":\"uint32\","
                   "\"access\":\"wo\",\"command\":true,"
                   "\"signature\":\"0x65766173\"}\n"));
 static_assert(as_view(described_layouts)
                   .contains("{\"type\":\"record\",\"index\":\"0x4002\","
                             "\"group\":\"a\",\"name\":\"byte\","
-                            "\"title\":\"a.byte\",\"title_ru\":\"a.byte\","
+                            "\"label_en\":\"a.byte\",\"label_ru\":\"a.byte\","
                             "\"class\":\"parameters\",\"datatype\":\"uint8\","
                             "\"layout\":1}\n"));
 
@@ -1306,10 +1307,10 @@ inline constexpr od_field<ctx> mode_layout[] = {
 
 inline constexpr od_field_info mode_field_info[] = {
     {.name = "highest_subindex",
-     .title = {"Highest subindex", "Наибольший подындекс"}},
-    {.name = "value", .title = {"Value", "Значение"}, .inherits = true},
+     .label = {"Highest subindex", "Наибольший подындекс"}},
+    {.name = "value", .label = {"Value", "Значение"}, .inherits = true},
     {.name = "policy",
-     .title = {"Policy", "Политика"},
+     .label = {"Policy", "Политика"},
      .value_table = policies},
 };
 
@@ -1337,9 +1338,9 @@ inline constexpr od_binding<ctx> mode_array{.access = od_access::ro,
 // The rows of named values, not in the order of their keys.
 // clang-format off
 inline constexpr od_row<ctx> valued[] = {
-    {{0x5002, 0x01}, titled("b.level"), level_object},
-    {{0x5003, 0x00}, titled("b.modes"), mode_array},
-    {{0x4003, 0x00}, titled("a.mode"),  mode_record()},
+    {{0x5002, 0x01}, labelled("b.level"), level_object},
+    {{0x5003, 0x00}, labelled("b.modes"), mode_array},
+    {{0x4003, 0x00}, labelled("a.mode"),  mode_record()},
 };
 // clang-format on
 
@@ -1351,44 +1352,44 @@ inline constexpr od_row<ctx> revalued[] = {valued[2], valued[0], valued[1]};
 // `modes` and `same_modes` are two arrays; then the members and the rows,
 // each that has a table referring to it.
 inline constexpr std::string_view valued_body =
-    "{\"type\":\"group\",\"name\":\"a\",\"title\":\"Group A\","
-    "\"title_ru\":\"Группа А\"}\n"
-    "{\"type\":\"group\",\"name\":\"b\",\"title\":\"Group B\","
-    "\"title_ru\":\"Группа Б\"}\n"
+    "{\"type\":\"group\",\"name\":\"a\",\"label_en\":\"Group A\","
+    "\"label_ru\":\"Группа А\"}\n"
+    "{\"type\":\"group\",\"name\":\"b\",\"label_en\":\"Group B\","
+    "\"label_ru\":\"Группа Б\"}\n"
     "{\"type\":\"value\",\"value_table\":0,\"value\":0,"
-    "\"name\":\"on_command\",\"title\":\"On command\","
-    "\"title_ru\":\"По команде\"}\n"
+    "\"name\":\"on_command\",\"label_en\":\"On command\","
+    "\"label_ru\":\"По команде\"}\n"
     "{\"type\":\"value\",\"value_table\":0,\"value\":1,"
-    "\"name\":\"on_restart\",\"title\":\"On restart\","
-    "\"title_ru\":\"После перезапуска\"}\n"
+    "\"name\":\"on_restart\",\"label_en\":\"On restart\","
+    "\"label_ru\":\"После перезапуска\"}\n"
     "{\"type\":\"value\",\"value_table\":1,\"value\":0,\"name\":\"off\","
-    "\"title\":\"Off\",\"title_ru\":\"Выкл.\"}\n"
+    "\"label_en\":\"Off\",\"label_ru\":\"Выкл.\"}\n"
     "{\"type\":\"value\",\"value_table\":1,\"value\":1,\"name\":\"on\","
-    "\"title\":\"On\",\"title_ru\":\"Вкл.\"}\n"
+    "\"label_en\":\"On\",\"label_ru\":\"Вкл.\"}\n"
     "{\"type\":\"value\",\"value_table\":2,\"value\":-1,\"name\":\"low\","
-    "\"title\":\"Low\",\"title_ru\":\"Низкий\"}\n"
+    "\"label_en\":\"Low\",\"label_ru\":\"Низкий\"}\n"
     "{\"type\":\"value\",\"value_table\":2,\"value\":300,"
-    "\"name\":\"high\",\"title\":\"High\",\"title_ru\":\"Высокий\"}\n"
+    "\"name\":\"high\",\"label_en\":\"High\",\"label_ru\":\"Высокий\"}\n"
     "{\"type\":\"field\",\"layout\":0,\"sub\":\"0x00\","
-    "\"name\":\"highest_subindex\",\"title\":\"Highest subindex\","
-    "\"title_ru\":\"Наибольший подындекс\",\"datatype\":\"uint8\","
+    "\"name\":\"highest_subindex\",\"label_en\":\"Highest subindex\","
+    "\"label_ru\":\"Наибольший подындекс\",\"datatype\":\"uint8\","
     "\"access\":\"const\"}\n"
     "{\"type\":\"field\",\"layout\":0,\"sub\":\"0x01\",\"name\":\"value\","
-    "\"title\":\"Value\",\"title_ru\":\"Значение\",\"access\":\"ro\","
+    "\"label_en\":\"Value\",\"label_ru\":\"Значение\",\"access\":\"ro\","
     "\"inherits\":true}\n"
     "{\"type\":\"field\",\"layout\":0,\"sub\":\"0x02\",\"name\":\"policy\","
-    "\"title\":\"Policy\",\"title_ru\":\"Политика\",\"datatype\":\"uint8\","
+    "\"label_en\":\"Policy\",\"label_ru\":\"Политика\",\"datatype\":\"uint8\","
     "\"access\":\"const\",\"value_table\":0}\n"
     "{\"type\":\"record\",\"index\":\"0x4003\",\"group\":\"a\","
-    "\"name\":\"mode\",\"title\":\"a.mode\",\"title_ru\":\"a.mode\","
+    "\"name\":\"mode\",\"label_en\":\"a.mode\",\"label_ru\":\"a.mode\","
     "\"class\":\"parameters\",\"datatype\":\"uint8\",\"value_table\":1,"
     "\"layout\":0}\n"
     "{\"type\":\"object\",\"index\":\"0x5002\",\"sub\":\"0x01\","
-    "\"group\":\"b\",\"name\":\"level\",\"title\":\"b.level\","
-    "\"title_ru\":\"b.level\",\"class\":\"watch\",\"datatype\":\"int16\","
+    "\"group\":\"b\",\"name\":\"level\",\"label_en\":\"b.level\","
+    "\"label_ru\":\"b.level\",\"class\":\"watch\",\"datatype\":\"int16\","
     "\"access\":\"ro\",\"value_table\":2}\n"
     "{\"type\":\"array\",\"index\":\"0x5003\",\"group\":\"b\","
-    "\"name\":\"modes\",\"title\":\"b.modes\",\"title_ru\":\"b.modes\","
+    "\"name\":\"modes\",\"label_en\":\"b.modes\",\"label_ru\":\"b.modes\","
     "\"class\":\"watch\",\"datatype\":\"uint8\",\"access\":\"ro\","
     "\"value_table\":1}\n";
 
@@ -1416,15 +1417,15 @@ inline constexpr od_field_info same_mode_field_info[] = {mode_field_info[0],
 inline constexpr od_field_info other_mode_field_info[] = {
     mode_field_info[0],
     mode_field_info[1],
-    {.name = "policy", .title = {"Policy", "Политика"}, .value_table = modes},
+    {.name = "policy", .label = {"Policy", "Политика"}, .value_table = modes},
 };
 
 // clang-format off
 inline constexpr od_row<ctx> policy_layouts[] = {
-    {{0x4003, 0x00}, titled("a.mode"),  mode_record()},
-    {{0x4004, 0x00}, titled("a.same"),  mode_record(same_mode_field_info)},
-    {{0x4005, 0x00}, titled("a.other"), mode_record(other_mode_field_info)},
-    {{0x5002, 0x01}, titled("b.level"), level_object},
+    {{0x4003, 0x00}, labelled("a.mode"),  mode_record()},
+    {{0x4004, 0x00}, labelled("a.same"),  mode_record(same_mode_field_info)},
+    {{0x4005, 0x00}, labelled("a.other"), mode_record(other_mode_field_info)},
+    {{0x5002, 0x01}, labelled("b.level"), level_object},
 };
 // clang-format on
 
@@ -1440,8 +1441,8 @@ static_assert(occurrences(as_view(described_policies), "\"layout\":1}") == 1);
 static_assert(occurrences(as_view(described_policies), "\"type\":\"value\"")
               == 6);
 static_assert(as_view(described_policies)
-                  .contains("\"name\":\"policy\",\"title\":\"Policy\","
-                            "\"title_ru\":\"Политика\",\"datatype\":\"uint8\","
+                  .contains("\"name\":\"policy\",\"label_en\":\"Policy\","
+                            "\"label_ru\":\"Политика\",\"datatype\":\"uint8\","
                             "\"access\":\"const\",\"value_table\":1}\n"));
 static_assert(occurrences(as_view(described_policies), "\"value_table\":1,")
               == 5);
@@ -1450,8 +1451,8 @@ static_assert(occurrences(as_view(described_policies), "\"value_table\":1,")
 // enumerators.
 // clang-format off
 inline constexpr od_row<ctx> geared[] = {
-    {{0x5002, 0x01}, titled("b.gear"), od_ro<read_gear>},
-    {{0x4003, 0x00}, titled("a.mode"), mode_record()},
+    {{0x5002, 0x01}, labelled("b.gear"), od_ro<read_gear>},
+    {{0x4003, 0x00}, labelled("a.mode"), mode_record()},
 };
 // clang-format on
 
@@ -1460,11 +1461,11 @@ constexpr auto described_gears =
 
 static_assert(as_view(described_gears)
                   .contains("{\"type\":\"value\",\"value_table\":2,\"value\":4,"
-                            "\"name\":\"reverse\",\"title\":\"Reverse\","
-                            "\"title_ru\":\"Назад\"}\n"));
+                            "\"name\":\"reverse\",\"label_en\":\"Reverse\","
+                            "\"label_ru\":\"Назад\"}\n"));
 static_assert(as_view(described_gears)
                   .ends_with("\"group\":\"b\",\"name\":\"gear\","
-                             "\"title\":\"b.gear\",\"title_ru\":\"b.gear\","
+                             "\"label_en\":\"b.gear\",\"label_ru\":\"b.gear\","
                              "\"class\":\"watch\",\"datatype\":\"uint32\","
                              "\"access\":\"ro\",\"value_table\":2}\n"));
 
@@ -1487,8 +1488,8 @@ consteval std::string check_valid()
 {
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x2100, 0x01}, titled("a.command"), od_exec<command>},
-      {{0x5000, 0x01}, titled("a.value"),   od_ro<read_value>},
+      {{0x2100, 0x01}, labelled("a.command"), od_exec<command>},
+      {{0x5000, 0x01}, labelled("a.value"),   od_ro<read_value>},
   };
   // clang-format on
   return detail::od_check(rows, areas, group_a);
@@ -1500,7 +1501,7 @@ consteval std::string check_reserved_index()
 {
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x0FFF, 0x01}, titled("a.c"), od_ro<read_value>},
+      {{0x0FFF, 0x01}, labelled("a.c"), od_ro<read_value>},
   };
   // clang-format on
   return detail::od_check(rows, areas, group_a);
@@ -1511,7 +1512,7 @@ static_assert(check_reserved_index()
 
 consteval std::string check_one(od_binding<ctx> binding)
 {
-  od_row<ctx> const rows[] = {{{0x2000, 0x01}, titled("a.c"), binding}};
+  od_row<ctx> const rows[] = {{{0x2000, 0x01}, labelled("a.c"), binding}};
   return detail::od_check(rows, areas, group_a);
 }
 
@@ -1529,7 +1530,7 @@ consteval std::string check_outside()
 {
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x6000, 0x01}, titled("a.c"), od_ro<read_value>},
+      {{0x6000, 0x01}, labelled("a.c"), od_ro<read_value>},
   };
   // clang-format on
   return detail::od_check(rows, areas, group_a);
@@ -1550,60 +1551,60 @@ inline constexpr std::string_view not_a_path =
     ": the path must be a group and a name, each a letter followed by "
     "letters, digits or underscores";
 
-static_assert(check_info(titled("a.c")).empty());
-static_assert(check_info(titled("a.Vdc_2")).empty());
-static_assert(check_info(titled("a"))
+static_assert(check_info(labelled("a.c")).empty());
+static_assert(check_info(labelled("a.Vdc_2")).empty());
+static_assert(check_info(labelled("a"))
               == "od: 2000h:01 a" + std::string{not_a_path});
-static_assert(check_info(titled("a.c.d"))
+static_assert(check_info(labelled("a.c.d"))
               == "od: 2000h:01 a.c.d" + std::string{not_a_path});
-static_assert(check_info(titled("a.1c"))
+static_assert(check_info(labelled("a.1c"))
               == "od: 2000h:01 a.1c" + std::string{not_a_path});
-static_assert(check_info(titled("a._c"))
+static_assert(check_info(labelled("a._c"))
               == "od: 2000h:01 a._c" + std::string{not_a_path});
-static_assert(check_info(titled("a.c-d"))
+static_assert(check_info(labelled("a.c-d"))
               == "od: 2000h:01 a.c-d" + std::string{not_a_path});
-static_assert(check_info(titled(".c"))
+static_assert(check_info(labelled(".c"))
               == "od: 2000h:01 .c" + std::string{not_a_path});
-static_assert(check_info(titled("a/c"))
+static_assert(check_info(labelled("a/c"))
               == "od: 2000h:01 a/c" + std::string{not_a_path});
 static_assert(check_info({}) == "od: 2000h:01" + std::string{not_a_path});
-static_assert(check_info(titled("x.c"))
+static_assert(check_info(labelled("x.c"))
               == "od: 2000h:01 x.c: group 'x' is not declared");
 
-// Checks the title `en`, `ru` of an object at 2000h:01.
-consteval std::string check_title(std::string_view en, std::string_view ru)
+// Checks the label `en`, `ru` of an object at 2000h:01.
+consteval std::string check_label(std::string_view en, std::string_view ru)
 {
   return check_info({"a.c", {en, ru}});
 }
 
 inline constexpr std::string_view not_verbatim =
-    "od: 2000h:01 a.c: the title must be UTF-8 without quotation marks, "
+    "od: 2000h:01 a.c: the label must be UTF-8 without quotation marks, "
     "backslashes or control characters";
 
-static_assert(check_title("Motor temperature, °C", "Температура, °C").empty());
-static_assert(check_title("Resistance, Ω", "Сопротивление, Ω").empty());
-static_assert(check_title("Smile \U0001F600", "Улыбка \U0001F600").empty());
-static_assert(check_title("C", "")
-              == "od: 2000h:01 a.c: the title must not be empty in any "
+static_assert(check_label("Motor temperature, °C", "Температура, °C").empty());
+static_assert(check_label("Resistance, Ω", "Сопротивление, Ω").empty());
+static_assert(check_label("Smile \U0001F600", "Улыбка \U0001F600").empty());
+static_assert(check_label("C", "")
+              == "od: 2000h:01 a.c: the label must not be empty in any "
                  "language");
-static_assert(check_title("", "Ц")
-              == "od: 2000h:01 a.c: the title must not be empty in any "
+static_assert(check_label("", "Ц")
+              == "od: 2000h:01 a.c: the label must not be empty in any "
                  "language");
-static_assert(check_title("The \"c\"", "Ц") == not_verbatim);
-static_assert(check_title("C", "Ц\\") == not_verbatim);
-static_assert(check_title("C\n", "Ц") == not_verbatim);
-static_assert(check_title("C\x7F", "Ц") == not_verbatim);
+static_assert(check_label("The \"c\"", "Ц") == not_verbatim);
+static_assert(check_label("C", "Ц\\") == not_verbatim);
+static_assert(check_label("C\n", "Ц") == not_verbatim);
+static_assert(check_label("C\x7F", "Ц") == not_verbatim);
 // U+0085, a control character of Latin-1.
-static_assert(check_title("C\xC2\x85", "Ц") == not_verbatim);
+static_assert(check_label("C\xC2\x85", "Ц") == not_verbatim);
 // UTF-8 cut short, a stray continuation byte, a byte that never starts a
 // character, the overlong form of '/', a surrogate and a code point past
 // U+10FFFF.
-static_assert(check_title("C\xC3", "Ц") == not_verbatim);
-static_assert(check_title("C\x80", "Ц") == not_verbatim);
-static_assert(check_title("C\xFF", "Ц") == not_verbatim);
-static_assert(check_title("C\xC0\xAF", "Ц") == not_verbatim);
-static_assert(check_title("C\xED\xA0\x80", "Ц") == not_verbatim);
-static_assert(check_title("C\xF4\x90\x80\x80", "Ц") == not_verbatim);
+static_assert(check_label("C\xC3", "Ц") == not_verbatim);
+static_assert(check_label("C\x80", "Ц") == not_verbatim);
+static_assert(check_label("C\xFF", "Ц") == not_verbatim);
+static_assert(check_label("C\xC0\xAF", "Ц") == not_verbatim);
+static_assert(check_label("C\xED\xA0\x80", "Ц") == not_verbatim);
+static_assert(check_label("C\xF4\x90\x80\x80", "Ц") == not_verbatim);
 
 // A binding that gives the info of its object, as that of a settings
 // parameter does.
@@ -1671,7 +1672,7 @@ template<std::size_t A>
 consteval std::string check_in(od_area const (&in)[A])
 {
   od_row<ctx> const rows[] = {
-      {{0x2000, 0x01}, titled("a.c"), od_ro<read_value>}};
+      {{0x2000, 0x01}, labelled("a.c"), od_ro<read_value>}};
   return detail::od_check(rows, in, group_a);
 }
 
@@ -1707,7 +1708,7 @@ static_assert(check_adjacent().empty());
 consteval std::string check_group(od_group group)
 {
   od_row<ctx> const rows[] = {
-      {{0x2000, 0x01}, titled("a.c"), od_ro<read_value>}};
+      {{0x2000, 0x01}, labelled("a.c"), od_ro<read_value>}};
   od_group const with[] = {group_a[0], group};
   return detail::od_check(rows, areas, with);
 }
@@ -1731,17 +1732,17 @@ static_assert(check_group({"status", {"Status", "Статус"}})
 static_assert(check_group({"a", {"A again", "Снова А"}})
               == "od: group 'a': declared twice");
 static_assert(check_group({"b", {"B", ""}})
-              == "od: group 'b': the title must not be empty in any "
+              == "od: group 'b': the label must not be empty in any "
                  "language");
 static_assert(check_group({"b", {"B\t", "Б"}})
-              == "od: group 'b': the title must be UTF-8 without quotation "
+              == "od: group 'b': the label must be UTF-8 without quotation "
                  "marks, backslashes or control characters");
 static_assert(check_group({"b", {"B", "Б"}}) == "od: group 'b': has no row");
 
 // A record is checked field by field, at the row that names it.
 consteval std::string check_record(od_binding<ctx> binding)
 {
-  od_row<ctx> const rows[] = {{{0x2000, 0x00}, titled("a.c"), binding}};
+  od_row<ctx> const rows[] = {{{0x2000, 0x00}, labelled("a.c"), binding}};
   return detail::od_check(rows, areas, group_a);
 }
 
@@ -1763,7 +1764,7 @@ static_assert(check_record({.access = od_access::ro,
                             .layout = unread_layout})
               == "od: 2000h:00 a.c: member 01h readable but has no reader");
 
-// The members of a record are described: info for each, named, titled,
+// The members of a record are described: info for each, named, labelled,
 // a member that inherits the value of the record's type, and a signature for
 // a command only.
 consteval std::string check_member_info(std::span<od_field_info const> info,
@@ -1793,45 +1794,45 @@ static_assert(check_member_info(record_field_info).empty());
 static_assert(check_member_info(std::span{record_field_info}.first(2))
               == "od: 2000h:00 a.c: the record has 3 members but describes 2");
 static_assert(check_member_info(replaced(1,
-                                         {.name = "2nd", .title = {"V", "З"}}))
+                                         {.name = "2nd", .label = {"V", "З"}}))
               == "od: 2000h:00 a.c: member 01h: the name must be a letter "
                  "followed by letters, digits or underscores");
 static_assert(check_member_info(replaced(2,
                                          {.name = "highest_subindex",
-                                          .title = {"A", "А"}}))
+                                          .label = {"A", "А"}}))
               == "od: 2000h:00 a.c: members 00h and 02h have the same name");
 static_assert(check_member_info(replaced(1,
-                                         {.name = "value", .title = {"V", ""}}))
-              == "od: 2000h:00 a.c: member 01h: the title must not be empty in "
+                                         {.name = "value", .label = {"V", ""}}))
+              == "od: 2000h:00 a.c: member 01h: the label must not be empty in "
                  "any language");
 static_assert(
-    check_member_info(replaced(1, {.name = "value", .title = {"V\"", "З"}}))
-    == "od: 2000h:00 a.c: member 01h: the title must be UTF-8 without "
+    check_member_info(replaced(1, {.name = "value", .label = {"V\"", "З"}}))
+    == "od: 2000h:00 a.c: member 01h: the label must be UTF-8 without "
        "quotation marks, backslashes or control characters");
 static_assert(check_member_info(replaced(2,
                                          {.name = "arg",
-                                          .title = {"A", "А"},
+                                          .label = {"A", "А"},
                                           .signature = od_save_signature}))
               == "od: 2000h:00 a.c: member 02h has a signature but is no "
                  "command");
 static_assert(check_member_info(replaced(
                   2,
-                  {.name = "arg", .title = {"A", "А"}, .inherits = true}))
+                  {.name = "arg", .label = {"A", "А"}, .inherits = true}))
               == "od: 2000h:00 a.c: member 02h inherits the record's type, "
                  "float32, but is uint16");
 // A record whose value no member holds has no unit, nor does its line state
 // a type.
 static_assert(
-    check_member_info(replaced(1, {.name = "value", .title = {"V", "З"}}), "A")
+    check_member_info(replaced(1, {.name = "value", .label = {"V", "З"}}), "A")
     == "od: 2000h:00 a.c: a record without a member that inherits "
        "its value has no unit");
 
 inline constexpr std::array<od_field_info, 3> plain_field_info =
-    replaced(1, {.name = "value", .title = {"Value", "Значение"}});
+    replaced(1, {.name = "value", .label = {"Value", "Значение"}});
 
 inline constexpr od_row<ctx> plain[] = {
     {{0x4000, 0x00},
-     titled("a.plain"),
+     labelled("a.plain"),
      {.access = od_access::ro,
       .type = float32,
       .layout = record_layout,
@@ -1841,9 +1842,9 @@ inline constexpr od_row<ctx> plain[] = {
 static_assert(
     as_view(make_description<plain, areas, group_a, "Test device">())
         .ends_with("{\"type\":\"record\",\"index\":\"0x4000\","
-                   "\"group\":\"a\",\"name\":\"plain\",\"title\":\"a.plain\","
-                   "\"title_ru\":\"a.plain\",\"class\":\"parameters\","
-                   "\"layout\":0}\n"));
+                   "\"group\":\"a\",\"name\":\"plain\","
+                   "\"label_en\":\"a.plain\",\"label_ru\":\"a.plain\","
+                   "\"class\":\"parameters\",\"layout\":0}\n"));
 
 // An array is checked at the row that names it, its elements as one object.
 static_assert(check_record(od_string<text>).empty());
@@ -1884,34 +1885,34 @@ consteval std::string check_two(od_row<ctx> first, od_row<ctx> second)
   return detail::od_check(rows, areas, group_a);
 }
 
-static_assert(check_two({{0x2000, 0x01}, titled("a.c"), od_ro<read_value>},
-                        {{0x2000, 0x01}, titled("a.d"), od_ro<read_u8>})
+static_assert(check_two({{0x2000, 0x01}, labelled("a.c"), od_ro<read_value>},
+                        {{0x2000, 0x01}, labelled("a.d"), od_ro<read_u8>})
               == "od: 2000h:01 a.c and 2000h:01 a.d have the same key");
-static_assert(check_two({{0x2000, 0x01}, titled("a.c"), od_ro<read_value>},
-                        {{0x2000, 0x02}, titled("a.c"), od_ro<read_u8>})
+static_assert(check_two({{0x2000, 0x01}, labelled("a.c"), od_ro<read_value>},
+                        {{0x2000, 0x02}, labelled("a.c"), od_ro<read_u8>})
               == "od: 2000h:01 a.c and 2000h:02 a.c have the same path");
 static_assert(
-    check_two({{0x2000, 0x00}, titled("a.c"), record(1)},
-              {{0x2000, 0x05}, titled("a.d"), od_ro<read_u8>})
+    check_two({{0x2000, 0x00}, labelled("a.c"), record(1)},
+              {{0x2000, 0x05}, labelled("a.d"), od_ro<read_u8>})
     == "od: 2000h:00 a.c and 2000h:05 a.d share the index of a record");
-static_assert(check_two({{0x2000, 0x00}, titled("a.c"), record(1)},
-                        {{0x2001, 0x00}, titled("a.d"), record(1)})
+static_assert(check_two({{0x2000, 0x00}, labelled("a.c"), record(1)},
+                        {{0x2001, 0x00}, labelled("a.d"), record(1)})
                   .empty());
 static_assert(
-    check_two({{0x2000, 0x00}, titled("a.c"), od_string<text>},
-              {{0x2000, 0x05}, titled("a.d"), od_ro<read_u8>})
+    check_two({{0x2000, 0x00}, labelled("a.c"), od_string<text>},
+              {{0x2000, 0x05}, labelled("a.d"), od_ro<read_u8>})
     == "od: 2000h:00 a.c and 2000h:05 a.d share the index of an array");
 static_assert(
-    check_two({{0x2000, 0x05}, titled("a.d"), od_ro<read_u8>},
-              {{0x2000, 0x00}, titled("a.c"), od_ro<read_value>})
+    check_two({{0x2000, 0x05}, labelled("a.d"), od_ro<read_u8>},
+              {{0x2000, 0x00}, labelled("a.c"), od_ro<read_value>})
     == "od: 2000h:05 a.d and 2000h:00 a.c share an index whose subindex 00 "
        "the dictionary serves");
 // Checks two objects that differ in key and path, 2000h:01 a.c and
 // 2000h:02 a.d.
 consteval std::string check_pair(od_binding<ctx> first, od_binding<ctx> second)
 {
-  return check_two({{0x2000, 0x01}, titled("a.c"), first},
-                   {{0x2000, 0x02}, titled("a.d"), second});
+  return check_two({{0x2000, 0x01}, labelled("a.c"), first},
+                   {{0x2000, 0x02}, labelled("a.d"), second});
 }
 
 consteval od_binding<ctx> reading(std::uint16_t arg)
@@ -1947,8 +1948,8 @@ consteval od_binding<ctx> diagnosed()
           .diagnosed = true};
 }
 
-static_assert(check_two({{0x0FFF, 0x01}, titled("a.c"), od_ro<read_value>},
-                        {{0x2000, 0x02}, titled("a.d"), diagnosed()})
+static_assert(check_two({{0x0FFF, 0x01}, labelled("a.c"), od_ro<read_value>},
+                        {{0x2000, 0x02}, labelled("a.d"), diagnosed()})
                   .empty());
 
 // -- Checks: values --
@@ -2013,7 +2014,7 @@ static_assert(check_table(raw_reader(uint8), modes, "V")
 // The info of `byte_layout` whose member 01h holds no value of the record.
 inline constexpr od_field_info byte_plain_field_info[] = {
     byte_field_info[0],
-    {.name = "value", .title = {"Value", "Значение"}},
+    {.name = "value", .label = {"Value", "Значение"}},
     byte_field_info[2],
 };
 
@@ -2031,12 +2032,12 @@ static_assert(check_table({.access = od_access::ro,
 // type that takes a table, each a value of the type.
 static_assert(check_member_info(replaced(2,
                                          {.name = "arg",
-                                          .title = {"A", "А"},
+                                          .label = {"A", "А"},
                                           .value_table = modes}))
                   .empty());
 static_assert(check_member_info(replaced(1,
                                          {.name = "value",
-                                          .title = {"V", "З"},
+                                          .label = {"V", "З"},
                                           .inherits = true,
                                           .value_table = modes}))
               == "od: 2000h:00 a.c: member 01h inherits the record's values "
@@ -2044,18 +2045,18 @@ static_assert(check_member_info(replaced(1,
 static_assert(
     check_member_info(
         replaced(1,
-                 {.name = "value", .title = {"V", "З"}, .value_table = modes}))
+                 {.name = "value", .label = {"V", "З"}, .value_table = modes}))
     == "od: 2000h:00 a.c: member 01h: a float32 has no table of values");
 static_assert(check_member_info(replaced(2,
                                          {.name = "arg",
-                                          .title = {"A", "А"},
+                                          .label = {"A", "А"},
                                           .command = true,
                                           .value_table = modes}))
               == "od: 2000h:00 a.c: member 02h: a command has no table of "
                  "values");
 static_assert(check_member_info(replaced(
                   2,
-                  {.name = "arg", .title = {"A", "А"}, .value_table = levels}))
+                  {.name = "arg", .label = {"A", "А"}, .value_table = levels}))
               == "od: 2000h:00 a.c: member 02h: value -1 does not fit uint16");
 
 // Checks the values `first` and `second` of a uint8 object at 2000h:00.
@@ -2066,10 +2067,10 @@ consteval std::string check_two_values(od_value_info first,
   return check_table(raw_reader(uint8), values);
 }
 
-// A table names each value as a segment of a path, titles it, and holds the
+// A table names each value as a segment of a path, labels it, and holds the
 // values in increasing order, no two with the same name or with the same
-// title in one language: two titles "A (001)" are a copy not corrected. The
-// title of a value may be the same in both languages, as an abbreviation is.
+// label in one language: two labels "A (001)" are a copy not corrected. The
+// label of a value may be the same in both languages, as an abbreviation is.
 
 static_assert(check_two_values({0, "svpwm", {"SVPWM", "SVPWM"}},
                                {1, "dpwm0", {"DPWM0", "DPWM0"}})
@@ -2078,10 +2079,10 @@ static_assert(check_two_values({0, "a", {"A", "А"}}, {1, "2nd", {"B", "Б"}})
               == "od: 2000h:00 a.c: value 1: the name must be a letter "
                  "followed by letters, digits or underscores");
 static_assert(check_two_values({0, "a", {"A", "А"}}, {1, "b", {"B", ""}})
-              == "od: 2000h:00 a.c: value 1: the title must not be empty in "
+              == "od: 2000h:00 a.c: value 1: the label must not be empty in "
                  "any language");
 static_assert(check_two_values({0, "a", {"A", "А"}}, {1, "b", {"B\"", "Б"}})
-              == "od: 2000h:00 a.c: value 1: the title must be UTF-8 without "
+              == "od: 2000h:00 a.c: value 1: the label must be UTF-8 without "
                  "quotation marks, backslashes or control characters");
 static_assert(check_two_values({1, "b", {"B", "Б"}}, {0, "a", {"A", "А"}})
               == "od: 2000h:00 a.c: value 0 follows value 1: the values must "
@@ -2093,10 +2094,10 @@ static_assert(check_two_values({0, "a", {"A", "А"}}, {1, "a", {"B", "Б"}})
               == "od: 2000h:00 a.c: values 0 and 1 have the same name");
 static_assert(check_two_values({0, "a", {"A (001)", "А (001)"}},
                                {1, "ab", {"A (001)", "АБ (011)"}})
-              == "od: 2000h:00 a.c: values 0 and 1 have the same title in "
+              == "od: 2000h:00 a.c: values 0 and 1 have the same label in "
                  "English");
 static_assert(check_two_values({0, "a", {"A", "Один"}}, {1, "b", {"B", "Один"}})
-              == "od: 2000h:00 a.c: values 0 and 1 have the same title in "
+              == "od: 2000h:00 a.c: values 0 and 1 have the same label in "
                  "Russian");
 
 // A table is checked once, and a broken one is reported at the first row that
@@ -2107,7 +2108,7 @@ inline constexpr od_field_info misnamed_field_info[] = {
     mode_field_info[0],
     mode_field_info[1],
     {.name = "policy",
-     .title = {"Policy", "Политика"},
+     .label = {"Policy", "Политика"},
      .value_table = misnamed},
 };
 
@@ -2115,8 +2116,8 @@ consteval std::string check_shared_tables()
 {
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x5002, 0x01}, titled("a.first"),  {.access = od_access::ro, .type = int16, .read = &read_level, .value_table = misnamed}},
-      {{0x5002, 0x02}, titled("a.second"), {.access = od_access::ro, .type = uint8, .read = &read_byte, .value_table = misnamed}},
+      {{0x5002, 0x01}, labelled("a.first"),  {.access = od_access::ro, .type = int16, .read = &read_level, .value_table = misnamed}},
+      {{0x5002, 0x02}, labelled("a.second"), {.access = od_access::ro, .type = uint8, .read = &read_byte, .value_table = misnamed}},
   };
   // clang-format on
   return detail::od_check(rows, areas, group_a);
@@ -2126,8 +2127,8 @@ consteval std::string check_shared_member_tables()
 {
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x4001, 0x00}, titled("a.first"),  mode_record(misnamed_field_info)},
-      {{0x4002, 0x00}, titled("a.second"), mode_record(misnamed_field_info)},
+      {{0x4001, 0x00}, labelled("a.first"),  mode_record(misnamed_field_info)},
+      {{0x4002, 0x00}, labelled("a.second"), mode_record(misnamed_field_info)},
   };
   // clang-format on
   return detail::od_check(rows, areas, group_a);
@@ -2183,14 +2184,14 @@ inline constexpr pdo_row<setpoint> setpoint_rows[] = {
 
 // TPDO2 of the predefined form, and RPDO5 of a custom COB-ID.
 inline constexpr od_pdo report_tpdo{.name = "report",
-                                    .title = {"Report", "Отчёт"},
+                                    .label = {"Report", "Отчёт"},
                                     .direction = pdo_direction::tx,
                                     .number = 2,
                                     .cob_id = pdo_id::predefined(),
                                     .period = 10ms};
 
 inline constexpr od_pdo setpoint_rpdo{.name = "setpoint",
-                                      .title = {"Setpoint", "Уставка"},
+                                      .label = {"Setpoint", "Уставка"},
                                       .direction = pdo_direction::rx,
                                       .number = 5,
                                       .cob_id = pdo_id::custom(0x405),
@@ -2221,80 +2222,80 @@ inline constexpr od_process_data processed{.pdos = processed_pdos};
 // dictionary, the signal of the gear sharing table 2 with b.gear; and after
 // the objects, the TPDO, then the RPDO, each followed by its signals by first
 // bit. The TPDO states the base of its COB-ID, the RPDO its custom COB-ID; a
-// counter has no path or title, a voltage states its step and unit.
+// counter has no path or label, a voltage states its step and unit.
 inline constexpr std::string_view processed_body =
-    "{\"type\":\"group\",\"name\":\"a\",\"title\":\"Group A\","
-    "\"title_ru\":\"Группа А\"}\n"
-    "{\"type\":\"group\",\"name\":\"b\",\"title\":\"Group B\","
-    "\"title_ru\":\"Группа Б\"}\n"
+    "{\"type\":\"group\",\"name\":\"a\",\"label_en\":\"Group A\","
+    "\"label_ru\":\"Группа А\"}\n"
+    "{\"type\":\"group\",\"name\":\"b\",\"label_en\":\"Group B\","
+    "\"label_ru\":\"Группа Б\"}\n"
     "{\"type\":\"value\",\"value_table\":0,\"value\":0,"
-    "\"name\":\"on_command\",\"title\":\"On command\","
-    "\"title_ru\":\"По команде\"}\n"
+    "\"name\":\"on_command\",\"label_en\":\"On command\","
+    "\"label_ru\":\"По команде\"}\n"
     "{\"type\":\"value\",\"value_table\":0,\"value\":1,"
-    "\"name\":\"on_restart\",\"title\":\"On restart\","
-    "\"title_ru\":\"После перезапуска\"}\n"
+    "\"name\":\"on_restart\",\"label_en\":\"On restart\","
+    "\"label_ru\":\"После перезапуска\"}\n"
     "{\"type\":\"value\",\"value_table\":1,\"value\":0,\"name\":\"off\","
-    "\"title\":\"Off\",\"title_ru\":\"Выкл.\"}\n"
+    "\"label_en\":\"Off\",\"label_ru\":\"Выкл.\"}\n"
     "{\"type\":\"value\",\"value_table\":1,\"value\":1,\"name\":\"on\","
-    "\"title\":\"On\",\"title_ru\":\"Вкл.\"}\n"
+    "\"label_en\":\"On\",\"label_ru\":\"Вкл.\"}\n"
     "{\"type\":\"value\",\"value_table\":2,\"value\":0,\"name\":\"park\","
-    "\"title\":\"Park\",\"title_ru\":\"Стоянка\"}\n"
+    "\"label_en\":\"Park\",\"label_ru\":\"Стоянка\"}\n"
     "{\"type\":\"value\",\"value_table\":2,\"value\":1,"
-    "\"name\":\"drive\",\"title\":\"Drive\",\"title_ru\":\"Вперёд\"}\n"
+    "\"name\":\"drive\",\"label_en\":\"Drive\",\"label_ru\":\"Вперёд\"}\n"
     "{\"type\":\"value\",\"value_table\":2,\"value\":4,"
-    "\"name\":\"reverse\",\"title\":\"Reverse\",\"title_ru\":\"Назад\"}\n"
+    "\"name\":\"reverse\",\"label_en\":\"Reverse\",\"label_ru\":\"Назад\"}\n"
     "{\"type\":\"value\",\"value_table\":3,\"value\":-1,"
-    "\"name\":\"left\",\"title\":\"Left\",\"title_ru\":\"Влево\"}\n"
+    "\"name\":\"left\",\"label_en\":\"Left\",\"label_ru\":\"Влево\"}\n"
     "{\"type\":\"value\",\"value_table\":3,\"value\":0,"
-    "\"name\":\"level\",\"title\":\"Level\",\"title_ru\":\"Ровно\"}\n"
+    "\"name\":\"level\",\"label_en\":\"Level\",\"label_ru\":\"Ровно\"}\n"
     "{\"type\":\"value\",\"value_table\":3,\"value\":1,"
-    "\"name\":\"right\",\"title\":\"Right\",\"title_ru\":\"Вправо\"}\n"
+    "\"name\":\"right\",\"label_en\":\"Right\",\"label_ru\":\"Вправо\"}\n"
     "{\"type\":\"field\",\"layout\":0,\"sub\":\"0x00\","
-    "\"name\":\"highest_subindex\",\"title\":\"Highest subindex\","
-    "\"title_ru\":\"Наибольший подындекс\",\"datatype\":\"uint8\","
+    "\"name\":\"highest_subindex\",\"label_en\":\"Highest subindex\","
+    "\"label_ru\":\"Наибольший подындекс\",\"datatype\":\"uint8\","
     "\"access\":\"const\"}\n"
     "{\"type\":\"field\",\"layout\":0,\"sub\":\"0x01\",\"name\":\"value\","
-    "\"title\":\"Value\",\"title_ru\":\"Значение\",\"access\":\"ro\","
+    "\"label_en\":\"Value\",\"label_ru\":\"Значение\",\"access\":\"ro\","
     "\"inherits\":true}\n"
     "{\"type\":\"field\",\"layout\":0,\"sub\":\"0x02\",\"name\":\"policy\","
-    "\"title\":\"Policy\",\"title_ru\":\"Политика\",\"datatype\":\"uint8\","
+    "\"label_en\":\"Policy\",\"label_ru\":\"Политика\",\"datatype\":\"uint8\","
     "\"access\":\"const\",\"value_table\":0}\n"
     "{\"type\":\"record\",\"index\":\"0x4003\",\"group\":\"a\","
-    "\"name\":\"mode\",\"title\":\"a.mode\",\"title_ru\":\"a.mode\","
+    "\"name\":\"mode\",\"label_en\":\"a.mode\",\"label_ru\":\"a.mode\","
     "\"class\":\"parameters\",\"datatype\":\"uint8\",\"value_table\":1,"
     "\"layout\":0}\n"
     "{\"type\":\"object\",\"index\":\"0x5002\",\"sub\":\"0x01\","
-    "\"group\":\"b\",\"name\":\"gear\",\"title\":\"b.gear\","
-    "\"title_ru\":\"b.gear\",\"class\":\"watch\",\"datatype\":\"uint32\","
+    "\"group\":\"b\",\"name\":\"gear\",\"label_en\":\"b.gear\","
+    "\"label_ru\":\"b.gear\",\"class\":\"watch\",\"datatype\":\"uint32\","
     "\"access\":\"ro\",\"value_table\":2}\n"
-    "{\"type\":\"pdo\",\"name\":\"report\",\"title\":\"Report\","
-    "\"title_ru\":\"Отчёт\",\"direction\":\"tx\",\"number\":2,"
+    "{\"type\":\"pdo\",\"name\":\"report\",\"label_en\":\"Report\","
+    "\"label_ru\":\"Отчёт\",\"direction\":\"tx\",\"number\":2,"
     "\"mapping\":\"signals\",\"cob_base\":\"0x280\",\"period_ms\":10}\n"
     "{\"type\":\"signal\",\"pdo\":\"report\",\"start\":0,\"width\":3,"
-    "\"role\":\"value\",\"name\":\"gear\",\"title\":\"Gear\","
-    "\"title_ru\":\"Передача\",\"encoding\":\"unsigned\","
+    "\"role\":\"value\",\"name\":\"gear\",\"label_en\":\"Gear\","
+    "\"label_ru\":\"Передача\",\"encoding\":\"unsigned\","
     "\"value_table\":2}\n"
     "{\"type\":\"signal\",\"pdo\":\"report\",\"start\":3,\"width\":1,"
-    "\"role\":\"value\",\"name\":\"on\",\"title\":\"On\","
-    "\"title_ru\":\"Включено\",\"encoding\":\"unsigned\"}\n"
+    "\"role\":\"value\",\"name\":\"on\",\"label_en\":\"On\","
+    "\"label_ru\":\"Включено\",\"encoding\":\"unsigned\"}\n"
     "{\"type\":\"signal\",\"pdo\":\"report\",\"start\":4,\"width\":2,"
-    "\"role\":\"value\",\"name\":\"tilt\",\"title\":\"Tilt\","
-    "\"title_ru\":\"Наклон\",\"encoding\":\"signed\",\"value_table\":3}\n"
+    "\"role\":\"value\",\"name\":\"tilt\",\"label_en\":\"Tilt\","
+    "\"label_ru\":\"Наклон\",\"encoding\":\"signed\",\"value_table\":3}\n"
     "{\"type\":\"signal\",\"pdo\":\"report\",\"start\":16,\"width\":16,"
-    "\"role\":\"value\",\"name\":\"voltage\",\"title\":\"Voltage\","
-    "\"title_ru\":\"Напряжение\",\"encoding\":\"signed\",\"scale\":\"1/10\","
+    "\"role\":\"value\",\"name\":\"voltage\",\"label_en\":\"Voltage\","
+    "\"label_ru\":\"Напряжение\",\"encoding\":\"signed\",\"scale\":\"1/10\","
     "\"unit\":\"V\"}\n"
     "{\"type\":\"signal\",\"pdo\":\"report\",\"start\":56,\"width\":2,"
     "\"role\":\"counter\",\"encoding\":\"unsigned\"}\n"
-    "{\"type\":\"pdo\",\"name\":\"setpoint\",\"title\":\"Setpoint\","
-    "\"title_ru\":\"Уставка\",\"direction\":\"rx\",\"number\":5,"
+    "{\"type\":\"pdo\",\"name\":\"setpoint\",\"label_en\":\"Setpoint\","
+    "\"label_ru\":\"Уставка\",\"direction\":\"rx\",\"number\":5,"
     "\"mapping\":\"signals\",\"cob_id\":\"0x405\",\"timeout_ms\":350}\n"
     "{\"type\":\"signal\",\"pdo\":\"setpoint\",\"start\":0,\"width\":1,"
-    "\"role\":\"value\",\"name\":\"stop\",\"title\":\"Stop\","
-    "\"title_ru\":\"Стоп\",\"encoding\":\"unsigned\"}\n"
+    "\"role\":\"value\",\"name\":\"stop\",\"label_en\":\"Stop\","
+    "\"label_ru\":\"Стоп\",\"encoding\":\"unsigned\"}\n"
     "{\"type\":\"signal\",\"pdo\":\"setpoint\",\"start\":8,\"width\":16,"
-    "\"role\":\"value\",\"name\":\"level\",\"title\":\"Level\","
-    "\"title_ru\":\"Уровень\",\"encoding\":\"signed\"}\n";
+    "\"role\":\"value\",\"name\":\"level\",\"label_en\":\"Level\","
+    "\"label_ru\":\"Уровень\",\"encoding\":\"signed\"}\n";
 
 constexpr auto processed_description =
     make_description<geared, areas, groups, "Test device", processed>();
@@ -2381,7 +2382,7 @@ consteval std::string check_report(od_pdo const& pdo = report_tpdo)
   auto const mapped = pdo_of<Rows>(pdo);
   od_mapped_pdo const pdos[] = {mapped};
   od_row<ctx> const rows[] = {
-      {{0x2000, 0x01}, titled("a.c"), od_ro<read_value>}};
+      {{0x2000, 0x01}, labelled("a.c"), od_ro<read_value>}};
   return detail::od_check(rows, areas, group_a, {.pdos = pdos});
 }
 
@@ -2407,13 +2408,13 @@ static_assert(check_changed([](od_pdo& pdo) { pdo.name = "a"; })
 static_assert(check_changed([](od_pdo& pdo) { pdo.name = "watch"; })
               == "od: TPDO2 watch: named as a class");
 
-// Its title is that of an object.
-static_assert(check_changed([](od_pdo& pdo) { pdo.title = {"Report", ""}; })
-              == "od: TPDO2 report: the title must not be empty in any "
+// Its label is that of an object.
+static_assert(check_changed([](od_pdo& pdo) { pdo.label = {"Report", ""}; })
+              == "od: TPDO2 report: the label must not be empty in any "
                  "language");
 static_assert(
-    check_changed([](od_pdo& pdo) { pdo.title = {"\"Report\"", "Отчёт"}; })
-    == "od: TPDO2 report: the title must be UTF-8 without quotation marks, "
+    check_changed([](od_pdo& pdo) { pdo.label = {"\"Report\"", "Отчёт"}; })
+    == "od: TPDO2 report: the label must be UTF-8 without quotation marks, "
        "backslashes or control characters");
 
 // Its number is from 1 to 512, and of the predefined form from 1 to 4.
@@ -2512,19 +2513,19 @@ static_assert(check_report<prefixed_rows>() == not_a_signal_name);
 static_assert(check_report<numbered_rows>() == not_a_signal_name);
 static_assert(check_report<quoted_name_rows>() == not_a_signal_name);
 
-// The title of a signal is that of an object, and no two signals of a PDO
+// The label of a signal is that of an object, and no two signals of a PDO
 // have the same name; signals of two PDOs may, as the PDOs have different
 // names.
 // clang-format off
-inline constexpr pdo_row<report> quoted_title_rows[] = {
+inline constexpr pdo_row<report> quoted_label_rows[] = {
 {{16, 16}, "voltage", {"Volt\\age", "Напряжение"}, pdo_map<&report::voltage>}};
 inline constexpr pdo_row<report> same_name_rows[] = {
 {{ 0,  3}, "voltage", {"Gear", "Передача"},        pdo_map<&report::drive_gear>},
 {{16, 16}, "voltage", {"Voltage", "Напряжение"},   pdo_map<&report::voltage>}};
 // clang-format on
 
-static_assert(check_report<quoted_title_rows>()
-              == "od: TPDO2 report: the signal at bit 16: the title must be "
+static_assert(check_report<quoted_label_rows>()
+              == "od: TPDO2 report: the signal at bit 16: the label must be "
                  "UTF-8 without quotation marks, backslashes or control "
                  "characters");
 static_assert(check_report<same_name_rows>()
@@ -2542,19 +2543,19 @@ consteval pdo_codec<report> voltage_codec(auto change)
 }
 
 inline constexpr std::string_view voltage_name = "voltage";
-inline constexpr emb::i18n voltage_title = {"Voltage", "Напряжение"};
+inline constexpr emb::i18n voltage_label = {"Voltage", "Напряжение"};
 
 // clang-format off
 inline constexpr pdo_row<report> quoted_unit_rows[] = {
-{{16, 16}, voltage_name, voltage_title, voltage_codec([](auto& codec) { codec.unit = "V\""; })}};
+{{16, 16}, voltage_name, voltage_label, voltage_codec([](auto& codec) { codec.unit = "V\""; })}};
 inline constexpr pdo_row<report> unreduced_rows[] = {
-{{16, 16}, voltage_name, voltage_title, voltage_codec([](auto& codec) { codec.scale_num = 2; codec.scale_den = 20; })}};
+{{16, 16}, voltage_name, voltage_label, voltage_codec([](auto& codec) { codec.scale_num = 2; codec.scale_den = 20; })}};
 inline constexpr pdo_row<report> negative_step_rows[] = {
-{{16, 16}, voltage_name, voltage_title, voltage_codec([](auto& codec) { codec.scale_num = -1; })}};
+{{16, 16}, voltage_name, voltage_label, voltage_codec([](auto& codec) { codec.scale_num = -1; })}};
 inline constexpr pdo_row<report> zero_step_rows[] = {
-{{16, 16}, voltage_name, voltage_title, voltage_codec([](auto& codec) { codec.scale_num = 0; codec.scale_den = 1; })}};
+{{16, 16}, voltage_name, voltage_label, voltage_codec([](auto& codec) { codec.scale_num = 0; codec.scale_den = 1; })}};
 inline constexpr pdo_row<report> misnamed_table_rows[] = {
-{{16, 16}, voltage_name, voltage_title, voltage_codec([](auto& codec) { codec.value_table = misnamed; })}};
+{{16, 16}, voltage_name, voltage_label, voltage_codec([](auto& codec) { codec.value_table = misnamed; })}};
 // clang-format on
 
 static_assert(check_report<quoted_unit_rows>()
@@ -2583,7 +2584,7 @@ consteval std::string check_pdo_pair(od_pdo const& first, od_pdo const& second)
   auto const setpoint_mapped = pdo_of<Setpoint>(second);
   od_mapped_pdo const pdos[] = {report_mapped, setpoint_mapped};
   od_row<ctx> const rows[] = {
-      {{0x2000, 0x01}, titled("a.c"), od_ro<read_value>}};
+      {{0x2000, 0x01}, labelled("a.c"), od_ro<read_value>}};
   return detail::od_check(rows, areas, group_a, {.pdos = pdos});
 }
 
@@ -2666,7 +2667,7 @@ consteval std::string check_dictionary_first()
       pdo_of<report_rows>(changed([](od_pdo& pdo) { pdo.name = "2nd"; }));
   od_mapped_pdo const pdos[] = {mapped};
   od_row<ctx> const rows[] = {
-      {{0x0FFF, 0x01}, titled("a.c"), od_ro<read_value>}};
+      {{0x0FFF, 0x01}, labelled("a.c"), od_ro<read_value>}};
   return detail::od_check(rows, areas, group_a, {.pdos = pdos});
 }
 

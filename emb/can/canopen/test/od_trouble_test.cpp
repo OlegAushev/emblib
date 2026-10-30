@@ -37,7 +37,7 @@ struct overheat {
   static constexpr level level_min = level::warning;
   static constexpr level level_max = level::fault;
   static constexpr std::string_view name = "overheat";
-  static constexpr emb::i18n title = {"Overheat", "Перегрев"};
+  static constexpr emb::i18n label = {"Overheat", "Перегрев"};
 };
 
 struct overvoltage {
@@ -45,7 +45,7 @@ struct overvoltage {
   static constexpr level level_min = level::fault;
   static constexpr level level_max = level::fault;
   static constexpr std::string_view name = "overvoltage";
-  static constexpr emb::i18n title = {"Overvoltage", "Перенапряжение"};
+  static constexpr emb::i18n label = {"Overvoltage", "Перенапряжение"};
 };
 
 // The status of the id 2 is retired.
@@ -55,7 +55,7 @@ struct stall {
   static constexpr level level_min = level::warning;
   static constexpr level level_max = level::fault;
   static constexpr std::string_view name = "stall";
-  static constexpr emb::i18n title = {"Stall", "Заклинивание"};
+  static constexpr emb::i18n label = {"Stall", "Заклинивание"};
 };
 
 using statuses = emb::typelist<overheat, overvoltage, stall>;
@@ -101,19 +101,19 @@ static_assert(severity_value_of(std::optional{level::fault}) == 2);
 static_assert(od_severity_scale<level>.size() == 3);
 static_assert(od_severity_scale<level>[0].value == 0);
 static_assert(od_severity_scale<level>[0].name == "none");
-static_assert(od_severity_scale<level>[0].title == emb::i18n{"None", "Нет"});
+static_assert(od_severity_scale<level>[0].label == emb::i18n{"None", "Нет"});
 static_assert(od_severity_scale<level>[1].value == 1);
 static_assert(od_severity_scale<level>[1].name == "warning");
 static_assert(od_severity_scale<level>[2].value == 2);
 static_assert(od_severity_scale<level>[2].name == "fault");
-static_assert(od_severity_scale<level>[2].title == emb::i18n{"Fault", "Отказ"});
+static_assert(od_severity_scale<level>[2].label == emb::i18n{"Fault", "Отказ"});
 
 // The stub of a retired status is named after its id, in decimal digits.
 static_assert(detail::od_decimal<0>.view() == "0");
 static_assert(detail::od_decimal<10>.view() == "10");
 static_assert(detail::od_retired_name<22>.view() == "retired_22");
-static_assert(detail::od_retired_title_en<253>.view() == "Retired status 253");
-static_assert(detail::od_retired_title_ru<7>.view() == "Снятый статус 7");
+static_assert(detail::od_retired_label_en<253>.view() == "Retired status 253");
+static_assert(detail::od_retired_label_ru<7>.view() == "Снятый статус 7");
 
 // -- Binding --
 
@@ -138,16 +138,16 @@ static_assert(bind<od_statuses<registry>>().layout[4].write == nullptr);
 static_assert(bind<od_statuses<registry>>().info.path.empty());
 static_assert(bind<od_statuses<registry>>().value_table.empty());
 
-// The member of a status bears its name and title, that of a retired one
+// The member of a status bears its name and label, that of a retired one
 // those of the stub, and each past 00h the scale.
 static_assert(bind<od_statuses<registry>>().field_info[0].name
               == "highest_subindex");
 static_assert(bind<od_statuses<registry>>().field_info[0].value_table.empty());
 static_assert(bind<od_statuses<registry>>().field_info[1].name == "overheat");
-static_assert(bind<od_statuses<registry>>().field_info[1].title
-              == overheat::title);
+static_assert(bind<od_statuses<registry>>().field_info[1].label
+              == overheat::label);
 static_assert(bind<od_statuses<registry>>().field_info[3].name == "retired_2");
-static_assert(bind<od_statuses<registry>>().field_info[3].title
+static_assert(bind<od_statuses<registry>>().field_info[3].label
               == emb::i18n{"Retired status 2", "Снятый статус 2"});
 static_assert(bind<od_statuses<registry>>().field_info[3].value_table.data()
               == od_severity_scale<level>.data());
@@ -286,33 +286,33 @@ static_assert(od_description_fingerprint(description)
 // or table. The scale is the table of its members, numbered before the table
 // of a row; the members state their type, and the stub is one of them.
 inline constexpr std::string_view body =
-    R"({"type":"group","name":"trouble","title":"Trouble","title_ru":"Неисправности"})"
+    R"({"type":"group","name":"trouble","label_en":"Trouble","label_ru":"Неисправности"})"
     "\n"
-    R"({"type":"group","name":"drive","title":"Drive","title_ru":"Привод"})"
+    R"({"type":"group","name":"drive","label_en":"Drive","label_ru":"Привод"})"
     "\n"
-    R"({"type":"value","value_table":0,"value":0,"name":"none","title":"None","title_ru":"Нет"})"
+    R"({"type":"value","value_table":0,"value":0,"name":"none","label_en":"None","label_ru":"Нет"})"
     "\n"
-    R"({"type":"value","value_table":0,"value":1,"name":"warning","title":"Warning","title_ru":"Предупреждение"})"
+    R"({"type":"value","value_table":0,"value":1,"name":"warning","label_en":"Warning","label_ru":"Предупреждение"})"
     "\n"
-    R"({"type":"value","value_table":0,"value":2,"name":"fault","title":"Fault","title_ru":"Отказ"})"
+    R"({"type":"value","value_table":0,"value":2,"name":"fault","label_en":"Fault","label_ru":"Отказ"})"
     "\n"
-    R"({"type":"value","value_table":1,"value":0,"name":"idle","title":"Idle","title_ru":"Ожидание"})"
+    R"({"type":"value","value_table":1,"value":0,"name":"idle","label_en":"Idle","label_ru":"Ожидание"})"
     "\n"
-    R"({"type":"value","value_table":1,"value":1,"name":"run","title":"Run","title_ru":"Работа"})"
+    R"({"type":"value","value_table":1,"value":1,"name":"run","label_en":"Run","label_ru":"Работа"})"
     "\n"
-    R"({"type":"field","layout":0,"sub":"0x00","name":"highest_subindex","title":"Highest subindex","title_ru":"Наибольший подындекс","datatype":"uint8","access":"const"})"
+    R"({"type":"field","layout":0,"sub":"0x00","name":"highest_subindex","label_en":"Highest subindex","label_ru":"Наибольший подындекс","datatype":"uint8","access":"const"})"
     "\n"
-    R"({"type":"field","layout":0,"sub":"0x01","name":"overheat","title":"Overheat","title_ru":"Перегрев","datatype":"uint8","access":"ro","value_table":0})"
+    R"({"type":"field","layout":0,"sub":"0x01","name":"overheat","label_en":"Overheat","label_ru":"Перегрев","datatype":"uint8","access":"ro","value_table":0})"
     "\n"
-    R"({"type":"field","layout":0,"sub":"0x02","name":"overvoltage","title":"Overvoltage","title_ru":"Перенапряжение","datatype":"uint8","access":"ro","value_table":0})"
+    R"({"type":"field","layout":0,"sub":"0x02","name":"overvoltage","label_en":"Overvoltage","label_ru":"Перенапряжение","datatype":"uint8","access":"ro","value_table":0})"
     "\n"
-    R"({"type":"field","layout":0,"sub":"0x03","name":"retired_2","title":"Retired status 2","title_ru":"Снятый статус 2","datatype":"uint8","access":"ro","value_table":0})"
+    R"({"type":"field","layout":0,"sub":"0x03","name":"retired_2","label_en":"Retired status 2","label_ru":"Снятый статус 2","datatype":"uint8","access":"ro","value_table":0})"
     "\n"
-    R"({"type":"field","layout":0,"sub":"0x04","name":"stall","title":"Stall","title_ru":"Заклинивание","datatype":"uint8","access":"ro","value_table":0})"
+    R"({"type":"field","layout":0,"sub":"0x04","name":"stall","label_en":"Stall","label_ru":"Заклинивание","datatype":"uint8","access":"ro","value_table":0})"
     "\n"
-    R"({"type":"record","index":"0x4000","group":"trouble","name":"statuses","title":"Trouble statuses","title_ru":"Статусы неисправностей","class":"status","layout":0})"
+    R"({"type":"record","index":"0x4000","group":"trouble","name":"statuses","label_en":"Trouble statuses","label_ru":"Статусы неисправностей","class":"status","layout":0})"
     "\n"
-    R"({"type":"object","index":"0x5000","sub":"0x01","group":"drive","name":"mode","title":"Mode","title_ru":"Режим","class":"watch","datatype":"uint32","access":"ro","value_table":1})"
+    R"({"type":"object","index":"0x5000","sub":"0x01","group":"drive","name":"mode","label_en":"Mode","label_ru":"Режим","class":"watch","datatype":"uint32","access":"ro","value_table":1})"
     "\n";
 
 static_assert(as_view(description).ends_with(body));

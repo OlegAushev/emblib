@@ -16,8 +16,8 @@
 #   format, section 3.9 of docs/canopen-od-algorithm.ru.md, or its header
 #   states another fingerprint than the hash of its body;
 # - tools/image_strings.py fails the build if <file.bin> holds, as a whole
-#   string, a path or a title of the description or a line of a file
-#   STRINGS: labels exist at compile time only;
+#   string, a path or a label of the description or a line of a file
+#   STRINGS: they exist at compile time only;
 # - with EXAMPLE, tools/od_decode.py --candump decodes the frames of the log
 #   of candump <candump> by the description, as a host reads them from the
 #   node <id>, and fails the build if they decode otherwise than <file>

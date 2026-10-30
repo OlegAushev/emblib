@@ -35,39 +35,39 @@ enum_info(drive_mode)
 inline constexpr auto drive_phase_swap =
     settings::param("drive.phase_swap",
                     false,
-                    {.title = {"Phase swap", "Перестановка фаз"},
+                    {.label = {"Phase swap", "Перестановка фаз"},
                      .apply = settings::apply_policy::on_command});
 inline constexpr auto motor_p =
     settings::param("motor.p",
                     std::int32_t{11},
-                    {.title = {"Pole pairs", "Число пар полюсов"},
+                    {.label = {"Pole pairs", "Число пар полюсов"},
                      .min = std::int32_t{1},
                      .max = std::int32_t{64}});
 inline constexpr auto drive_freq =
     settings::param("drive.freq",
                     emb::units::hz_f32{10000.0f},
-                    {.title = {"Frequency", "Частота"},
+                    {.label = {"Frequency", "Частота"},
                      .min = emb::units::hz_f32{1000.0f},
                      .max = emb::units::hz_f32{20000.0f},
                      .apply = settings::apply_policy::on_command});
 inline constexpr auto prod_serial = settings::param(
     "prod.serial",
     std::uint32_t{0},
-    {.title = {"Serial number", "Серийный номер"}, .writable = false});
+    {.label = {"Serial number", "Серийный номер"}, .writable = false});
 inline constexpr auto prod_secret =
     settings::param("prod.secret", std::uint32_t{0}, {.expose = false});
 // A slope held as rpm, whose unit replaces the symbol of its type.
 inline constexpr auto drive_slope =
     settings::param("drive.slope",
                     emb::units::rpm_f32{100.0f},
-                    {.title = {"Speed slope", "Темп изменения скорости"},
+                    {.label = {"Speed slope", "Темп изменения скорости"},
                      .unit = "rpm/s",
                      .apply = settings::apply_policy::on_command});
 // A parameter of an enumeration, which names its values.
 inline constexpr auto drive_mode_param =
     settings::param("drive.mode",
                     drive_mode::idle,
-                    {.title = {"Drive mode", "Режим привода"},
+                    {.label = {"Drive mode", "Режим привода"},
                      .apply = settings::apply_policy::on_command});
 
 inline constexpr auto schema = settings::make_schema(drive_phase_swap,
@@ -278,9 +278,9 @@ static_assert(bind<bridge::param<prod_serial>>().layout[1].access
 static_assert(bind<bridge::param<prod_serial>>().layout[1].write == nullptr);
 static_assert(bind<bridge::param<motor_p>>().layout[1].access == od_access::rw);
 
-// A record is named as its parameter: by the parameter's name and title.
+// A record is named as its parameter: by the parameter's name and label.
 static_assert(bind<bridge::param<motor_p>>().info.path == "motor.p");
-static_assert(bind<bridge::param<motor_p>>().info.title == motor_p.title);
+static_assert(bind<bridge::param<motor_p>>().info.label == motor_p.label);
 static_assert(bind<bridge::param<motor_p>>().info.unit.empty());
 
 // The record's unit is the parameter's: the symbol of its type, or the unit
@@ -364,37 +364,37 @@ static_assert(occurrences(as_view(description), R"("type":"field")")
 static_assert(
     as_view(description)
         .contains(R"({"type":"record","index":"0x3100","group":"drive",)"
-                  R"("name":"phase_swap","title":"Phase swap",)"
-                  R"("title_ru":"Перестановка фаз","class":"parameters",)"
+                  R"("name":"phase_swap","label_en":"Phase swap",)"
+                  R"("label_ru":"Перестановка фаз","class":"parameters",)"
                   R"("datatype":"boolean","layout":0})"
                   "\n"));
 static_assert(
     as_view(description)
         .contains(R"({"type":"record","index":"0x3101","group":"motor",)"
-                  R"("name":"p","title":"Pole pairs",)"
-                  R"("title_ru":"Число пар полюсов","class":"parameters",)"
+                  R"("name":"p","label_en":"Pole pairs",)"
+                  R"("label_ru":"Число пар полюсов","class":"parameters",)"
                   R"("datatype":"int32","layout":0})"
                   "\n"));
 static_assert(
     as_view(description)
         .contains(R"({"type":"record","index":"0x3102","group":"drive",)"
-                  R"("name":"freq","title":"Frequency","title_ru":"Частота",)"
-                  R"("class":"parameters","datatype":"float32","unit":"Hz",)"
-                  R"("layout":1})"
+                  R"("name":"freq","label_en":"Frequency",)"
+                  R"("label_ru":"Частота","class":"parameters",)"
+                  R"("datatype":"float32","unit":"Hz","layout":1})"
                   "\n"));
 static_assert(
     as_view(description)
         .contains(R"({"type":"record","index":"0x3103","group":"prod",)"
-                  R"("name":"serial","title":"Serial number",)"
-                  R"("title_ru":"Серийный номер","class":"parameters",)"
+                  R"("name":"serial","label_en":"Serial number",)"
+                  R"("label_ru":"Серийный номер","class":"parameters",)"
                   R"("datatype":"uint32","layout":2})"
                   "\n"));
 static_assert(
     as_view(description)
         .contains(
             R"({"type":"record","index":"0x3104","group":"drive",)"
-            R"("name":"slope","title":"Speed slope",)"
-            R"("title_ru":"Темп изменения скорости","class":"parameters",)"
+            R"("name":"slope","label_en":"Speed slope",)"
+            R"("label_ru":"Темп изменения скорости","class":"parameters",)"
             R"("datatype":"float32","unit":"rpm/s","layout":1})"
             "\n"));
 
@@ -405,21 +405,22 @@ static_assert(
     as_view(description)
         .contains(
             R"({"type":"field","layout":2,"sub":"0x01","name":"requested",)"
-            R"("title":"Requested value","title_ru":"Запрошенное значение",)"
+            R"("label_en":"Requested value","label_ru":"Запрошенное значение",)"
             R"("access":"ro","inherits":true})"
             "\n"));
 static_assert(
     as_view(description)
         .contains(
             R"({"type":"field","layout":2,"sub":"0x08","name":"apply",)"
-            R"("title":"Apply","title_ru":"Применить","datatype":"uint32",)"
+            R"("label_en":"Apply","label_ru":"Применить","datatype":"uint32",)"
             R"("access":"wo","command":true})"
             "\n"));
 static_assert(
     as_view(description)
         .contains(R"({"type":"field","layout":1,"sub":"0x0A","name":"actual",)"
-                  R"("title":"Actual value","title_ru":"Фактическое значение",)"
-                  R"("access":"ro","inherits":true})"
+                  R"("label_en":"Actual value",)"
+                  R"("label_ru":"Фактическое значение","access":"ro",)"
+                  R"("inherits":true})"
                   "\n"));
 
 // The values are named: the policy of every record, first, by the members of
@@ -428,35 +429,36 @@ static_assert(occurrences(as_view(description), R"("type":"value")")
               == 2 + 5 + 2);
 static_assert(as_view(description)
                   .contains(R"({"type":"value","value_table":0,"value":0,)"
-                            R"("name":"on_command","title":"On command",)"
-                            R"("title_ru":"По команде"})"
+                            R"("name":"on_command","label_en":"On command",)"
+                            R"("label_ru":"По команде"})"
                             "\n"));
 static_assert(
     as_view(description)
         .contains(R"({"type":"value","value_table":1,"value":134217762,)"
                   R"("name":"state_error",)"
-                  R"("title":"Not admitted in this state, or values wait to )"
-                  R"(be applied","title_ru":"Не допускается в этом )"
+                  R"("label_en":"Not admitted in this state, or values wait )"
+                  R"(to be applied","label_ru":"Не допускается в этом )"
                   R"(состоянии, или значения ждут применения"})"
                   "\n"));
 static_assert(
     as_view(description)
         .contains(R"({"type":"field","layout":0,"sub":"0x07","name":"policy",)"
-                  R"("title":"Apply policy","title_ru":"Политика применения",)"
-                  R"("datatype":"uint8","access":"const","value_table":0})"
+                  R"("label_en":"Apply policy",)"
+                  R"("label_ru":"Политика применения","datatype":"uint8",)"
+                  R"("access":"const","value_table":0})"
                   "\n"));
 static_assert(
     as_view(description)
         .contains(R"("group":"settings","name":"last_refusal",)"
-                  R"("title":"Last refusal","title_ru":"Последний отказ",)"
+                  R"("label_en":"Last refusal","label_ru":"Последний отказ",)"
                   R"("class":"control","datatype":"uint32","access":"ro",)"
                   R"("value_table":1})"
                   "\n"));
 static_assert(
     as_view(description)
         .contains(R"({"type":"record","index":"0x3105","group":"drive",)"
-                  R"("name":"mode","title":"Drive mode",)"
-                  R"("title_ru":"Режим привода","class":"parameters",)"
+                  R"("name":"mode","label_en":"Drive mode",)"
+                  R"("label_ru":"Режим привода","class":"parameters",)"
                   R"("datatype":"uint32","value_table":2,"layout":1})"
                   "\n"));
 

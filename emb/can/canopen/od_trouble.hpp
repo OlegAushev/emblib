@@ -45,11 +45,11 @@ inline constexpr auto od_severity_scale = [] {
   std::array<od_value_info, info.size() + 1> out{};
   out[0] = {.value = severity_value_of<Level>(std::nullopt),
             .name = "none",
-            .title = {"None", "Нет"}};
+            .label = {"None", "Нет"}};
   for (auto i = 0uz; i < info.size(); ++i) {
     out[i + 1] = {.value = severity_value_of<Level>(info[i].value()),
                   .name = info[i].name(),
-                  .title = info[i].title()};
+                  .label = info[i].label()};
   }
   return out;
 }();
@@ -78,15 +78,15 @@ concept od_known_registry =
     requires { typename od_registry_traits<R>::status_list; };
 
 // The concept `od_labelled_status<S>` is satisfied if and only if the status
-// `S` states its name, `name`, and its title, `title`, which label its member
-// of the record of the statuses.
+// `S` states its name, `name`, and its label, `label`, which describe its
+// member of the record of the statuses.
 template<typename S>
 concept od_labelled_status = requires {
   { S::name } -> std::convertible_to<std::string_view>;
-  { S::title } -> std::convertible_to<i18n>;
+  { S::label } -> std::convertible_to<i18n>;
 };
 
-// Whether each status of the list states its name and its title.
+// Whether each status of the list states its name and its label.
 template<typename... Statuses>
 consteval bool od_statuses_labelled(typelist<Statuses...>)
 {
@@ -133,16 +133,16 @@ inline constexpr auto od_decimal = [] {
   return out;
 }();
 
-// The name and the titles of the stub of the retired status of the id `Id`:
+// The name and the labels of the stub of the retired status of the id `Id`:
 // "retired_22", "Retired status 22" and "Снятый статус 22".
 template<std::size_t Id>
 inline constexpr auto od_retired_name = "retired_" + od_decimal<Id>;
 
 template<std::size_t Id>
-inline constexpr auto od_retired_title_en = "Retired status " + od_decimal<Id>;
+inline constexpr auto od_retired_label_en = "Retired status " + od_decimal<Id>;
 
 template<std::size_t Id>
-inline constexpr auto od_retired_title_ru = "Снятый статус " + od_decimal<Id>;
+inline constexpr auto od_retired_label_ru = "Снятый статус " + od_decimal<Id>;
 
 inline constexpr std::string_view od_unlabelled_levels =
     "od: the enumeration of the levels of the statuses must label each level "
@@ -153,7 +153,7 @@ inline constexpr std::string_view od_too_many_statuses =
     "id + 1, and the last is FEh";
 
 inline constexpr std::string_view od_unlabelled_status =
-    "od: each status must state its name and its title, which label its "
+    "od: each status must state its name and its label, which describe its "
     "member";
 
 // The binding of the record of the statuses of `Registry` (`od_statuses`):
@@ -222,21 +222,21 @@ struct statuses_binding {
   }();
 
   // The info of the members: that of 00h, then, at subindex id + 1, the name
-  // and the title of the status of the id, or those of the stub of a retired
+  // and the label of the status of the id, or those of the stub of a retired
   // one; each member past 00h takes its values from the scale.
   static constexpr auto field_info = [] {
     constexpr std::span<od_value_info const> scale =
         od_severity_scale<level_type>;
     std::array<od_field_info, id_space + 1> out{};
     out[0] = {.name = "highest_subindex",
-              .title = {"Highest subindex", "Наибольший подындекс"}};
+              .label = {"Highest subindex", "Наибольший подындекс"}};
     [&]<std::size_t... Id>(std::index_sequence<Id...>) {
       (
           [&] {
             if constexpr (!live[Id]) {
               out[Id + 1] = {.name = od_retired_name<Id>.view(),
-                             .title = {od_retired_title_en<Id>.view(),
-                                       od_retired_title_ru<Id>.view()},
+                             .label = {od_retired_label_en<Id>.view(),
+                                       od_retired_label_ru<Id>.view()},
                              .value_table = scale};
             }
           }(),
@@ -245,7 +245,7 @@ struct statuses_binding {
     trouble::for_each<status_list>([&]<typename S>(S) {
       if constexpr (od_labelled_status<S>) {
         out[std::size_t{S::id} + 1] = {.name = S::name,
-                                       .title = S::title,
+                                       .label = S::label,
                                        .value_table = scale};
       }
     });
@@ -283,8 +283,8 @@ struct statuses_binding {
 //   hole + 1  ro u8     0: the stub of a retired status, on an id that no
 //                       status of the list has
 //
-// A member of a status is named and titled by the status's `name` and
-// `title`. The stub of a retired one is named "retired_<id>" and titled
+// A member of a status is named and labelled by the status's `name` and
+// `label`. The stub of a retired one is named "retired_<id>" and labelled
 // "Retired status <id>" and "Снятый статус <id>": an id is the address of its
 // status, so a retired status leaves a hole in the ids rather than moving the
 // statuses after it, and the stub keeps their members in place. Each member
@@ -296,9 +296,9 @@ struct statuses_binding {
 // (`detail::od_registry_traits`). The enumeration of the levels must label
 // each of its levels from 0 and no other value, as the scale names the
 // severities a member reads; the ids must be below 254, as the last subindex
-// is FEh; and each status must state its name and its title. A registry that
+// is FEh; and each status must state its name and its label. A registry that
 // breaks one fails to compile, at the row. Like the info of the rows, the
-// names and the titles of the members exist at compile time only: the image
+// names and the labels of the members exist at compile time only: the image
 // holds the layout and a reader for each status.
 template<auto& Registry>
   requires detail::od_known_registry<std::remove_cvref_t<decltype(Registry)>>

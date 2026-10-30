@@ -44,8 +44,8 @@ constexpr bool fits_width(std::int64_t value, unsigned width, bool is_signed)
 // two signals overlap, and no two map one member, as their getters tell: a
 // counter has the getter of its member. A PDO has at most one counter, of one
 // to eight bits, as `rolling_counter` and `node_link` count. A signal of the
-// role `value` has a name and a title in each language, and a counter none.
-// The form of the name and the texts of the title are for the rules of the
+// role `value` has a name and a label in each language, and a counter none.
+// The form of the name and the texts of the label are for the rules of the
 // description to check, as those of the rows of a dictionary are.
 template<typename Rows>
 constexpr std::string pdo_check(Rows const& rows)
@@ -96,15 +96,15 @@ constexpr std::string pdo_check(Rows const& rows)
     }
     if (counter
         && (!row.name.empty()
-            || !row.title.en.empty()
-            || !row.title.ru.empty())) {
+            || !row.label.en.empty()
+            || !row.label.ru.empty())) {
       return "pdo: "
            + signal_name(bits.start)
-           + " is a counter and has no name or title";
+           + " is a counter and has no name or label";
     }
     if (!counter
-        && (row.name.empty() || row.title.en.empty() || row.title.ru.empty())) {
-      return "pdo: " + signal_name(bits.start) + " needs a name and a title";
+        && (row.name.empty() || row.label.en.empty() || row.label.ru.empty())) {
+      return "pdo: " + signal_name(bits.start) + " needs a name and a label";
     }
   }
   return {};

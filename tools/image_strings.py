@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Reports the strings that an image of the firmware holds whole, and fails
-if there is any: the paths and titles of a description of the dictionary
+if there is any: the paths and labels of a description of the dictionary
 (.od.jsonl), or the lines of a list. The info of the dictionary exists at
 compile time only, and none of it may reach the image.
 
@@ -12,7 +12,7 @@ objects, arrays and records, as the source writes them, the group and the
 name joined by a dot, though not those of the records of the class
 parameters, which are the names of parameters and stay in the image; the
 names of the signals of PDOs; the names of the members of the layouts of
-the records of the class status, which name the statuses; and the titles,
+the records of the class status, which name the statuses; and the labels,
 in each language, of objects, arrays, records, groups, members of layouts,
 values, PDOs and signals.
 
@@ -31,7 +31,7 @@ import argparse
 import json
 import sys
 
-TITLES = ('title', 'title_ru')
+LABELS = ('label_en', 'label_ru')
 SHORTEST = 4
 
 
@@ -56,7 +56,7 @@ def description_strings(path):
             yield entry['name'], f'{path}:{number} name'
         if kind in ('object', 'array', 'record', 'group', 'field',
                     'value', 'pdo', 'signal'):
-            for key in TITLES:
+            for key in LABELS:
                 if key in entry:
                     yield entry[key], f'{path}:{number} {key}'
 

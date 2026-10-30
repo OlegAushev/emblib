@@ -237,7 +237,7 @@ static_assert(enum_info_of<mode>().size() == 3);
 static_assert(enum_info_of<mode>()[0].value() == mode::off);
 static_assert(enum_info_of<mode>()[2].value() == mode::fast);
 static_assert(enum_info_of<mode>()[1].name() == "slow");
-static_assert(enum_info_of<mode>()[1].title() == i18n{"Slow", "Медленно"});
+static_assert(enum_info_of<mode>()[1].label() == i18n{"Slow", "Медленно"});
 static_assert(enum_info_of<level>().front().value() == level::low);
 static_assert(enum_info_of<level>().back().value() == level::high);
 
@@ -254,20 +254,20 @@ consteval std::string_view name_of(mode m)
 static_assert(name_of(mode::fast) == "fast");
 static_assert(name_of(mode::unlabelled).empty());
 
-// Returns the English title of `e`: reading the info of an enumerator makes
+// Returns the English label of `e`: reading the info of an enumerator makes
 // this function template an immediate function, which a constant expression
 // may call.
 template<typename E>
-constexpr std::string_view english_title_of(E e)
+constexpr std::string_view english_label_of(E e)
 {
   for (auto const& enumerator : enum_info_of<E>()) {
-    if (enumerator.value() == e) return enumerator.title().en;
+    if (enumerator.value() == e) return enumerator.label().en;
   }
   return {};
 }
 
-static_assert(english_title_of(level::high) == "High");
-static_assert(english_title_of(mode::off) == "Off");
+static_assert(english_label_of(level::high) == "High");
+static_assert(english_label_of(mode::off) == "Off");
 
 // -- enum carrier tests --
 

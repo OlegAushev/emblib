@@ -61,8 +61,8 @@ constexpr void append_value(std::string& out, std::int64_t value)
 constexpr bool is_empty(od_object_info const& info)
 {
   return info.path.empty()
-      && info.title.en.empty()
-      && info.title.ru.empty()
+      && info.label.en.empty()
+      && info.label.ru.empty()
       && info.unit.empty();
 }
 
@@ -353,16 +353,16 @@ constexpr bool is_verbatim_text(std::string_view text)
   return true;
 }
 
-// Returns the rule that a title breaks, or an empty view if it breaks none:
+// Returns the rule that a label breaks, or an empty view if it breaks none:
 // each language must have a text, and each text must be verbatim
 // (`is_verbatim_text`).
-constexpr std::string_view title_error(i18n const& title)
+constexpr std::string_view label_error(i18n const& label)
 {
-  if (title.en.empty() || title.ru.empty()) {
-    return "the title must not be empty in any language";
+  if (label.en.empty() || label.ru.empty()) {
+    return "the label must not be empty in any language";
   }
-  if (!is_verbatim_text(title.en) || !is_verbatim_text(title.ru)) {
-    return "the title must be UTF-8 without quotation marks, backslashes or "
+  if (!is_verbatim_text(label.en) || !is_verbatim_text(label.ru)) {
+    return "the label must be UTF-8 without quotation marks, backslashes or "
            "control characters";
   }
   return {};
@@ -486,8 +486,8 @@ constexpr std::string values_fit_error(std::span<od_value_info const> values,
 
 // Returns the rule that `values`, a table of values, breaks, or an empty
 // string if it breaks none: each value is named as a segment of a path and
-// titled, the values strictly increase, and no two of them have the same
-// name, or the same title in one language; in two languages a title may be
+// labelled, the values strictly increase, and no two of them have the same
+// name, or the same label in one language; in two languages a label may be
 // the same, as an abbreviation is. The rules depend on the table alone, so a
 // table that objects or members share is checked once
 // (`check_value_tables`).
@@ -500,7 +500,7 @@ constexpr std::string value_table_error(std::span<od_value_info const> values)
            + ": the name must be a letter followed by letters, digits or "
              "underscores";
     }
-    if (auto const what = title_error(info.title); !what.empty()) {
+    if (auto const what = label_error(info.label); !what.empty()) {
       return value_name(info.value) + ": " + std::string{what};
     }
     if (i > 0 && values[i - 1].value >= info.value) {
@@ -514,13 +514,13 @@ constexpr std::string value_table_error(std::span<od_value_info const> values)
       if (other.name == info.name) {
         return values_name(other.value, info.value) + " have the same name";
       }
-      if (other.title.en == info.title.en) {
+      if (other.label.en == info.label.en) {
         return values_name(other.value, info.value)
-             + " have the same title in English";
+             + " have the same label in English";
       }
-      if (other.title.ru == info.title.ru) {
+      if (other.label.ru == info.label.ru) {
         return values_name(other.value, info.value)
-             + " have the same title in Russian";
+             + " have the same label in Russian";
       }
     }
   }
@@ -538,7 +538,7 @@ constexpr std::string member_name(std::size_t sub)
 
 // Returns the rule that `info`, the info of the members of a layout, breaks,
 // or an empty string if it breaks none: each member is named as a segment of
-// a path, unique in the layout, and titled, and only a command has a
+// a path, unique in the layout, and labelled, and only a command has a
 // signature. The rules depend on the info alone, so the info that records
 // share is checked once (`check_shared_field_info`).
 constexpr std::string field_info_error(std::span<od_field_info const> info)
@@ -560,7 +560,7 @@ constexpr std::string field_info_error(std::span<od_field_info const> info)
         return out;
       }
     }
-    if (auto const what = title_error(member.title); !what.empty()) {
+    if (auto const what = label_error(member.label); !what.empty()) {
       return member_name(i) + ": " + std::string{what};
     }
     if (member.signature && !member.command) {
@@ -756,8 +756,8 @@ constexpr std::string check_array(od_row<Ctx> const& row)
 }
 
 // The rules of the info of a row: the row has none if its binding gives it,
-// the path is a group and a name, the group is declared, and the title obeys
-// `title_error`.
+// the path is a group and a name, the group is declared, and the label obeys
+// `label_error`.
 template<typename Ctx, std::size_t G>
 constexpr std::string check_info(od_row<Ctx> const& row,
                                  od_group const (&groups)[G])
@@ -779,7 +779,7 @@ constexpr std::string check_info(od_row<Ctx> const& row,
     what += "' is not declared";
     return row_error(row, what);
   }
-  if (auto const what = title_error(info.title); !what.empty()) {
+  if (auto const what = label_error(info.label); !what.empty()) {
     return row_error(row, what);
   }
   return {};
@@ -917,7 +917,7 @@ constexpr std::string check_areas(od_area const (&areas)[A])
 }
 
 // Checks the groups: each name is a segment of a path, not the name of a
-// class, and declared once, and each title obeys `title_error`.
+// class, and declared once, and each label obeys `label_error`.
 template<std::size_t G>
 constexpr std::string check_groups(od_group const (&groups)[G])
 {
@@ -934,7 +934,7 @@ constexpr std::string check_groups(od_group const (&groups)[G])
     if (group_position(group.name, groups) != i) {
       return group_error(group, "declared twice");
     }
-    if (auto const what = title_error(group.title); !what.empty()) {
+    if (auto const what = label_error(group.label); !what.empty()) {
       return group_error(group, what);
     }
   }
@@ -1117,7 +1117,7 @@ constexpr std::string check_catalogs(od_row<Ctx> const (&rows)[N])
 
 // The rules of a PDO alone: its name is a segment, which a host joins to the
 // names of its signals, and names no group, whose objects a host would mix up
-// with them, and no class; its title obeys `title_error`; its number is that of
+// with them, and no class; its label obeys `label_error`; its number is that of
 // a PDO of CiA 301, 1 to 512, and only PDOs 1 to 4 have the predefined COB-ID,
 // as `cob_id_of` gives it; a custom COB-ID is one of 11 bits, from 001h to
 // 7FFh, as `put_hex` writes three digits of it and would drop the others, and
@@ -1141,7 +1141,7 @@ constexpr std::string check_pdo(od_pdo const& pdo, od_group const (&groups)[G])
   if (std::ranges::contains(od_classes, pdo.name, class_name)) {
     return pdo_error(pdo, "named as a class");
   }
-  if (auto const what = title_error(pdo.title); !what.empty()) {
+  if (auto const what = label_error(pdo.label); !what.empty()) {
     return pdo_error(pdo, what);
   }
   if (pdo.number < 1 || pdo.number > 512) {
@@ -1179,8 +1179,8 @@ constexpr std::string check_pdo(od_pdo const& pdo, od_group const (&groups)[G])
 // `pdo_of` checks. The name of a signal of the role `value` is a segment, and
 // no other signal of the PDO has it: as no PDO is named as a group and PDOs
 // have different names, the path that a host makes of the name of the PDO
-// and that of the signal is unique in the whole description. Its title obeys
-// `title_error`; a unit is verbatim (`is_verbatim_text`), and a step
+// and that of the signal is unique in the whole description. Its label obeys
+// `label_error`; a unit is verbatim (`is_verbatim_text`), and a step
 // `scale_num` / `scale_den` a positive fraction in its lowest terms, as the
 // description writes it, which that of an `emb::scaled` is unless its ratio
 // is negative.
@@ -1199,7 +1199,7 @@ constexpr std::string check_signals(od_mapped_pdo const& mapped)
                             "the name must be a letter followed by letters, "
                             "digits or underscores");
       }
-      if (auto const what = title_error(signal.title); !what.empty()) {
+      if (auto const what = label_error(signal.label); !what.empty()) {
         return signal_error(pdo, start, what);
       }
       for (auto j = 0uz; j < i; ++j) {

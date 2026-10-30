@@ -28,7 +28,7 @@ constexpr std::uint8_t hall_code(sector s)
   return codes[std::to_underlying(s)];
 }
 
-// Returns the info of the sectors for a host: each is titled by the inputs
+// Returns the info of the sectors for a host: each is labelled by the inputs
 // that are high in it and by its Hall code, the inputs C, B and A from the
 // highest bit, as `hall_code` gives it, alike in both languages.
 consteval std::span<enumerator_info<sector> const> enum_info(sector)

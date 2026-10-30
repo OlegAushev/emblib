@@ -81,7 +81,7 @@ struct pdo_codec : detail::pdo_member_codec<Message> {
 
 // The class template `pdo_row` is one signal of a PDO that carries a message
 // of type `Message`, as an application writes it: where its bits lie, its
-// name and its title, and the codec of the member it carries, which a builder
+// name and its label, and the codec of the member it carries, which a builder
 // gives:
 //
 //   inline constexpr pdo_row<drive_command> drive_command_rows[] = {
@@ -95,15 +95,15 @@ struct pdo_codec : detail::pdo_member_codec<Message> {
 // An array of rows lays the PDO out, and `encode_pdo`, `decode_pdo` and
 // `peek_pdo` work from it at compile time; the bits that no row covers are
 // reserved. A signal of the role `value` has a name, a segment unique in the
-// PDO, and a title, and a counter neither (`detail::pdo_check`); the PDO,
+// PDO, and a label, and a counter neither (`detail::pdo_check`); the PDO,
 // which `pdo_of` names, is not named again, and the unit is the codec's. Rows
-// exist only at compile time: no name, title or text of a rule reaches the
+// exist only at compile time: no name, label or text of a rule reaches the
 // image.
 template<typename Message>
 struct pdo_row {
   pdo_bits bits;
   std::string_view name;
-  i18n title;
+  i18n label;
   pdo_codec<Message> codec;
 };
 
@@ -624,7 +624,7 @@ inline constexpr std::uint8_t counter_mask_of = [] {
 //
 //   inline constexpr auto drive_status_pdo = pdo_of<drive_status_rows>(
 //       {.name = "drive_status",
-//        .title = {"Drive status", "Состояние привода"},
+//        .label = {"Drive status", "Состояние привода"},
 //        .direction = pdo_direction::tx,
 //        .number = 1,
 //        .cob_id = pdo_id::predefined(),

@@ -237,7 +237,7 @@ concept od_settings_access =
 // `param<Decl>` binds the record of the parameter that `Decl` declares, and
 // `param<Decl, Actual>` one that also shows its actual value, as the reader
 // `Actual` reads it in the type and the unit of the parameter. The record's
-// path is the parameter's name and its title the parameter's, so its row has
+// path is the parameter's name and its label the parameter's, so its row has
 // no info of its own: `{key, {}, param<Decl>}`. The record's type and unit
 // are the parameter's; its members, by subindex:
 //
@@ -431,32 +431,32 @@ class od_settings {
   // value of the parameter inherit the record's type and unit.
   static constexpr od_field_info param_field_info[] = {
       {.name = "highest_subindex",
-       .title = {"Highest subindex", "Наибольший подындекс"}},
+       .label = {"Highest subindex", "Наибольший подындекс"}},
       {.name = "requested",
-       .title = {"Requested value", "Запрошенное значение"},
+       .label = {"Requested value", "Запрошенное значение"},
        .inherits = true},
       {.name = "applied",
-       .title = {"Applied value", "Применённое значение"},
+       .label = {"Applied value", "Применённое значение"},
        .inherits = true},
       {.name = "stored",
-       .title = {"Stored value", "Сохранённое значение"},
+       .label = {"Stored value", "Сохранённое значение"},
        .inherits = true},
       {.name = "default",
-       .title = {"Default value", "Значение по умолчанию"},
+       .label = {"Default value", "Значение по умолчанию"},
        .inherits = true},
       {.name = "min",
-       .title = {"Lower bound", "Нижняя граница"},
+       .label = {"Lower bound", "Нижняя граница"},
        .inherits = true},
       {.name = "max",
-       .title = {"Upper bound", "Верхняя граница"},
+       .label = {"Upper bound", "Верхняя граница"},
        .inherits = true},
       {.name = "policy",
-       .title = {"Apply policy", "Политика применения"},
+       .label = {"Apply policy", "Политика применения"},
        .value_table = detail::od_value_table_of<settings::apply_policy>},
-      {.name = "apply", .title = {"Apply", "Применить"}, .command = true},
-      {.name = "discard", .title = {"Discard", "Отбросить"}, .command = true},
+      {.name = "apply", .label = {"Apply", "Применить"}, .command = true},
+      {.name = "discard", .label = {"Discard", "Отбросить"}, .command = true},
       {.name = "actual",
-       .title = {"Actual value", "Фактическое значение"},
+       .label = {"Actual value", "Фактическое значение"},
        .inherits = true},
   };
 
@@ -514,7 +514,7 @@ class od_settings {
               .field_info =
                   std::span<od_field_info const>{param_field_info}.first(
                       actual ? 11 : 10),
-              .info = {.path = Decl.desc.name, .title = Decl.title},
+              .info = {.path = Decl.desc.name, .label = Decl.label},
               .unit = Decl.unit,
               .value_table = detail::od_value_table_of<typename param::type>,
               .diagnosed = !(known && shown && fits && in_unit)};

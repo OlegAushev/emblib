@@ -111,7 +111,7 @@ inline constexpr pdo_row<status> status_rows[] = {
 
 inline constexpr auto status_pdo =
     pdo_of<status_rows>({.name = "status",
-                         .title = {"Status", "Состояние"},
+                         .label = {"Status", "Состояние"},
                          .direction = pdo_direction::tx,
                          .number = 1,
                          .cob_id = pdo_id::predefined(),

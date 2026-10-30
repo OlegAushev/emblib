@@ -13,17 +13,17 @@ using namespace emb::settings;
 inline constexpr auto limit_low =
     param("limit.low",
           std::uint32_t{10},
-          {.title = {"Low limit", "Нижний предел"}});
+          {.label = {"Low limit", "Нижний предел"}});
 inline constexpr auto limit_high =
     param("limit.high",
           std::uint32_t{20},
-          {.title = {"High limit", "Верхний предел"}});
+          {.label = {"High limit", "Верхний предел"}});
 inline constexpr auto ctrl_gain =
-    param("ctrl.gain", 0.5f, {.title = {"Gain", "Коэффициент усиления"}});
+    param("ctrl.gain", 0.5f, {.label = {"Gain", "Коэффициент усиления"}});
 inline constexpr auto schema = make_schema(limit_low, limit_high, ctrl_gain);
 
 inline constexpr auto other_x =
-    param("other.x", std::uint32_t{0}, {.title = {"Other X", "Другой X"}});
+    param("other.x", std::uint32_t{0}, {.label = {"Other X", "Другой X"}});
 inline constexpr auto other_schema = make_schema(other_x);
 
 using limits = inputs<schema, limit_high, limit_low>;

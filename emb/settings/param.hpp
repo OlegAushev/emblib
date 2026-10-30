@@ -152,15 +152,15 @@ constexpr std::uint32_t identify(std::string_view name, scalar_kind kind)
 
 // The class template `options` holds the optional part of the declaration of
 // a parameter of type `T`, as `param` takes it. Each field from `min` on sets
-// the field of the same name in the `descriptor` of the parameter; `title` and
+// the field of the same name in the `descriptor` of the parameter; `label` and
 // `unit` are kept in the `declaration`, outside the descriptor, which a
 // schema keeps in the image.
 template<some_parameter_type T>
 struct options {
-  // Name of the parameter for people, in each language. `param` rejects an
-  // exposed parameter (`expose`) without a title in each: a transport shows
+  // Label of the parameter for people, in each language. `param` rejects an
+  // exposed parameter (`expose`) without a label in each: a transport shows
   // it to them.
-  i18n title{};
+  i18n label{};
   // Symbol of the unit of the value, for a type that names no unit or one that
   // does not describe the parameter, e.g. "rpm/s" for a slope held as an
   // `rpm_f32`: it replaces the symbol of the type
@@ -185,14 +185,14 @@ struct options {
 };
 
 // The class template `declaration` holds a parameter as `param` declares it:
-// its `descriptor`, its title and unit for people, and its type as `T`, which
+// its `descriptor`, its label and unit for people, and its type as `T`, which
 // `type` names and from which `make_schema` builds the typelist of the
 // schema. Kept in a `constexpr` variable with static storage duration, a
 // declaration is also what names its parameter to `parameter`, `image` and
 // `section`:
 //
 //   inline constexpr auto pole_pairs = param(
-//       "motor.pole_pairs", std::int32_t{11}, {.title = {"Pole pairs", "…"}});
+//       "motor.pole_pairs", std::int32_t{11}, {.label = {"Pole pairs", "…"}});
 //   ...
 //   values.get<pole_pairs>()
 template<some_parameter_type T>
@@ -200,8 +200,8 @@ struct declaration {
   using type = T;
 
   descriptor desc;
-  // Name of the parameter for people, as `options::title` gives it.
-  i18n title;
+  // Label of the parameter for people, as `options::label` gives it.
+  i18n label;
   // Symbol of the unit of the value: `options::unit` if given, otherwise the
   // symbol of the type, empty if the type names none.
   std::string_view unit;
@@ -230,7 +230,7 @@ concept some_declaration = detail::is_declaration<std::remove_cvref_t<T>>;
 // `def` and the rest of the declaration in `opts`.
 //
 //   param("motor.pole_pairs", std::int32_t{11},
-//         {.title = {"Pole pairs", "…"}, .min = 1, .max = 64, .apply = ...})
+//         {.label = {"Pole pairs", "…"}, .min = 1, .max = 64, .apply = ...})
 //
 // The type of the parameter is that of `def`, so a literal must have that
 // type exactly: `0.05f`, not `0.05`, and `std::int32_t{1}`, not `1`, an `int`,
@@ -239,7 +239,7 @@ concept some_declaration = detail::is_declaration<std::remove_cvref_t<T>>;
 // carrier (`scalar_t`) and its identifier is that of a parameter of the
 // carrier of the same name. Compilation fails at the call if `opts.min` is
 // above `opts.max`, if `def` lies outside [`opts.min`, `opts.max`], if the
-// parameter is exposed without a title in each language, if `opts.unit`
+// parameter is exposed without a label in each language, if `opts.unit`
 // repeats the symbol of `T` or is given to a `bool` or to an enumeration, or
 // if an enumeration does not label every value from `opts.min` to
 // `opts.max`.
@@ -263,8 +263,8 @@ consteval declaration<T> param(std::string_view name,
       EMB_PANIC("the enumeration does not label a value between the bounds");
     }
   }
-  if (opts.expose && (opts.title.en.empty() || opts.title.ru.empty())) {
-    EMB_PANIC("an exposed parameter needs a title in each language");
+  if (opts.expose && (opts.label.en.empty() || opts.label.ru.empty())) {
+    EMB_PANIC("an exposed parameter needs a label in each language");
   }
   if (!opts.unit.empty() && opts.unit == unit_symbol_of<T>()) {
     EMB_PANIC("the unit only repeats the symbol of the type");
@@ -283,7 +283,7 @@ consteval declaration<T> param(std::string_view name,
                      .apply = opts.apply,
                      .writable = opts.writable,
                      .expose = opts.expose},
-          opts.title,
+          opts.label,
           opts.unit.empty() ? unit_symbol_of<T>() : opts.unit};
 }
 

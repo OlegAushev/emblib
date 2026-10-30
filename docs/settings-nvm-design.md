@@ -94,20 +94,20 @@ Declared as:
 ```cpp
 inline constexpr auto phase_swap =
   param("drive.phase_swap", false,
-        {.title = {"Phase swap", "Перестановка фаз"},
+        {.label = {"Phase swap", "Перестановка фаз"},
          .apply = apply_policy::on_command});
 inline constexpr auto runout_speed =
   param("drive.runout_speed", rpm{100.0f},           // unit "rpm" from the type
-        {.title = {"Runout speed", "Скорость выбега"},
+        {.label = {"Runout speed", "Скорость выбега"},
          .min = rpm{0.0f}, .max = rpm{5000.0f},
          .apply = apply_policy::on_command});
 inline constexpr auto stopping_torque =
   param("drive.stopping_torque", pu{0.05f},          // clamped: own bounds
-        {.title = {"Stopping torque", "Момент останова"},
+        {.label = {"Stopping torque", "Момент останова"},
          .apply = apply_policy::on_command});
 inline constexpr auto uvp_dc =
   param("protection.uvp_dc", 35.0f,                  // a float names no unit
-        {.title = {"DC undervoltage", "Пониженное напряжение"}, .unit = "V",
+        {.label = {"DC undervoltage", "Пониженное напряжение"}, .unit = "V",
          .apply = apply_policy::on_command});
 
 inline constexpr auto schema = settings::make_schema(
@@ -124,15 +124,15 @@ reached by index only may be declared in the `make_schema` call.
 
 The type comes from the default, so a literal needs its suffix — `param("x",
 0.05)` does not compile. Per-parameter checks (default within bounds, min
-below max, a title for an exposed parameter, a unit that neither repeats the
+below max, a label for an exposed parameter, a unit that neither repeats the
 type's symbol nor is given to a `bool` or an enumeration, and every value of
 an enumeration between the bounds labelled) live in `param()` so that a bad
 declaration is reported on its own line; cross-parameter ones (duplicate
 name, identifier collision) live in `make_schema`.
 
-The title, in English and in Russian (`emb::i18n`), and the unit are for
+The label, in English and in Russian (`emb::i18n`), and the unit are for
 people: a transport shows them. A parameter `expose`d to a transport must
-have a title in each language. The unit is the symbol of the type
+have a label in each language. The unit is the symbol of the type
 (`emb::unit_symbol_of`), e.g. "rpm" for an `rpm_f32`; `.unit` gives one to a
 type that names none, e.g. a `float` threshold in volts, or replaces one that
 does not describe the parameter, e.g. "rpm/s" for a slope held as an
@@ -537,7 +537,7 @@ The OD table keeps what genuinely belongs to CANopen — the index of each
 record, and the areas of indices, from which the class of an object
 follows — and takes everything else from the section and its schema
 through the parameter's declaration: the type, and the record's info,
-its path being the parameter's name and its title the parameter's. Each
+its path being the parameter's name and its label the parameter's. Each
 parameter is a record, one row at an index of its own, whose info is
 empty (`can/canopen/od_settings.hpp`; the dictionary around it is
 described in `canopen-od-algorithm.ru.md`):
@@ -605,7 +605,7 @@ Completeness is checked at compile time, without coupling:
 - every schema parameter with `expose` has exactly one record and a hidden
   one none — "forgot to publish the new parameter" fails the build;
 - a parameter's path, its name, is a group and a name of a group the
-  dictionary declares, and its title is not empty in any language (T2,
+  dictionary declares, and its label is not empty in any language (T2,
   T35 and T36 in `canopen-od-algorithm.ru.md`); a row of a parameter that
   gives info of its own is refused (T34);
 - the record's type and unit are the parameter's by construction,

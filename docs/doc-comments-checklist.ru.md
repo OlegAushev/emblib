@@ -143,7 +143,7 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `descriptor`
   - [x] `detail::lowest`, `detail::highest`, `detail::identify`,
     `detail::labelled_between` (вручную 2026-10-22)
-  - [x] `options` (и поля `title`, `unit`), `declaration` (и поля `title`,
+  - [x] `options` (и поля `label`, `unit`), `declaration` (и поля `label`,
     `unit`), `param`
 - [x] `emb/settings/record.hpp`
   - [x] `record_format` (с описанием формата записи)

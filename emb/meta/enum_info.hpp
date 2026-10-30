@@ -13,11 +13,11 @@ namespace emb {
 
 // The class template `enumerator_info` describes an enumerator of the scoped
 // enumeration `E`: its value, its name, an identifier for code that describes
-// the value, and its title for people, in each language. An
+// the value, and its label for people, in each language. An
 // `enumerator_info` exists at compile time only: its constructor and its
 // accessors are `consteval`, so a function that reads one is an immediate
 // function or does not compile, and no code brings a table of them, with
-// their names and titles, into the image by reading it at run time. A
+// their names and labels, into the image by reading it at run time. A
 // `constexpr` function template that reads one becomes an immediate function
 // (P2564), and a call of it at run time fails to compile where it is made.
 // The address of one, e.g. `data()` of the span of a table, is a constant and
@@ -41,10 +41,10 @@ template<typename E>
   requires std::is_scoped_enum_v<E>
 class enumerator_info {
 public:
-  consteval enumerator_info(E value, std::string_view name, i18n title)
+  consteval enumerator_info(E value, std::string_view name, i18n label)
       : value_(value),
         name_(name),
-        title_(title)
+        label_(label)
   {
   }
 
@@ -58,15 +58,15 @@ public:
     return name_;
   }
 
-  consteval i18n title() const
+  consteval i18n label() const
   {
-    return title_;
+    return label_;
   }
 
 private:
   E value_;
   std::string_view name_;
-  i18n title_;
+  i18n label_;
 };
 
 // The concept `enum_with_info<E>` is satisfied if and only if `E` is a scoped
@@ -93,7 +93,7 @@ concept enum_with_info = std::is_scoped_enum_v<E> && requires {
 // same name. Constant evaluation fails otherwise, and the diagnostic names
 // the rule broken. The first element of the table thus holds the lowest value
 // labelled and the last one the highest, and a value has at most one element;
-// values between them may have none. What a name and a title may hold is for
+// values between them may have none. What a name and a label may hold is for
 // the code that shows them to check.
 template<enum_with_info E>
 consteval std::span<enumerator_info<E> const> enum_info_of()

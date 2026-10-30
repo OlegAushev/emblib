@@ -353,7 +353,7 @@ namespace canopen {
 inline constexpr auto node_id =
     param("canopen.node_id",
           std::uint32_t{1},
-          {.title = {"Node ID", "Номер узла"},
+          {.label = {"Node ID", "Номер узла"},
            .min = std::uint32_t{emb::can::canopen::node_id::min},
            .max = std::uint32_t{emb::can::canopen::node_id::max},
            .apply = apply::on_restart});

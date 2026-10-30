@@ -114,20 +114,20 @@ template<std::size_t K>
 inline constexpr auto status_name = "status_" + detail::od_decimal<K>;
 
 template<std::size_t K>
-inline constexpr auto status_title_en = "Status " + detail::od_decimal<K>;
+inline constexpr auto status_label_en = "Status " + detail::od_decimal<K>;
 
 template<std::size_t K>
-inline constexpr auto status_title_ru = "Статус " + detail::od_decimal<K>;
+inline constexpr auto status_label_ru = "Статус " + detail::od_decimal<K>;
 
 template<std::size_t N>
 inline constexpr auto status_field_info = [] {
   std::array<od_field_info, N + 1> info{};
   info[0] = {.name = "highest_subindex",
-             .title = {"Highest subindex", "Наибольший подындекс"}};
+             .label = {"Highest subindex", "Наибольший подындекс"}};
   [&]<std::size_t... K>(std::index_sequence<K...>) {
     ((info[K + 1] = {.name = status_name<K + 1>.view(),
-                     .title = {status_title_en<K + 1>.view(),
-                               status_title_ru<K + 1>.view()}}),
+                     .label = {status_label_en<K + 1>.view(),
+                               status_label_ru<K + 1>.view()}}),
      ...);
   }(std::make_index_sequence<N>{});
   return info;
@@ -440,7 +440,7 @@ static_assert(test_full_queue());
 // -- Description --
 
 inline constexpr od_pdo statuses_tpdo{.name = "statuses",
-                                      .title = {"Statuses", "Статусы"},
+                                      .label = {"Statuses", "Статусы"},
                                       .direction = pdo_direction::tx,
                                       .number = 1,
                                       .cob_id = pdo_id::predefined(),
@@ -463,7 +463,7 @@ inline constexpr pdo_row<level> level_rows[] = {
 
 inline constexpr auto level_pdo =
     pdo_of<level_rows>({.name = "level",
-                        .title = {"Level", "Уровень"},
+                        .label = {"Level", "Уровень"},
                         .direction = pdo_direction::tx,
                         .number = 2,
                         .cob_id = pdo_id::predefined(),
@@ -497,11 +497,11 @@ consteval std::string_view as_view(auto const& chars)
 // The MPDO is a line pdo of the mapping sam, with no line signal after it,
 // and the PDO of signals follows it, as TPDO2.
 inline constexpr std::string_view described_pdo_lines =
-    R"({"type":"pdo","name":"statuses","title":"Statuses","title_ru":"Статусы","direction":"tx","number":1,"mapping":"sam","cob_base":"0x180","period_ms":10})"
+    R"({"type":"pdo","name":"statuses","label_en":"Statuses","label_ru":"Статусы","direction":"tx","number":1,"mapping":"sam","cob_base":"0x180","period_ms":10})"
     "\n"
-    R"({"type":"pdo","name":"level","title":"Level","title_ru":"Уровень","direction":"tx","number":2,"mapping":"signals","cob_base":"0x280","period_ms":100})"
+    R"({"type":"pdo","name":"level","label_en":"Level","label_ru":"Уровень","direction":"tx","number":2,"mapping":"signals","cob_base":"0x280","period_ms":100})"
     "\n"
-    R"({"type":"signal","pdo":"level","start":0,"width":8,"role":"value","name":"value","title":"Level","title_ru":"Уровень","encoding":"unsigned"})"
+    R"({"type":"signal","pdo":"level","start":0,"width":8,"role":"value","name":"value","label_en":"Level","label_ru":"Уровень","encoding":"unsigned"})"
     "\n";
 
 static_assert(as_view(description).ends_with(described_pdo_lines));
@@ -629,7 +629,7 @@ static_assert(check_list<adjoining>().empty());
 
 // An MPDO in source address mode is a TPDO.
 static_assert(check_list<few_objects>({.name = "statuses",
-                                       .title = {"Statuses", "Статусы"},
+                                       .label = {"Statuses", "Статусы"},
                                        .direction = pdo_direction::rx,
                                        .number = 1,
                                        .cob_id = pdo_id::predefined(),
@@ -642,7 +642,7 @@ consteval std::string check_two_mpdos()
 {
   auto const first = pdo_of<few_objects>(statuses_tpdo);
   auto const second = pdo_of<same_objects>({.name = "more",
-                                            .title = {"More", "Ещё"},
+                                            .label = {"More", "Ещё"},
                                             .direction = pdo_direction::tx,
                                             .number = 3,
                                             .cob_id = pdo_id::predefined(),

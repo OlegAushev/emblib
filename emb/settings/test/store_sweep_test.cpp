@@ -21,7 +21,7 @@ inline constexpr std::uint32_t magic = 0x52414554u; // "TEAR"
 inline constexpr auto generation_number =
     param("generation",
           std::uint32_t{0},
-          {.title = {"Generation", "Поколение"}});
+          {.label = {"Generation", "Поколение"}});
 
 // One parameter: a record of 32 bytes, 24 of body and 8 of footer.
 inline constexpr auto schema = make_schema(generation_number);

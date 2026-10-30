@@ -194,7 +194,7 @@ inline constexpr pdo_row<command> command_rows[] = {
 
 inline constexpr auto command_pdo =
     pdo_of<command_rows>({.name = "command",
-                          .title = {"Command", "Команда"},
+                          .label = {"Command", "Команда"},
                           .direction = pdo_direction::rx,
                           .number = 1,
                           .cob_id = pdo_id::predefined(),

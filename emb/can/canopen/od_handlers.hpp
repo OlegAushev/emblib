@@ -64,7 +64,7 @@ inline constexpr auto od_enum_value_table = [] {
   for (auto i = 0uz; i < info.size(); ++i) {
     out[i] = {.value = std::to_underlying(info[i].value()),
               .name = info[i].name(),
-              .title = info[i].title()};
+              .label = info[i].label()};
   }
   return out;
 }();

@@ -164,12 +164,12 @@ constexpr void put_flag(Sink& sink, std::string_view key, bool value)
   sink.put("true");
 }
 
-// Writes a title, in English and in Russian.
+// Writes a label, in English and in Russian.
 template<typename Sink>
-constexpr void put_title(Sink& sink, i18n const& title)
+constexpr void put_label(Sink& sink, i18n const& label)
 {
-  put_string(sink, "title", title.en);
-  put_string(sink, "title_ru", title.ru);
+  put_string(sink, "label_en", label.en);
+  put_string(sink, "label_ru", label.ru);
 }
 
 // Writes the start of a line of a description: `{"type":"kind"`.
@@ -207,7 +207,7 @@ constexpr void put_header(Sink& sink,
 }
 
 // Whether the tables of values `a` and `b` name the same values alike: as
-// many values, in the same order, each with the same name and titles.
+// many values, in the same order, each with the same name and labels.
 constexpr bool same_values(std::span<od_value_info const> a,
                            std::span<od_value_info const> b)
 {
@@ -216,7 +216,7 @@ constexpr bool same_values(std::span<od_value_info const> a,
   for (auto i = 0uz; i < a.size(); ++i) {
     if (a[i].value != b[i].value
         || a[i].name != b[i].name
-        || a[i].title != b[i].title) {
+        || a[i].label != b[i].label) {
       return false;
     }
   }
@@ -261,7 +261,7 @@ constexpr void put_table(Sink& sink,
 }
 
 // Whether the records `a` and `b` show a host the same layout: as many
-// members, and each with the same name, title, access, flags, signature and
+// members, and each with the same name, label, access, flags, signature and
 // table of values, and the same type unless it inherits the record's. Records
 // of parameters of different types thus share a layout, as do layouts that
 // differ only in their handlers.
@@ -277,7 +277,7 @@ constexpr bool same_layout(od_binding<Ctx> const& a, od_binding<Ctx> const& b)
     auto const& lb = b.field_info[i];
     if (!shared
         && (la.name != lb.name
-            || la.title != lb.title
+            || la.label != lb.label
             || la.inherits != lb.inherits
             || la.command != lb.command
             || la.signature != lb.signature
@@ -303,7 +303,7 @@ constexpr void put_values(Sink& sink, od_value_tables const& tables)
       put_key(sink, "value");
       put_signed(sink, info.value);
       put_string(sink, "name", info.name);
-      put_title(sink, info.title);
+      put_label(sink, info.label);
       put_end(sink);
     }
   }
@@ -327,7 +327,7 @@ constexpr void put_field(Sink& sink,
   put_key(sink, "sub");
   put_hex(sink, static_cast<unsigned>(sub), 2);
   put_string(sink, "name", member.name);
-  put_title(sink, member.title);
+  put_label(sink, member.label);
   if (!member.inherits) put_string(sink, "datatype", type_name(field.type));
   put_string(sink, "access", access_name(field.access));
   put_table(sink, tables, member.value_table);
@@ -365,7 +365,7 @@ constexpr void put_row(Sink& sink,
   }
   put_string(sink, "group", group_of(info.path));
   put_string(sink, "name", name_of(info.path));
-  put_title(sink, info.title);
+  put_label(sink, info.label);
   put_string(sink,
              "class",
              area != nullptr ? class_name(area->class_)
@@ -389,7 +389,7 @@ constexpr void put_row(Sink& sink,
   put_end(sink);
 }
 
-// Writes the line of the PDO `mapped`: its name, its title, its direction,
+// Writes the line of the PDO `mapped`: its name, its label, its direction,
 // its number, what it carries, `signals` or, of an MPDO in source address
 // mode, `sam`, its COB-ID, custom in `cob_id`, or the base of its predefined
 // form in `cob_base`, which a host adds the node-ID to, and the period of a
@@ -402,7 +402,7 @@ constexpr void put_pdo(Sink& sink, od_mapped_pdo const& mapped)
   bool const tx = pdo.direction == pdo_direction::tx;
   put_start(sink, "pdo");
   put_string(sink, "name", pdo.name);
-  put_title(sink, pdo.title);
+  put_label(sink, pdo.label);
   put_string(sink, "direction", direction_name(pdo.direction));
   put_key(sink, "number");
   put_decimal(sink, pdo.number);
@@ -424,7 +424,7 @@ constexpr void put_pdo(Sink& sink, od_mapped_pdo const& mapped)
 
 // Writes the line of `signal`, a signal of `pdo`, its table of values
 // numbered among `tables`: where its bits lie, its role, the name and the
-// title of a signal of the role `value`, how its bits read, its step unless
+// label of a signal of the role `value`, how its bits read, its step unless
 // it is 1/1, its unit and its table of values, if any.
 template<typename Sink>
 constexpr void put_signal(Sink& sink,
@@ -441,7 +441,7 @@ constexpr void put_signal(Sink& sink,
   put_string(sink, "role", role_name(signal.role));
   if (signal.role == pdo_role::value) {
     put_string(sink, "name", signal.name);
-    put_title(sink, signal.title);
+    put_label(sink, signal.label);
   }
   put_string(sink, "encoding", encoding_name(signal.encoding));
   if (signal.scale_num != 1 || signal.scale_den != 1) {
@@ -529,7 +529,7 @@ constexpr void od_describe(Sink& sink,
     seen[group] = true;
     put_start(sink, "group");
     put_string(sink, "name", groups[group].name);
-    put_title(sink, groups[group].title);
+    put_label(sink, groups[group].label);
     put_end(sink);
   }
 

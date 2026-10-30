@@ -34,7 +34,7 @@ it breaks, naming its line:
   predefined forms of the description; a TPDO states a period above 0 and an
   RPDO a timeout;
 - a signal lies within 64 bits, at least one bit wide, and overlaps no
-  other; it has a name and titles exactly if its role is value, the name
+  other; it has a name and labels exactly if its role is value, the name
   once in its PDO; a PDO has at most one counter, unsigned, of one to eight
   bits;
 - an MPDO in source address mode, of the mapping sam, is a TPDO, one to a
@@ -88,19 +88,19 @@ VERSION = 1
 # with '?' is optional: a line omits it when it has no value.
 KEYS = {
     'header': 'format version device fingerprint',
-    'group': 'name title title_ru',
-    'value': 'value_table value name title title_ru',
-    'field': 'layout sub name title title_ru datatype? access value_table? '
+    'group': 'name label_en label_ru',
+    'value': 'value_table value name label_en label_ru',
+    'field': 'layout sub name label_en label_ru datatype? access value_table? '
              'command? signature? inherits?',
-    'object': 'index sub group name title title_ru class datatype access '
+    'object': 'index sub group name label_en label_ru class datatype access '
               'unit? value_table? command? signature?',
-    'array': 'index group name title title_ru class datatype access unit? '
+    'array': 'index group name label_en label_ru class datatype access unit? '
              'value_table? text?',
-    'record': 'index group name title title_ru class datatype? unit? '
+    'record': 'index group name label_en label_ru class datatype? unit? '
               'value_table? layout',
-    'pdo': 'name title title_ru direction number mapping cob_id? cob_base? '
+    'pdo': 'name label_en label_ru direction number mapping cob_id? cob_base? '
            'period_ms? timeout_ms?',
-    'signal': 'pdo start width role name? title? title_ru? encoding scale? '
+    'signal': 'pdo start width role name? label_en? label_ru? encoding scale? '
               'unit? value_table?',
 }
 
@@ -127,7 +127,7 @@ NAMED = {
     'role': ('value', 'counter'),
     'encoding': ('unsigned', 'signed'),
 }
-TEXTS = ('device', 'title', 'title_ru', 'unit')
+TEXTS = ('device', 'label_en', 'label_ru', 'unit')
 SEGMENT = '[A-Za-z][A-Za-z0-9_]*'
 
 # The highest node-ID, which the predefined form of a PDO adds to its base.
@@ -373,7 +373,7 @@ class Checker:
         for other in named:
             if other[1] == name:
                 self.fail(f'values {other[0]} and {value} have the same name')
-        named.append((value, name, values['title'], values['title_ru']))
+        named.append((value, name, values['label_en'], values['label_ru']))
 
     def field(self, values):
         k = values['layout']
@@ -548,10 +548,10 @@ class Checker:
         current['signals'].append(values)
         self.signals += 1
 
-        labelled = [key for key in ('name', 'title', 'title_ru')
+        labelled = [key for key in ('name', 'label_en', 'label_ru')
                     if key in values]
         if values['role'] == 'value':
-            for key in ('name', 'title', 'title_ru'):
+            for key in ('name', 'label_en', 'label_ru'):
                 if key not in values:
                     self.fail(f'{where} has the role value but no "{key}"')
             own = values['name']

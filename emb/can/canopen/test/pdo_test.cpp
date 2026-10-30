@@ -586,7 +586,7 @@ struct members {
 };
 
 inline constexpr std::string_view any_name = "any";
-inline constexpr emb::i18n any_title = {"Any", "Любой"};
+inline constexpr emb::i18n any_label = {"Any", "Любой"};
 
 template<auto const& Rows>
 constexpr bool rule_is(std::string_view text)
@@ -595,30 +595,30 @@ constexpr bool rule_is(std::string_view text)
 }
 
 inline constexpr pdo_row<members> all_rules_kept[] = {
-    {{0, 1}, any_name, any_title, pdo_map<&members::flag>},
-    {{1, 2}, any_name, any_title, pdo_map<&members::mode>},
-    {{3, 3}, any_name, any_title, pdo_map<&members::tilt>},
-    {{8, 8}, any_name, any_title, pdo_map<&members::number>},
-    {{16, 32}, any_name, any_title, pdo_map<&members::wide>},
+    {{0, 1}, any_name, any_label, pdo_map<&members::flag>},
+    {{1, 2}, any_name, any_label, pdo_map<&members::mode>},
+    {{3, 3}, any_name, any_label, pdo_map<&members::tilt>},
+    {{8, 8}, any_name, any_label, pdo_map<&members::number>},
+    {{16, 32}, any_name, any_label, pdo_map<&members::wide>},
     {{48, 8}, {}, {}, pdo_map_counter<&members::wide_counter>},
 };
 static_assert(rule_is<all_rules_kept>(""));
 
 inline constexpr pdo_row<members> no_bits[] = {
-    {{3, 0}, any_name, any_title, pdo_map<&members::number>},
+    {{3, 0}, any_name, any_label, pdo_map<&members::number>},
 };
 static_assert(rule_is<no_bits>(
     "pdo: the signal at bit 3 must be from 1 to the bits of its member's "
     "type"));
 
 inline constexpr pdo_row<members> wider_than_type[] = {
-    {{3, 9}, any_name, any_title, pdo_map<&members::number>},
+    {{3, 9}, any_name, any_label, pdo_map<&members::number>},
 };
 static_assert(rule_is<wider_than_type>(
     "pdo: the signal at bit 3 must be from 1 to the bits of its member's "
     "type"));
 
-// The rules of the bits come before those of the name and the title.
+// The rules of the bits come before those of the name and the label.
 inline constexpr pdo_row<members> wide_bool[] = {
     {{3, 2}, {}, {}, pdo_map<&members::flag>},
 };
@@ -627,26 +627,26 @@ static_assert(rule_is<wide_bool>(
     "type"));
 
 inline constexpr pdo_row<members> past_the_frame[] = {
-    {{60, 8}, any_name, any_title, pdo_map<&members::number>},
+    {{60, 8}, any_name, any_label, pdo_map<&members::number>},
 };
 static_assert(
     rule_is<past_the_frame>("pdo: the signal at bit 60 must lie within the 64 "
                             "bits"));
 
 inline constexpr pdo_row<members> past_bit_99[] = {
-    {{100, 8}, any_name, any_title, pdo_map<&members::number>},
+    {{100, 8}, any_name, any_label, pdo_map<&members::number>},
 };
 static_assert(
     rule_is<past_bit_99>("pdo: the signal at bit 100 must lie within the 64 "
                          "bits"));
 
 inline constexpr pdo_row<members> whole_frame[] = {
-    {{0, 64}, any_name, any_title, pdo_map<&members::wide>},
+    {{0, 64}, any_name, any_label, pdo_map<&members::wide>},
 };
 static_assert(rule_is<whole_frame>(""));
 
 inline constexpr pdo_row<members> narrow_enumeration[] = {
-    {{3, 1}, any_name, any_title, pdo_map<&members::mode>},
+    {{3, 1}, any_name, any_label, pdo_map<&members::mode>},
 };
 static_assert(rule_is<narrow_enumeration>(
     "pdo: the signal at bit 3 is too narrow for the named values"));
@@ -654,35 +654,35 @@ static_assert(rule_is<narrow_enumeration>(
 // A signed signal of 2 bits holds -2 to 1, and 2, the highest value named,
 // does not fit it; one of 3 bits holds it.
 inline constexpr pdo_row<members> narrow_signed[] = {
-    {{3, 2}, any_name, any_title, pdo_map<&members::tilt>},
+    {{3, 2}, any_name, any_label, pdo_map<&members::tilt>},
 };
 static_assert(rule_is<narrow_signed>(
     "pdo: the signal at bit 3 is too narrow for the named values"));
 
 inline constexpr pdo_row<members> overlap[] = {
-    {{0, 2}, any_name, any_title, pdo_map<&members::number>},
-    {{1, 1}, any_name, any_title, pdo_map<&members::flag>},
+    {{0, 2}, any_name, any_label, pdo_map<&members::number>},
+    {{1, 1}, any_name, any_label, pdo_map<&members::flag>},
 };
 static_assert(
     rule_is<overlap>("pdo: the signal at bit 1 overlaps the signal at bit 0"));
 
 inline constexpr pdo_row<members> overlap_later[] = {
-    {{8, 8}, any_name, any_title, pdo_map<&members::number>},
-    {{0, 9}, any_name, any_title, pdo_map<&members::wide>},
+    {{8, 8}, any_name, any_label, pdo_map<&members::number>},
+    {{0, 9}, any_name, any_label, pdo_map<&members::wide>},
 };
 static_assert(rule_is<overlap_later>(
     "pdo: the signal at bit 0 overlaps the signal at bit 8"));
 
 inline constexpr pdo_row<members> member_twice[] = {
-    {{0, 1}, any_name, any_title, pdo_map<&members::flag>},
-    {{1, 1}, any_name, any_title, pdo_map<&members::flag>},
+    {{0, 1}, any_name, any_label, pdo_map<&members::flag>},
+    {{1, 1}, any_name, any_label, pdo_map<&members::flag>},
 };
 static_assert(rule_is<member_twice>(
     "pdo: the signal at bit 1 maps the member of the signal at bit 0"));
 
 // A counter has the getter of its member.
 inline constexpr pdo_row<members> counter_twice[] = {
-    {{0, 2}, any_name, any_title, pdo_map<&members::counter>},
+    {{0, 2}, any_name, any_label, pdo_map<&members::counter>},
     {{56, 2}, {}, {}, pdo_map_counter<&members::counter>},
 };
 static_assert(rule_is<counter_twice>(
@@ -701,7 +701,7 @@ static_assert(rule_is<wide_counter>(
     "pdo: the signal at bit 48 is a counter and takes one to eight bits"));
 
 // A row has no unit to give: a signal takes its unit from the type of its
-// member alone, while a unit given beside the title would replace that of the
+// member alone, while a unit given beside the label would replace that of the
 // type, as the info of an object of the dictionary does, and "%" would show a
 // torque of half the rated one as 0.5 %.
 template<typename Info>
@@ -719,24 +719,24 @@ inline constexpr pdo_row<members> counter_with_name[] = {
     {{56, 2}, "counter", {}, pdo_map_counter<&members::counter>},
 };
 static_assert(rule_is<counter_with_name>(
-    "pdo: the signal at bit 56 is a counter and has no name or title"));
+    "pdo: the signal at bit 56 is a counter and has no name or label"));
 
-inline constexpr pdo_row<members> counter_with_title[] = {
+inline constexpr pdo_row<members> counter_with_label[] = {
     {{56, 2}, "", {"Counter", ""}, pdo_map_counter<&members::counter>},
 };
-static_assert(rule_is<counter_with_title>(
-    "pdo: the signal at bit 56 is a counter and has no name or title"));
+static_assert(rule_is<counter_with_label>(
+    "pdo: the signal at bit 56 is a counter and has no name or label"));
 
 inline constexpr pdo_row<members> no_name[] = {
     {{8, 8}, "", {"Number", "Число"}, pdo_map<&members::number>},
 };
 static_assert(
-    rule_is<no_name>("pdo: the signal at bit 8 needs a name and a title"));
+    rule_is<no_name>("pdo: the signal at bit 8 needs a name and a label"));
 
-inline constexpr pdo_row<members> no_russian_title[] = {
+inline constexpr pdo_row<members> no_russian_label[] = {
     {{8, 8}, "number", {"Number", ""}, pdo_map<&members::number>},
 };
-static_assert(rule_is<no_russian_title>(
-    "pdo: the signal at bit 8 needs a name and a title"));
+static_assert(rule_is<no_russian_label>(
+    "pdo: the signal at bit 8 needs a name and a label"));
 
 } // namespace

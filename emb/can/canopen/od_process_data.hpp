@@ -31,7 +31,7 @@ enum class pdo_direction : std::uint8_t {
 // The struct `od_pdo` describes a PDO as the server sets its slot up and the
 // description of the dictionary states it: `name`, by what the PDO carries
 // rather than by its slot, which a host joins to the names of its signals;
-// its title for people, in each language; its direction; its number, that
+// its label for people, in each language; its direction; its number, that
 // of its slot, from 1; its COB-ID, of the predefined form, a base + the
 // node-ID, or custom; and `period`, at which a TPDO goes, or `timeout`, after
 // which an RPDO that has not come is missed, 0 if the server does not watch
@@ -40,7 +40,7 @@ enum class pdo_direction : std::uint8_t {
 // the PDO carries.
 struct od_pdo {
   std::string_view name;
-  i18n title;
+  i18n label;
   pdo_direction direction;
   std::size_t number;
   pdo_id cob_id;
@@ -52,7 +52,7 @@ struct od_pdo {
 // row of the PDO (`pdo_row`) without its thunks, with the role, the encoding,
 // the unit, the step `scale_num` / `scale_den` and the table of values of its
 // codec. `name`, a segment unique in the PDO, which a host joins to the name
-// of the PDO to find the signal, and the title, in each language, are those
+// of the PDO to find the signal, and the label, in each language, are those
 // of the row: a signal of the role `value` has both, and a counter neither
 // (`detail::pdo_check`). The unit is the codec's alone: a signal takes it from
 // the type of its member, as its bits are the member's raw value, whose step
@@ -60,7 +60,7 @@ struct od_pdo {
 struct od_signal {
   pdo_bits bits;
   std::string_view name;
-  i18n title;
+  i18n label;
   pdo_role role;
   pdo_encoding encoding;
   std::string_view unit;
@@ -99,7 +99,7 @@ inline constexpr auto od_signals_of = [] {
     auto const& codec = Rows[i].codec;
     signals[i] = {.bits = Rows[i].bits,
                   .name = Rows[i].name,
-                  .title = Rows[i].title,
+                  .label = Rows[i].label,
                   .role = codec.role,
                   .encoding = codec.encoding,
                   .unit = codec.unit,
@@ -179,7 +179,7 @@ inline constexpr auto const& mapped_list =
 //
 //   inline constexpr auto statuses_pdo = pdo_of<statuses_objects>(
 //       {.name = "statuses",
-//        .title = {"Trouble statuses", "Статусы неисправностей"},
+//        .label = {"Trouble statuses", "Статусы неисправностей"},
 //        .direction = pdo_direction::tx,
 //        .number = 1,
 //        .cob_id = pdo_id::predefined(),
