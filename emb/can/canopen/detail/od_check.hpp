@@ -356,7 +356,7 @@ constexpr bool is_verbatim_text(std::string_view text)
 // Returns the rule that a label breaks, or an empty view if it breaks none:
 // each language must have a text, and each text must be verbatim
 // (`is_verbatim_text`).
-constexpr std::string_view label_error(i18n const& label)
+constexpr std::string_view label_error(i18n::text const& label)
 {
   if (label.en.empty() || label.ru.empty()) {
     return "the label must not be empty in any language";

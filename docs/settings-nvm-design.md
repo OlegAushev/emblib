@@ -130,9 +130,9 @@ an enumeration between the bounds labelled) live in `param()` so that a bad
 declaration is reported on its own line; cross-parameter ones (duplicate
 name, identifier collision) live in `make_schema`.
 
-The label, in English and in Russian (`emb::i18n`), and the unit are for
-people: a transport shows them. A parameter `expose`d to a transport must
-have a label in each language. The unit is the symbol of the type
+The label, in English and in Russian (`emb::i18n::text`), and the unit are
+for people: a transport shows them. A parameter `expose`d to a transport
+must have a label in each language. The unit is the symbol of the type
 (`emb::unit_symbol_of`), e.g. "rpm" for an `rpm_f32`; `.unit` gives one to a
 type that names none, e.g. a `float` threshold in volts, or replaces one that
 does not describe the parameter, e.g. "rpm/s" for a slope held as an

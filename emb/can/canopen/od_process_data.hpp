@@ -40,7 +40,7 @@ enum class pdo_direction : std::uint8_t {
 // the PDO carries.
 struct od_pdo {
   std::string_view name;
-  i18n label;
+  i18n::text label;
   pdo_direction direction;
   std::size_t number;
   pdo_id cob_id;
@@ -60,7 +60,7 @@ struct od_pdo {
 struct od_signal {
   pdo_bits bits;
   std::string_view name;
-  i18n label;
+  i18n::text label;
   pdo_role role;
   pdo_encoding encoding;
   std::string_view unit;

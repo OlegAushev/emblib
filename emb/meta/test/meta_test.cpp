@@ -237,7 +237,8 @@ static_assert(enum_info_of<mode>().size() == 3);
 static_assert(enum_info_of<mode>()[0].value() == mode::off);
 static_assert(enum_info_of<mode>()[2].value() == mode::fast);
 static_assert(enum_info_of<mode>()[1].name() == "slow");
-static_assert(enum_info_of<mode>()[1].label() == i18n{"Slow", "Медленно"});
+static_assert(enum_info_of<mode>()[1].label()
+              == i18n::text{"Slow", "Медленно"});
 static_assert(enum_info_of<level>().front().value() == level::low);
 static_assert(enum_info_of<level>().back().value() == level::high);
 

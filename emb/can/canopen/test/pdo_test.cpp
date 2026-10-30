@@ -586,7 +586,7 @@ struct members {
 };
 
 inline constexpr std::string_view any_name = "any";
-inline constexpr emb::i18n any_label = {"Any", "Любой"};
+inline constexpr emb::i18n::text any_label = {"Any", "Любой"};
 
 template<auto const& Rows>
 constexpr bool rule_is(std::string_view text)

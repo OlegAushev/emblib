@@ -41,7 +41,7 @@ template<typename E>
   requires std::is_scoped_enum_v<E>
 class enumerator_info {
 public:
-  consteval enumerator_info(E value, std::string_view name, i18n label)
+  consteval enumerator_info(E value, std::string_view name, i18n::text label)
       : value_(value),
         name_(name),
         label_(label)
@@ -58,7 +58,7 @@ public:
     return name_;
   }
 
-  consteval i18n label() const
+  consteval i18n::text label() const
   {
     return label_;
   }
@@ -66,7 +66,7 @@ public:
 private:
   E value_;
   std::string_view name_;
-  i18n label_;
+  i18n::text label_;
 };
 
 // The concept `enum_with_info<E>` is satisfied if and only if `E` is a scoped

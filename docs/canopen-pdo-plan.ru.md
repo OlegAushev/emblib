@@ -883,7 +883,7 @@ enum class pdo_direction : std::uint8_t { tx, rx };
 // One PDO, as the server sets it up and the description states it.
 struct od_pdo {
   std::string_view name; // "drive_status": the first segment of its paths
-  i18n label;
+  i18n::text label;
   pdo_direction direction;
   std::size_t number;
   pdo_id cob_id;
@@ -2201,7 +2201,7 @@ etk K.
   2.1); если ссылка нужна — только `static constexpr`. Проверять образ, а
   не `.o`: копия, из которой читают только скаляр, оставляет тексты в
   `.o`, но не в образе.
-- **`od_pdo` не структурный тип**: `std::string_view` и `i18n` не дают
+- **`od_pdo` не структурный тип**: `std::string_view` и `i18n::text` не дают
   передать его параметром шаблона. `pdo_of` берёт его аргументом функции,
   а сервер — константу `mapped_pdo` по ссылке.
 - **Стёртый типизированный делегат не вычисляется при компиляции**:

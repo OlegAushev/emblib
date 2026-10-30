@@ -103,7 +103,7 @@ template<typename Message>
 struct pdo_row {
   pdo_bits bits;
   std::string_view name;
-  i18n label;
+  i18n::text label;
   pdo_codec<Message> codec;
 };
 

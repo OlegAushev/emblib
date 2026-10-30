@@ -83,7 +83,7 @@ concept od_known_registry =
 template<typename S>
 concept od_labelled_status = requires {
   { S::name } -> std::convertible_to<std::string_view>;
-  { S::label } -> std::convertible_to<i18n>;
+  { S::label } -> std::convertible_to<i18n::text>;
 };
 
 // Whether each status of the list states its name and its label.

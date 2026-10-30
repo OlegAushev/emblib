@@ -166,7 +166,7 @@ constexpr void put_flag(Sink& sink, std::string_view key, bool value)
 
 // Writes a label, in English and in Russian.
 template<typename Sink>
-constexpr void put_label(Sink& sink, i18n const& label)
+constexpr void put_label(Sink& sink, i18n::text const& label)
 {
   put_string(sink, "label_en", label.en);
   put_string(sink, "label_ru", label.ru);

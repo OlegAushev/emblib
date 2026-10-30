@@ -711,7 +711,7 @@ static_assert(bind<od_ro<read_gear>>().value_table.size() == 3);
 static_assert(bind<od_ro<read_gear>>().value_table[2].value == 4);
 static_assert(bind<od_ro<read_gear>>().value_table[2].name == "reverse");
 static_assert(bind<od_ro<read_gear>>().value_table[2].label
-              == emb::i18n{"Reverse", "Назад"});
+              == emb::i18n::text{"Reverse", "Назад"});
 static_assert(bind<od_ro<read_tilt>>().value_table[0].value == -1);
 static_assert(bind<od_wo<write_gear>>().value_table.size() == 3);
 static_assert(bind<od_rw<read_gear, write_gear>>().value_table.size() == 3);
@@ -2543,7 +2543,7 @@ consteval pdo_codec<report> voltage_codec(auto change)
 }
 
 inline constexpr std::string_view voltage_name = "voltage";
-inline constexpr emb::i18n voltage_label = {"Voltage", "Напряжение"};
+inline constexpr emb::i18n::text voltage_label = {"Voltage", "Напряжение"};
 
 // clang-format off
 inline constexpr pdo_row<report> quoted_unit_rows[] = {

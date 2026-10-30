@@ -37,7 +37,7 @@ struct overheat {
   static constexpr level level_min = level::warning;
   static constexpr level level_max = level::fault;
   static constexpr std::string_view name = "overheat";
-  static constexpr emb::i18n label = {"Overheat", "Перегрев"};
+  static constexpr emb::i18n::text label = {"Overheat", "Перегрев"};
 };
 
 struct overvoltage {
@@ -45,7 +45,7 @@ struct overvoltage {
   static constexpr level level_min = level::fault;
   static constexpr level level_max = level::fault;
   static constexpr std::string_view name = "overvoltage";
-  static constexpr emb::i18n label = {"Overvoltage", "Перенапряжение"};
+  static constexpr emb::i18n::text label = {"Overvoltage", "Перенапряжение"};
 };
 
 // The status of the id 2 is retired.
@@ -55,7 +55,7 @@ struct stall {
   static constexpr level level_min = level::warning;
   static constexpr level level_max = level::fault;
   static constexpr std::string_view name = "stall";
-  static constexpr emb::i18n label = {"Stall", "Заклинивание"};
+  static constexpr emb::i18n::text label = {"Stall", "Заклинивание"};
 };
 
 using statuses = emb::typelist<overheat, overvoltage, stall>;
@@ -101,12 +101,14 @@ static_assert(severity_value_of(std::optional{level::fault}) == 2);
 static_assert(od_severity_scale<level>.size() == 3);
 static_assert(od_severity_scale<level>[0].value == 0);
 static_assert(od_severity_scale<level>[0].name == "none");
-static_assert(od_severity_scale<level>[0].label == emb::i18n{"None", "Нет"});
+static_assert(od_severity_scale<level>[0].label
+              == emb::i18n::text{"None", "Нет"});
 static_assert(od_severity_scale<level>[1].value == 1);
 static_assert(od_severity_scale<level>[1].name == "warning");
 static_assert(od_severity_scale<level>[2].value == 2);
 static_assert(od_severity_scale<level>[2].name == "fault");
-static_assert(od_severity_scale<level>[2].label == emb::i18n{"Fault", "Отказ"});
+static_assert(od_severity_scale<level>[2].label
+              == emb::i18n::text{"Fault", "Отказ"});
 
 // The stub of a retired status is named after its id, in decimal digits.
 static_assert(detail::od_decimal<0>.view() == "0");
@@ -148,7 +150,7 @@ static_assert(bind<od_statuses<registry>>().field_info[1].label
               == overheat::label);
 static_assert(bind<od_statuses<registry>>().field_info[3].name == "retired_2");
 static_assert(bind<od_statuses<registry>>().field_info[3].label
-              == emb::i18n{"Retired status 2", "Снятый статус 2"});
+              == emb::i18n::text{"Retired status 2", "Снятый статус 2"});
 static_assert(bind<od_statuses<registry>>().field_info[3].value_table.data()
               == od_severity_scale<level>.data());
 static_assert(bind<od_statuses<registry>>().field_info[4].name == "stall");

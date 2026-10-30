@@ -209,7 +209,7 @@ struct od_area {
 // dictionary declares has objects, and none is named as a class.
 struct od_group {
   std::string_view name;
-  i18n label;
+  i18n::text label;
 };
 
 // The struct `od_object_info` describes an object for a host: `path`,
@@ -220,7 +220,7 @@ struct od_group {
 // none. What serves the object does not depend on its info.
 struct od_object_info {
   std::string_view path;
-  i18n label;
+  i18n::text label;
   std::string_view unit = {};
 };
 
@@ -236,7 +236,7 @@ struct od_object_info {
 struct od_value_info {
   std::int64_t value;
   std::string_view name;
-  i18n label;
+  i18n::text label;
 };
 
 // An object's handlers. `arg` is the argument its row binds, e.g. the index
@@ -285,7 +285,7 @@ struct od_field {
 // names.
 struct od_field_info {
   std::string_view name;
-  i18n label;
+  i18n::text label;
   bool inherits = false;
   bool command = false;
   std::optional<std::uint32_t> signature{};

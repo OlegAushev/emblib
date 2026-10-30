@@ -160,7 +160,7 @@ struct options {
   // Label of the parameter for people, in each language. `param` rejects an
   // exposed parameter (`expose`) without a label in each: a transport shows
   // it to them.
-  i18n label{};
+  i18n::text label{};
   // Symbol of the unit of the value, for a type that names no unit or one that
   // does not describe the parameter, e.g. "rpm/s" for a slope held as an
   // `rpm_f32`: it replaces the symbol of the type
@@ -201,7 +201,7 @@ struct declaration {
 
   descriptor desc;
   // Label of the parameter for people, as `options::label` gives it.
-  i18n label;
+  i18n::text label;
   // Symbol of the unit of the value: `options::unit` if given, otherwise the
   // symbol of the type, empty if the type names none.
   std::string_view unit;
