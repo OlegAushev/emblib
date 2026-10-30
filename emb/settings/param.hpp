@@ -161,13 +161,14 @@ struct options {
   // exposed parameter (`expose`) without a label in each: a transport shows
   // it to them.
   i18n::text label{};
-  // Symbol of the unit of the value, for a type that names no unit or one that
-  // does not describe the parameter, e.g. "rpm/s" for a slope held as an
-  // `rpm_f32`: it replaces the symbol of the type
-  // (`emb::unit_symbol_of<T>()`). `param` rejects a unit equal to that
-  // symbol, which would only repeat it, and any unit of a `bool` or of an
-  // enumeration, whose values are named instead.
-  std::string_view unit{};
+  // Symbol of the unit of the value, in each language, for a type that names
+  // no unit or one that does not describe the parameter, e.g. "rpm/s" and
+  // "об/(мин·с)" for a slope held as an `rpm_f32`: it replaces the symbol of
+  // the type (`emb::unit_symbol_of<T>()`). `param` rejects a unit equal to
+  // that symbol, which would only repeat it, any unit of a `bool` or of an
+  // enumeration, whose values are named instead, and a unit without a symbol
+  // in each language: a transport shows it with the value.
+  i18n::text unit{};
   // Lower and upper bound of the value, inclusive. If left out, each is the
   // widest `T` admits: the lowest or the highest finite value of
   // `scalar_t<T>`, converted to `T`, and for an enumeration the lowest or the
@@ -202,9 +203,10 @@ struct declaration {
   descriptor desc;
   // Label of the parameter for people, as `options::label` gives it.
   i18n::text label;
-  // Symbol of the unit of the value: `options::unit` if given, otherwise the
-  // symbol of the type, empty if the type names none.
-  std::string_view unit;
+  // Symbol of the unit of the value, in each language: `options::unit` if
+  // given, otherwise the symbol of the type, `i18n::text{}` if the type names
+  // none.
+  i18n::text unit;
 };
 
 namespace detail {
@@ -240,8 +242,9 @@ concept some_declaration = detail::is_declaration<std::remove_cvref_t<T>>;
 // carrier of the same name. Compilation fails at the call if `opts.min` is
 // above `opts.max`, if `def` lies outside [`opts.min`, `opts.max`], if the
 // parameter is exposed without a label in each language, if `opts.unit`
-// repeats the symbol of `T` or is given to a `bool` or to an enumeration, or
-// if an enumeration does not label every value from `opts.min` to
+// repeats the symbol of `T` or is given to a `bool` or to an enumeration, if
+// the unit, `opts.unit` or the symbol of `T`, lacks a symbol in a language,
+// or if an enumeration does not label every value from `opts.min` to
 // `opts.max`.
 template<some_parameter_type T>
 consteval declaration<T> param(std::string_view name,
@@ -266,12 +269,16 @@ consteval declaration<T> param(std::string_view name,
   if (opts.expose && !i18n::is_complete(opts.label)) {
     EMB_PANIC("an exposed parameter needs a label in each language");
   }
-  if (!opts.unit.empty() && opts.unit == unit_symbol_of<T>()) {
+  if (opts.unit != i18n::text{} && opts.unit == unit_symbol_of<T>()) {
     EMB_PANIC("the unit only repeats the symbol of the type");
   }
-  if (!opts.unit.empty()
+  if (opts.unit != i18n::text{}
       && (kind == scalar_kind::boolean || some_enum_value<T>)) {
     EMB_PANIC("a bool or an enumeration takes no unit");
+  }
+  auto const unit = opts.unit == i18n::text{} ? unit_symbol_of<T>() : opts.unit;
+  if (unit != i18n::text{} && !i18n::is_complete(unit)) {
+    EMB_PANIC("the unit needs a symbol in each language");
   }
 
   return {descriptor{.name = name,
@@ -284,7 +291,7 @@ consteval declaration<T> param(std::string_view name,
                      .writable = opts.writable,
                      .expose = opts.expose},
           opts.label,
-          opts.unit.empty() ? unit_symbol_of<T>() : opts.unit};
+          unit};
 }
 
 } // namespace settings

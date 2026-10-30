@@ -15,6 +15,7 @@
 #include "od.hpp"
 #include "od_handlers.hpp"
 
+#include <emb/i18n.hpp>
 #include <emb/meta/alternative_of.hpp>
 #include <emb/meta/enum_info.hpp>
 #include <emb/meta/fixed_string.hpp>
@@ -199,16 +200,18 @@ consteval bool od_reads_as()
 
 // Whether the reader `Actual` reads the actual value of a parameter of type
 // `T` and unit `unit` in that unit: the type of the value it returns names no
-// unit, or the symbol of `T`, or `unit`. A reader of `rpm_f32` fits a
-// parameter of type `rpm_f32` whose unit is "rpm/s", one of `hz_f32` a
-// parameter of type `float` whose unit is "Hz"; one of `rpm_f32` fits
-// neither the latter nor a parameter of type `eradps_f32`.
+// unit, or the symbol of `T`, or `unit`, each in each language. A reader of
+// `rpm_f32` fits a parameter of type `rpm_f32` whose unit is "rpm/s", one of
+// `hz_f32` a parameter of type `float` whose unit is "Hz"; one of `rpm_f32`
+// fits neither the latter nor a parameter of type `eradps_f32`.
 template<auto Actual, typename T>
-consteval bool od_reads_in_unit(std::string_view unit)
+consteval bool od_reads_in_unit(i18n::text const& unit)
 {
   using value_type = typename od_read_value<od_result_t<Actual>>::type;
   constexpr auto symbol = unit_symbol_of<value_type>();
-  return symbol.empty() || symbol == unit_symbol_of<T>() || symbol == unit;
+  return symbol == i18n::text{}
+      || symbol == unit_symbol_of<T>()
+      || symbol == unit;
 }
 
 } // namespace detail

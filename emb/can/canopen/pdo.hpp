@@ -61,19 +61,19 @@ struct pdo_member_codec {
 // The class template `pdo_codec` is the codec of a member of a message of type
 // `Message` that a PDO carries (`detail::pdo_member_codec`), with what the
 // description of the PDO says of the member: its role, the symbol of the unit
-// of its type, empty if it has none, its step `scale_num` / `scale_den`, the
-// physical value of one raw step, and the table of its named values, empty if
-// it names none. A builder makes it from the member (`pdo_map`,
-// `pdo_map_element`, `pdo_map_counter`), and the type of the member alone
-// gives what the description says: an `emb::scaled` the symbol of its
-// quantity (`emb::unit_symbol_of`) and its step, an enumeration the table of
-// its enumerators, the one that an object of it has in the dictionary, and any
-// other type the symbol of its own unit, if it names one, and a step of 1.
-// Like a row, a codec exists at compile time only.
+// of its type, in each language, `i18n::text{}` if it has none, its step
+// `scale_num` / `scale_den`, the physical value of one raw step, and the table
+// of its named values, empty if it names none. A builder makes it from the
+// member (`pdo_map`, `pdo_map_element`, `pdo_map_counter`), and the type of
+// the member alone gives what the description says: an `emb::scaled` the
+// symbol of its quantity (`emb::unit_symbol_of`) and its step, an enumeration
+// the table of its enumerators, the one that an object of it has in the
+// dictionary, and any other type the symbol of its own unit, if it names one,
+// and a step of 1. Like a row, a codec exists at compile time only.
 template<typename Message>
 struct pdo_codec : detail::pdo_member_codec<Message> {
   pdo_role role = pdo_role::value;
-  std::string_view unit{};
+  i18n::text unit{};
   std::int64_t scale_num = 1;
   std::int64_t scale_den = 1;
   std::span<od_value_info const> value_table{};

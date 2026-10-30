@@ -524,22 +524,22 @@ struct electrical_status {
 // table.
 inline constexpr auto dc_voltage = pdo_map<&electrical_status::dc_voltage>;
 static_assert(dc_voltage.role == pdo_role::value);
-static_assert(dc_voltage.unit == "V");
+static_assert(dc_voltage.unit == emb::i18n::text{"V", "В"});
 static_assert(dc_voltage.scale_num == 1 && dc_voltage.scale_den == 10);
 static_assert(dc_voltage.value_table.empty());
 static_assert(dc_voltage.encoding == pdo_encoding::signed_);
 static_assert(dc_voltage.max_width == 16);
 
 inline constexpr auto torque_ref = pdo_map<&drive_command::torque_ref>;
-static_assert(torque_ref.unit == "pu");
+static_assert(torque_ref.unit == emb::i18n::text{"pu", "о. е."});
 static_assert(torque_ref.scale_num == 1 && torque_ref.scale_den == 10000);
 
 inline constexpr auto speed_ref = pdo_map<&drive_command::speed_ref>;
-static_assert(speed_ref.unit == "rpm");
+static_assert(speed_ref.unit == emb::i18n::text{"rpm", "об/мин"});
 static_assert(speed_ref.scale_num == 1 && speed_ref.scale_den == 1);
 
 inline constexpr auto state = pdo_map<&drive_status::state>;
-static_assert(state.unit.empty());
+static_assert(state.unit == emb::i18n::text{});
 static_assert(state.scale_num == 1 && state.scale_den == 1);
 static_assert(state.value_table.data()
               == detail::od_value_table_of<drive::state>.data());
@@ -555,12 +555,12 @@ static_assert(tilt.max_width == 8);
 static_assert(tilt.lowest_named == -1 && tilt.highest_named == 2);
 
 inline constexpr auto pwm_on = pdo_map<&drive_status::pwm_on>;
-static_assert(pwm_on.unit.empty() && pwm_on.value_table.empty());
+static_assert(pwm_on.unit == emb::i18n::text{} && pwm_on.value_table.empty());
 static_assert(pwm_on.scale_num == 1 && pwm_on.scale_den == 1);
 static_assert(pwm_on.max_width == 1 && pwm_on.takes == nullptr);
 
 inline constexpr auto flags = pdo_map<&status_flags::flags>;
-static_assert(flags.unit.empty() && flags.value_table.empty());
+static_assert(flags.unit == emb::i18n::text{} && flags.value_table.empty());
 static_assert(flags.encoding == pdo_encoding::unsigned_);
 static_assert(flags.max_width == 64 && flags.takes == nullptr);
 
@@ -570,7 +570,7 @@ inline constexpr auto counter = pdo_map_counter<&electrical_status::counter>;
 static_assert(counter.role == pdo_role::counter);
 static_assert(counter.get == pdo_map<&electrical_status::counter>.get);
 static_assert(counter.max_width == 8);
-static_assert(counter.unit.empty() && counter.value_table.empty());
+static_assert(counter.unit == emb::i18n::text{} && counter.value_table.empty());
 
 // -- the rules of the rows of a PDO -------------------------------------------
 
@@ -706,11 +706,14 @@ static_assert(rule_is<wide_counter>(
 // torque of half the rated one as 0.5 %.
 template<typename Info>
 concept info_takes_unit = requires {
-  Info{"torque_ref", {"Torque reference", "Задание момента"}, "%"};
+  Info{"torque_ref", {"Torque reference", "Задание момента"}, {"%", "%"}};
 };
 template<typename Row>
 concept row_takes_unit = requires {
-  Row{{0, 8}, "torque_ref", {"Torque reference", "Задание момента"}, "%"};
+  Row{{0, 8},
+      "torque_ref",
+      {"Torque reference", "Задание момента"},
+      {"%", "%"}};
 };
 static_assert(info_takes_unit<od_object_info>
               && !row_takes_unit<pdo_row<members>>);

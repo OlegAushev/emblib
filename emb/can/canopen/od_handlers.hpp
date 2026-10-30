@@ -16,6 +16,7 @@
 #include "od.hpp"
 #include "od_value_cast.hpp"
 
+#include <emb/i18n.hpp>
 #include <emb/meta/enum_carrier32.hpp>
 #include <emb/meta/enum_info.hpp>
 #include <emb/meta/typelist.hpp>
@@ -429,16 +430,17 @@ inline constexpr std::string_view od_rw_values_disagreement =
 
 // Whether the reader `G` and the writer `S` of an rw object, which travel as
 // the same scalar (`od_rw_pair`), agree on the unit: the symbols of the types
-// they read and write are equal, or one of them is empty, as that of a bare
-// scalar is. A reader of `hz_f32` and a writer of `float` agree, on "Hz"; a
-// reader of `rpm_f32` and a writer of `hz_f32` do not.
+// they read and write are equal in each language, or one of them is empty,
+// `i18n::text{}`, as that of a bare scalar is. A reader of `hz_f32` and a
+// writer of `float` agree, on "Hz"; a reader of `rpm_f32` and a writer of
+// `hz_f32` do not.
 template<auto G, auto S, typename Ctx>
 inline constexpr bool od_units_agree = [] {
   constexpr auto read =
       unit_symbol_of<typename od_read_value<od_result_t<G>>::type>();
   constexpr auto written =
       unit_symbol_of<typename od_written<od_args_t<S>, Ctx>::type>();
-  return read.empty() || written.empty() || read == written;
+  return read == i18n::text{} || written == i18n::text{} || read == written;
 }();
 
 // Whether the reader `G` and the writer `S` of an rw object, which travel as
@@ -546,8 +548,9 @@ struct rw_binding {
                 .type = od_type_of<od_carrier_t<read_type>>,
                 .read = &od_read_thunk<G, Ctx>,
                 .write = &od_write_thunk<S, Ctx>,
-                .unit = read_unit.empty() ? unit_symbol_of<written_type>()
-                                          : read_unit,
+                .unit = read_unit == i18n::text{}
+                          ? unit_symbol_of<written_type>()
+                          : read_unit,
                 .value_table = od_value_table_of<read_type>,
                 .diagnosed = !agree};
       }

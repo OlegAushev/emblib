@@ -390,24 +390,30 @@ static_assert(bind<od_ro_array<samples>>().count
               == &detail::od_array_count_thunk<ctx, 3>);
 static_assert(bind<od_ro_array<read_rates>>().type == od_data_type::float32);
 
-// The unit of an object is the symbol of the type of its value, if the type
-// names one: of what the reader returns or the writer takes, of the elements
-// of an array.
-static_assert(bind<od_ro<read_freq>>().unit == "Hz");
-static_assert(bind<od_ro<read_value>>().unit.empty());
-static_assert(bind<od_const<zero<emb::units::edeg_f32>>>().unit == "\u00B0el");
-static_assert(bind<od_wo<write_freq>>().unit == "Hz");
-static_assert(bind<od_ro_array<read_rates>>().unit == "Hz");
-static_assert(bind<od_ro_array<samples>>().unit.empty());
-static_assert(bind<od_exec<command>>().unit.empty());
-static_assert(bind<od_string<text>>().unit.empty());
+// The symbols of the hertz and of the volt, in each language, and no unit.
+inline constexpr emb::i18n::text hertz = {"Hz", "Гц"};
+inline constexpr emb::i18n::text volt = {"V", "В"};
+inline constexpr emb::i18n::text no_unit = {};
+
+// The unit of an object is the symbol of the type of its value, in each
+// language, if the type names one: of what the reader returns or the writer
+// takes, of the elements of an array.
+static_assert(bind<od_ro<read_freq>>().unit == hertz);
+static_assert(bind<od_ro<read_value>>().unit == no_unit);
+static_assert(bind<od_const<zero<emb::units::edeg_f32>>>().unit
+              == emb::i18n::text{"\u00B0el", "\u00B0эл"});
+static_assert(bind<od_wo<write_freq>>().unit == hertz);
+static_assert(bind<od_ro_array<read_rates>>().unit == hertz);
+static_assert(bind<od_ro_array<samples>>().unit == no_unit);
+static_assert(bind<od_exec<command>>().unit == no_unit);
+static_assert(bind<od_string<text>>().unit == no_unit);
 
 // The reader and the writer of an rw object agree on the unit if one of them
 // names none; the unit is the one named.
-static_assert(bind<od_rw<read_freq, write_value>>().unit == "Hz");
-static_assert(bind<od_rw<read_value, write_freq>>().unit == "Hz");
-static_assert(bind<od_rw<read_freq, write_freq>>().unit == "Hz");
-static_assert(bind<od_rw<read_value, write_value>>().unit.empty());
+static_assert(bind<od_rw<read_freq, write_value>>().unit == hertz);
+static_assert(bind<od_rw<read_value, write_freq>>().unit == hertz);
+static_assert(bind<od_rw<read_freq, write_freq>>().unit == hertz);
+static_assert(bind<od_rw<read_value, write_value>>().unit == no_unit);
 // A reader of rpm and a writer of hertz travel as the same scalar, but
 // disagree on the unit: the binding is refused with a message of its own.
 static_assert(od_rw_pair<zero<emb::units::rpm_f32>, write_freq, ctx>);
@@ -717,7 +723,7 @@ static_assert(bind<od_wo<write_gear>>().value_table.size() == 3);
 static_assert(bind<od_rw<read_gear, write_gear>>().value_table.size() == 3);
 static_assert(bind<od_ro_array<gears>>().value_table.size() == 3);
 static_assert(bind<od_ro<read_value>>().value_table.empty());
-static_assert(bind<od_ro<read_gear>>().unit.empty());
+static_assert(bind<od_ro<read_gear>>().unit == no_unit);
 static_assert(!bind<od_ro<read_gear>>().diagnosed);
 
 // A reader gives the carrier; a writer takes only the values the enumeration
@@ -796,12 +802,12 @@ static_assert(od_reader<read_maybe_gear, ctx>);
 static_assert(!od_array_reader<maybe_samples, ctx>);
 static_assert(!od_array_reader<maybe_elements, ctx>);
 static_assert(bind<od_ro<read_maybe_freq>>().type == od_data_type::float32);
-static_assert(bind<od_ro<read_maybe_freq>>().unit == "Hz");
+static_assert(bind<od_ro<read_maybe_freq>>().unit == hertz);
 static_assert(bind<od_const<read_maybe_freq>>().access == od_access::const_);
 static_assert(bind<od_ro<read_maybe_gear>>().type == od_data_type::uint32);
 static_assert(bind<od_ro<read_maybe_gear>>().value_table.size() == 3);
 static_assert(od_rw_pair<read_maybe_freq, write_value, ctx>);
-static_assert(bind<od_rw<read_maybe_freq, write_freq>>().unit == "Hz");
+static_assert(bind<od_rw<read_maybe_freq, write_freq>>().unit == hertz);
 
 // An empty value answers no_data_available, 0800 0024h; a value is read as a
 // reader of the value itself reads it.
@@ -1067,11 +1073,11 @@ inline constexpr od_group regrouped[] = {described_groups[1],
 
 // clang-format off
 inline constexpr od_row<ctx> described[] = {
-    {{0x5000, 0x01}, {"b.value", {"Value", "Значение"}, "V"}, od_ro<read_value>},
-    {{0x2100, 0x01}, {"a.save", {"Save", "Сохранить"}},       od_exec<command, od_save_signature>},
-    {{0x2000, 0x00}, {"a.text", {"Text", "Текст"}},           od_string<text>},
-    {{0x4000, 0x00}, {"a.first", {"First", "Первый"}, "A"},   record(1)},
-    {{0x5001, 0x00}, {"b.rates", {"Rates", "Частоты"}},       od_ro_array<read_rates>},
+    {{0x5000, 0x01}, {"b.value", {"Value", "Значение"}, {"V", "В"}}, od_ro<read_value>},
+    {{0x2100, 0x01}, {"a.save", {"Save", "Сохранить"}},              od_exec<command, od_save_signature>},
+    {{0x2000, 0x00}, {"a.text", {"Text", "Текст"}},                  od_string<text>},
+    {{0x4000, 0x00}, {"a.first", {"First", "Первый"}, {"A", "А"}},   record(1)},
+    {{0x5001, 0x00}, {"b.rates", {"Rates", "Частоты"}},              od_ro_array<read_rates>},
 };
 // clang-format on
 
@@ -1108,16 +1114,16 @@ inline constexpr std::string_view described_body =
     "\"access\":\"wo\",\"command\":true,\"signature\":\"0x65766173\"}\n"
     "{\"type\":\"record\",\"index\":\"0x4000\",\"group\":\"a\","
     "\"name\":\"first\",\"label_en\":\"First\",\"label_ru\":\"Первый\","
-    "\"class\":\"parameters\",\"datatype\":\"float32\",\"unit\":\"A\","
-    "\"layout\":0}\n"
+    "\"class\":\"parameters\",\"datatype\":\"float32\",\"unit_en\":\"A\","
+    "\"unit_ru\":\"А\",\"layout\":0}\n"
     "{\"type\":\"object\",\"index\":\"0x5000\",\"sub\":\"0x01\","
     "\"group\":\"b\",\"name\":\"value\",\"label_en\":\"Value\","
     "\"label_ru\":\"Значение\",\"class\":\"watch\",\"datatype\":\"float32\","
-    "\"access\":\"ro\",\"unit\":\"V\"}\n"
+    "\"access\":\"ro\",\"unit_en\":\"V\",\"unit_ru\":\"В\"}\n"
     "{\"type\":\"array\",\"index\":\"0x5001\",\"group\":\"b\","
     "\"name\":\"rates\",\"label_en\":\"Rates\",\"label_ru\":\"Частоты\","
     "\"class\":\"watch\",\"datatype\":\"float32\",\"access\":\"ro\","
-    "\"unit\":\"Hz\"}\n";
+    "\"unit_en\":\"Hz\",\"unit_ru\":\"Гц\"}\n";
 
 inline constexpr std::string_view described_header_start =
     "{\"type\":\"header\",\"format\":\"emb-canopen-od\",\"version\":1,"
@@ -1167,7 +1173,7 @@ inline constexpr od_row<ctx> relabelled[] = {
     described[0],
     described[1],
     described[2],
-    {{0x4000, 0x00}, {"a.first", {"First", "Первая"}, "A"}, record(1)},
+    {{0x4000, 0x00}, {"a.first", {"First", "Первая"}, {"A", "А"}}, record(1)},
     described[4]};
 
 static_assert(
@@ -1627,7 +1633,7 @@ consteval std::string check_named(od_object_info info)
 }
 
 static_assert(check_named({}).empty());
-static_assert(check_named({"", {}, "V"})
+static_assert(check_named({"", {}, volt})
               == "od: 2000h:01 a.named: the row describes the object, but "
                  "its binding does too");
 
@@ -1635,7 +1641,7 @@ static_assert(check_named({"", {}, "V"})
 
 // Checks the object at 2000h:00, of the path "a.c" and the unit `unit`,
 // bound by `binding`.
-consteval std::string check_unit(std::string_view unit, od_binding<ctx> binding)
+consteval std::string check_unit(emb::i18n::text unit, od_binding<ctx> binding)
 {
   od_row<ctx> const rows[] = {
       {{0x2000, 0x00}, {"a.c", {"C", "Ц"}, unit}, binding}};
@@ -1644,26 +1650,39 @@ consteval std::string check_unit(std::string_view unit, od_binding<ctx> binding)
 
 // A unit for a value whose type names none, or in place of the symbol of the
 // type, which the info must not repeat.
-static_assert(check_unit("V", od_ro<read_value>).empty());
-static_assert(check_unit("rpm", od_ro<read_freq>).empty());
-static_assert(check_unit("", od_ro<read_freq>).empty());
-static_assert(check_unit("Hz", od_ro<read_freq>)
+static_assert(check_unit(volt, od_ro<read_value>).empty());
+static_assert(check_unit({"rpm", "об/мин"}, od_ro<read_freq>).empty());
+static_assert(check_unit(no_unit, od_ro<read_freq>).empty());
+static_assert(check_unit(hertz, od_ro<read_freq>)
               == "od: 2000h:00 a.c: the unit 'Hz' repeats the symbol of the "
                  "value's type");
-static_assert(check_unit("Hz", od_ro_array<read_rates>)
+static_assert(check_unit(hertz, od_ro_array<read_rates>)
               == "od: 2000h:00 a.c: the unit 'Hz' repeats the symbol of the "
                  "value's type");
+// Another symbol in one language is another unit, not a repetition.
+static_assert(check_unit({"Hz", "Герц"}, od_ro<read_freq>).empty());
 // No unit for a command, an array of characters or a boolean.
-static_assert(check_unit("V", od_exec<command>)
+static_assert(check_unit(volt, od_exec<command>)
               == "od: 2000h:00 a.c: a command has no unit");
-static_assert(check_unit("V", od_string<text>)
+static_assert(check_unit(volt, od_string<text>)
               == "od: 2000h:00 a.c: an array of characters has no unit");
-static_assert(check_unit("V", od_ro<zero<bool>>)
+static_assert(check_unit(volt, od_ro<zero<bool>>)
               == "od: 2000h:00 a.c: a boolean has no unit");
-static_assert(check_unit("\"V\"", od_ro<read_value>)
+// A symbol in each language, each verbatim: an empty one or a quotation mark
+// in any language breaks the unit.
+static_assert(check_unit({"V", ""}, od_ro<read_value>)
+              == "od: 2000h:00 a.c: the unit must not be empty in any "
+                 "language");
+static_assert(check_unit({"", "В"}, od_ro<read_value>)
+              == "od: 2000h:00 a.c: the unit must not be empty in any "
+                 "language");
+static_assert(check_unit({"\"V\"", "В"}, od_ro<read_value>)
               == "od: 2000h:00 a.c: the unit must be UTF-8 without quotation "
                  "marks, backslashes or control characters");
-static_assert(check_unit("\u03A9", od_ro<read_value>).empty());
+static_assert(check_unit({"V", "\"В\""}, od_ro<read_value>)
+              == "od: 2000h:00 a.c: the unit must be UTF-8 without quotation "
+                 "marks, backslashes or control characters");
+static_assert(check_unit({"\u03A9", "Ом"}, od_ro<read_value>).empty());
 
 // -- Checks: areas and groups --
 
@@ -1768,7 +1787,7 @@ static_assert(check_record({.access = od_access::ro,
 // a member that inherits the value of the record's type, and a signature for
 // a command only.
 consteval std::string check_member_info(std::span<od_field_info const> info,
-                                        std::string_view unit = {})
+                                        emb::i18n::text unit = {})
 {
   od_row<ctx> const rows[] = {{{0x2000, 0x00},
                                {"a.c", {"C", "Ц"}, unit},
@@ -1823,7 +1842,8 @@ static_assert(check_member_info(replaced(
 // A record whose value no member holds has no unit, nor does its line state
 // a type.
 static_assert(
-    check_member_info(replaced(1, {.name = "value", .label = {"V", "З"}}), "A")
+    check_member_info(replaced(1, {.name = "value", .label = {"V", "З"}}),
+                      {"A", "А"})
     == "od: 2000h:00 a.c: a record without a member that inherits "
        "its value has no unit");
 
@@ -1958,7 +1978,7 @@ static_assert(check_two({{0x0FFF, 0x01}, labelled("a.c"), od_ro<read_value>},
 // by `binding` and its values named by `values`.
 consteval std::string check_table(od_binding<ctx> binding,
                                   std::span<od_value_info const> values,
-                                  std::string_view unit = {})
+                                  emb::i18n::text unit = {})
 {
   binding.value_table = values;
   od_row<ctx> const rows[] = {
@@ -2008,7 +2028,7 @@ static_assert(check_table(od_string<text>, modes)
 static_assert(check_table(od_ro_array<samples>, modes)
               == "od: 2000h:00 a.c: a float32 has no table of values");
 // A named value needs no unit.
-static_assert(check_table(raw_reader(uint8), modes, "V")
+static_assert(check_table(raw_reader(uint8), modes, volt)
               == "od: 2000h:00 a.c: values that a table names have no unit");
 
 // The info of `byte_layout` whose member 01h holds no value of the record.
@@ -2210,7 +2230,7 @@ static_assert(mapped_report.signals.size() == 5);
 static_assert(mapped_report.signals[1].bits.start == 0);
 static_assert(mapped_report.signals[2].role == pdo_role::counter);
 static_assert(mapped_report.signals[0].scale_den == 10);
-static_assert(mapped_report.signals[0].unit == "V");
+static_assert(mapped_report.signals[0].unit == volt);
 static_assert(mapped_report.mapping() == pdo_mapping::signals);
 
 // The PDOs beside the dictionary `geared`, the RPDO first.
@@ -2284,7 +2304,7 @@ inline constexpr std::string_view processed_body =
     "{\"type\":\"signal\",\"pdo\":\"report\",\"start\":16,\"width\":16,"
     "\"role\":\"value\",\"name\":\"voltage\",\"label_en\":\"Voltage\","
     "\"label_ru\":\"Напряжение\",\"encoding\":\"signed\",\"scale\":\"1/10\","
-    "\"unit\":\"V\"}\n"
+    "\"unit_en\":\"V\",\"unit_ru\":\"В\"}\n"
     "{\"type\":\"signal\",\"pdo\":\"report\",\"start\":56,\"width\":2,"
     "\"role\":\"counter\",\"encoding\":\"unsigned\"}\n"
     "{\"type\":\"pdo\",\"name\":\"setpoint\",\"label_en\":\"Setpoint\","
@@ -2547,7 +2567,9 @@ inline constexpr emb::i18n::text voltage_label = {"Voltage", "Напряжени
 
 // clang-format off
 inline constexpr pdo_row<report> quoted_unit_rows[] = {
-{{16, 16}, voltage_name, voltage_label, voltage_codec([](auto& codec) { codec.unit = "V\""; })}};
+{{16, 16}, voltage_name, voltage_label, voltage_codec([](auto& codec) { codec.unit = {"V", "В\""}; })}};
+inline constexpr pdo_row<report> half_unit_rows[] = {
+{{16, 16}, voltage_name, voltage_label, voltage_codec([](auto& codec) { codec.unit = {"V", ""}; })}};
 inline constexpr pdo_row<report> unreduced_rows[] = {
 {{16, 16}, voltage_name, voltage_label, voltage_codec([](auto& codec) { codec.scale_num = 2; codec.scale_den = 20; })}};
 inline constexpr pdo_row<report> negative_step_rows[] = {
@@ -2562,6 +2584,9 @@ static_assert(check_report<quoted_unit_rows>()
               == "od: TPDO2 report: the signal at bit 16: the unit must be "
                  "UTF-8 without quotation marks, backslashes or control "
                  "characters");
+static_assert(check_report<half_unit_rows>()
+              == "od: TPDO2 report: the signal at bit 16: the unit must not be "
+                 "empty in any language");
 static_assert(check_report<unreduced_rows>()
               == "od: TPDO2 report: the signal at bit 16: the step must be a "
                  "positive fraction in its lowest terms");

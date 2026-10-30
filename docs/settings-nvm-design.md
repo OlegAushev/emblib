@@ -105,13 +105,14 @@ inline constexpr auto stopping_torque =
   param("drive.stopping_torque", pu{0.05f},          // clamped: own bounds
         {.label = {"Stopping torque", "Момент останова"},
          .apply = apply_policy::on_command});
-inline constexpr auto uvp_dc =
-  param("protection.uvp_dc", 35.0f,                  // a float names no unit
-        {.label = {"DC undervoltage", "Пониженное напряжение"}, .unit = "V",
+inline constexpr auto Ld =
+  param("motor.Ld", 30.0e-6f,                        // a float names no unit
+        {.label = {"d-axis inductance", "Индуктивность по оси d"},
+         .unit = {"H", "Гн"},
          .apply = apply_policy::on_command});
 
 inline constexpr auto schema = settings::make_schema(
-    phase_swap, runout_speed, stopping_torque, uvp_dc);
+    phase_swap, runout_speed, stopping_torque, Ld);
 ```
 
 The declaration is also the key of the typed access: `get<runout_speed>()`
@@ -125,19 +126,24 @@ reached by index only may be declared in the `make_schema` call.
 The type comes from the default, so a literal needs its suffix — `param("x",
 0.05)` does not compile. Per-parameter checks (default within bounds, min
 below max, a label for an exposed parameter, a unit that neither repeats the
-type's symbol nor is given to a `bool` or an enumeration, and every value of
-an enumeration between the bounds labelled) live in `param()` so that a bad
+type's symbol nor is given to a `bool` or an enumeration and has a symbol in
+each language, and every value of an enumeration between the bounds
+labelled) live in `param()` so that a bad
 declaration is reported on its own line; cross-parameter ones (duplicate
 name, identifier collision) live in `make_schema`.
 
-The label, in English and in Russian (`emb::i18n::text`), and the unit are
-for people: a transport shows them. A parameter `expose`d to a transport
-must have a label in each language. The unit is the symbol of the type
-(`emb::unit_symbol_of`), e.g. "rpm" for an `rpm_f32`; `.unit` gives one to a
-type that names none, e.g. a `float` threshold in volts, or replaces one that
-does not describe the parameter, e.g. "rpm/s" for a slope held as an
-`rpm_f32`. Both are kept in the declaration, outside the descriptor: the
-schema keeps its descriptors in the image, and the texts stay out of it.
+The label and the unit, each in English and in Russian (`emb::i18n::text`),
+are for people: a transport shows them. A parameter `expose`d to a transport
+must have a label in each language, and a unit, if it has one, has a symbol
+in each. The unit is the symbol of the type (`emb::unit_symbol_of`), e.g.
+"rpm" and "об/мин" for an `rpm_f32`; `.unit` gives one to a type that names
+none, e.g. a `float` inductance in henries, for which no tag exists, or
+replaces one that does not describe the parameter, e.g. "rpm/s" and
+"об/(мин·с)" for a slope held as an `rpm_f32`. A quantity whose unit a tag
+names is declared in that type rather than as a `float` with `.unit`, so
+that its symbols, in both languages, are written once, in the tag. Both are
+kept in the declaration, outside the descriptor: the schema keeps its
+descriptors in the image, and the texts stay out of it.
 
 A parameter may be an enumeration: a scoped one that labels its values for
 people (`emb::enum_with_info`, `emb/meta/enum_info.hpp`), e.g.
@@ -1516,6 +1522,21 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   the image, which keeps the descriptors, does not carry them; renaming a
   title therefore changes no identifier. Rejected: the title in the
   descriptor, which would put every title in flash.
+- **A unit has a symbol in each language** (2026-10-30). The label of a
+  parameter came in English and in Russian, its unit in English alone, so
+  a host would have shown "Напряжение DC, V". Russian writes the units by
+  symbols of its own, those of ГОСТ 8.417 for SI: В, А, Ом, Гц, с; and
+  some symbols are English abbreviations, "rpm", which Russian writes
+  "об/мин", and "pu", "о. е.". `options::unit` and `declaration::unit` are
+  `emb::i18n::text`, as the symbol of each unit tag and of a per-unit
+  value is, and `param()` rejects a unit, given or the type's, without a
+  symbol in each language. The inverter declares the 13 parameters whose
+  `.unit` only named the symbol of a tag, "V", "A", "°C" and "Ω", in the
+  types of those units, so the translation of each is written in its tag;
+  `.unit` stays for the units no tag names, "ms", "H", "Wb", "A/A",
+  "pu/s" and "rpm/s". Rejected: a table from the English symbol to the
+  Russian one, in emblib or in the host, which an application's own unit
+  such as "rpm/s" would not be in.
 - **The dictionary has a fingerprint** (2026-10-20). A host decodes what
   the inverter sends by a table generated from `od.cpp`, and nothing told
   a stale table from a fresh one: addresses and types moved three times in

@@ -2,28 +2,31 @@
 
 #include <emb/units/named_unit.hpp>
 
+#include <emb/i18n.hpp>
+
 #include <concepts>
-#include <string_view>
 
 namespace emb {
 namespace units {
 
 namespace tags {
 
-// Unit tag of the ampere, whose symbol is "A".
+// Unit tag of the ampere, whose symbol is "A", in Russian "А": U+0410, the
+// Cyrillic capital letter A.
 struct amp {
-  static constexpr std::string_view symbol = "A";
+  static constexpr i18n::text symbol = {"A", "А"};
 };
 
-// Unit tag of the volt, whose symbol is "V".
+// Unit tag of the volt, whose symbol is "V", in Russian "В".
 struct volt {
-  static constexpr std::string_view symbol = "V";
+  static constexpr i18n::text symbol = {"V", "В"};
 };
 
 // Unit tag of the ohm, whose symbol is "Ω": U+03A9, the Greek capital letter
-// omega, into which NFC normalization turns U+2126, the ohm sign.
+// omega, into which NFC normalization turns U+2126, the ohm sign; in Russian
+// "Ом".
 struct ohm {
-  static constexpr std::string_view symbol = "Ω";
+  static constexpr i18n::text symbol = {"Ω", "Ом"};
 };
 
 } // namespace tags

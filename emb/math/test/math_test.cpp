@@ -1,3 +1,4 @@
+#include <emb/i18n.hpp>
 #include <emb/math.hpp>
 #include <emb/meta/unit_symbol.hpp>
 
@@ -78,10 +79,12 @@ constexpr bool test_math()
 
 static_assert(test_math());
 
-// A per-unit value names its unit "pu"; any other clamped names none.
-static_assert(emb::unit_symbol_of<emb::signed_pu_f32>() == "pu");
-static_assert(emb::unit_symbol_of<emb::unsigned_pu_f32>() == "pu");
-static_assert(emb::unit_symbol_of<emb::signed_pu<double>>() == "pu");
+// A per-unit value names its unit "pu", in Russian "о. е."; any other
+// clamped names none.
+inline constexpr emb::i18n::text per_unit{"pu", "о. е."};
+static_assert(emb::unit_symbol_of<emb::signed_pu_f32>() == per_unit);
+static_assert(emb::unit_symbol_of<emb::unsigned_pu_f32>() == per_unit);
+static_assert(emb::unit_symbol_of<emb::signed_pu<double>>() == per_unit);
 static_assert(!emb::unit_with_symbol<emb::clamped<0.0f, 2.0f>>);
 static_assert(!emb::unit_with_symbol<emb::clamped<0, 1>>);
 

@@ -146,15 +146,6 @@ constexpr void put_string(Sink& sink,
   sink.put('"');
 }
 
-// Writes a member whose value is a string, unless the string is empty.
-template<typename Sink>
-constexpr void put_optional(Sink& sink,
-                            std::string_view key,
-                            std::string_view value)
-{
-  if (!value.empty()) put_string(sink, key, value);
-}
-
 // Writes a flag, which a description states only when it is set.
 template<typename Sink>
 constexpr void put_flag(Sink& sink, std::string_view key, bool value)
@@ -164,19 +155,39 @@ constexpr void put_flag(Sink& sink, std::string_view key, bool value)
   sink.put("true");
 }
 
-// Writes a label: the text of each language under the key `label_` and the
-// code of the language, e.g. `label_en`. The texts need no escapes, as the
-// rules of `od_check` see to it.
+// Writes a text for people: the text of each language under `key`, an
+// underscore and the code of the language, e.g. `label_en`. The texts need no
+// escapes, as the rules of `od_check` see to it.
+template<typename Sink>
+constexpr void put_text(Sink& sink,
+                        std::string_view key,
+                        i18n::text const& text)
+{
+  for (auto const& language : i18n::languages) {
+    sink.put(",\"");
+    sink.put(key);
+    sink.put('_');
+    sink.put(language.code);
+    sink.put("\":\"");
+    sink.put(text.*language.member);
+    sink.put('"');
+  }
+}
+
+// Writes a label, under `label_` and the code of each language, e.g.
+// `label_en`.
 template<typename Sink>
 constexpr void put_label(Sink& sink, i18n::text const& label)
 {
-  for (auto const& language : i18n::languages) {
-    sink.put(",\"label_");
-    sink.put(language.code);
-    sink.put("\":\"");
-    sink.put(label.*language.member);
-    sink.put('"');
-  }
+  put_text(sink, "label", label);
+}
+
+// Writes the symbol of a unit, under `unit_` and the code of each language,
+// e.g. `unit_en`, unless there is no unit, `i18n::text{}`.
+template<typename Sink>
+constexpr void put_unit(Sink& sink, i18n::text const& unit)
+{
+  if (unit != i18n::text{}) put_text(sink, "unit", unit);
 }
 
 // Writes the start of a line of a description: `{"type":"kind"`.
@@ -381,7 +392,7 @@ constexpr void put_row(Sink& sink,
     put_string(sink, "datatype", type_name(binding.type));
   }
   if (!record) put_string(sink, "access", access_name(binding.access));
-  put_optional(sink, "unit", unit_of(row));
+  put_unit(sink, unit_of(row));
   put_table(sink, tables, binding.value_table);
   if (record) {
     put_key(sink, "layout");
@@ -459,7 +470,7 @@ constexpr void put_signal(Sink& sink,
     put_signed(sink, signal.scale_den);
     sink.put('"');
   }
-  put_optional(sink, "unit", signal.unit);
+  put_unit(sink, signal.unit);
   put_table(sink, tables, signal.value_table);
   put_end(sink);
 }

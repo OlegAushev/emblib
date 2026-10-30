@@ -50,8 +50,8 @@ struct od_pdo {
 
 // The struct `od_signal` is a signal of a PDO as the description reads it: a
 // row of the PDO (`pdo_row`) without its thunks, with the role, the encoding,
-// the unit, the step `scale_num` / `scale_den` and the table of values of its
-// codec. `name`, a segment unique in the PDO, which a host joins to the name
+// the unit, in each language, the step `scale_num` / `scale_den` and the
+// table of values of its codec. `name`, a segment unique in the PDO, which a host joins to the name
 // of the PDO to find the signal, and the label, in each language, are those
 // of the row: a signal of the role `value` has both, and a counter neither
 // (`detail::pdo_check`). The unit is the codec's alone: a signal takes it from
@@ -63,7 +63,7 @@ struct od_signal {
   i18n::text label;
   pdo_role role;
   pdo_encoding encoding;
-  std::string_view unit;
+  i18n::text unit;
   std::int64_t scale_num = 1;
   std::int64_t scale_den = 1;
   std::span<od_value_info const> value_table;

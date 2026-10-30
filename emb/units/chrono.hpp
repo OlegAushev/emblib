@@ -1,11 +1,11 @@
 #pragma once
 
 #include <emb/chrono.hpp>
+#include <emb/i18n.hpp>
 #include <emb/units/named_unit.hpp>
 
 #include <chrono>
 #include <concepts>
-#include <string_view>
 #include <type_traits>
 
 namespace emb {
@@ -13,14 +13,14 @@ namespace units {
 
 namespace tags {
 
-// Unit tag of the hertz, whose symbol is "Hz".
+// Unit tag of the hertz, whose symbol is "Hz", in Russian "Гц".
 struct hz {
-  static constexpr std::string_view symbol = "Hz";
+  static constexpr i18n::text symbol = {"Hz", "Гц"};
 };
 
-// Unit tag of the second, whose symbol is "s".
+// Unit tag of the second, whose symbol is "s", in Russian "с".
 struct sec {
-  static constexpr std::string_view symbol = "s";
+  static constexpr i18n::text symbol = {"s", "с"};
 };
 
 } // namespace tags

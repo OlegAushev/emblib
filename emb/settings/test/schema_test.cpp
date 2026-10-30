@@ -3,6 +3,7 @@
 #include <span>
 #include <type_traits>
 
+#include <emb/i18n.hpp>
 #include <emb/math/clamped.hpp>
 #include <emb/meta/enum_info.hpp>
 #include <emb/settings/schema.hpp>
@@ -149,28 +150,30 @@ static_assert(test_single_parameter_schema());
 
 // -- Label and unit --
 
-// The declaration keeps the label and the unit for people; the unit is the
-// symbol of the type unless the declaration gives another.
+// The declaration keeps the label and the unit for people, each in each
+// language; the unit is the symbol of the type unless the declaration gives
+// another.
 static_assert(drive_runout_speed.label.en == "Runout speed");
 static_assert(drive_runout_speed.label.ru == "Скорость выбега");
-static_assert(drive_runout_speed.unit == "rpm");
-static_assert(drive_stopping_torque.unit == "pu");
-static_assert(motor_p.unit.empty());
-static_assert(drive_phase_swap.unit.empty());
+static_assert(drive_runout_speed.unit == i18n::text{"rpm", "об/мин"});
+static_assert(drive_stopping_torque.unit == i18n::text{"pu", "о. е."});
+static_assert(motor_p.unit == i18n::text{});
+static_assert(drive_phase_swap.unit == i18n::text{});
 
 // A unit replaces the symbol of a type that names none, or one that does not
 // describe the parameter.
 inline constexpr auto dc_undervoltage =
     param("protection.uvp_dc",
           35.0f,
-          {.label = {"DC undervoltage", "Пониженное напряжение"}, .unit = "V"});
+          {.label = {"DC undervoltage", "Пониженное напряжение"},
+           .unit = {"V", "В"}});
 inline constexpr auto speed_slope =
     param("model.speed_slope",
           rpm{1000.0f},
           {.label = {"Speed slope", "Скорость нарастания скорости"},
-           .unit = "rpm/s"});
-static_assert(dc_undervoltage.unit == "V");
-static_assert(speed_slope.unit == "rpm/s");
+           .unit = {"rpm/s", "об/(мин·с)"}});
+static_assert(dc_undervoltage.unit == i18n::text{"V", "В"});
+static_assert(speed_slope.unit == i18n::text{"rpm/s", "об/(мин·с)"});
 
 // A hidden parameter needs no label.
 static_assert(prot_watchdog_timeout.label.en.empty());
@@ -236,7 +239,7 @@ static_assert(model_pwm_mode.desc.id
 static_assert(model_pwm_mode.desc == model_pwm_number.desc);
 static_assert(model_pwm_mode.desc.min == to_cell(std::uint32_t{0}));
 static_assert(model_pwm_mode.desc.max == to_cell(std::uint32_t{2}));
-static_assert(model_pwm_mode.unit.empty());
+static_assert(model_pwm_mode.unit == i18n::text{});
 
 // Bounds narrower than the values labelled, a value between them each, or
 // past a gap in the values labelled.

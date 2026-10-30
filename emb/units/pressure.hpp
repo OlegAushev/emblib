@@ -2,27 +2,29 @@
 
 #include <emb/units/named_unit.hpp>
 
+#include <emb/i18n.hpp>
+
 #include <concepts>
-#include <string_view>
 
 namespace emb {
 namespace units {
 
 namespace tags {
 
-// Unit tag of the pascal, whose symbol is "Pa".
+// Unit tag of the pascal, whose symbol is "Pa", in Russian "Па".
 struct pascal {
-  static constexpr std::string_view symbol = "Pa";
+  static constexpr i18n::text symbol = {"Pa", "Па"};
 };
 
-// Unit tag of the megapascal, whose symbol is "MPa".
+// Unit tag of the megapascal, whose symbol is "MPa", in Russian "МПа".
 struct megapascal {
-  static constexpr std::string_view symbol = "MPa";
+  static constexpr i18n::text symbol = {"MPa", "МПа"};
 };
 
-// Unit tag of the standard atmosphere, whose symbol is "atm".
+// Unit tag of the standard atmosphere, whose symbol is "atm", in Russian
+// "атм".
 struct atmosphere {
-  static constexpr std::string_view symbol = "atm";
+  static constexpr i18n::text symbol = {"atm", "атм"};
 };
 
 } // namespace tags

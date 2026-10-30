@@ -2,24 +2,26 @@
 
 #include <emb/units/named_unit.hpp>
 
+#include <emb/i18n.hpp>
 #include <emb/math.hpp>
 
 #include <concepts>
-#include <string_view>
 
 namespace emb {
 namespace units {
 
 namespace tags {
 
-// Unit tag of the revolution per minute, whose symbol is "rpm".
+// Unit tag of the revolution per minute, whose symbol is "rpm", in Russian
+// "об/мин".
 struct rpm {
-  static constexpr std::string_view symbol = "rpm";
+  static constexpr i18n::text symbol = {"rpm", "об/мин"};
 };
 
-// Unit tag of the electrical radian per second, whose symbol is "rad(el)/s".
+// Unit tag of the electrical radian per second, whose symbol is "rad(el)/s",
+// in Russian "рад(эл)/с".
 struct eradps {
-  static constexpr std::string_view symbol = "rad(el)/s";
+  static constexpr i18n::text symbol = {"rad(el)/s", "рад(эл)/с"};
 };
 
 } // namespace tags

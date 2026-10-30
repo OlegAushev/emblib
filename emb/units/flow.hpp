@@ -2,22 +2,25 @@
 
 #include <emb/units/named_unit.hpp>
 
+#include <emb/i18n.hpp>
+
 #include <concepts>
-#include <string_view>
 
 namespace emb {
 namespace units {
 
 namespace tags {
 
-// Unit tag of the cubic meter per hour, whose symbol is "m³/h".
+// Unit tag of the cubic meter per hour, whose symbol is "m³/h", in Russian
+// "м³/ч".
 struct cubic_meter_per_hour {
-  static constexpr std::string_view symbol = "m³/h";
+  static constexpr i18n::text symbol = {"m³/h", "м³/ч"};
 };
 
-// Unit tag of the liter per minute, whose symbol is "L/min".
+// Unit tag of the liter per minute, whose symbol is "L/min", in Russian
+// "л/мин".
 struct liter_per_minute {
-  static constexpr std::string_view symbol = "L/min";
+  static constexpr i18n::text symbol = {"L/min", "л/мин"};
 };
 
 } // namespace tags

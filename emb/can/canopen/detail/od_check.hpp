@@ -60,7 +60,9 @@ constexpr void append_value(std::string& out, std::int64_t value)
 // gives it must be.
 constexpr bool is_empty(od_object_info const& info)
 {
-  return info.path.empty() && info.label == i18n::text{} && info.unit.empty();
+  return info.path.empty()
+      && info.label == i18n::text{}
+      && info.unit == i18n::text{};
 }
 
 // Returns the info of `row`: the one its binding gives, if any, or else its
@@ -74,10 +76,10 @@ constexpr od_object_info const& info_of(od_row<Ctx> const& row)
 // Returns the unit of `row`: the one its info gives, if any, or else the one
 // its binding gives.
 template<typename Ctx>
-constexpr std::string_view unit_of(od_row<Ctx> const& row)
+constexpr i18n::text const& unit_of(od_row<Ctx> const& row)
 {
-  auto const unit = info_of(row).unit;
-  return unit.empty() ? row.binding.unit : unit;
+  auto const& unit = info_of(row).unit;
+  return unit == i18n::text{} ? row.binding.unit : unit;
 }
 
 // Renders a row as "3100h:00 drive.phase_swap", or as "3100h:00" if it has no
@@ -367,6 +369,24 @@ constexpr std::string_view label_error(i18n::text const& label)
   return {};
 }
 
+// Returns the rule that a unit breaks, or an empty view if it breaks none:
+// each language must have a symbol, and each symbol must be verbatim
+// (`is_verbatim_text`). No unit, `i18n::text{}`, breaks none.
+constexpr std::string_view unit_error(i18n::text const& unit)
+{
+  if (unit == i18n::text{}) return {};
+  if (!i18n::is_complete(unit)) {
+    return "the unit must not be empty in any language";
+  }
+  for (auto const& language : i18n::languages) {
+    if (!is_verbatim_text(unit.*language.member)) {
+      return "the unit must be UTF-8 without quotation marks, backslashes or "
+             "control characters";
+    }
+  }
+  return {};
+}
+
 // Returns the area of `areas` that `index` lies in, or nullptr if it lies in
 // none.
 template<std::size_t A>
@@ -599,7 +619,7 @@ constexpr std::string check_field_info(od_row<Ctx> const& row)
     }
     inherited = inherited || info[i].inherits;
   }
-  if (!inherited && !unit_of(row).empty()) {
+  if (!inherited && unit_of(row) != i18n::text{}) {
     return row_error(row,
                      "a record without a member that inherits its value has "
                      "no unit");
@@ -783,26 +803,25 @@ constexpr std::string check_info(od_row<Ctx> const& row,
   return {};
 }
 
-// The rules of the unit of a row: it is verbatim (`is_verbatim_text`), the
-// info does not repeat the unit the binding gives, the symbol of the
-// value's type, and a command, an array of characters or a boolean has none:
-// the value of a command is not used, a character is no quantity, and a
-// boolean has no dimension.
+// The rules of the unit of a row: it has a symbol in each language, each
+// verbatim (`unit_error`), the info does not repeat the unit the binding
+// gives, the symbol of the value's type, and a command, an array of
+// characters or a boolean has none: the value of a command is not used, a
+// character is no quantity, and a boolean has no dimension. A rule names the
+// unit by its symbol in English.
 template<typename Ctx>
 constexpr std::string check_unit(od_row<Ctx> const& row)
 {
   auto const& binding = row.binding;
-  auto const unit = unit_of(row);
+  auto const& unit = unit_of(row);
 
-  if (unit.empty()) return {};
-  if (!is_verbatim_text(unit)) {
-    return row_error(row,
-                     "the unit must be UTF-8 without quotation marks, "
-                     "backslashes or control characters");
+  if (unit == i18n::text{}) return {};
+  if (auto const what = unit_error(unit); !what.empty()) {
+    return row_error(row, what);
   }
   if (info_of(row).unit == binding.unit) {
     std::string what = "the unit '";
-    what += unit;
+    what += unit.en;
     what += "' repeats the symbol of the value's type";
     return row_error(row, what);
   }
@@ -836,7 +855,7 @@ constexpr std::string check_values(od_row<Ctx> const& row)
                      "a record without a member that inherits its value has "
                      "no table of values");
   }
-  if (!unit_of(row).empty()) {
+  if (unit_of(row) != i18n::text{}) {
     return row_error(row, "values that a table names have no unit");
   }
   if (auto const what = values_fit_error(values, binding.type); !what.empty()) {
@@ -1178,10 +1197,9 @@ constexpr std::string check_pdo(od_pdo const& pdo, od_group const (&groups)[G])
 // no other signal of the PDO has it: as no PDO is named as a group and PDOs
 // have different names, the path that a host makes of the name of the PDO
 // and that of the signal is unique in the whole description. Its label obeys
-// `label_error`; a unit is verbatim (`is_verbatim_text`), and a step
-// `scale_num` / `scale_den` a positive fraction in its lowest terms, as the
-// description writes it, which that of an `emb::scaled` is unless its ratio
-// is negative.
+// `label_error` and a unit `unit_error`, and a step `scale_num` /
+// `scale_den` is a positive fraction in its lowest terms, as the description
+// writes it, which that of an `emb::scaled` is unless its ratio is negative.
 constexpr std::string check_signals(od_mapped_pdo const& mapped)
 {
   auto const& pdo = mapped.pdo;
@@ -1211,11 +1229,8 @@ constexpr std::string check_signals(od_mapped_pdo const& mapped)
         }
       }
     }
-    if (!is_verbatim_text(signal.unit)) {
-      return signal_error(pdo,
-                          start,
-                          "the unit must be UTF-8 without quotation marks, "
-                          "backslashes or control characters");
+    if (auto const what = unit_error(signal.unit); !what.empty()) {
+      return signal_error(pdo, start, what);
     }
     if (signal.scale_num <= 0
         || signal.scale_den <= 0

@@ -2,38 +2,39 @@
 
 #include <emb/units/named_unit.hpp>
 
+#include <emb/i18n.hpp>
 #include <emb/math.hpp>
 
 #include <concepts>
 #include <cstdint>
-#include <string_view>
 
 namespace emb {
 namespace units {
 
 namespace tags {
 
-// Unit tag of the electrical radian, whose symbol is "rad(el)". An electrical
-// unit is marked "el"; that of the radian in parentheses, so that a compound
-// symbol such as "rad(el)/s" reads unambiguously.
+// Unit tag of the electrical radian, whose symbol is "rad(el)", in Russian
+// "рад(эл)". An electrical unit is marked "el", in Russian "эл"; that of the
+// radian in parentheses, so that a compound symbol such as "rad(el)/s" reads
+// unambiguously.
 struct erad {
-  static constexpr std::string_view symbol = "rad(el)";
+  static constexpr i18n::text symbol = {"rad(el)", "рад(эл)"};
 };
 
-// Unit tag of the electrical degree, whose symbol is "°el", as drive
-// documentation writes it, e.g. "120 °el".
+// Unit tag of the electrical degree, whose symbol is "°el", in Russian "°эл",
+// as drive documentation writes it, e.g. "120 °el".
 struct edeg {
-  static constexpr std::string_view symbol = "°el";
+  static constexpr i18n::text symbol = {"°el", "°эл"};
 };
 
-// Unit tag of the radian, whose symbol is "rad".
+// Unit tag of the radian, whose symbol is "rad", in Russian "рад".
 struct rad {
-  static constexpr std::string_view symbol = "rad";
+  static constexpr i18n::text symbol = {"rad", "рад"};
 };
 
-// Unit tag of the degree, whose symbol is "°".
+// Unit tag of the degree, whose symbol is "°" in each language.
 struct deg {
-  static constexpr std::string_view symbol = "°";
+  static constexpr i18n::text symbol = {"°", "°"};
 };
 
 } // namespace tags

@@ -2,8 +2,9 @@
 
 #include <emb/units/named_unit.hpp>
 
+#include <emb/i18n.hpp>
+
 #include <concepts>
-#include <string_view>
 
 namespace emb {
 namespace units {
@@ -11,9 +12,9 @@ namespace units {
 namespace tags {
 
 // Unit tag of the microsiemens per centimeter, whose symbol is "µS/cm",
-// with U+00B5, the micro sign.
+// with U+00B5, the micro sign, in Russian "мкСм/см".
 struct microsiemens_per_cm {
-  static constexpr std::string_view symbol = "µS/cm";
+  static constexpr i18n::text symbol = {"µS/cm", "мкСм/см"};
 };
 
 } // namespace tags

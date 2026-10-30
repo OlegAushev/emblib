@@ -215,13 +215,14 @@ struct od_group {
 // The struct `od_object_info` describes an object for a host: `path`,
 // "group.name", the group and the name by which a host finds it, which the
 // description states apart, its label for people, in each language, and the
-// symbol of the unit of its value, empty if it has none. The path and the
-// label are required; `unit` comes last, with a default, as most objects have
-// none. What serves the object does not depend on its info.
+// symbol of the unit of its value, in each language, `i18n::text{}` if it
+// has none. The path and the label are required; `unit` comes last, with a
+// default, as most objects have none. What serves the object does not depend
+// on its info.
 struct od_object_info {
   std::string_view path;
   i18n::text label;
-  std::string_view unit = {};
+  i18n::text unit = {};
 };
 
 // The struct `od_value_info` describes, for a host, a value that an object may
@@ -301,9 +302,10 @@ struct od_field_info {
 // `info` describes the object if the builder knows it, as that of a settings
 // parameter knows its path, the name of the parameter, and its label from the
 // schema; the row then has no info of its own. `unit` is the symbol of the
-// unit of the object's value as the builder knows it: that of the type its
-// handler reads or writes (`emb::unit_symbol_of`), or the unit of a settings
-// parameter; the unit of the row's info, if any, takes its place.
+// unit of the object's value, in each language, as the builder knows it:
+// that of the type its handler reads or writes (`emb::unit_symbol_of`), or
+// the unit of a settings parameter; the unit of the row's info, if any, takes
+// its place.
 // `value_table` is the table of the values the object takes
 // (`od_value_info`), if they are named, as the builder knows it: that of the
 // enumeration its handler reads or writes; of an array, the table of its
@@ -340,7 +342,7 @@ struct od_binding {
   std::span<od_field<Ctx> const> layout{};
   std::span<od_field_info const> field_info{};
   od_object_info info{};
-  std::string_view unit{};
+  i18n::text unit{};
   std::span<od_value_info const> value_table{};
   bool command = false;
   std::optional<std::uint32_t> signature{};

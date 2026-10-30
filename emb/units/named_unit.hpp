@@ -1,9 +1,10 @@
 #pragma once
 
+#include <emb/i18n.hpp>
+
 #include <cmath>
 #include <compare>
 #include <concepts>
-#include <string_view>
 #include <type_traits>
 
 namespace emb {
@@ -53,13 +54,14 @@ struct named_unit {
     return v.value;
   }
 
-  // Returns the symbol of the unit, the `symbol` of the unit tag, e.g. "V" for
-  // `tags::volt`; declared only if the tag has one. Generic code calls it
-  // unqualified, e.g. through `emb::unit_symbol_of`: as a friend defined in
-  // the class, it is found only by argument-dependent lookup.
-  friend constexpr std::string_view unit_symbol(named_unit)
+  // Returns the symbol of the unit in each language, the `symbol` of the unit
+  // tag, e.g. "V" and "В" for `tags::volt`; declared only if the tag has one.
+  // Generic code calls it unqualified, e.g. through `emb::unit_symbol_of`: as
+  // a friend defined in the class, it is found only by argument-dependent
+  // lookup.
+  friend constexpr i18n::text unit_symbol(named_unit)
     requires requires {
-      { Unit::symbol } -> std::convertible_to<std::string_view>;
+      { Unit::symbol } -> std::convertible_to<i18n::text>;
     }
   {
     return Unit::symbol;

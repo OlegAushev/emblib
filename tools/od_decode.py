@@ -16,8 +16,8 @@ it breaks, naming its line:
 - each line is of a kind that the format knows, with the keys of its kind
   in their order, each value of its form: a group or a name as a segment,
   a hexadecimal number of the digits of its key, a flag only when set, a
-  text that is not empty, a step as a positive fraction in its lowest
-  terms;
+  text that is not empty, a unit in each language or in none, a step as a
+  positive fraction in its lowest terms;
 - the lines go in their order: the header, the groups in the order of their
   first objects by key, the values of the tables by table and by value, the
   members of layouts by layout and by subindex, the objects, arrays and
@@ -58,7 +58,8 @@ the value of each signal of a PDO by its path, the name of its PDO and its
 own joined by a dot; of an MPDO in source address mode, the key of its
 object, the path of the object, its group and its name so joined, of the
 record and the name of the member or of the array, and its value, a status
-by the name of its severity; a frame of a PDO shorter than 8 bytes as
+by the name of its severity, a value with the symbol of its unit in English,
+if it has one; a frame of a PDO shorter than 8 bytes as
 refused, an RPDO with a reserved bit set or an unnamed value as refused, as
 the node refuses it, an MPDO of another producer or in destination address
 mode as refused, and a frame of a COB-ID that no PDO has, or an MPDO of an
@@ -93,15 +94,15 @@ KEYS = {
     'field': 'layout sub name label_en label_ru datatype? access value_table? '
              'command? signature? inherits?',
     'object': 'index sub group name label_en label_ru class datatype access '
-              'unit? value_table? command? signature?',
-    'array': 'index group name label_en label_ru class datatype access unit? '
-             'value_table? text?',
-    'record': 'index group name label_en label_ru class datatype? unit? '
-              'value_table? layout',
+              'unit_en? unit_ru? value_table? command? signature?',
+    'array': 'index group name label_en label_ru class datatype access '
+             'unit_en? unit_ru? value_table? text?',
+    'record': 'index group name label_en label_ru class datatype? unit_en? '
+              'unit_ru? value_table? layout',
     'pdo': 'name label_en label_ru direction number mapping cob_id? cob_base? '
            'period_ms? timeout_ms?',
     'signal': 'pdo start width role name? label_en? label_ru? encoding scale? '
-              'unit? value_table?',
+              'unit_en? unit_ru? value_table?',
 }
 
 # The place of each kind of line in the order of the lines: objects, arrays
@@ -127,7 +128,10 @@ NAMED = {
     'role': ('value', 'counter'),
     'encoding': ('unsigned', 'signed'),
 }
-TEXTS = ('device', 'label_en', 'label_ru', 'unit')
+TEXTS = ('device', 'label_en', 'label_ru', 'unit_en', 'unit_ru')
+# The keys of the symbol of a unit, one per language: a line states each or
+# none.
+UNITS = ('unit_en', 'unit_ru')
 SEGMENT = '[A-Za-z][A-Za-z0-9_]*'
 
 # The highest node-ID, which the predefined form of a PDO adds to its base.
@@ -342,6 +346,11 @@ class Checker:
         for key in keys:
             if not key.endswith('?') and key not in values:
                 self.fail(f'no "{key}"')
+        stated = [key for key in UNITS if key in values]
+        if stated and len(stated) < len(UNITS):
+            missing = next(key for key in UNITS if key not in values)
+            self.fail(f'"{stated[0]}" but no "{missing}": a unit is stated in '
+                      f'each language or in none')
 
         if kind == 'header':
             self.header = values
@@ -453,7 +462,7 @@ class Checker:
             if inherits and 'datatype' not in values:
                 self.fail(f'no "datatype", though members of layout {k} '
                           f'inherit the value of the record')
-            for key in ('datatype', 'unit', 'value_table'):
+            for key in ('datatype', *UNITS, 'value_table'):
                 if not inherits and key in values:
                     self.fail(f'"{key}", though no member of layout {k} '
                               f'inherits the value of the record')
@@ -731,8 +740,8 @@ class Decoder:
                                          f'label names'
             else:
                 text = physical(raw, signal.get('scale', '1/1'))
-                if 'unit' in signal:
-                    text += f' {signal["unit"]}'
+                if 'unit_en' in signal:
+                    text += f' {signal["unit_en"]}'
             values.append(f'{key}={text}')
         line = f'{head}: {", ".join(values)}'
         reserved = [bit for bit in range(64)
@@ -766,8 +775,8 @@ class Decoder:
             text = self.tables[values['value_table']].get(raw, f'{raw}?')
         else:
             text = f'{raw:.6g}' if datatype == 'float32' else str(raw)
-            if 'unit' in values:
-                text += f' {values["unit"]}'
+            if 'unit_en' in values:
+                text += f' {values["unit_en"]}'
         return f'{key} {path}={text}' if path else f'{key}={text}'
 
     def object(self, index, sub):

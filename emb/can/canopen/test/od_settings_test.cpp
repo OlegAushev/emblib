@@ -61,7 +61,7 @@ inline constexpr auto drive_slope =
     settings::param("drive.slope",
                     emb::units::rpm_f32{100.0f},
                     {.label = {"Speed slope", "Темп изменения скорости"},
-                     .unit = "rpm/s",
+                     .unit = {"rpm/s", "об/(мин·с)"},
                      .apply = settings::apply_policy::on_command});
 // A parameter of an enumeration, which names its values.
 inline constexpr auto drive_mode_param =
@@ -231,17 +231,24 @@ static_assert(detail::od_reads_as<actual_pole_pairs, std::int32_t>());
 static_assert(!detail::od_reads_as<actual_freq, std::int32_t>());
 static_assert(!detail::od_reads_as<actual_mode, std::uint32_t>());
 
+// The symbols of the units below, in each language.
+inline constexpr emb::i18n::text hertz = {"Hz", "Гц"};
+inline constexpr emb::i18n::text rpm = {"rpm", "об/мин"};
+inline constexpr emb::i18n::text rpm_per_second = {"rpm/s", "об/(мин·с)"};
+
 // The actual value is read in the unit of its parameter: in a type that names
 // no unit, in the type of the parameter, or in the parameter's unit, which
-// may replace the symbol of the type.
-static_assert(detail::od_reads_in_unit<actual_freq, emb::units::hz_f32>("Hz"));
-static_assert(detail::od_reads_in_unit<actual_hz, emb::units::hz_f32>("Hz"));
-static_assert(detail::od_reads_in_unit<actual_hz, float>("Hz"));
+// may replace the symbol of the type; a symbol is the same only in each
+// language.
+static_assert(detail::od_reads_in_unit<actual_freq, emb::units::hz_f32>(hertz));
+static_assert(detail::od_reads_in_unit<actual_hz, emb::units::hz_f32>(hertz));
+static_assert(detail::od_reads_in_unit<actual_hz, float>(hertz));
 static_assert(
-    detail::od_reads_in_unit<actual_rpm, emb::units::rpm_f32>("rpm/s"));
-static_assert(!detail::od_reads_in_unit<actual_rpm, float>("Hz"));
+    detail::od_reads_in_unit<actual_rpm, emb::units::rpm_f32>(rpm_per_second));
+static_assert(!detail::od_reads_in_unit<actual_rpm, float>(hertz));
+static_assert(!detail::od_reads_in_unit<actual_hz, float>({"Hz", "Герц"}));
 static_assert(
-    !detail::od_reads_in_unit<actual_eradps, emb::units::rpm_f32>("rpm"));
+    !detail::od_reads_in_unit<actual_eradps, emb::units::rpm_f32>(rpm));
 
 // -- Catalogs --
 
@@ -281,13 +288,13 @@ static_assert(bind<bridge::param<motor_p>>().layout[1].access == od_access::rw);
 // A record is named as its parameter: by the parameter's name and label.
 static_assert(bind<bridge::param<motor_p>>().info.path == "motor.p");
 static_assert(bind<bridge::param<motor_p>>().info.label == motor_p.label);
-static_assert(bind<bridge::param<motor_p>>().info.unit.empty());
+static_assert(bind<bridge::param<motor_p>>().info.unit == emb::i18n::text{});
 
 // The record's unit is the parameter's: the symbol of its type, or the unit
 // that replaces it.
-static_assert(bind<bridge::param<drive_freq>>().unit == "Hz");
-static_assert(bind<bridge::param<motor_p>>().unit.empty());
-static_assert(bind<bridge::param<drive_slope>>().unit == "rpm/s");
+static_assert(bind<bridge::param<drive_freq>>().unit == hertz);
+static_assert(bind<bridge::param<motor_p>>().unit == emb::i18n::text{});
+static_assert(bind<bridge::param<drive_slope>>().unit == rpm_per_second);
 static_assert(!bind<bridge::param<drive_freq, actual_hz>>().diagnosed);
 static_assert(!bind<bridge::param<drive_slope, actual_rpm>>().diagnosed);
 
@@ -380,7 +387,8 @@ static_assert(
         .contains(R"({"type":"record","index":"0x3102","group":"drive",)"
                   R"("name":"freq","label_en":"Frequency",)"
                   R"("label_ru":"Частота","class":"parameters",)"
-                  R"("datatype":"float32","unit":"Hz","layout":1})"
+                  R"("datatype":"float32","unit_en":"Hz","unit_ru":"Гц",)"
+                  R"("layout":1})"
                   "\n"));
 static_assert(
     as_view(description)
@@ -395,7 +403,8 @@ static_assert(
             R"({"type":"record","index":"0x3104","group":"drive",)"
             R"("name":"slope","label_en":"Speed slope",)"
             R"("label_ru":"Темп изменения скорости","class":"parameters",)"
-            R"("datatype":"float32","unit":"rpm/s","layout":1})"
+            R"("datatype":"float32","unit_en":"rpm/s",)"
+            R"json("unit_ru":"об/(мин·с)","layout":1})json"
             "\n"));
 
 // The members that show a value inherit the record's type and unit; those

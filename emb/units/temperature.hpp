@@ -2,22 +2,24 @@
 
 #include <emb/units/named_unit.hpp>
 
+#include <emb/i18n.hpp>
+
 #include <concepts>
-#include <string_view>
 
 namespace emb {
 namespace units {
 
 namespace tags {
 
-// Unit tag of the degree Celsius, whose symbol is "°C".
+// Unit tag of the degree Celsius, whose symbol is "°C" in each language.
 struct degree_celsius {
-  static constexpr std::string_view symbol = "°C";
+  static constexpr i18n::text symbol = {"°C", "°C"};
 };
 
-// Unit tag of the kelvin, whose symbol is "K".
+// Unit tag of the kelvin, whose symbol is "K", in Russian "К": U+041A, the
+// Cyrillic capital letter Ka.
 struct kelvin {
-  static constexpr std::string_view symbol = "K";
+  static constexpr i18n::text symbol = {"K", "К"};
 };
 
 } // namespace tags

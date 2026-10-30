@@ -158,16 +158,25 @@ static_assert(std::is_same_v<unwrapped_t<no_value_of>, no_value_of>);
 
 // -- unit symbol tests --
 
-// Names the symbol of its unit, found by argument-dependent lookup.
+// Names the symbol of its unit in each language, found by argument-dependent
+// lookup.
 struct volts {
   float value = 0.f;
-  friend constexpr std::string_view unit_symbol(volts)
+  friend constexpr i18n::text unit_symbol(volts)
+  {
+    return {"V", "В"};
+  }
+};
+
+// Names a symbol in one language, as a std::string_view, not as a text.
+struct one_language_symbol {
+  friend constexpr std::string_view unit_symbol(one_language_symbol)
   {
     return "V";
   }
 };
 
-// Names a symbol, but not as a std::string_view.
+// Names a symbol, but not as a text.
 struct c_string_symbol {
   friend constexpr char const* unit_symbol(c_string_symbol)
   {
@@ -176,13 +185,15 @@ struct c_string_symbol {
 };
 
 static_assert(unit_with_symbol<volts>);
+static_assert(!unit_with_symbol<one_language_symbol>);
 static_assert(!unit_with_symbol<c_string_symbol>);
 static_assert(!unit_with_symbol<meters>);
 static_assert(!unit_with_symbol<float>);
 
-static_assert(unit_symbol_of<volts>() == "V");
-static_assert(unit_symbol_of<meters>().empty());
-static_assert(unit_symbol_of<float>().empty());
+static_assert(unit_symbol_of<volts>() == i18n::text{"V", "В"});
+static_assert(unit_symbol_of<one_language_symbol>() == i18n::text{});
+static_assert(unit_symbol_of<meters>() == i18n::text{});
+static_assert(unit_symbol_of<float>() == i18n::text{});
 
 // -- enumerator info tests --
 
