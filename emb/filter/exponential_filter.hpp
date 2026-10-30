@@ -23,7 +23,7 @@ namespace emb {
 // rounding. The time constant must be positive; the behavior is undefined if
 // the quotient is NaN.
 template<typename T, typename Duration>
-  requires(std::floating_point<T> || emb::units::some_unit<T>)
+  requires(std::floating_point<T> || emb::units::some_quantity<T>)
        && std::floating_point<decltype(std::declval<Duration>()
                                        / std::declval<Duration>())>
 class exponential_filter {

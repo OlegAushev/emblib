@@ -64,7 +64,7 @@ emblib не попал. Такие файлы помечены «песочни�
 - [x] `emb/math/scaled.hpp`
   - [x] `saturate_round`
   - [x] `quantize`, `dequantize`
-  - [x] `some_quantity`, `some_ratio`
+  - [x] `some_ratio`
   - [x] `detail::scaled`
   - [x] `scaled` (псевдоним)
 - [x] `emb/math/sqrt.hpp`
@@ -241,7 +241,7 @@ emblib не попал. Такие файлы помечены «песочни�
     `atmosphere_f32`
   - [x] `convert_to` (шесть перегрузок)
 - [x] `emb/units/quantity.hpp`
-  - [x] `quantity` (и друг `unit_symbol`), `some_unit`, `convert_to`
+  - [x] `quantity` (и друг `unit_symbol`), `some_quantity`, `convert_to`
 - [x] `emb/units/relations.hpp`
   - [x] `operator/`
   - [x] `operator*` (две перегрузки)

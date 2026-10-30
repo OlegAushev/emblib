@@ -116,11 +116,11 @@ struct quantity {
   }
 };
 
-// The concept `some_unit<T>` is satisfied if and only if `T` is a
+// The concept `some_quantity<T>` is satisfied if and only if `T` is a
 // specialization of `quantity`. A cv-qualified or reference type does not
 // satisfy it.
 template<typename T>
-concept some_unit =
+concept some_quantity =
     std::same_as<T, quantity<typename T::value_type, typename T::unit_type>>;
 
 // Converts `v` to its own type `To`, i.e. returns `v` unchanged. Ignores the

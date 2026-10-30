@@ -47,7 +47,7 @@ using eradps_f32 = eradps<float>;
 // `tags::rpm` or `tags::eradps`.
 template<typename T>
 concept quantity_of_rotational_speed =
-    some_unit<T>
+    some_quantity<T>
     && (std::same_as<typename T::unit_type, tags::rpm>
         || std::same_as<typename T::unit_type, tags::eradps>);
 

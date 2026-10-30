@@ -18,7 +18,7 @@ namespace emb::signal {
 //
 // `affine` is a structural type, so an `affine` can be the template argument of
 // `bind`.
-template<emb::units::some_unit In, emb::units::some_unit Out>
+template<emb::units::some_quantity In, emb::units::some_quantity Out>
 struct affine {
   In input_min;
   In input_max;

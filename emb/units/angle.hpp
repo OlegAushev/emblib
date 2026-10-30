@@ -74,14 +74,14 @@ using deg_f32 = deg<float>;
 // `T` is a specialization of `erad` or `edeg`.
 template<typename T>
 concept quantity_of_electrical_angle =
-    some_unit<T>
+    some_quantity<T>
     && (std::same_as<typename T::unit_type, tags::erad>
         || std::same_as<typename T::unit_type, tags::edeg>);
 
 // The concept `quantity_of_angle<T>` is satisfied if and only if `T` is a
 // specialization of `rad` or `deg`; `erad` and `edeg` do not satisfy it.
 template<typename T>
-concept quantity_of_angle = some_unit<T>
+concept quantity_of_angle = some_quantity<T>
                          && (std::same_as<typename T::unit_type, tags::rad>
                              || std::same_as<typename T::unit_type, tags::deg>);
 
@@ -89,7 +89,7 @@ concept quantity_of_angle = some_unit<T>
 // specialization of `erad` or `rad`.
 template<typename T>
 concept quantity_in_radians =
-    some_unit<T>
+    some_quantity<T>
     && (std::same_as<typename T::unit_type, tags::erad>
         || std::same_as<typename T::unit_type, tags::rad>);
 
@@ -97,7 +97,7 @@ concept quantity_in_radians =
 // specialization of `edeg` or `deg`.
 template<typename T>
 concept quantity_in_degrees =
-    some_unit<T>
+    some_quantity<T>
     && (std::same_as<typename T::unit_type, tags::edeg>
         || std::same_as<typename T::unit_type, tags::deg>);
 

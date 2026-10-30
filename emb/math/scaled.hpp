@@ -118,16 +118,6 @@ constexpr Float dequantize(Int n)
   return static_cast<Float>(n) * step;
 }
 
-// The concept `some_quantity<T>` specifies that `T` is a class that wraps a
-// physical value of floating-point type. It is satisfied if and only if `T`
-// is a wrapper (`some_wrapper`) of a floating-point type. It is modeled only
-// if `T(value_of(q))` wraps the same physical value as `q`.
-//
-// `units::quantity` satisfies it, and so does `clamped` with floating-point
-// bounds, e.g. `signed_pu_f32`; arithmetic types such as `float` do not.
-template<typename T>
-concept some_quantity = some_wrapper<T> && std::floating_point<unwrapped_t<T>>;
-
 // The concept `some_ratio<R>` is satisfied if and only if `R::type` denotes
 // the same type as `std::ratio<R::num, R::den>`. Every specialization of
 // `std::ratio` satisfies it. The ratio can be zero or negative.
@@ -147,11 +137,13 @@ namespace detail {
 // The class template `scaled` stores a quantity of type `Q` as a count of
 // steps of type `Raw`, the raw value, where `Step` is a ratio type, such as
 // `std::ratio`, giving the physical value of one step. E.g. with a `Step` of
-// `std::ratio<1, 10000>`, a physical value of 1.0 is stored as 10000.
-// `scaled` is trivially copyable and has the size and alignment of `Raw`, and
-// its object representation is that of the raw value, so it can stand in for
-// a `Raw` member of a structure that is converted to and from bytes, e.g. by
-// `std::bit_cast`.
+// `std::ratio<1, 10000>`, a physical value of 1.0 is stored as 10000. `Q` is
+// a wrapper (`some_wrapper`) of a floating-point type, e.g. `units::quantity`
+// or `clamped` with floating-point bounds, such as `signed_pu_f32`; an
+// arithmetic type such as `float` is not. `scaled` is trivially copyable and
+// has the size and alignment of `Raw`, and its object representation is that
+// of the raw value, so it can stand in for a `Raw` member of a structure that
+// is converted to and from bytes, e.g. by `std::bit_cast`.
 //
 // A default-constructed `scaled` has a raw value of zero. Constructing a
 // `scaled` from a quantity, or assigning a quantity to it, converts the
@@ -169,7 +161,8 @@ namespace detail {
 // converts a quantity to a raw value is ill-formed if `Raw` is not a signed
 // or unsigned integer type, or if it is an unsigned type at least as wide as
 // `long long`, such as `std::uint64_t`.
-template<std::integral Raw, some_quantity Q, some_ratio Step>
+template<std::integral Raw, some_wrapper Q, some_ratio Step>
+  requires std::floating_point<unwrapped_t<Q>>
 class scaled {
 public:
   using raw_type = Raw;
@@ -216,7 +209,8 @@ private:
 // ratios of equal value give the same type even if they are distinct types,
 // e.g. `std::ratio<3, 30>` and `std::ratio<1, 10>`. For any other `Step`, this
 // holds only if `Step::type` is in lowest terms.
-template<std::integral Raw, some_quantity Q, some_ratio Step>
+template<std::integral Raw, some_wrapper Q, some_ratio Step>
+  requires std::floating_point<unwrapped_t<Q>>
 using scaled = detail::scaled<Raw, Q, typename Step::type>;
 
 } // namespace emb

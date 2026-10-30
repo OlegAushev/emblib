@@ -147,7 +147,7 @@ inline constexpr auto element_ref =
 template<typename T>
 inline constexpr bool is_scaled = false;
 
-template<std::integral Raw, some_quantity Q, some_ratio Step>
+template<typename Raw, typename Q, typename Step>
 inline constexpr bool is_scaled<emb::detail::scaled<Raw, Q, Step>> = true;
 
 // Returns the raw bits of the integer `v`, sign-extended to 64 if `T` is

@@ -18,7 +18,7 @@ namespace emb::signal {
 //
 // `proportional` is a structural type, so a `proportional` can be the template
 // argument of `bind`.
-template<emb::units::some_unit In, emb::units::some_unit Out>
+template<emb::units::some_quantity In, emb::units::some_quantity Out>
 struct proportional {
   In rated_input;
   Out rated_output;

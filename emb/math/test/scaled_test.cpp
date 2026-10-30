@@ -27,11 +27,16 @@ static_assert(
         volt_ds,
         emb::scaled<std::int16_t, emb::units::volt_f32, std::ratio<3, 30>>>);
 
-// both wrapper families qualify; a bare float does not
-static_assert(emb::some_quantity<emb::units::volt_f32>);
-static_assert(emb::some_quantity<emb::signed_pu_f32>);
-static_assert(!emb::some_quantity<float>);
-static_assert(!emb::some_quantity<int>);
+template<typename Q>
+concept scalable =
+    requires { typename emb::scaled<std::int16_t, Q, std::ratio<1, 10>>; };
+
+// both wrapper families qualify; a bare number and a wrapper of an int do not
+static_assert(scalable<emb::units::volt_f32>);
+static_assert(scalable<emb::signed_pu_f32>);
+static_assert(!scalable<float>);
+static_assert(!scalable<int>);
+static_assert(!scalable<emb::clamped<0, 100>>);
 
 static_assert(emb::some_ratio<std::ratio<1, 10>>);
 static_assert(!emb::some_ratio<int>);
