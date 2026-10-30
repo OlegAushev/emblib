@@ -20,6 +20,7 @@
 #include "types.hpp"
 
 #include <emb/can.hpp>
+#include <emb/i18n.hpp>
 #include <emb/math/scaled.hpp>
 #include <emb/meta/enum_carrier32.hpp>
 #include <emb/meta/enum_info.hpp>
@@ -75,30 +76,34 @@ struct pdo_codec : detail::pdo_member_codec<Message> {
   std::string_view unit{};
   std::int64_t scale_num = 1;
   std::int64_t scale_den = 1;
-  std::span<od_value_label const> value_labels{};
+  std::span<od_value_info const> value_table{};
 };
 
 // The class template `pdo_row` is one signal of a PDO that carries a message
 // of type `Message`, as an application writes it: where its bits lie, its
-// label and the codec of the member it carries, which a builder gives:
+// name and its title, and the codec of the member it carries, which a builder
+// gives:
 //
 //   inline constexpr pdo_row<drive_command> drive_command_rows[] = {
 //       {{16, 16},
-//        {"torque_ref", {"Torque reference", "Задание момента"}},
+//        "torque_ref",
+//        {"Torque reference", "Задание момента"},
 //        pdo_map<&drive_command::torque_ref>},
-//       {{56, 2}, {}, pdo_map_counter<&drive_command::counter>},
+//       {{56, 2}, {}, {}, pdo_map_counter<&drive_command::counter>},
 //   };
 //
 // An array of rows lays the PDO out, and `encode_pdo`, `decode_pdo` and
 // `peek_pdo` work from it at compile time; the bits that no row covers are
-// reserved. The label gives the name and the title of a signal of the role
-// `value`, and a counter has none (`od_signal_label`); the PDO, which
-// `pdo_of` names, is not named again. Rows exist only at compile time: no
-// name, title or text of a rule reaches the image.
+// reserved. A signal of the role `value` has a name, a segment unique in the
+// PDO, and a title, and a counter neither (`detail::pdo_check`); the PDO,
+// which `pdo_of` names, is not named again, and the unit is the codec's. Rows
+// exist only at compile time: no name, title or text of a rule reaches the
+// image.
 template<typename Message>
 struct pdo_row {
   pdo_bits bits;
-  od_signal_label label;
+  std::string_view name;
+  i18n title;
   pdo_codec<Message> codec;
 };
 
@@ -265,7 +270,7 @@ consteval pdo_codec<Message> described(pdo_member_codec<Message> const& core)
   }
   else {
     codec.unit = unit_symbol_of<T>();
-    codec.value_labels = od_value_labels_of<T>;
+    codec.value_table = od_value_table_of<T>;
   }
   return codec;
 }

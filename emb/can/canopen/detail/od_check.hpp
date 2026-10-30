@@ -56,30 +56,30 @@ constexpr void append_value(std::string& out, std::int64_t value)
                      : static_cast<std::uint64_t>(value));
 }
 
-// Whether every field of `label` is empty, as the label of a row whose
-// binding gives one must be.
-constexpr bool is_empty(od_label const& label)
+// Whether every field of `info` is empty, as the info of a row whose binding
+// gives it must be.
+constexpr bool is_empty(od_object_info const& info)
 {
-  return label.path.empty()
-      && label.title.en.empty()
-      && label.title.ru.empty()
-      && label.unit.empty();
+  return info.path.empty()
+      && info.title.en.empty()
+      && info.title.ru.empty()
+      && info.unit.empty();
 }
 
-// Returns the label of `row`: the one its binding gives, if any, or else its
+// Returns the info of `row`: the one its binding gives, if any, or else its
 // own.
 template<typename Ctx>
-constexpr od_label const& label_of(od_row<Ctx> const& row)
+constexpr od_object_info const& info_of(od_row<Ctx> const& row)
 {
-  return is_empty(row.binding.label) ? row.label : row.binding.label;
+  return is_empty(row.binding.info) ? row.info : row.binding.info;
 }
 
-// Returns the unit of `row`: the one its label gives, if any, or else the
-// one its binding gives.
+// Returns the unit of `row`: the one its info gives, if any, or else the one
+// its binding gives.
 template<typename Ctx>
 constexpr std::string_view unit_of(od_row<Ctx> const& row)
 {
-  auto const unit = label_of(row).unit;
+  auto const unit = info_of(row).unit;
   return unit.empty() ? row.binding.unit : unit;
 }
 
@@ -91,7 +91,7 @@ constexpr void append_row(std::string& out, od_row<Ctx> const& row)
   append_hex(out, row.key.index, 4);
   out += "h:";
   append_hex(out, row.key.subindex, 2);
-  if (auto const path = label_of(row).path; !path.empty()) {
+  if (auto const path = info_of(row).path; !path.empty()) {
     out += ' ';
     out += path;
   }
@@ -411,8 +411,8 @@ constexpr std::string_view handler_error(od_access access,
 template<typename Ctx>
 constexpr bool inherits_value(od_binding<Ctx> const& binding)
 {
-  for (auto const& label : binding.field_labels) {
-    if (label.inherits) return true;
+  for (auto const& member : binding.field_info) {
+    if (member.inherits) return true;
   }
   return false;
 }
@@ -471,12 +471,12 @@ constexpr std::string_view table_error(od_data_type type,
 // Returns the rule that `values`, a table of values, breaks by being given
 // to an object or a member of type `type`, or an empty string if it breaks
 // none: each value is one of the type.
-constexpr std::string values_fit_error(std::span<od_value_label const> values,
+constexpr std::string values_fit_error(std::span<od_value_info const> values,
                                        od_data_type type)
 {
-  for (auto const& label : values) {
-    if (!fits(type, label.value)) {
-      return value_name(label.value)
+  for (auto const& info : values) {
+    if (!fits(type, info.value)) {
+      return value_name(info.value)
            + " does not fit "
            + std::string{type_name(type)};
     }
@@ -491,35 +491,35 @@ constexpr std::string values_fit_error(std::span<od_value_label const> values,
 // the same, as an abbreviation is. The rules depend on the table alone, so a
 // table that objects or members share is checked once
 // (`check_value_tables`).
-constexpr std::string value_labels_error(std::span<od_value_label const> values)
+constexpr std::string value_table_error(std::span<od_value_info const> values)
 {
   for (auto i = 0uz; i < values.size(); ++i) {
-    auto const& label = values[i];
-    if (!is_segment(label.name)) {
-      return value_name(label.value)
+    auto const& info = values[i];
+    if (!is_segment(info.name)) {
+      return value_name(info.value)
            + ": the name must be a letter followed by letters, digits or "
              "underscores";
     }
-    if (auto const what = title_error(label.title); !what.empty()) {
-      return value_name(label.value) + ": " + std::string{what};
+    if (auto const what = title_error(info.title); !what.empty()) {
+      return value_name(info.value) + ": " + std::string{what};
     }
-    if (i > 0 && values[i - 1].value >= label.value) {
-      return value_name(label.value)
+    if (i > 0 && values[i - 1].value >= info.value) {
+      return value_name(info.value)
            + " follows "
            + value_name(values[i - 1].value)
            + ": the values must increase";
     }
     for (auto j = 0uz; j < i; ++j) {
       auto const& other = values[j];
-      if (other.name == label.name) {
-        return values_name(other.value, label.value) + " have the same name";
+      if (other.name == info.name) {
+        return values_name(other.value, info.value) + " have the same name";
       }
-      if (other.title.en == label.title.en) {
-        return values_name(other.value, label.value)
+      if (other.title.en == info.title.en) {
+        return values_name(other.value, info.value)
              + " have the same title in English";
       }
-      if (other.title.ru == label.title.ru) {
-        return values_name(other.value, label.value)
+      if (other.title.ru == info.title.ru) {
+        return values_name(other.value, info.value)
              + " have the same title in Russian";
       }
     }
@@ -536,22 +536,22 @@ constexpr std::string member_name(std::size_t sub)
   return out;
 }
 
-// Returns the rule that `labels`, the labels of the members of a layout,
-// break, or an empty string if they break none: each member is named as a
-// segment of a path, unique in the layout, and titled, and only a command has
-// a signature. The rules depend on the labels alone, so labels that records
-// share are checked once (`check_shared_labels`).
-constexpr std::string field_labels_error(std::span<od_field_label const> labels)
+// Returns the rule that `info`, the info of the members of a layout, breaks,
+// or an empty string if it breaks none: each member is named as a segment of
+// a path, unique in the layout, and titled, and only a command has a
+// signature. The rules depend on the info alone, so the info that records
+// share is checked once (`check_shared_field_info`).
+constexpr std::string field_info_error(std::span<od_field_info const> info)
 {
-  for (auto i = 0uz; i < labels.size(); ++i) {
-    auto const& label = labels[i];
-    if (!is_segment(label.name)) {
+  for (auto i = 0uz; i < info.size(); ++i) {
+    auto const& member = info[i];
+    if (!is_segment(member.name)) {
       return member_name(i)
            + ": the name must be a letter followed by letters, digits or "
              "underscores";
     }
     for (auto j = 0uz; j < i; ++j) {
-      if (labels[j].name == label.name) {
+      if (info[j].name == member.name) {
         std::string out = "members ";
         append_hex(out, static_cast<unsigned>(j), 2);
         out += "h and ";
@@ -560,63 +560,63 @@ constexpr std::string field_labels_error(std::span<od_field_label const> labels)
         return out;
       }
     }
-    if (auto const what = title_error(label.title); !what.empty()) {
+    if (auto const what = title_error(member.title); !what.empty()) {
       return member_name(i) + ": " + std::string{what};
     }
-    if (label.signature && !label.command) {
+    if (member.signature && !member.command) {
       return member_name(i) + " has a signature but is no command";
     }
   }
   return {};
 }
 
-// The rules of the labels of the members of a record that depend on the
-// record: a label for each field, a member that inherits the record's value
+// The rules of the info of the members of a record that depend on the
+// record: info for each field, a member that inherits the record's value
 // of the record's type, no unit for a record without such a member, which the
 // unit would not apply to, and a table of values only for a member that
 // inherits nothing, whose type takes one (`table_error`) and holds each of
 // its values. A member that inherits the record's value takes the record's
 // table, and the unit of a member is only ever the record's.
 template<typename Ctx>
-constexpr std::string check_field_labels(od_row<Ctx> const& row)
+constexpr std::string check_field_info(od_row<Ctx> const& row)
 {
   auto const& binding = row.binding;
-  auto const& labels = binding.field_labels;
+  auto const& info = binding.field_info;
 
-  if (labels.size() != binding.layout.size()) {
+  if (info.size() != binding.layout.size()) {
     std::string what = "the record has ";
     append_decimal(what, binding.layout.size());
-    what += " members but labels ";
-    append_decimal(what, labels.size());
+    what += " members but describes ";
+    append_decimal(what, info.size());
     return row_error(row, what);
   }
   bool inherited = false;
-  for (auto i = 0uz; i < labels.size(); ++i) {
-    if (labels[i].inherits && binding.layout[i].type != binding.type) {
+  for (auto i = 0uz; i < info.size(); ++i) {
+    if (info[i].inherits && binding.layout[i].type != binding.type) {
       std::string what = member_name(i) + " inherits the record's type, ";
       what += type_name(binding.type);
       what += ", but is ";
       what += type_name(binding.layout[i].type);
       return row_error(row, what);
     }
-    inherited = inherited || labels[i].inherits;
+    inherited = inherited || info[i].inherits;
   }
   if (!inherited && !unit_of(row).empty()) {
     return row_error(row,
                      "a record without a member that inherits its value has "
                      "no unit");
   }
-  for (auto i = 0uz; i < labels.size(); ++i) {
-    auto const& values = labels[i].value_labels;
+  for (auto i = 0uz; i < info.size(); ++i) {
+    auto const& values = info[i].value_table;
     if (values.empty()) continue;
-    if (labels[i].inherits) {
+    if (info[i].inherits) {
       return row_error(row,
                        member_name(i)
                            + " inherits the record's values and has no table "
                              "of its own");
     }
     auto const type = binding.layout[i].type;
-    if (auto const what = table_error(type, labels[i].command, false);
+    if (auto const what = table_error(type, info[i].command, false);
         !what.empty()) {
       return row_error(row, member_name(i) + ": " + std::string{what});
     }
@@ -627,46 +627,45 @@ constexpr std::string check_field_labels(od_row<Ctx> const& row)
   return {};
 }
 
-// Checks the labels of the members of the records by `field_labels_error`,
-// once for each set of labels, which the records of one kind share, and
+// Checks the info of the members of the records by `field_info_error`, once
+// for each set of info, which the records of one kind share, and
 // reports a broken one at the first record that has it.
 template<typename Ctx, std::size_t N>
-constexpr std::string check_shared_labels(od_row<Ctx> const (&rows)[N])
+constexpr std::string check_shared_field_info(od_row<Ctx> const (&rows)[N])
 {
-  std::array<std::span<od_field_label const>, N> checked{};
+  std::array<std::span<od_field_info const>, N> checked{};
   auto count = 0uz;
   for (auto const& row : rows) {
-    auto const& labels = row.binding.field_labels;
+    auto const& info = row.binding.field_info;
     if (row.binding.layout.empty()) continue;
     bool const seen = std::ranges::any_of(
         checked.begin(),
         checked.begin() + count,
-        [&](std::span<od_field_label const> other) {
-          return other.data() == labels.data() && other.size() == labels.size();
+        [&](std::span<od_field_info const> other) {
+          return other.data() == info.data() && other.size() == info.size();
         });
     if (seen) continue;
-    checked[count++] = labels;
-    if (auto const what = field_labels_error(labels); !what.empty()) {
+    checked[count++] = info;
+    if (auto const what = field_info_error(info); !what.empty()) {
       return row_error(row, what);
     }
   }
   return {};
 }
 
-// Checks the tables of values by `value_labels_error`, once for each table,
-// which rows and the labels of members may share, and reports a broken one at
+// Checks the tables of values by `value_table_error`, once for each table,
+// which rows and the info of members may share, and reports a broken one at
 // the first row that has it, and at its member. A table is told apart from
 // another by its address, and the tables of the members of records that
-// share their labels are visited once.
+// share their info are visited once.
 template<typename Ctx, std::size_t N>
 constexpr std::string check_value_tables(od_row<Ctx> const (&rows)[N])
 {
-  std::vector<std::span<od_value_label const>> checked;
-  std::vector<std::span<od_field_label const>> visited;
-  auto const first_time = [&](std::span<od_value_label const> values) {
-    bool const seen = std::ranges::any_of(
-        checked,
-        [&](std::span<od_value_label const> other) {
+  std::vector<std::span<od_value_info const>> checked;
+  std::vector<std::span<od_field_info const>> visited;
+  auto const first_time = [&](std::span<od_value_info const> values) {
+    bool const seen =
+        std::ranges::any_of(checked, [&](std::span<od_value_info const> other) {
           return other.data() == values.data() && other.size() == values.size();
         });
     if (!seen) checked.push_back(values);
@@ -674,26 +673,25 @@ constexpr std::string check_value_tables(od_row<Ctx> const (&rows)[N])
   };
 
   for (auto const& row : rows) {
-    auto const& values = row.binding.value_labels;
+    auto const& values = row.binding.value_table;
     if (!values.empty() && first_time(values)) {
-      if (auto const what = value_labels_error(values); !what.empty()) {
+      if (auto const what = value_table_error(values); !what.empty()) {
         return row_error(row, what);
       }
     }
 
-    auto const& labels = row.binding.field_labels;
-    if (labels.empty()) continue;
-    bool const seen = std::ranges::any_of(
-        visited,
-        [&](std::span<od_field_label const> other) {
-          return other.data() == labels.data() && other.size() == labels.size();
+    auto const& info = row.binding.field_info;
+    if (info.empty()) continue;
+    bool const seen =
+        std::ranges::any_of(visited, [&](std::span<od_field_info const> other) {
+          return other.data() == info.data() && other.size() == info.size();
         });
     if (seen) continue;
-    visited.push_back(labels);
-    for (auto i = 0uz; i < labels.size(); ++i) {
-      auto const& member_values = labels[i].value_labels;
+    visited.push_back(info);
+    for (auto i = 0uz; i < info.size(); ++i) {
+      auto const& member_values = info[i].value_table;
       if (member_values.empty() || !first_time(member_values)) continue;
-      if (auto const what = value_labels_error(member_values); !what.empty()) {
+      if (auto const what = value_table_error(member_values); !what.empty()) {
         return row_error(row, member_name(i) + ": " + what);
       }
     }
@@ -703,8 +701,8 @@ constexpr std::string check_value_tables(od_row<Ctx> const (&rows)[N])
 
 // The rules of a row that binds a record: the row names the record with
 // subindex 00h, the binding has no handlers of its own, the layout fits in the
-// subindices, each field obeys the rules of one object, and the labels of
-// the fields obey `check_field_labels`; `check_shared_labels` checks the rest
+// subindices, each field obeys the rules of one object, and the info of the
+// fields obeys `check_field_info`; `check_shared_field_info` checks the rest
 // of their rules once for all the records that share them.
 template<typename Ctx>
 constexpr std::string check_record(od_row<Ctx> const& row)
@@ -733,7 +731,7 @@ constexpr std::string check_record(od_row<Ctx> const& row)
       return row_error(row, out);
     }
   }
-  return check_field_labels(row);
+  return check_field_info(row);
 }
 
 // The rules of a row that binds an array: the row names the array with
@@ -757,37 +755,38 @@ constexpr std::string check_array(od_row<Ctx> const& row)
   return {};
 }
 
-// The rules of the label of a row: the row has none if its binding gives
-// one, the path is a group and a name, the group is declared, and the title
-// obeys `title_error`.
+// The rules of the info of a row: the row has none if its binding gives it,
+// the path is a group and a name, the group is declared, and the title obeys
+// `title_error`.
 template<typename Ctx, std::size_t G>
-constexpr std::string check_label(od_row<Ctx> const& row,
-                                  od_group const (&groups)[G])
+constexpr std::string check_info(od_row<Ctx> const& row,
+                                 od_group const (&groups)[G])
 {
-  auto const& label = label_of(row);
+  auto const& info = info_of(row);
 
-  if (!is_empty(row.binding.label) && !is_empty(row.label)) {
-    return row_error(row, "the row has a label, but its binding gives one");
+  if (!is_empty(row.binding.info) && !is_empty(row.info)) {
+    return row_error(row,
+                     "the row describes the object, but its binding does too");
   }
-  if (!is_path(label.path)) {
+  if (!is_path(info.path)) {
     return row_error(row,
                      "the path must be a group and a name, each a letter "
                      "followed by letters, digits or underscores");
   }
-  if (group_position(group_of(label.path), groups) == G) {
+  if (group_position(group_of(info.path), groups) == G) {
     std::string what = "group '";
-    what += group_of(label.path);
+    what += group_of(info.path);
     what += "' is not declared";
     return row_error(row, what);
   }
-  if (auto const what = title_error(label.title); !what.empty()) {
+  if (auto const what = title_error(info.title); !what.empty()) {
     return row_error(row, what);
   }
   return {};
 }
 
 // The rules of the unit of a row: it is verbatim (`is_verbatim_text`), the
-// label does not repeat the unit the binding gives, the symbol of the
+// info does not repeat the unit the binding gives, the symbol of the
 // value's type, and a command, an array of characters or a boolean has none:
 // the value of a command is not used, a character is no quantity, and a
 // boolean has no dimension.
@@ -803,7 +802,7 @@ constexpr std::string check_unit(od_row<Ctx> const& row)
                      "the unit must be UTF-8 without quotation marks, "
                      "backslashes or control characters");
   }
-  if (label_of(row).unit == binding.unit) {
+  if (info_of(row).unit == binding.unit) {
     std::string what = "the unit '";
     what += unit;
     what += "' repeats the symbol of the value's type";
@@ -826,7 +825,7 @@ template<typename Ctx>
 constexpr std::string check_values(od_row<Ctx> const& row)
 {
   auto const& binding = row.binding;
-  auto const& values = binding.value_labels;
+  auto const& values = binding.value_table;
 
   if (values.empty()) return {};
   if (auto const what =
@@ -861,7 +860,7 @@ constexpr std::string check_row(od_row<Ctx> const& row,
   if (area_of(row.key.index, areas) == nullptr) {
     return row_error(row, "the index lies in no area");
   }
-  if (auto error = check_label(row, groups); !error.empty()) return error;
+  if (auto error = check_info(row, groups); !error.empty()) return error;
   if (auto error = check_unit(row); !error.empty()) return error;
   if (auto error = check_values(row); !error.empty()) return error;
 
@@ -949,7 +948,7 @@ constexpr std::string check_groups_used(od_row<Ctx> const (&rows)[N],
 {
   std::array<bool, G> used{};
   for (auto const& row : rows) {
-    auto const group = group_position(group_of(label_of(row).path), groups);
+    auto const group = group_position(group_of(info_of(row).path), groups);
     if (group < G) used[group] = true;
   }
   for (auto i = 0uz; i < G; ++i) {
@@ -1013,12 +1012,12 @@ template<typename Ctx, std::size_t N>
 constexpr std::string check_paths(od_row<Ctx> const (&rows)[N])
 {
   auto const order = sorted_positions(rows, [](auto const& a, auto const& b) {
-    return label_of(a).path < label_of(b).path;
+    return info_of(a).path < info_of(b).path;
   });
   for (auto k = 1uz; k < N; ++k) {
     auto const& first = rows[std::min(order[k - 1], order[k])];
     auto const& second = rows[std::max(order[k - 1], order[k])];
-    if (label_of(first).path == label_of(second).path) {
+    if (info_of(first).path == info_of(second).path) {
       return pair_error(first, second, "have the same path");
     }
   }
@@ -1192,21 +1191,20 @@ constexpr std::string check_signals(od_mapped_pdo const& mapped)
 
   for (auto i = 0uz; i < signals.size(); ++i) {
     auto const& signal = signals[i];
-    auto const& label = signal.label;
     auto const start = unsigned{signal.bits.start};
     if (signal.role == pdo_role::value) {
-      if (!is_segment(label.name)) {
+      if (!is_segment(signal.name)) {
         return signal_error(pdo,
                             start,
                             "the name must be a letter followed by letters, "
                             "digits or underscores");
       }
-      if (auto const what = title_error(label.title); !what.empty()) {
+      if (auto const what = title_error(signal.title); !what.empty()) {
         return signal_error(pdo, start, what);
       }
       for (auto j = 0uz; j < i; ++j) {
         if (signals[j].role == pdo_role::value
-            && signals[j].label.name == label.name) {
+            && signals[j].name == signal.name) {
           return pdo_error(pdo,
                            signal_name(signals[j].bits.start)
                                + " and "
@@ -1233,25 +1231,25 @@ constexpr std::string check_signals(od_mapped_pdo const& mapped)
   return {};
 }
 
-// Checks the tables of values of the signals by `value_labels_error`, once
+// Checks the tables of values of the signals by `value_table_error`, once
 // for each table, which signals may share with each other and with the rows,
 // and reports a broken one at the first signal that has it.
 constexpr std::string check_signal_tables(std::span<od_mapped_pdo const> pdos)
 {
-  std::vector<std::span<od_value_label const>> checked;
+  std::vector<std::span<od_value_info const>> checked;
   for (auto const& mapped : pdos) {
     for (auto const& signal : mapped.signals) {
-      auto const& values = signal.value_labels;
+      auto const& values = signal.value_table;
       if (values.empty()) continue;
       bool const seen =
           std::ranges::any_of(checked,
-                              [&](std::span<od_value_label const> other) {
+                              [&](std::span<od_value_info const> other) {
                                 return other.data() == values.data()
                                     && other.size() == values.size();
                               });
       if (seen) continue;
       checked.push_back(values);
-      if (auto const what = value_labels_error(values); !what.empty()) {
+      if (auto const what = value_table_error(values); !what.empty()) {
         return signal_error(mapped.pdo, signal.bits.start, what);
       }
     }
@@ -1502,8 +1500,8 @@ constexpr std::string check_process_data(od_process_data const& process_data,
 // Returns an empty string if the rows, the areas and the groups make a valid
 // dictionary, and `process_data` valid PDOs beside it, or else the first rule
 // they break: rules of the areas, then of the groups, then of a single row in
-// source order, then those of the labels of the members of records, once for
-// each set of labels, then those of the tables of values, once for each
+// source order, then those of the info of the members of records, once for
+// each set of info, then those of the tables of values, once for each
 // table, then those of two rows, keys before paths before handlers, then
 // catalog coverage, then that every group has a row, and last the rules of
 // the process data (`check_process_data`). Returns an empty string as well if
@@ -1527,7 +1525,7 @@ constexpr std::string od_check(od_row<Ctx> const (&rows)[N],
       return error;
     }
   }
-  if (auto error = check_shared_labels(rows); !error.empty()) return error;
+  if (auto error = check_shared_field_info(rows); !error.empty()) return error;
   if (auto error = check_value_tables(rows); !error.empty()) return error;
   if (auto error = check_keys(rows); !error.empty()) return error;
   if (auto error = check_paths(rows); !error.empty()) return error;

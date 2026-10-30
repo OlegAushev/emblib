@@ -31,8 +31,8 @@ namespace canopen {
 //
 // on one line, the fingerprint being that of the dictionary
 // (`od_dictionary::fingerprint`), the hash of every line after the header.
-// A line for each group follows, then one for each label of a value, by
-// table of values, then one for each member of each layout of a record, then
+// A line for each group follows, then one for each value of a table of
+// values, by table, then one for each member of each layout of a record, then
 // one for each object, array or record, by key, and last one for each PDO,
 // the TPDOs first and by number, each followed by one for each of its
 // signals, by first bit (`detail::od_describe`); a member, an object, an

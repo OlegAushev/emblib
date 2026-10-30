@@ -48,31 +48,25 @@ struct od_pdo {
   std::chrono::milliseconds timeout{0};
 };
 
-// The struct `od_signal_label` labels a signal of a PDO for a host: `name`, a
-// segment unique in the PDO, which a host joins to the name of the PDO to
-// find the signal, and its title, in each language. A signal of the role
-// `value` has both, and a counter neither (`detail::pdo_check`). A label has
-// no unit: a signal takes its unit from the type of its member alone, as its
-// bits are the member's raw value, whose step the type gives (`pdo_codec`).
-// Like the label of a row, it exists at compile time only.
-struct od_signal_label {
-  std::string_view name;
-  i18n title;
-};
-
 // The struct `od_signal` is a signal of a PDO as the description reads it: a
 // row of the PDO (`pdo_row`) without its thunks, with the role, the encoding,
 // the unit, the step `scale_num` / `scale_den` and the table of values of its
-// codec.
+// codec. `name`, a segment unique in the PDO, which a host joins to the name
+// of the PDO to find the signal, and the title, in each language, are those
+// of the row: a signal of the role `value` has both, and a counter neither
+// (`detail::pdo_check`). The unit is the codec's alone: a signal takes it from
+// the type of its member, as its bits are the member's raw value, whose step
+// the type gives.
 struct od_signal {
   pdo_bits bits;
-  od_signal_label label;
+  std::string_view name;
+  i18n title;
   pdo_role role;
   pdo_encoding encoding;
   std::string_view unit;
   std::int64_t scale_num = 1;
   std::int64_t scale_den = 1;
-  std::span<od_value_label const> value_labels;
+  std::span<od_value_info const> value_table;
 };
 
 // The struct `od_mapped_pdo` is a PDO with what it carries, as the description
@@ -104,13 +98,14 @@ inline constexpr auto od_signals_of = [] {
   for (auto i = 0uz; i < std::size(Rows); ++i) {
     auto const& codec = Rows[i].codec;
     signals[i] = {.bits = Rows[i].bits,
-                  .label = Rows[i].label,
+                  .name = Rows[i].name,
+                  .title = Rows[i].title,
                   .role = codec.role,
                   .encoding = codec.encoding,
                   .unit = codec.unit,
                   .scale_num = codec.scale_num,
                   .scale_den = codec.scale_den,
-                  .value_labels = codec.value_labels};
+                  .value_table = codec.value_table};
   }
   return signals;
 }();

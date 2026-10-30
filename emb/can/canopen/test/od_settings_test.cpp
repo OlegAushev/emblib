@@ -279,9 +279,9 @@ static_assert(bind<bridge::param<prod_serial>>().layout[1].write == nullptr);
 static_assert(bind<bridge::param<motor_p>>().layout[1].access == od_access::rw);
 
 // A record is named as its parameter: by the parameter's name and title.
-static_assert(bind<bridge::param<motor_p>>().label.path == "motor.p");
-static_assert(bind<bridge::param<motor_p>>().label.title == motor_p.title);
-static_assert(bind<bridge::param<motor_p>>().label.unit.empty());
+static_assert(bind<bridge::param<motor_p>>().info.path == "motor.p");
+static_assert(bind<bridge::param<motor_p>>().info.title == motor_p.title);
+static_assert(bind<bridge::param<motor_p>>().info.unit.empty());
 
 // The record's unit is the parameter's: the symbol of its type, or the unit
 // that replaces it.
@@ -295,12 +295,12 @@ static_assert(!bind<bridge::param<drive_slope, actual_rpm>>().diagnosed);
 // names its values; the actual value is read as the enumeration itself. The
 // policy of every record is named.
 static_assert(bind<bridge::param<drive_mode_param>>().type == uint32);
-static_assert(bind<bridge::param<drive_mode_param>>().value_labels.size() == 2);
-static_assert(bind<bridge::param<motor_p>>().value_labels.empty());
+static_assert(bind<bridge::param<drive_mode_param>>().value_table.size() == 2);
+static_assert(bind<bridge::param<motor_p>>().value_table.empty());
 static_assert(!bind<bridge::param<drive_mode_param, actual_mode>>().diagnosed);
 static_assert(detail::od_reads_as<actual_mode, drive_mode>());
 static_assert(!detail::od_reads_as<actual_pole_pairs, drive_mode>());
-static_assert(bind<bridge::param<motor_p>>().field_labels[7].value_labels.size()
+static_assert(bind<bridge::param<motor_p>>().field_info[7].value_table.size()
               == 2);
 
 // -- Records --
@@ -424,17 +424,16 @@ static_assert(
 
 // The values are named: the policy of every record, first, by the members of
 // the layouts; then the last refusal and the mode of the drive, by key.
-static_assert(occurrences(as_view(description), R"("type":"value_label")")
+static_assert(occurrences(as_view(description), R"("type":"value")")
               == 2 + 5 + 2);
+static_assert(as_view(description)
+                  .contains(R"({"type":"value","value_table":0,"value":0,)"
+                            R"("name":"on_command","title":"On command",)"
+                            R"("title_ru":"По команде"})"
+                            "\n"));
 static_assert(
     as_view(description)
-        .contains(R"({"type":"value_label","value_table":0,"value":0,)"
-                  R"("name":"on_command","title":"On command",)"
-                  R"("title_ru":"По команде"})"
-                  "\n"));
-static_assert(
-    as_view(description)
-        .contains(R"({"type":"value_label","value_table":1,"value":134217762,)"
+        .contains(R"({"type":"value","value_table":1,"value":134217762,)"
                   R"("name":"state_error",)"
                   R"("title":"Not admitted in this state, or values wait to )"
                   R"(be applied","title_ru":"Не допускается в этом )"
@@ -663,7 +662,7 @@ consteval std::string check_hidden()
       .arg = 4,
       .catalog = &bridge::catalog,
       .layout = bind<bridge::param<prod_serial>>().layout,
-      .field_labels = bind<bridge::param<prod_serial>>().field_labels};
+      .field_info = bind<bridge::param<prod_serial>>().field_info};
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
       {{0x3100, 0x00}, {},                                     bridge::param<drive_phase_swap>},
@@ -681,9 +680,9 @@ static_assert(check_hidden()
               == "od: settings parameter 'prod.secret' is not exposed but has "
                  "a row: 3104h:00 prod.secret");
 
-// The record takes its label from the schema; a row that gives one as well is
+// The record takes its info from the schema; a row that gives it as well is
 // reported at the row.
-consteval std::string check_label()
+consteval std::string check_info()
 {
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
@@ -693,8 +692,8 @@ consteval std::string check_label()
   return detail::od_check(rows, areas, groups);
 }
 
-static_assert(check_label()
-              == "od: 3101h:00 motor.p: the row has a label, but its binding "
-                 "gives one");
+static_assert(check_info()
+              == "od: 3101h:00 motor.p: the row describes the object, but its "
+                 "binding does too");
 
 } // namespace

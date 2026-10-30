@@ -156,8 +156,8 @@ inline constexpr od_field<ctx> record_layout[] = {
     {.access = od_access::ro, .type = uint16, .read = &read_arg},
 };
 
-// The labels of the members of `record_layout`; the value is the record's.
-inline constexpr od_field_label record_labels[] = {
+// The info of the members of `record_layout`; the value is the record's.
+inline constexpr od_field_info record_field_info[] = {
     {.name = "highest_subindex",
      .title = {"Highest subindex", "Наибольший подындекс"}},
     {.name = "value", .title = {"Value", "Значение"}, .inherits = true},
@@ -170,7 +170,7 @@ consteval od_binding<ctx> record(std::uint16_t arg)
           .type = float32,
           .arg = arg,
           .layout = record_layout,
-          .field_labels = record_labels};
+          .field_info = record_field_info};
 }
 
 template<typename T>
@@ -707,16 +707,16 @@ static_assert(bind<od_wo<write_gear>>().type == od_data_type::uint32);
 static_assert(bind<od_rw<read_gear, write_gear>>().type
               == od_data_type::uint32);
 static_assert(bind<od_ro_array<gears>>().type == od_data_type::uint32);
-static_assert(bind<od_ro<read_gear>>().value_labels.size() == 3);
-static_assert(bind<od_ro<read_gear>>().value_labels[2].value == 4);
-static_assert(bind<od_ro<read_gear>>().value_labels[2].name == "reverse");
-static_assert(bind<od_ro<read_gear>>().value_labels[2].title
+static_assert(bind<od_ro<read_gear>>().value_table.size() == 3);
+static_assert(bind<od_ro<read_gear>>().value_table[2].value == 4);
+static_assert(bind<od_ro<read_gear>>().value_table[2].name == "reverse");
+static_assert(bind<od_ro<read_gear>>().value_table[2].title
               == emb::i18n{"Reverse", "Назад"});
-static_assert(bind<od_ro<read_tilt>>().value_labels[0].value == -1);
-static_assert(bind<od_wo<write_gear>>().value_labels.size() == 3);
-static_assert(bind<od_rw<read_gear, write_gear>>().value_labels.size() == 3);
-static_assert(bind<od_ro_array<gears>>().value_labels.size() == 3);
-static_assert(bind<od_ro<read_value>>().value_labels.empty());
+static_assert(bind<od_ro<read_tilt>>().value_table[0].value == -1);
+static_assert(bind<od_wo<write_gear>>().value_table.size() == 3);
+static_assert(bind<od_rw<read_gear, write_gear>>().value_table.size() == 3);
+static_assert(bind<od_ro_array<gears>>().value_table.size() == 3);
+static_assert(bind<od_ro<read_value>>().value_table.empty());
 static_assert(bind<od_ro<read_gear>>().unit.empty());
 static_assert(!bind<od_ro<read_gear>>().diagnosed);
 
@@ -799,7 +799,7 @@ static_assert(bind<od_ro<read_maybe_freq>>().type == od_data_type::float32);
 static_assert(bind<od_ro<read_maybe_freq>>().unit == "Hz");
 static_assert(bind<od_const<read_maybe_freq>>().access == od_access::const_);
 static_assert(bind<od_ro<read_maybe_gear>>().type == od_data_type::uint32);
-static_assert(bind<od_ro<read_maybe_gear>>().value_labels.size() == 3);
+static_assert(bind<od_ro<read_maybe_gear>>().value_table.size() == 3);
 static_assert(od_rw_pair<read_maybe_freq, write_value, ctx>);
 static_assert(bind<od_rw<read_maybe_freq, write_freq>>().unit == "Hz");
 
@@ -848,8 +848,8 @@ inline constexpr od_group groups[] = {
     {"b", {"Group B", "Группа Б"}},
 };
 
-// The label of an object of the tables below, titled after its path.
-consteval od_label titled(std::string_view path)
+// The info of an object of the tables below, titled after its path.
+consteval od_object_info titled(std::string_view path)
 {
   return {path, {path, path}};
 }
@@ -1199,7 +1199,7 @@ inline constexpr od_field<ctx> byte_layout[] = {
     {.access = od_access::wo, .type = uint32, .write = &raw_write},
 };
 
-inline constexpr od_field_label byte_labels[] = {
+inline constexpr od_field_info byte_field_info[] = {
     {.name = "highest_subindex",
      .title = {"Highest subindex", "Наибольший подындекс"}},
     {.name = "value", .title = {"Value", "Значение"}, .inherits = true},
@@ -1211,8 +1211,8 @@ inline constexpr od_field_label byte_labels[] = {
 
 // clang-format off
 inline constexpr od_row<ctx> layouts[] = {
-    {{0x4002, 0x00}, titled("a.byte"),   {.access = od_access::ro, .type = uint8, .layout = byte_layout, .field_labels = byte_labels}},
-    {{0x4001, 0x00}, titled("a.other"),  {.access = od_access::ro, .type = float32, .arg = 2, .layout = other_layout, .field_labels = record_labels}},
+    {{0x4002, 0x00}, titled("a.byte"),   {.access = od_access::ro, .type = uint8, .layout = byte_layout, .field_info = byte_field_info}},
+    {{0x4001, 0x00}, titled("a.other"),  {.access = od_access::ro, .type = float32, .arg = 2, .layout = other_layout, .field_info = record_field_info}},
     {{0x4000, 0x00}, titled("a.first"),  record(1)},
     {{0x5000, 0x01}, titled("b.value"),  od_ro<read_value>},
 };
@@ -1278,23 +1278,23 @@ constexpr od_read_result read_level(ctx&, std::uint16_t)
 
 // The values of a policy, of a mode and of a level, named by hand; a level
 // may be below zero or past a byte.
-inline constexpr od_value_label policies[] = {
+inline constexpr od_value_info policies[] = {
     {0, "on_command", {"On command", "По команде"}},
     {1, "on_restart", {"On restart", "После перезапуска"}},
 };
 
-inline constexpr od_value_label modes[] = {
+inline constexpr od_value_info modes[] = {
     {0, "off", {"Off", "Выкл."}},
     {1, "on", {"On", "Вкл."}},
 };
 
-inline constexpr od_value_label levels[] = {
+inline constexpr od_value_info levels[] = {
     {-1, "low", {"Low", "Низкий"}},
     {300, "high", {"High", "Высокий"}},
 };
 
 // The values of `modes` in an array of their own: the same table for a host.
-inline constexpr od_value_label same_modes[] = {modes[0], modes[1]};
+inline constexpr od_value_info same_modes[] = {modes[0], modes[1]};
 
 // A record of a named uint8 whose member 02h, a policy, names values of its
 // own.
@@ -1304,35 +1304,35 @@ inline constexpr od_field<ctx> mode_layout[] = {
     {.access = od_access::const_, .type = uint8, .read = &read_byte},
 };
 
-inline constexpr od_field_label mode_labels[] = {
+inline constexpr od_field_info mode_field_info[] = {
     {.name = "highest_subindex",
      .title = {"Highest subindex", "Наибольший подындекс"}},
     {.name = "value", .title = {"Value", "Значение"}, .inherits = true},
     {.name = "policy",
      .title = {"Policy", "Политика"},
-     .value_labels = policies},
+     .value_table = policies},
 };
 
 consteval od_binding<ctx>
-mode_record(std::span<od_field_label const> labels = mode_labels)
+mode_record(std::span<od_field_info const> info = mode_field_info)
 {
   return {.access = od_access::ro,
           .type = uint8,
           .layout = mode_layout,
-          .field_labels = labels,
-          .value_labels = same_modes};
+          .field_info = info,
+          .value_table = same_modes};
 }
 
 inline constexpr od_binding<ctx> level_object{.access = od_access::ro,
                                               .type = int16,
                                               .read = &read_level,
-                                              .value_labels = levels};
+                                              .value_table = levels};
 
 inline constexpr od_binding<ctx> mode_array{.access = od_access::ro,
                                             .type = uint8,
                                             .read = &read_byte,
                                             .count = &read_last_subindex,
-                                            .value_labels = modes};
+                                            .value_table = modes};
 
 // The rows of named values, not in the order of their keys.
 // clang-format off
@@ -1345,7 +1345,7 @@ inline constexpr od_row<ctx> valued[] = {
 
 inline constexpr od_row<ctx> revalued[] = {valued[2], valued[0], valued[1]};
 
-// The body of the description of `valued`: the labels of the values after
+// The body of the description of `valued`: the values of the tables after
 // the groups, by table and by value, the tables numbered as the members of
 // the layouts and then the rows by key first name them, each once, though
 // `modes` and `same_modes` are two arrays; then the members and the rows,
@@ -1355,19 +1355,19 @@ inline constexpr std::string_view valued_body =
     "\"title_ru\":\"Группа А\"}\n"
     "{\"type\":\"group\",\"name\":\"b\",\"title\":\"Group B\","
     "\"title_ru\":\"Группа Б\"}\n"
-    "{\"type\":\"value_label\",\"value_table\":0,\"value\":0,"
+    "{\"type\":\"value\",\"value_table\":0,\"value\":0,"
     "\"name\":\"on_command\",\"title\":\"On command\","
     "\"title_ru\":\"По команде\"}\n"
-    "{\"type\":\"value_label\",\"value_table\":0,\"value\":1,"
+    "{\"type\":\"value\",\"value_table\":0,\"value\":1,"
     "\"name\":\"on_restart\",\"title\":\"On restart\","
     "\"title_ru\":\"После перезапуска\"}\n"
-    "{\"type\":\"value_label\",\"value_table\":1,\"value\":0,\"name\":\"off\","
+    "{\"type\":\"value\",\"value_table\":1,\"value\":0,\"name\":\"off\","
     "\"title\":\"Off\",\"title_ru\":\"Выкл.\"}\n"
-    "{\"type\":\"value_label\",\"value_table\":1,\"value\":1,\"name\":\"on\","
+    "{\"type\":\"value\",\"value_table\":1,\"value\":1,\"name\":\"on\","
     "\"title\":\"On\",\"title_ru\":\"Вкл.\"}\n"
-    "{\"type\":\"value_label\",\"value_table\":2,\"value\":-1,\"name\":\"low\","
+    "{\"type\":\"value\",\"value_table\":2,\"value\":-1,\"name\":\"low\","
     "\"title\":\"Low\",\"title_ru\":\"Низкий\"}\n"
-    "{\"type\":\"value_label\",\"value_table\":2,\"value\":300,"
+    "{\"type\":\"value\",\"value_table\":2,\"value\":300,"
     "\"name\":\"high\",\"title\":\"High\",\"title_ru\":\"Высокий\"}\n"
     "{\"type\":\"field\",\"layout\":0,\"sub\":\"0x00\","
     "\"name\":\"highest_subindex\",\"title\":\"Highest subindex\","
@@ -1407,23 +1407,23 @@ static_assert(
     as_view(make_description<revalued, areas, groups, "Test device">())
     == as_view(valued_description));
 
-// Layouts that differ in the table of a member are two; those whose labels
-// are two arrays of the same content are one.
-inline constexpr od_field_label same_mode_labels[] = {mode_labels[0],
-                                                      mode_labels[1],
-                                                      mode_labels[2]};
+// Layouts that differ in the table of a member are two; those whose info is
+// two arrays of the same content are one.
+inline constexpr od_field_info same_mode_field_info[] = {mode_field_info[0],
+                                                         mode_field_info[1],
+                                                         mode_field_info[2]};
 
-inline constexpr od_field_label other_mode_labels[] = {
-    mode_labels[0],
-    mode_labels[1],
-    {.name = "policy", .title = {"Policy", "Политика"}, .value_labels = modes},
+inline constexpr od_field_info other_mode_field_info[] = {
+    mode_field_info[0],
+    mode_field_info[1],
+    {.name = "policy", .title = {"Policy", "Политика"}, .value_table = modes},
 };
 
 // clang-format off
 inline constexpr od_row<ctx> policy_layouts[] = {
     {{0x4003, 0x00}, titled("a.mode"),  mode_record()},
-    {{0x4004, 0x00}, titled("a.same"),  mode_record(same_mode_labels)},
-    {{0x4005, 0x00}, titled("a.other"), mode_record(other_mode_labels)},
+    {{0x4004, 0x00}, titled("a.same"),  mode_record(same_mode_field_info)},
+    {{0x4005, 0x00}, titled("a.other"), mode_record(other_mode_field_info)},
     {{0x5002, 0x01}, titled("b.level"), level_object},
 };
 // clang-format on
@@ -1437,8 +1437,7 @@ static_assert(occurrences(as_view(described_policies), "\"layout\":0}") == 2);
 static_assert(occurrences(as_view(described_policies), "\"layout\":1}") == 1);
 // The tables: `policies`, then `modes` of the other layout, which is also the
 // table of the three records, then `levels`.
-static_assert(occurrences(as_view(described_policies),
-                          "\"type\":\"value_label\"")
+static_assert(occurrences(as_view(described_policies), "\"type\":\"value\"")
               == 6);
 static_assert(as_view(described_policies)
                   .contains("\"name\":\"policy\",\"title\":\"Policy\","
@@ -1459,11 +1458,10 @@ inline constexpr od_row<ctx> geared[] = {
 constexpr auto described_gears =
     make_description<geared, areas, groups, "Test device">();
 
-static_assert(
-    as_view(described_gears)
-        .contains("{\"type\":\"value_label\",\"value_table\":2,\"value\":4,"
-                  "\"name\":\"reverse\",\"title\":\"Reverse\","
-                  "\"title_ru\":\"Назад\"}\n"));
+static_assert(as_view(described_gears)
+                  .contains("{\"type\":\"value\",\"value_table\":2,\"value\":4,"
+                            "\"name\":\"reverse\",\"title\":\"Reverse\","
+                            "\"title_ru\":\"Назад\"}\n"));
 static_assert(as_view(described_gears)
                   .ends_with("\"group\":\"b\",\"name\":\"gear\","
                              "\"title\":\"b.gear\",\"title_ru\":\"b.gear\","
@@ -1539,12 +1537,12 @@ consteval std::string check_outside()
 
 static_assert(check_outside() == "od: 6000h:01 a.c: the index lies in no area");
 
-// -- Checks: labels --
+// -- Checks: info of objects --
 
-// Checks the label `label` of an object at 2000h:01.
-consteval std::string check_label(od_label label)
+// Checks the info `info` of an object at 2000h:01.
+consteval std::string check_info(od_object_info info)
 {
-  od_row<ctx> const rows[] = {{{0x2000, 0x01}, label, od_ro<read_value>}};
+  od_row<ctx> const rows[] = {{{0x2000, 0x01}, info, od_ro<read_value>}};
   return detail::od_check(rows, areas, group_a);
 }
 
@@ -1552,30 +1550,30 @@ inline constexpr std::string_view not_a_path =
     ": the path must be a group and a name, each a letter followed by "
     "letters, digits or underscores";
 
-static_assert(check_label(titled("a.c")).empty());
-static_assert(check_label(titled("a.Vdc_2")).empty());
-static_assert(check_label(titled("a"))
+static_assert(check_info(titled("a.c")).empty());
+static_assert(check_info(titled("a.Vdc_2")).empty());
+static_assert(check_info(titled("a"))
               == "od: 2000h:01 a" + std::string{not_a_path});
-static_assert(check_label(titled("a.c.d"))
+static_assert(check_info(titled("a.c.d"))
               == "od: 2000h:01 a.c.d" + std::string{not_a_path});
-static_assert(check_label(titled("a.1c"))
+static_assert(check_info(titled("a.1c"))
               == "od: 2000h:01 a.1c" + std::string{not_a_path});
-static_assert(check_label(titled("a._c"))
+static_assert(check_info(titled("a._c"))
               == "od: 2000h:01 a._c" + std::string{not_a_path});
-static_assert(check_label(titled("a.c-d"))
+static_assert(check_info(titled("a.c-d"))
               == "od: 2000h:01 a.c-d" + std::string{not_a_path});
-static_assert(check_label(titled(".c"))
+static_assert(check_info(titled(".c"))
               == "od: 2000h:01 .c" + std::string{not_a_path});
-static_assert(check_label(titled("a/c"))
+static_assert(check_info(titled("a/c"))
               == "od: 2000h:01 a/c" + std::string{not_a_path});
-static_assert(check_label({}) == "od: 2000h:01" + std::string{not_a_path});
-static_assert(check_label(titled("x.c"))
+static_assert(check_info({}) == "od: 2000h:01" + std::string{not_a_path});
+static_assert(check_info(titled("x.c"))
               == "od: 2000h:01 x.c: group 'x' is not declared");
 
 // Checks the title `en`, `ru` of an object at 2000h:01.
 consteval std::string check_title(std::string_view en, std::string_view ru)
 {
-  return check_label({"a.c", {en, ru}});
+  return check_info({"a.c", {en, ru}});
 }
 
 inline constexpr std::string_view not_verbatim =
@@ -1607,30 +1605,30 @@ static_assert(check_title("C\xC0\xAF", "Ц") == not_verbatim);
 static_assert(check_title("C\xED\xA0\x80", "Ц") == not_verbatim);
 static_assert(check_title("C\xF4\x90\x80\x80", "Ц") == not_verbatim);
 
-// A binding that gives its object's label, as that of a settings parameter
-// does.
+// A binding that gives the info of its object, as that of a settings
+// parameter does.
 consteval od_binding<ctx> named()
 {
   return {.access = od_access::ro,
           .type = od_data_type::float32,
           .read = &raw_read,
-          .label = {"a.named", {"Named", "Названный"}}};
+          .info = {"a.named", {"Named", "Названный"}}};
 }
 
 static_assert(check_one(named())
-              == "od: 2000h:01 a.named: the row has a label, "
-                 "but its binding gives one");
+              == "od: 2000h:01 a.named: the row describes the object, but "
+                 "its binding does too");
 
-consteval std::string check_named(od_label label)
+consteval std::string check_named(od_object_info info)
 {
-  od_row<ctx> const rows[] = {{{0x2000, 0x01}, label, named()}};
+  od_row<ctx> const rows[] = {{{0x2000, 0x01}, info, named()}};
   return detail::od_check(rows, areas, group_a);
 }
 
 static_assert(check_named({}).empty());
 static_assert(check_named({"", {}, "V"})
-              == "od: 2000h:01 a.named: the row has a label, but its binding "
-                 "gives one");
+              == "od: 2000h:01 a.named: the row describes the object, but "
+                 "its binding does too");
 
 // -- Checks: units --
 
@@ -1644,7 +1642,7 @@ consteval std::string check_unit(std::string_view unit, od_binding<ctx> binding)
 }
 
 // A unit for a value whose type names none, or in place of the symbol of the
-// type, which the label must not repeat.
+// type, which the info must not repeat.
 static_assert(check_unit("V", od_ro<read_value>).empty());
 static_assert(check_unit("rpm", od_ro<read_freq>).empty());
 static_assert(check_unit("", od_ro<read_freq>).empty());
@@ -1765,56 +1763,58 @@ static_assert(check_record({.access = od_access::ro,
                             .layout = unread_layout})
               == "od: 2000h:00 a.c: member 01h readable but has no reader");
 
-// The members of a record are labelled: one label for each, named, titled,
+// The members of a record are described: info for each, named, titled,
 // a member that inherits the value of the record's type, and a signature for
 // a command only.
-consteval std::string check_labels(std::span<od_field_label const> labels,
-                                   std::string_view unit = {})
+consteval std::string check_member_info(std::span<od_field_info const> info,
+                                        std::string_view unit = {})
 {
   od_row<ctx> const rows[] = {{{0x2000, 0x00},
                                {"a.c", {"C", "Ц"}, unit},
                                {.access = od_access::ro,
                                 .type = float32,
                                 .layout = record_layout,
-                                .field_labels = labels}}};
+                                .field_info = info}}};
   return detail::od_check(rows, areas, group_a);
 }
 
-// The labels of `record_layout`, the member at `at` replaced with `label`.
-consteval std::array<od_field_label, 3> relabelled(std::size_t at,
-                                                   od_field_label label)
+// The info of `record_layout`, the member at `at` replaced with `member`.
+consteval std::array<od_field_info, 3> replaced(std::size_t at,
+                                                od_field_info member)
 {
-  std::array<od_field_label, 3> out{record_labels[0],
-                                    record_labels[1],
-                                    record_labels[2]};
-  out[at] = label;
+  std::array<od_field_info, 3> out{record_field_info[0],
+                                   record_field_info[1],
+                                   record_field_info[2]};
+  out[at] = member;
   return out;
 }
 
-static_assert(check_labels(record_labels).empty());
-static_assert(check_labels(std::span{record_labels}.first(2))
-              == "od: 2000h:00 a.c: the record has 3 members but labels 2");
-static_assert(check_labels(relabelled(1, {.name = "2nd", .title = {"V", "З"}}))
+static_assert(check_member_info(record_field_info).empty());
+static_assert(check_member_info(std::span{record_field_info}.first(2))
+              == "od: 2000h:00 a.c: the record has 3 members but describes 2");
+static_assert(check_member_info(replaced(1,
+                                         {.name = "2nd", .title = {"V", "З"}}))
               == "od: 2000h:00 a.c: member 01h: the name must be a letter "
                  "followed by letters, digits or underscores");
-static_assert(check_labels(relabelled(2,
-                                      {.name = "highest_subindex",
-                                       .title = {"A", "А"}}))
+static_assert(check_member_info(replaced(2,
+                                         {.name = "highest_subindex",
+                                          .title = {"A", "А"}}))
               == "od: 2000h:00 a.c: members 00h and 02h have the same name");
-static_assert(check_labels(relabelled(1, {.name = "value", .title = {"V", ""}}))
+static_assert(check_member_info(replaced(1,
+                                         {.name = "value", .title = {"V", ""}}))
               == "od: 2000h:00 a.c: member 01h: the title must not be empty in "
                  "any language");
 static_assert(
-    check_labels(relabelled(1, {.name = "value", .title = {"V\"", "З"}}))
+    check_member_info(replaced(1, {.name = "value", .title = {"V\"", "З"}}))
     == "od: 2000h:00 a.c: member 01h: the title must be UTF-8 without "
        "quotation marks, backslashes or control characters");
-static_assert(check_labels(relabelled(2,
-                                      {.name = "arg",
-                                       .title = {"A", "А"},
-                                       .signature = od_save_signature}))
+static_assert(check_member_info(replaced(2,
+                                         {.name = "arg",
+                                          .title = {"A", "А"},
+                                          .signature = od_save_signature}))
               == "od: 2000h:00 a.c: member 02h has a signature but is no "
                  "command");
-static_assert(check_labels(relabelled(
+static_assert(check_member_info(replaced(
                   2,
                   {.name = "arg", .title = {"A", "А"}, .inherits = true}))
               == "od: 2000h:00 a.c: member 02h inherits the record's type, "
@@ -1822,12 +1822,12 @@ static_assert(check_labels(relabelled(
 // A record whose value no member holds has no unit, nor does its line state
 // a type.
 static_assert(
-    check_labels(relabelled(1, {.name = "value", .title = {"V", "З"}}), "A")
+    check_member_info(replaced(1, {.name = "value", .title = {"V", "З"}}), "A")
     == "od: 2000h:00 a.c: a record without a member that inherits "
        "its value has no unit");
 
-inline constexpr std::array<od_field_label, 3> plain_labels =
-    relabelled(1, {.name = "value", .title = {"Value", "Значение"}});
+inline constexpr std::array<od_field_info, 3> plain_field_info =
+    replaced(1, {.name = "value", .title = {"Value", "Значение"}});
 
 inline constexpr od_row<ctx> plain[] = {
     {{0x4000, 0x00},
@@ -1835,7 +1835,7 @@ inline constexpr od_row<ctx> plain[] = {
      {.access = od_access::ro,
       .type = float32,
       .layout = record_layout,
-      .field_labels = plain_labels}},
+      .field_info = plain_field_info}},
 };
 
 static_assert(
@@ -1956,10 +1956,10 @@ static_assert(check_two({{0x0FFF, 0x01}, titled("a.c"), od_ro<read_value>},
 // Checks the object at 2000h:00, of the path "a.c" and the unit `unit`, bound
 // by `binding` and its values named by `values`.
 consteval std::string check_table(od_binding<ctx> binding,
-                                  std::span<od_value_label const> values,
+                                  std::span<od_value_info const> values,
                                   std::string_view unit = {})
 {
-  binding.value_labels = values;
+  binding.value_table = values;
   od_row<ctx> const rows[] = {
       {{0x2000, 0x00}, {"a.c", {"C", "Ц"}, unit}, binding}};
   return detail::od_check(rows, areas, group_a);
@@ -1970,12 +1970,12 @@ consteval od_binding<ctx> raw_reader(od_data_type type)
   return raw(od_access::ro, type, true, false);
 }
 
-inline constexpr od_value_label bytes_past[] = {
+inline constexpr od_value_info bytes_past[] = {
     {0, "zero", {"Zero", "Ноль"}},
     {256, "past", {"Past a byte", "За байтом"}},
 };
 
-inline constexpr od_value_label signed_bytes[] = {
+inline constexpr od_value_info signed_bytes[] = {
     {-128, "lowest", {"Lowest", "Наименьшее"}},
     {127, "highest", {"Highest", "Наибольшее"}},
 };
@@ -2010,11 +2010,11 @@ static_assert(check_table(od_ro_array<samples>, modes)
 static_assert(check_table(raw_reader(uint8), modes, "V")
               == "od: 2000h:00 a.c: values that a table names have no unit");
 
-// The labels of `byte_layout` whose member 01h holds no value of the record.
-inline constexpr od_field_label byte_plain_labels[] = {
-    byte_labels[0],
+// The info of `byte_layout` whose member 01h holds no value of the record.
+inline constexpr od_field_info byte_plain_field_info[] = {
+    byte_field_info[0],
     {.name = "value", .title = {"Value", "Значение"}},
-    byte_labels[2],
+    byte_field_info[2],
 };
 
 // A record names the values of its members that inherit its value, and so
@@ -2022,47 +2022,47 @@ inline constexpr od_field_label byte_plain_labels[] = {
 static_assert(check_table({.access = od_access::ro,
                            .type = uint8,
                            .layout = byte_layout,
-                           .field_labels = byte_plain_labels},
+                           .field_info = byte_plain_field_info},
                           modes)
               == "od: 2000h:00 a.c: a record without a member that inherits "
                  "its value has no table of values");
 
 // A member names its values, unless it inherits those of the record, in a
 // type that takes a table, each a value of the type.
-static_assert(check_labels(relabelled(2,
-                                      {.name = "arg",
-                                       .title = {"A", "А"},
-                                       .value_labels = modes}))
+static_assert(check_member_info(replaced(2,
+                                         {.name = "arg",
+                                          .title = {"A", "А"},
+                                          .value_table = modes}))
                   .empty());
-static_assert(check_labels(relabelled(1,
-                                      {.name = "value",
-                                       .title = {"V", "З"},
-                                       .inherits = true,
-                                       .value_labels = modes}))
+static_assert(check_member_info(replaced(1,
+                                         {.name = "value",
+                                          .title = {"V", "З"},
+                                          .inherits = true,
+                                          .value_table = modes}))
               == "od: 2000h:00 a.c: member 01h inherits the record's values "
                  "and has no table of its own");
 static_assert(
-    check_labels(relabelled(
-        1,
-        {.name = "value", .title = {"V", "З"}, .value_labels = modes}))
+    check_member_info(
+        replaced(1,
+                 {.name = "value", .title = {"V", "З"}, .value_table = modes}))
     == "od: 2000h:00 a.c: member 01h: a float32 has no table of values");
-static_assert(check_labels(relabelled(2,
-                                      {.name = "arg",
-                                       .title = {"A", "А"},
-                                       .command = true,
-                                       .value_labels = modes}))
+static_assert(check_member_info(replaced(2,
+                                         {.name = "arg",
+                                          .title = {"A", "А"},
+                                          .command = true,
+                                          .value_table = modes}))
               == "od: 2000h:00 a.c: member 02h: a command has no table of "
                  "values");
-static_assert(check_labels(relabelled(
+static_assert(check_member_info(replaced(
                   2,
-                  {.name = "arg", .title = {"A", "А"}, .value_labels = levels}))
+                  {.name = "arg", .title = {"A", "А"}, .value_table = levels}))
               == "od: 2000h:00 a.c: member 02h: value -1 does not fit uint16");
 
 // Checks the values `first` and `second` of a uint8 object at 2000h:00.
-consteval std::string check_two_values(od_value_label first,
-                                       od_value_label second)
+consteval std::string check_two_values(od_value_info first,
+                                       od_value_info second)
 {
-  od_value_label const values[] = {first, second};
+  od_value_info const values[] = {first, second};
   return check_table(raw_reader(uint8), values);
 }
 
@@ -2101,22 +2101,22 @@ static_assert(check_two_values({0, "a", {"A", "Один"}}, {1, "b", {"B", "Од
 
 // A table is checked once, and a broken one is reported at the first row that
 // names its values with it, as at the first record whose member does.
-inline constexpr od_value_label misnamed[] = {{0, "2nd", {"A", "А"}}};
+inline constexpr od_value_info misnamed[] = {{0, "2nd", {"A", "А"}}};
 
-inline constexpr od_field_label misnamed_labels[] = {
-    mode_labels[0],
-    mode_labels[1],
+inline constexpr od_field_info misnamed_field_info[] = {
+    mode_field_info[0],
+    mode_field_info[1],
     {.name = "policy",
      .title = {"Policy", "Политика"},
-     .value_labels = misnamed},
+     .value_table = misnamed},
 };
 
 consteval std::string check_shared_tables()
 {
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x5002, 0x01}, titled("a.first"),  {.access = od_access::ro, .type = int16, .read = &read_level, .value_labels = misnamed}},
-      {{0x5002, 0x02}, titled("a.second"), {.access = od_access::ro, .type = uint8, .read = &read_byte, .value_labels = misnamed}},
+      {{0x5002, 0x01}, titled("a.first"),  {.access = od_access::ro, .type = int16, .read = &read_level, .value_table = misnamed}},
+      {{0x5002, 0x02}, titled("a.second"), {.access = od_access::ro, .type = uint8, .read = &read_byte, .value_table = misnamed}},
   };
   // clang-format on
   return detail::od_check(rows, areas, group_a);
@@ -2126,8 +2126,8 @@ consteval std::string check_shared_member_tables()
 {
   // clang-format off
   static constexpr od_row<ctx> rows[] = {
-      {{0x4001, 0x00}, titled("a.first"),  mode_record(misnamed_labels)},
-      {{0x4002, 0x00}, titled("a.second"), mode_record(misnamed_labels)},
+      {{0x4001, 0x00}, titled("a.first"),  mode_record(misnamed_field_info)},
+      {{0x4002, 0x00}, titled("a.second"), mode_record(misnamed_field_info)},
   };
   // clang-format on
   return detail::od_check(rows, areas, group_a);
@@ -2160,11 +2160,11 @@ struct report {
 // The rows of the report, not in the order of their bits.
 // clang-format off
 inline constexpr pdo_row<report> report_rows[] = {
-{{16, 16}, {"voltage", {"Voltage", "Напряжение"}}, pdo_map<&report::voltage>},
-{{ 0,  3}, {"gear", {"Gear", "Передача"}},         pdo_map<&report::drive_gear>},
-{{56,  2}, {},                                     pdo_map_counter<&report::counter>},
-{{ 3,  1}, {"on", {"On", "Включено"}},             pdo_map<&report::on>},
-{{ 4,  2}, {"tilt", {"Tilt", "Наклон"}},           pdo_map<&report::body_tilt>},
+{{16, 16}, "voltage", {"Voltage", "Напряжение"}, pdo_map<&report::voltage>},
+{{ 0,  3}, "gear", {"Gear", "Передача"},         pdo_map<&report::drive_gear>},
+{{56,  2}, {}, {},                               pdo_map_counter<&report::counter>},
+{{ 3,  1}, "on", {"On", "Включено"},             pdo_map<&report::on>},
+{{ 4,  2}, "tilt", {"Tilt", "Наклон"},           pdo_map<&report::body_tilt>},
 };
 // clang-format on
 
@@ -2176,8 +2176,8 @@ struct setpoint {
 
 // clang-format off
 inline constexpr pdo_row<setpoint> setpoint_rows[] = {
-{{0,  1}, {"stop", {"Stop", "Стоп"}},      pdo_map<&setpoint::stop>},
-{{8, 16}, {"level", {"Level", "Уровень"}}, pdo_map<&setpoint::level>},
+{{0,  1}, "stop", {"Stop", "Стоп"},      pdo_map<&setpoint::stop>},
+{{8, 16}, "level", {"Level", "Уровень"}, pdo_map<&setpoint::level>},
 };
 // clang-format on
 
@@ -2216,7 +2216,7 @@ static_assert(mapped_report.mapping() == pdo_mapping::signals);
 inline constexpr od_mapped_pdo processed_pdos[] = {setpoint_pdo, report_pdo};
 inline constexpr od_process_data processed{.pdos = processed_pdos};
 
-// The body of the description of `geared` with the PDOs: the labels of the
+// The body of the description of `geared` with the PDOs: the values of the
 // tilt, which a signal names first, as table 3, after those of the
 // dictionary, the signal of the gear sharing table 2 with b.gear; and after
 // the objects, the TPDO, then the RPDO, each followed by its signals by first
@@ -2227,27 +2227,27 @@ inline constexpr std::string_view processed_body =
     "\"title_ru\":\"Группа А\"}\n"
     "{\"type\":\"group\",\"name\":\"b\",\"title\":\"Group B\","
     "\"title_ru\":\"Группа Б\"}\n"
-    "{\"type\":\"value_label\",\"value_table\":0,\"value\":0,"
+    "{\"type\":\"value\",\"value_table\":0,\"value\":0,"
     "\"name\":\"on_command\",\"title\":\"On command\","
     "\"title_ru\":\"По команде\"}\n"
-    "{\"type\":\"value_label\",\"value_table\":0,\"value\":1,"
+    "{\"type\":\"value\",\"value_table\":0,\"value\":1,"
     "\"name\":\"on_restart\",\"title\":\"On restart\","
     "\"title_ru\":\"После перезапуска\"}\n"
-    "{\"type\":\"value_label\",\"value_table\":1,\"value\":0,\"name\":\"off\","
+    "{\"type\":\"value\",\"value_table\":1,\"value\":0,\"name\":\"off\","
     "\"title\":\"Off\",\"title_ru\":\"Выкл.\"}\n"
-    "{\"type\":\"value_label\",\"value_table\":1,\"value\":1,\"name\":\"on\","
+    "{\"type\":\"value\",\"value_table\":1,\"value\":1,\"name\":\"on\","
     "\"title\":\"On\",\"title_ru\":\"Вкл.\"}\n"
-    "{\"type\":\"value_label\",\"value_table\":2,\"value\":0,\"name\":\"park\","
+    "{\"type\":\"value\",\"value_table\":2,\"value\":0,\"name\":\"park\","
     "\"title\":\"Park\",\"title_ru\":\"Стоянка\"}\n"
-    "{\"type\":\"value_label\",\"value_table\":2,\"value\":1,"
+    "{\"type\":\"value\",\"value_table\":2,\"value\":1,"
     "\"name\":\"drive\",\"title\":\"Drive\",\"title_ru\":\"Вперёд\"}\n"
-    "{\"type\":\"value_label\",\"value_table\":2,\"value\":4,"
+    "{\"type\":\"value\",\"value_table\":2,\"value\":4,"
     "\"name\":\"reverse\",\"title\":\"Reverse\",\"title_ru\":\"Назад\"}\n"
-    "{\"type\":\"value_label\",\"value_table\":3,\"value\":-1,"
+    "{\"type\":\"value\",\"value_table\":3,\"value\":-1,"
     "\"name\":\"left\",\"title\":\"Left\",\"title_ru\":\"Влево\"}\n"
-    "{\"type\":\"value_label\",\"value_table\":3,\"value\":0,"
+    "{\"type\":\"value\",\"value_table\":3,\"value\":0,"
     "\"name\":\"level\",\"title\":\"Level\",\"title_ru\":\"Ровно\"}\n"
-    "{\"type\":\"value_label\",\"value_table\":3,\"value\":1,"
+    "{\"type\":\"value\",\"value_table\":3,\"value\":1,"
     "\"name\":\"right\",\"title\":\"Right\",\"title_ru\":\"Вправо\"}\n"
     "{\"type\":\"field\",\"layout\":0,\"sub\":\"0x00\","
     "\"name\":\"highest_subindex\",\"title\":\"Highest subindex\","
@@ -2501,11 +2501,11 @@ inline constexpr std::string_view not_a_signal_name =
 
 // clang-format off
 inline constexpr pdo_row<report> prefixed_rows[] = {
-{{16, 16}, {"report.voltage", {"Voltage", "Напряжение"}}, pdo_map<&report::voltage>}};
+{{16, 16}, "report.voltage", {"Voltage", "Напряжение"}, pdo_map<&report::voltage>}};
 inline constexpr pdo_row<report> numbered_rows[] = {
-{{16, 16}, {"2nd", {"Voltage", "Напряжение"}},            pdo_map<&report::voltage>}};
+{{16, 16}, "2nd", {"Voltage", "Напряжение"},            pdo_map<&report::voltage>}};
 inline constexpr pdo_row<report> quoted_name_rows[] = {
-{{16, 16}, {"\"v\"", {"Voltage", "Напряжение"}},          pdo_map<&report::voltage>}};
+{{16, 16}, "\"v\"", {"Voltage", "Напряжение"},          pdo_map<&report::voltage>}};
 // clang-format on
 
 static_assert(check_report<prefixed_rows>() == not_a_signal_name);
@@ -2517,10 +2517,10 @@ static_assert(check_report<quoted_name_rows>() == not_a_signal_name);
 // names.
 // clang-format off
 inline constexpr pdo_row<report> quoted_title_rows[] = {
-{{16, 16}, {"voltage", {"Volt\\age", "Напряжение"}}, pdo_map<&report::voltage>}};
+{{16, 16}, "voltage", {"Volt\\age", "Напряжение"}, pdo_map<&report::voltage>}};
 inline constexpr pdo_row<report> same_name_rows[] = {
-{{ 0,  3}, {"voltage", {"Gear", "Передача"}},        pdo_map<&report::drive_gear>},
-{{16, 16}, {"voltage", {"Voltage", "Напряжение"}},   pdo_map<&report::voltage>}};
+{{ 0,  3}, "voltage", {"Gear", "Передача"},        pdo_map<&report::drive_gear>},
+{{16, 16}, "voltage", {"Voltage", "Напряжение"},   pdo_map<&report::voltage>}};
 // clang-format on
 
 static_assert(check_report<quoted_title_rows>()
@@ -2541,20 +2541,20 @@ consteval pdo_codec<report> voltage_codec(auto change)
   return codec;
 }
 
-inline constexpr od_signal_label voltage_label{"voltage",
-                                               {"Voltage", "Напряжение"}};
+inline constexpr std::string_view voltage_name = "voltage";
+inline constexpr emb::i18n voltage_title = {"Voltage", "Напряжение"};
 
 // clang-format off
 inline constexpr pdo_row<report> quoted_unit_rows[] = {
-{{16, 16}, voltage_label, voltage_codec([](auto& codec) { codec.unit = "V\""; })}};
+{{16, 16}, voltage_name, voltage_title, voltage_codec([](auto& codec) { codec.unit = "V\""; })}};
 inline constexpr pdo_row<report> unreduced_rows[] = {
-{{16, 16}, voltage_label, voltage_codec([](auto& codec) { codec.scale_num = 2; codec.scale_den = 20; })}};
+{{16, 16}, voltage_name, voltage_title, voltage_codec([](auto& codec) { codec.scale_num = 2; codec.scale_den = 20; })}};
 inline constexpr pdo_row<report> negative_step_rows[] = {
-{{16, 16}, voltage_label, voltage_codec([](auto& codec) { codec.scale_num = -1; })}};
+{{16, 16}, voltage_name, voltage_title, voltage_codec([](auto& codec) { codec.scale_num = -1; })}};
 inline constexpr pdo_row<report> zero_step_rows[] = {
-{{16, 16}, voltage_label, voltage_codec([](auto& codec) { codec.scale_num = 0; codec.scale_den = 1; })}};
+{{16, 16}, voltage_name, voltage_title, voltage_codec([](auto& codec) { codec.scale_num = 0; codec.scale_den = 1; })}};
 inline constexpr pdo_row<report> misnamed_table_rows[] = {
-{{16, 16}, voltage_label, voltage_codec([](auto& codec) { codec.value_labels = misnamed; })}};
+{{16, 16}, voltage_name, voltage_title, voltage_codec([](auto& codec) { codec.value_table = misnamed; })}};
 // clang-format on
 
 static_assert(check_report<quoted_unit_rows>()
@@ -2619,7 +2619,7 @@ static_assert(check_pdo_pair(report_tpdo, changed_setpoint([](od_pdo& pdo) {
 // The setpoint with a signal named as one of the report, which it may be.
 // clang-format off
 inline constexpr pdo_row<setpoint> voltage_setpoint_rows[] = {
-{{8, 16}, {"voltage", {"Voltage", "Напряжение"}}, pdo_map<&setpoint::level>}};
+{{8, 16}, "voltage", {"Voltage", "Напряжение"}, pdo_map<&setpoint::level>}};
 // clang-format on
 
 static_assert(

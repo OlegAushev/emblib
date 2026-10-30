@@ -45,7 +45,7 @@ constexpr bool fits_width(std::int64_t value, unsigned width, bool is_signed)
 // counter has the getter of its member. A PDO has at most one counter, of one
 // to eight bits, as `rolling_counter` and `node_link` count. A signal of the
 // role `value` has a name and a title in each language, and a counter none.
-// The form of the name and the texts of the label are for the rules of the
+// The form of the name and the texts of the title are for the rules of the
 // description to check, as those of the rows of a dictionary are.
 template<typename Rows>
 constexpr std::string pdo_check(Rows const& rows)
@@ -54,7 +54,6 @@ constexpr std::string pdo_check(Rows const& rows)
   for (auto i = 0uz; i < std::size(rows); ++i) {
     auto const& row = rows[i];
     auto const& bits = row.bits;
-    auto const& label = row.label;
     auto const& codec = row.codec;
 
     if (bits.width < 1 || bits.width > codec.max_width) {
@@ -96,17 +95,15 @@ constexpr std::string pdo_check(Rows const& rows)
            + " is a counter and takes one to eight bits";
     }
     if (counter
-        && (!label.name.empty()
-            || !label.title.en.empty()
-            || !label.title.ru.empty())) {
+        && (!row.name.empty()
+            || !row.title.en.empty()
+            || !row.title.ru.empty())) {
       return "pdo: "
            + signal_name(bits.start)
            + " is a counter and has no name or title";
     }
     if (!counter
-        && (label.name.empty()
-            || label.title.en.empty()
-            || label.title.ru.empty())) {
+        && (row.name.empty() || row.title.en.empty() || row.title.ru.empty())) {
       return "pdo: " + signal_name(bits.start) + " needs a name and a title";
     }
   }

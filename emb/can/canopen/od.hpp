@@ -212,28 +212,28 @@ struct od_group {
   i18n title;
 };
 
-// The struct `od_label` labels an object: `path`, "group.name", the group and
-// the name by which a host finds it, which the description states apart, its
-// title for people, in each language, and the symbol of the unit of its
-// value, empty if it has none. The path and the title are required; `unit`
-// comes last, with a default, as most objects have none. What serves the
-// object does not depend on its label.
-struct od_label {
+// The struct `od_object_info` describes an object for a host: `path`,
+// "group.name", the group and the name by which a host finds it, which the
+// description states apart, its title for people, in each language, and the
+// symbol of the unit of its value, empty if it has none. The path and the
+// title are required; `unit` comes last, with a default, as most objects have
+// none. What serves the object does not depend on its info.
+struct od_object_info {
   std::string_view path;
   i18n title;
   std::string_view unit = {};
 };
 
-// The struct `od_value_label` labels, for a host, a value that an object may
+// The struct `od_value_info` describes, for a host, a value that an object may
 // take: the value, its name, a segment of a path unique in its table, by
 // which code finds the value, and its title, in each language. A table of
-// value labels names the values of an object in increasing order, and the
-// object takes those values only: a host shows the title of a value in place
-// of the number and offers the values named when it writes one. A builder
-// makes the table of an object whose value is an enumeration from the info of
-// its enumerators (`emb::enum_info_of`). Like the label of a row, a table
-// exists at compile time only.
-struct od_value_label {
+// values names the values of an object in increasing order, and the object
+// takes those values only: a host shows the title of a value in place of the
+// number and offers the values named when it writes one. A builder makes the
+// table of an object whose value is an enumeration from the info of its
+// enumerators (`emb::enum_info_of`). Like the info of a row, a table exists
+// at compile time only.
+struct od_value_info {
   std::int64_t value;
   std::string_view name;
   i18n title;
@@ -272,24 +272,24 @@ struct od_field {
   od_write_fn<Ctx> write = nullptr;
 };
 
-// The struct `od_field_label` labels a member of a record, a field of its
+// The struct `od_field_info` describes a member of a record, a field of its
 // layout, for a host: `name`, a segment of a path unique in the layout, the
 // title, in each language, whether the member holds the record's value
 // (`inherits`), as the requested value of a settings parameter does, and so
 // takes the record's type, unit and table of values, whether it is a command
 // (`command`), with the word that must be written (`signature`), if any, and
-// the table of the values the member takes (`value_labels`), if they are
-// named. A label written by hand must tell the truth about its field: nothing
+// the table of the values the member takes (`value_table`), if they are
+// named. Info written by hand must tell the truth about its field: nothing
 // checks that a command is written to run it, that its signature is the one
 // its handler checks, or that its handler reads only the values its table
 // names.
-struct od_field_label {
+struct od_field_info {
   std::string_view name;
   i18n title;
   bool inherits = false;
   bool command = false;
   std::optional<std::uint32_t> signature{};
-  std::span<od_value_label const> value_labels{};
+  std::span<od_value_info const> value_table{};
 };
 
 // The class template `od_binding` describes what serves an object: its access
@@ -298,27 +298,28 @@ struct od_field_label {
 // by hand must have a reader exactly if the access is readable and a writer
 // exactly if it is writable, and its reader must return the alternative its
 // type travels as. `catalog` is the index space `arg` selects from, if any.
-// `label` is the label of the object if the builder knows it, as that of a
-// settings parameter knows its name and title from the schema; the row then
-// has none of its own. `unit` is the symbol of the unit of the object's value
-// as the builder knows it: that of the type its handler reads or writes
-// (`emb::unit_symbol_of`), or the unit of a settings parameter; the unit of
-// the row's label, if any, takes its place. `value_labels` is the table of the
-// values the object takes (`od_value_label`), if they are named, as the
-// builder knows it: that of the enumeration its handler reads or writes; of
-// an array, the table of its elements, and of a record, of its members that
-// inherit its value. `command` marks a command, which
-// is written to run it, and `signature`, if it has a value, is the word that
-// must be written; `text` marks an array of characters. `diagnosed` is set by
-// a builder that has already reported an error, so that `make_dictionary`
-// does not report a second one. Of the fields, only the handlers, the
-// argument, the access, the type and the layout reach the image.
+// `info` describes the object if the builder knows it, as that of a settings
+// parameter knows its path, the name of the parameter, and its title from the
+// schema; the row then has no info of its own. `unit` is the symbol of the
+// unit of the object's value as the builder knows it: that of the type its
+// handler reads or writes (`emb::unit_symbol_of`), or the unit of a settings
+// parameter; the unit of the row's info, if any, takes its place.
+// `value_table` is the table of the values the object takes
+// (`od_value_info`), if they are named, as the builder knows it: that of the
+// enumeration its handler reads or writes; of an array, the table of its
+// elements, and of a record, of its members that inherit its value. `command`
+// marks a command, which is written to run it, and `signature`, if it has a
+// value, is the word that must be written; `text` marks an array of
+// characters. `diagnosed` is set by a builder that has already reported an
+// error, so that `make_dictionary` does not report a second one. Of the
+// fields, only the handlers, the argument, the access, the type and the
+// layout reach the image.
 //
 // A binding with a `layout` serves a record instead: every subindex of the
 // index of its row, which names it with subindex 00h, each through the field
 // of the layout at that subindex. It has no handlers of its own, and its
 // `access` is not used; `type` is the type of the record's value, and `arg`
-// the argument its fields pass on. `field_labels` labels each field, in the
+// the argument its fields pass on. `field_info` describes each field, in the
 // order of the layout.
 //
 // A binding with a `count` serves an array instead: the index of its row,
@@ -337,10 +338,10 @@ struct od_binding {
   std::uint16_t arg = 0;
   od_catalog const* catalog = nullptr;
   std::span<od_field<Ctx> const> layout{};
-  std::span<od_field_label const> field_labels{};
-  od_label label{};
+  std::span<od_field_info const> field_info{};
+  od_object_info info{};
   std::string_view unit{};
-  std::span<od_value_label const> value_labels{};
+  std::span<od_value_info const> value_table{};
   bool command = false;
   std::optional<std::uint32_t> signature{};
   bool text = false;
@@ -348,13 +349,13 @@ struct od_binding {
 };
 
 // The class template `od_row` is one object, one record or one array, as an
-// application writes it: its key, its label and its binding. The label is
-// empty, `{}`, if the binding gives one. Rows exist only at compile time:
+// application writes it: its key, its info and its binding. The info is
+// empty, `{}`, if the binding gives it. Rows exist only at compile time:
 // `make_dictionary` keeps the key and the binding and drops the rest.
 template<typename Ctx>
 struct od_row {
   od_key key;
-  od_label label;
+  od_object_info info;
   od_binding<Ctx> binding;
 };
 

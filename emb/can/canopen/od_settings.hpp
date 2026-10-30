@@ -49,8 +49,8 @@ constexpr sdo_abort_code to_sdo_abort(settings::error error)
 // (`sdo_abort_code`): what `od_settings::last_refusal` reports, as a `uint32`,
 // is the abort that answered the last refusal, which a host matches with the
 // answer to its command. One value thus names a refusal to apply and a refusal
-// to save alike, as `parameter_incompatibility` and `state_error` do. Its
-// labels name the values for a host.
+// to save alike, as `parameter_incompatibility` and `state_error` do. The
+// info of its enumerators names the values for a host.
 enum class od_refusal : std::uint32_t {
   // A parameter that nothing applies on command, but a restart.
   unsupported_access = std::to_underlying(sdo_abort_code::unsupported_access),
@@ -238,7 +238,7 @@ concept od_settings_access =
 // `param<Decl, Actual>` one that also shows its actual value, as the reader
 // `Actual` reads it in the type and the unit of the parameter. The record's
 // path is the parameter's name and its title the parameter's, so its row has
-// no label of its own: `{key, {}, param<Decl>}`. The record's type and unit
+// no info of its own: `{key, {}, param<Decl>}`. The record's type and unit
 // are the parameter's; its members, by subindex:
 //
 //   00h  const u8   the last subindex, 09h, or 0Ah with `Actual`
@@ -426,10 +426,10 @@ class od_settings {
     return fields;
   }();
 
-  // The labels of the members of the record of a parameter, for a host; a
+  // The info of the members of the record of a parameter, for a host; a
   // record without `Actual` takes the first ten. The members that show a
   // value of the parameter inherit the record's type and unit.
-  static constexpr od_field_label param_labels[] = {
+  static constexpr od_field_info param_field_info[] = {
       {.name = "highest_subindex",
        .title = {"Highest subindex", "Наибольший подындекс"}},
       {.name = "requested",
@@ -452,7 +452,7 @@ class od_settings {
        .inherits = true},
       {.name = "policy",
        .title = {"Apply policy", "Политика применения"},
-       .value_labels = detail::od_value_labels_of<settings::apply_policy>},
+       .value_table = detail::od_value_table_of<settings::apply_policy>},
       {.name = "apply", .title = {"Apply", "Применить"}, .command = true},
       {.name = "discard", .title = {"Discard", "Отбросить"}, .command = true},
       {.name = "actual",
@@ -511,12 +511,12 @@ class od_settings {
               .arg = static_cast<std::uint16_t>(param::index),
               .catalog = &catalog,
               .layout = param_layout<type, param::desc.writable, Actual>,
-              .field_labels =
-                  std::span<od_field_label const>{param_labels}.first(
+              .field_info =
+                  std::span<od_field_info const>{param_field_info}.first(
                       actual ? 11 : 10),
-              .label = {.path = Decl.desc.name, .title = Decl.title},
+              .info = {.path = Decl.desc.name, .title = Decl.title},
               .unit = Decl.unit,
-              .value_labels = detail::od_value_labels_of<typename param::type>,
+              .value_table = detail::od_value_table_of<typename param::type>,
               .diagnosed = !(known && shown && fits && in_unit)};
     }
   };

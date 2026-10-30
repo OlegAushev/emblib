@@ -98,16 +98,15 @@ static_assert(severity_value_of(std::optional{level::warning}) == 1);
 static_assert(severity_value_of(std::optional{level::fault}) == 2);
 
 // The scale names no level first, then each level at its severity.
-static_assert(od_severity_labels<level>.size() == 3);
-static_assert(od_severity_labels<level>[0].value == 0);
-static_assert(od_severity_labels<level>[0].name == "none");
-static_assert(od_severity_labels<level>[0].title == emb::i18n{"None", "Нет"});
-static_assert(od_severity_labels<level>[1].value == 1);
-static_assert(od_severity_labels<level>[1].name == "warning");
-static_assert(od_severity_labels<level>[2].value == 2);
-static_assert(od_severity_labels<level>[2].name == "fault");
-static_assert(od_severity_labels<level>[2].title
-              == emb::i18n{"Fault", "Отказ"});
+static_assert(od_severity_scale<level>.size() == 3);
+static_assert(od_severity_scale<level>[0].value == 0);
+static_assert(od_severity_scale<level>[0].name == "none");
+static_assert(od_severity_scale<level>[0].title == emb::i18n{"None", "Нет"});
+static_assert(od_severity_scale<level>[1].value == 1);
+static_assert(od_severity_scale<level>[1].name == "warning");
+static_assert(od_severity_scale<level>[2].value == 2);
+static_assert(od_severity_scale<level>[2].name == "fault");
+static_assert(od_severity_scale<level>[2].title == emb::i18n{"Fault", "Отказ"});
 
 // The stub of a retired status is named after its id, in decimal digits.
 static_assert(detail::od_decimal<0>.view() == "0");
@@ -127,34 +126,32 @@ consteval od_binding<ctx> bind()
 }
 
 // A member a subindex, 00h and one for each id, the retired one included;
-// the row gives the label, and the record has no value of its own.
+// the row gives the info, and the record has no value of its own.
 static_assert(bind<od_statuses<registry>>().layout.size() == 5);
-static_assert(bind<od_statuses<registry>>().field_labels.size() == 5);
+static_assert(bind<od_statuses<registry>>().field_info.size() == 5);
 static_assert(bind<od_statuses<registry>>().layout[0].access
               == od_access::const_);
 static_assert(bind<od_statuses<registry>>().layout[3].access == od_access::ro);
 static_assert(bind<od_statuses<registry>>().layout[4].type
               == od_data_type::uint8);
 static_assert(bind<od_statuses<registry>>().layout[4].write == nullptr);
-static_assert(bind<od_statuses<registry>>().label.path.empty());
-static_assert(bind<od_statuses<registry>>().value_labels.empty());
+static_assert(bind<od_statuses<registry>>().info.path.empty());
+static_assert(bind<od_statuses<registry>>().value_table.empty());
 
 // The member of a status bears its name and title, that of a retired one
 // those of the stub, and each past 00h the scale.
-static_assert(bind<od_statuses<registry>>().field_labels[0].name
+static_assert(bind<od_statuses<registry>>().field_info[0].name
               == "highest_subindex");
-static_assert(
-    bind<od_statuses<registry>>().field_labels[0].value_labels.empty());
-static_assert(bind<od_statuses<registry>>().field_labels[1].name == "overheat");
-static_assert(bind<od_statuses<registry>>().field_labels[1].title
+static_assert(bind<od_statuses<registry>>().field_info[0].value_table.empty());
+static_assert(bind<od_statuses<registry>>().field_info[1].name == "overheat");
+static_assert(bind<od_statuses<registry>>().field_info[1].title
               == overheat::title);
-static_assert(bind<od_statuses<registry>>().field_labels[3].name
-              == "retired_2");
-static_assert(bind<od_statuses<registry>>().field_labels[3].title
+static_assert(bind<od_statuses<registry>>().field_info[3].name == "retired_2");
+static_assert(bind<od_statuses<registry>>().field_info[3].title
               == emb::i18n{"Retired status 2", "Снятый статус 2"});
-static_assert(bind<od_statuses<registry>>().field_labels[3].value_labels.data()
-              == od_severity_labels<level>.data());
-static_assert(bind<od_statuses<registry>>().field_labels[4].name == "stall");
+static_assert(bind<od_statuses<registry>>().field_info[3].value_table.data()
+              == od_severity_scale<level>.data());
+static_assert(bind<od_statuses<registry>>().field_info[4].name == "stall");
 
 // The trait names the statuses and the levels of emb::trouble::registry, and
 // the bridge binds one.
@@ -171,7 +168,7 @@ static_assert(detail::od_registry_traits<trouble_registry>::level_count == 2);
 constinit trouble_registry raised{};
 
 static_assert(bind<od_statuses<raised>>().layout.size() == 5);
-static_assert(bind<od_statuses<raised>>().field_labels[4].name == "stall");
+static_assert(bind<od_statuses<raised>>().field_info[4].name == "stall");
 
 // -- The list of an MPDO --
 
@@ -293,15 +290,15 @@ inline constexpr std::string_view body =
     "\n"
     R"({"type":"group","name":"drive","title":"Drive","title_ru":"Привод"})"
     "\n"
-    R"({"type":"value_label","value_table":0,"value":0,"name":"none","title":"None","title_ru":"Нет"})"
+    R"({"type":"value","value_table":0,"value":0,"name":"none","title":"None","title_ru":"Нет"})"
     "\n"
-    R"({"type":"value_label","value_table":0,"value":1,"name":"warning","title":"Warning","title_ru":"Предупреждение"})"
+    R"({"type":"value","value_table":0,"value":1,"name":"warning","title":"Warning","title_ru":"Предупреждение"})"
     "\n"
-    R"({"type":"value_label","value_table":0,"value":2,"name":"fault","title":"Fault","title_ru":"Отказ"})"
+    R"({"type":"value","value_table":0,"value":2,"name":"fault","title":"Fault","title_ru":"Отказ"})"
     "\n"
-    R"({"type":"value_label","value_table":1,"value":0,"name":"idle","title":"Idle","title_ru":"Ожидание"})"
+    R"({"type":"value","value_table":1,"value":0,"name":"idle","title":"Idle","title_ru":"Ожидание"})"
     "\n"
-    R"({"type":"value_label","value_table":1,"value":1,"name":"run","title":"Run","title_ru":"Работа"})"
+    R"({"type":"value","value_table":1,"value":1,"name":"run","title":"Run","title_ru":"Работа"})"
     "\n"
     R"({"type":"field","layout":0,"sub":"0x00","name":"highest_subindex","title":"Highest subindex","title_ru":"Наибольший подындекс","datatype":"uint8","access":"const"})"
     "\n"

@@ -40,9 +40,9 @@ constexpr std::uint8_t severity_value_of(std::optional<Level> level)
 // (`severity_value_of`). Each member of the record of the statuses past 00h
 // takes its values from it.
 template<enum_with_info Level>
-inline constexpr auto od_severity_labels = [] {
+inline constexpr auto od_severity_scale = [] {
   constexpr auto info = enum_info_of<Level>();
-  std::array<od_value_label, info.size() + 1> out{};
+  std::array<od_value_info, info.size() + 1> out{};
   out[0] = {.value = severity_value_of<Level>(std::nullopt),
             .name = "none",
             .title = {"None", "Нет"}};
@@ -157,7 +157,7 @@ inline constexpr std::string_view od_unlabelled_status =
     "member";
 
 // The binding of the record of the statuses of `Registry` (`od_statuses`):
-// its layout, a template of the context, and the labels of its members.
+// its layout, a template of the context, and the info of its members.
 template<auto& Registry>
 struct statuses_binding {
   using traits = od_registry_traits<std::remove_cvref_t<decltype(Registry)>>;
@@ -221,13 +221,13 @@ struct statuses_binding {
     return fields;
   }();
 
-  // The labels of the members: that of 00h, then, at subindex id + 1, the
-  // name and the title of the status of the id, or those of the stub of a
-  // retired one; each member past 00h takes its values from the scale.
-  static constexpr auto labels = [] {
-    constexpr std::span<od_value_label const> scale =
-        od_severity_labels<level_type>;
-    std::array<od_field_label, id_space + 1> out{};
+  // The info of the members: that of 00h, then, at subindex id + 1, the name
+  // and the title of the status of the id, or those of the stub of a retired
+  // one; each member past 00h takes its values from the scale.
+  static constexpr auto field_info = [] {
+    constexpr std::span<od_value_info const> scale =
+        od_severity_scale<level_type>;
+    std::array<od_field_info, id_space + 1> out{};
     out[0] = {.name = "highest_subindex",
               .title = {"Highest subindex", "Наибольший подындекс"}};
     [&]<std::size_t... Id>(std::index_sequence<Id...>) {
@@ -237,7 +237,7 @@ struct statuses_binding {
               out[Id + 1] = {.name = od_retired_name<Id>.view(),
                              .title = {od_retired_title_en<Id>.view(),
                                        od_retired_title_ru<Id>.view()},
-                             .value_labels = scale};
+                             .value_table = scale};
             }
           }(),
           ...);
@@ -246,7 +246,7 @@ struct statuses_binding {
       if constexpr (od_labelled_status<S>) {
         out[std::size_t{S::id} + 1] = {.name = S::name,
                                        .title = S::title,
-                                       .value_labels = scale};
+                                       .value_table = scale};
       }
     });
     return out;
@@ -258,7 +258,7 @@ struct statuses_binding {
     return {.access = od_access::ro,
             .type = od_data_type::uint8,
             .layout = layout<Ctx>,
-            .field_labels = labels};
+            .field_info = field_info};
   }
 };
 
@@ -269,7 +269,7 @@ struct statuses_binding {
 // (`emb::trouble::registry`): the severity of each status, which a host finds
 // by the path of the record and the name of the status,
 // "trouble.statuses.ov_dc". The row names the record with subindex 00h and
-// gives its label, and the area of its index, of the class `status`, tells a
+// gives its info, and the area of its index, of the class `status`, tells a
 // host what the record is:
 //
 //   {{0x4000, 0x00}, {"trouble.statuses", {"Trouble statuses", "Статусы неисправностей"}}, od_statuses<trouble::registry>},
@@ -289,7 +289,7 @@ struct statuses_binding {
 // status, so a retired status leaves a hole in the ids rather than moving the
 // statuses after it, and the stub keeps their members in place. Each member
 // past 00h takes its values from the scale of severity
-// (`od_severity_labels`), the stub as well.
+// (`od_severity_scale`), the stub as well.
 //
 // The bridge calls only `severity` of the registry, a status at a time, and
 // takes the statuses and the levels from the type of the registry
@@ -297,7 +297,7 @@ struct statuses_binding {
 // each of its levels from 0 and no other value, as the scale names the
 // severities a member reads; the ids must be below 254, as the last subindex
 // is FEh; and each status must state its name and its title. A registry that
-// breaks one fails to compile, at the row. Like the labels of the rows, the
+// breaks one fails to compile, at the row. Like the info of the rows, the
 // names and the titles of the members exist at compile time only: the image
 // holds the layout and a reader for each status.
 template<auto& Registry>

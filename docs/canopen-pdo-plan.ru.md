@@ -52,7 +52,7 @@ emblib не ломается: новое добавляется рядом с п
 ## Решения
 
 1. 2026-10-23, слои слиты 2026-10-27. Кодек из строк, отдельной таблицы
-   нет. Строка PDO — `{первый бит, ширина}`, метка `od_label` и построитель
+   нет. Строка PDO — `{первый бит, ширина}`, сведения `od_object_info` и построитель
    от члена `pdo_map<&Message::m>`. Bit-field'ы, `_reservedN_` и `is_valid`
    уходят; биты без строки — резерв: 0 при передаче, отказ при приёме.
    - Кодек живёт в `emb::can::canopen`. Одна строка `pdo_row` и один кодек
@@ -105,7 +105,7 @@ emblib не ломается: новое добавляется рядом с п
      статус: `ro`, `uint8`, значение шкалы степени. Имя и наименование члена
      — у статуса, таблица значений — шкала степени. Полный путь статуса —
      `trouble.statuses.<имя>`. 00h — наибольший подындекс.
-   - Шкала степени `od_severity_labels<Level>` — обычная таблица значений: 0
+   - Шкала степени `od_severity_scale<Level>` — обычная таблица значений: 0
      — нет, уровень k — значение k + 1. «+1» считает одна функция
      `severity_value_of(std::optional<Level>)`.
    - Объект строит мост `od_statuses<Registry>` (`od_trouble.hpp`); список
@@ -455,7 +455,7 @@ emblib не ломается: новое добавляется рядом с п
     | производитель MPDO (`mpdo.hpp`) | `mpdo_scanner<Ctx, Scans>`, методы `next()` и `sent()` (рабочее имя) |
     | кадр SAM (`types.hpp`) | `sam_mpdo {producer, index, subindex, data}`, `to_payload` для него |
     | класс | `od_class::status` |
-    | мост статусов (`od_trouble.hpp`) | `od_statuses<Registry>`, `od_statuses_scans<Registry, Index>`, `severity_value_of`, `od_severity_labels<Level>`, трейт `detail::od_registry_traits` |
+    | мост статусов (`od_trouble.hpp`) | `od_statuses<Registry>`, `od_statuses_scans<Registry, Index>`, `severity_value_of`, `od_severity_scale<Level>`, трейт `detail::od_registry_traits` |
     | приём MPDO, вне плана | `to_sam_mpdo`, `sam_rpdo_config`, перегрузка `setup_rpdo`, `decode_status<StatusList, Index>` → `std::optional<status_severity<Level>>` |
     | etk | структуры `drive_status`, `electrical_status`, `motion_status`, `status_flags` (только шаг 1), `drive_command`, `model_command`; строки `<имя>_rows`; константы PDO `<имя>_pdo`; поток статусов — `statuses_pdo`, список `statuses_objects`, член `statuses_scanner_`; имена в JSONL — `drive_status` и так далее, `statuses` |
 
@@ -609,13 +609,13 @@ struct pdo_codec : detail::pdo_member_codec<Message> {
   std::string_view unit{};
   std::int64_t scale_num = 1; // the physical value of one raw step
   std::int64_t scale_den = 1;
-  std::span<od_value_label const> value_labels{};
+  std::span<od_value_info const> value_table{};
 };
 
 template<typename Message>
 struct pdo_row {
   pdo_bits bits;
-  od_label label;
+  od_object_info label;
   pdo_codec<Message> codec;
 };
 
@@ -687,7 +687,7 @@ constexpr auto peek_pdo(payload_t const& payload);
   кадра — от словаря берёт только `od_names` (решение 1).
 - `detail::described<T>(core)` добавляет сведения для описания из типа
   члена: у `emb::scaled` шаг — масштаб, `unit_symbol_of` величины —
-  единица; у перечисления — таблица `od_value_labels_of`; у другого типа —
+  единица; у перечисления — таблица `od_value_table_of`; у другого типа —
   его единица, если он её называет, и шаг 1.
 - `pdo_map_element<Member, I>` — то же для `(m.*Member)[I]`.
   `pdo_map_counter<Member>` берёт значение `pdo_map<Member>` и ставит роль
@@ -894,13 +894,13 @@ struct od_pdo {
 // A signal as the description sees it: a row without its thunks.
 struct od_signal {
   pdo_bits bits;
-  od_label label;
+  od_object_info label;
   pdo_role role;
   pdo_encoding encoding;
   std::string_view unit;
   std::int64_t scale_num = 1;
   std::int64_t scale_den = 1;
-  std::span<od_value_label const> value_labels;
+  std::span<od_value_info const> value_table;
 };
 
 // A PDO with what it carries: the signals of its rows, or the objects that its
@@ -1004,7 +1004,7 @@ struct od_process_data {
   Документирующий комментарий говорит, что предикат шире CiA 301.
 - Правила текстов (решение 8): наименование PDO и сигнала — `title_error`,
   единица — `is_verbatim_text`, каждая новая таблица значений —
-  `value_labels_error` (T49–T51). Одиночные отказы — `EMB_PANIC`, как в
+  `value_table_error` (T49–T51). Одиночные отказы — `EMB_PANIC`, как в
   `node_id` и `enum_info_of`.
 
 В etk:
@@ -1194,7 +1194,7 @@ constexpr std::uint8_t severity_value_of(std::optional<Level> level);
 // The scale of severity: `none`, then the enumerators of the levels at their
 // values.
 template<typename Level>
-inline constexpr std::array<od_value_label, /* ... */> od_severity_labels =
+inline constexpr std::array<od_value_info, /* ... */> od_severity_scale =
     /* ... */;
 
 namespace detail {
@@ -1217,7 +1217,7 @@ inline constexpr /* ... */ od_statuses = /* ... */;
   `detail::od_classes`, общий для T29 и правила имени PDO (коммит 5 выносит
   его из `check_groups`): список — литеральный массив, и без правки T29
   молча пропустит новый класс.
-- `od_severity_labels<Level>`: `none` с наименованием из emblib, затем
+- `od_severity_scale<Level>`: `none` с наименованием из emblib, затем
   уровни — `enum_info_of<Level>()` — на значениях k + 1. `enum_info_of`
   допускает пропуски значений, поэтому `od_statuses` проверяет
   `static_assert`'ом, что перечисление называет столько уровней, сколько
@@ -1848,7 +1848,7 @@ etk K.
    - `od.hpp`: `od_class::status`. `detail/od_check.hpp`: `class_name` и
      `detail::od_classes`.
    - Создать `emb/can/canopen/od_trouble.hpp`: `severity_value_of`,
-     `od_severity_labels<Level>`, трейт `detail::od_registry_traits`,
+     `od_severity_scale<Level>`, трейт `detail::od_registry_traits`,
      `od_statuses<Registry>` с заглушками на дырах; `static_assert`:
      пространство id не больше 254, метки — все уровни.
    - Инструменты: `class` = `status` в `--check`; `image_strings.py` — пути

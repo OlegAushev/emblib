@@ -104,8 +104,8 @@ struct status {
 
 // clang-format off
 inline constexpr pdo_row<status> status_rows[] = {
-{{ 0, 8}, {"value", {"Value", "Значение"}}, pdo_map<&status::value>},
-{{56, 2}, {},                               pdo_map_counter<&status::counter>},
+{{ 0, 8}, "value", {"Value", "Значение"}, pdo_map<&status::value>},
+{{56, 2}, {}, {},                         pdo_map_counter<&status::counter>},
 };
 // clang-format on
 
@@ -328,7 +328,7 @@ struct plain_status {
 };
 
 inline constexpr pdo_row<plain_status> plain_status_rows[] = {
-    {{0, 8}, {"value", {"Value", "Значение"}}, pdo_map<&plain_status::value>},
+    {{0, 8}, "value", {"Value", "Значение"}, pdo_map<&plain_status::value>},
 };
 
 static_assert(detail::counter_mask_of<status_rows> == 0x03);

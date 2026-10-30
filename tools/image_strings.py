@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Reports the strings that an image of the firmware holds whole, and fails
 if there is any: the paths and titles of a description of the dictionary
-(.od.jsonl), or the lines of a list. The labels of the dictionary exist at
-compile time only, and none of them may reach the image.
+(.od.jsonl), or the lines of a list. The info of the dictionary exists at
+compile time only, and none of it may reach the image.
 
 A string counts only as a whole: the image is split at its NUL bytes and
 each piece compared, so that a path that begins or ends another one, e.g.
@@ -55,7 +55,7 @@ def description_strings(path):
         if kind == 'field' and entry.get('layout') in statuses:
             yield entry['name'], f'{path}:{number} name'
         if kind in ('object', 'array', 'record', 'group', 'field',
-                    'value_label', 'pdo', 'signal'):
+                    'value', 'pdo', 'signal'):
             for key in TITLES:
                 if key in entry:
                     yield entry[key], f'{path}:{number} {key}'

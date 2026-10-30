@@ -120,25 +120,25 @@ template<std::size_t K>
 inline constexpr auto status_title_ru = "Статус " + detail::od_decimal<K>;
 
 template<std::size_t N>
-inline constexpr auto status_labels = [] {
-  std::array<od_field_label, N + 1> labels{};
-  labels[0] = {.name = "highest_subindex",
-               .title = {"Highest subindex", "Наибольший подындекс"}};
+inline constexpr auto status_field_info = [] {
+  std::array<od_field_info, N + 1> info{};
+  info[0] = {.name = "highest_subindex",
+             .title = {"Highest subindex", "Наибольший подындекс"}};
   [&]<std::size_t... K>(std::index_sequence<K...>) {
-    ((labels[K + 1] = {.name = status_name<K + 1>.view(),
-                       .title = {status_title_en<K + 1>.view(),
-                                 status_title_ru<K + 1>.view()}}),
+    ((info[K + 1] = {.name = status_name<K + 1>.view(),
+                     .title = {status_title_en<K + 1>.view(),
+                               status_title_ru<K + 1>.view()}}),
      ...);
   }(std::make_index_sequence<N>{});
-  return labels;
+  return info;
 }();
 
 template<std::size_t N>
 inline constexpr od_binding<ctx> status_record{.access = od_access::ro,
                                                .type = od_data_type::uint8,
                                                .layout = status_layout<N>,
-                                               .field_labels =
-                                                   status_labels<N>};
+                                               .field_info =
+                                                   status_field_info<N>};
 
 inline constexpr od_area areas[] = {
     {0x4000, 0x4FFF, od_class::status},
@@ -457,7 +457,7 @@ struct level {
 
 // clang-format off
 inline constexpr pdo_row<level> level_rows[] = {
-{{0, 8}, {"value", {"Level", "Уровень"}}, pdo_map<&level::value>},
+{{0, 8}, "value", {"Level", "Уровень"}, pdo_map<&level::value>},
 };
 // clang-format on
 

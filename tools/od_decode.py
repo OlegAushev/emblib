@@ -19,7 +19,7 @@ it breaks, naming its line:
   text that is not empty, a step as a positive fraction in its lowest
   terms;
 - the lines go in their order: the header, the groups in the order of their
-  first objects by key, the labels of values by table and by value, the
+  first objects by key, the values of the tables by table and by value, the
   members of layouts by layout and by subindex, the objects, arrays and
   records by key, each in a group that has a line and named once in it,
   then the PDOs, the TPDOs first and by number, each followed by its
@@ -89,7 +89,7 @@ VERSION = 1
 KEYS = {
     'header': 'format version device fingerprint',
     'group': 'name title title_ru',
-    'value_label': 'value_table value name title title_ru',
+    'value': 'value_table value name title title_ru',
     'field': 'layout sub name title title_ru datatype? access value_table? '
              'command? signature? inherits?',
     'object': 'index sub group name title title_ru class datatype access '
@@ -106,7 +106,7 @@ KEYS = {
 
 # The place of each kind of line in the order of the lines: objects, arrays
 # and records go together, by key, and so do a PDO and its signals.
-PLACE = {'header': 0, 'group': 1, 'value_label': 2, 'field': 3,
+PLACE = {'header': 0, 'group': 1, 'value': 2, 'field': 3,
          'object': 4, 'array': 4, 'record': 4, 'pdo': 5, 'signal': 5}
 
 # The hexadecimal keys and the digits of each.
@@ -247,7 +247,7 @@ class Checker:
         self.header = {}
         self.groups = {}       # group: the number of its line
         self.group_uses = []   # groups, in the order of their first rows
-        self.tables = []       # per table: [first line, labels]
+        self.tables = []       # per table: [first line, values]
         self.table_uses = []   # tables, in the order of their first references
         self.layouts = []      # per layout: [first line, members, inherits]
         self.layout_uses = []  # layouts, in the order of their first records
@@ -317,7 +317,7 @@ class Checker:
         if PLACE[kind] < self.place:
             self.fail(f'a line of kind "{kind}" after one of kind '
                       f'"{self.kinds[-1]}": the lines go header, group, '
-                      f'value_label, field, object, array and record, then '
+                      f'value, field, object, array and record, then '
                       f'pdo and signal')
         self.place = PLACE[kind]
         self.kinds.append(kind)
@@ -357,23 +357,23 @@ class Checker:
                       f"{self.groups[name]}")
         self.groups[name] = self.number
 
-    def value_label(self, values):
+    def value(self, values):
         k = values['value_table']
         if k == len(self.tables):
             self.tables.append([self.number, []])
         elif k != len(self.tables) - 1:
             self.fail((f'table {k} after table {len(self.tables) - 1}'
                        if self.tables else f'the first table is {k}')
-                      + ': the labels of values go by table, numbered from 0')
-        labels = self.tables[k][1]
+                      + ': the values go by table, numbered from 0')
+        named = self.tables[k][1]
         value, name = values['value'], values['name']
-        if labels and value <= labels[-1][0]:
-            self.fail(f'value {value} after value {labels[-1][0]}: the labels '
+        if named and value <= named[-1][0]:
+            self.fail(f'value {value} after value {named[-1][0]}: the values '
                       f'of a table go by value, each value once')
-        for other in labels:
+        for other in named:
             if other[1] == name:
                 self.fail(f'values {other[0]} and {value} have the same name')
-        labels.append((value, name, values['title'], values['title_ru']))
+        named.append((value, name, values['title'], values['title_ru']))
 
     def field(self, values):
         k = values['layout']
@@ -583,7 +583,7 @@ class Checker:
             return
         k = values['value_table']
         if k >= len(self.tables):
-            self.fail(f'table {k} has no labels of values')
+            self.fail(f'table {k} has no values')
         if k not in self.table_uses:
             if k != len(self.table_uses):
                 self.fail(f'table {k} before table {len(self.table_uses)}: '
@@ -607,11 +607,11 @@ class Checker:
                     self.fail(f'{slot} and {other_slot} share COB-ID '
                               f'{cob_id:03X}h on node {cob_id - base}',
                               number)
-        for k, (number, labels) in enumerate(self.tables):
+        for k, (number, named) in enumerate(self.tables):
             if k >= len(self.table_uses):
                 self.fail(f'table {k} is not referenced', number)
             for j in range(k):
-                if self.tables[j][1] == labels:
+                if self.tables[j][1] == named:
                     self.fail(f'tables {j} and {k} name the same values: a '
                               f'description has one table of them', number)
         for k, (number, members, _) in enumerate(self.layouts):
@@ -637,8 +637,8 @@ class Checker:
         return (f'{self.header["device"]}, fingerprint '
                 f'{self.header["fingerprint"]}: '
                 f'{counted(count("group"), "group")}, '
-                f'{counted(len(self.tables), "table")} of values with '
-                f'{counted(count("value_label"), "label")}, '
+                f'{counted(len(self.tables), "table")} of '
+                f'{counted(count("value"), "value")}, '
                 f'{counted(len(self.layouts), "layout")} with '
                 f'{counted(count("field"), "member")}, '
                 f'{counted(count("object"), "object")}, '
@@ -685,8 +685,8 @@ class Decoder:
 
     def __init__(self, checker, node):
         self.node = node
-        self.tables = [{label[0]: label[1] for label in labels}
-                       for _, labels in checker.tables]
+        self.tables = [{value: name for value, name, *_ in named}
+                       for _, named in checker.tables]
         self.objects = checker.objects
         self.arrays = checker.arrays
         self.records = checker.records

@@ -178,7 +178,7 @@ private:
 // start with the groups of `Groups`, a C array of `od_group const`, with the
 // PDOs of `ProcessData`, an `od_process_data const`, beside it, none by
 // default. Each must be an `inline constexpr` variable of a named namespace:
-// GCC at -O0 emits any other table, the labels in it included. A row whose
+// GCC at -O0 emits any other table, the info in it included. A row whose
 // binding has a layout becomes a record, one whose binding has a count an
 // array, any other an entry. An index whose entries all have a subindex past
 // 00h gets one more, at 00h: a `const` `uint8` that reads the highest

@@ -208,8 +208,8 @@ constexpr void put_header(Sink& sink,
 
 // Whether the tables of values `a` and `b` name the same values alike: as
 // many values, in the same order, each with the same name and titles.
-constexpr bool same_values(std::span<od_value_label const> a,
-                           std::span<od_value_label const> b)
+constexpr bool same_values(std::span<od_value_info const> a,
+                           std::span<od_value_info const> b)
 {
   if (a.size() != b.size()) return false;
   if (a.data() == b.data()) return true;
@@ -225,12 +225,12 @@ constexpr bool same_values(std::span<od_value_label const> a,
 
 // The tables of values of a description, in the order of their numbers, each
 // table once, as `same_values` compares them.
-using od_value_tables = std::vector<std::span<od_value_label const>>;
+using od_value_tables = std::vector<std::span<od_value_info const>>;
 
 // Returns the number of `values` among `tables`, or `tables.size()` if it is
 // not there.
 constexpr std::size_t table_number(od_value_tables const& tables,
-                                   std::span<od_value_label const> values)
+                                   std::span<od_value_info const> values)
 {
   auto k = 0uz;
   while (k < tables.size() && !same_values(tables[k], values)) {
@@ -241,7 +241,7 @@ constexpr std::size_t table_number(od_value_tables const& tables,
 
 // Adds `values` to `tables` unless it is there already or empty.
 constexpr void add_table(od_value_tables& tables,
-                         std::span<od_value_label const> values)
+                         std::span<od_value_info const> values)
 {
   if (!values.empty() && table_number(tables, values) == tables.size()) {
     tables.push_back(values);
@@ -253,7 +253,7 @@ constexpr void add_table(od_value_tables& tables,
 template<typename Sink>
 constexpr void put_table(Sink& sink,
                          od_value_tables const& tables,
-                         std::span<od_value_label const> values)
+                         std::span<od_value_info const> values)
 {
   if (values.empty()) return;
   put_key(sink, "value_table");
@@ -269,18 +269,19 @@ template<typename Ctx>
 constexpr bool same_layout(od_binding<Ctx> const& a, od_binding<Ctx> const& b)
 {
   if (a.layout.size() != b.layout.size()) return false;
-  // The labels of records of one kind are one array, compared once.
-  bool const shared = a.field_labels.data() == b.field_labels.data();
+  // The info of the members of records of one kind is one array, compared
+  // once.
+  bool const shared = a.field_info.data() == b.field_info.data();
   for (auto i = 0uz; i < a.layout.size(); ++i) {
-    auto const& la = a.field_labels[i];
-    auto const& lb = b.field_labels[i];
+    auto const& la = a.field_info[i];
+    auto const& lb = b.field_info[i];
     if (!shared
         && (la.name != lb.name
             || la.title != lb.title
             || la.inherits != lb.inherits
             || la.command != lb.command
             || la.signature != lb.signature
-            || !same_values(la.value_labels, lb.value_labels))) {
+            || !same_values(la.value_table, lb.value_table))) {
       return false;
     }
     if (a.layout[i].access != b.layout[i].access) return false;
@@ -289,27 +290,27 @@ constexpr bool same_layout(od_binding<Ctx> const& a, od_binding<Ctx> const& b)
   return true;
 }
 
-// Writes the lines of the labels of the values of `tables`, by table, and in
-// a table by value.
+// Writes the lines of the values of `tables`, by table, and in a table by
+// value.
 template<typename Sink>
-constexpr void put_value_labels(Sink& sink, od_value_tables const& tables)
+constexpr void put_values(Sink& sink, od_value_tables const& tables)
 {
   for (auto k = 0uz; k < tables.size(); ++k) {
-    for (auto const& label : tables[k]) {
-      put_start(sink, "value_label");
+    for (auto const& info : tables[k]) {
+      put_start(sink, "value");
       put_key(sink, "value_table");
       put_decimal(sink, k);
       put_key(sink, "value");
-      put_signed(sink, label.value);
-      put_string(sink, "name", label.name);
-      put_title(sink, label.title);
+      put_signed(sink, info.value);
+      put_string(sink, "name", info.name);
+      put_title(sink, info.title);
       put_end(sink);
     }
   }
 }
 
 // Writes the line of the member `sub` of layout number `layout`, whose fields
-// and labels are those of the record `binding`, its table of values numbered
+// and info are those of the record `binding`, its table of values numbered
 // among `tables`.
 template<typename Sink, typename Ctx>
 constexpr void put_field(Sink& sink,
@@ -319,23 +320,23 @@ constexpr void put_field(Sink& sink,
                          od_value_tables const& tables)
 {
   auto const& field = binding.layout[sub];
-  auto const& label = binding.field_labels[sub];
+  auto const& member = binding.field_info[sub];
   put_start(sink, "field");
   put_key(sink, "layout");
   put_decimal(sink, layout);
   put_key(sink, "sub");
   put_hex(sink, static_cast<unsigned>(sub), 2);
-  put_string(sink, "name", label.name);
-  put_title(sink, label.title);
-  if (!label.inherits) put_string(sink, "datatype", type_name(field.type));
+  put_string(sink, "name", member.name);
+  put_title(sink, member.title);
+  if (!member.inherits) put_string(sink, "datatype", type_name(field.type));
   put_string(sink, "access", access_name(field.access));
-  put_table(sink, tables, label.value_labels);
-  put_flag(sink, "command", label.command);
-  if (label.signature) {
+  put_table(sink, tables, member.value_table);
+  put_flag(sink, "command", member.command);
+  if (member.signature) {
     put_key(sink, "signature");
-    put_hex(sink, *label.signature, 8);
+    put_hex(sink, *member.signature, 8);
   }
-  put_flag(sink, "inherits", label.inherits);
+  put_flag(sink, "inherits", member.inherits);
   put_end(sink);
 }
 
@@ -351,7 +352,7 @@ constexpr void put_row(Sink& sink,
                        od_value_tables const& tables)
 {
   auto const& binding = row.binding;
-  auto const& label = label_of(row);
+  auto const& info = info_of(row);
   bool const record = !binding.layout.empty();
   bool const array = binding.count != nullptr;
 
@@ -362,9 +363,9 @@ constexpr void put_row(Sink& sink,
     put_key(sink, "sub");
     put_hex(sink, row.key.subindex, 2);
   }
-  put_string(sink, "group", group_of(label.path));
-  put_string(sink, "name", name_of(label.path));
-  put_title(sink, label.title);
+  put_string(sink, "group", group_of(info.path));
+  put_string(sink, "name", name_of(info.path));
+  put_title(sink, info.title);
   put_string(sink,
              "class",
              area != nullptr ? class_name(area->class_)
@@ -374,7 +375,7 @@ constexpr void put_row(Sink& sink,
   }
   if (!record) put_string(sink, "access", access_name(binding.access));
   put_optional(sink, "unit", unit_of(row));
-  put_table(sink, tables, binding.value_labels);
+  put_table(sink, tables, binding.value_table);
   if (record) {
     put_key(sink, "layout");
     put_decimal(sink, layout);
@@ -439,8 +440,8 @@ constexpr void put_signal(Sink& sink,
   put_decimal(sink, signal.bits.width);
   put_string(sink, "role", role_name(signal.role));
   if (signal.role == pdo_role::value) {
-    put_string(sink, "name", signal.label.name);
-    put_title(sink, signal.label.title);
+    put_string(sink, "name", signal.name);
+    put_title(sink, signal.title);
   }
   put_string(sink, "encoding", encoding_name(signal.encoding));
   if (signal.scale_num != 1 || signal.scale_den != 1) {
@@ -452,7 +453,7 @@ constexpr void put_signal(Sink& sink,
     sink.put('"');
   }
   put_optional(sink, "unit", signal.unit);
-  put_table(sink, tables, signal.value_labels);
+  put_table(sink, tables, signal.value_table);
   put_end(sink);
 }
 
@@ -494,7 +495,7 @@ sorted_signals(std::span<od_signal const> signals)
 // Writes the body of the description of the dictionary made of `rows`, whose
 // indices lie in `areas` and whose paths start with the groups of `groups`,
 // with the PDOs of `process_data` beside it: a line for each group, in the
-// order of its first row by key; a line for each label of a value, by table
+// order of its first row by key; a line for each value of a table, by table
 // and in a table by value, the tables numbered in the order in which the
 // members of the layouts, then the rows and last the signals first name them,
 // and compared by what a host sees (`same_values`); a line for each member of
@@ -523,7 +524,7 @@ constexpr void od_describe(Sink& sink,
 
   std::array<bool, G> seen{};
   for (auto const i : order) {
-    auto const group = group_position(group_of(label_of(rows[i]).path), groups);
+    auto const group = group_position(group_of(info_of(rows[i]).path), groups);
     if (group == G || seen[group]) continue;
     seen[group] = true;
     put_start(sink, "group");
@@ -562,19 +563,19 @@ constexpr void od_describe(Sink& sink,
   // signals, in the order of their lines.
   od_value_tables tables;
   for (auto k = 0uz; k < layouts; ++k) {
-    for (auto const& label : rows[first_record[k]].binding.field_labels) {
-      add_table(tables, label.value_labels);
+    for (auto const& member : rows[first_record[k]].binding.field_info) {
+      add_table(tables, member.value_table);
     }
   }
   for (auto const i : order) {
-    add_table(tables, rows[i].binding.value_labels);
+    add_table(tables, rows[i].binding.value_table);
   }
   for (auto k = 0uz; k < pdo_order.size(); ++k) {
     for (auto const s : signal_order[k]) {
-      add_table(tables, pdos[pdo_order[k]].signals[s].value_labels);
+      add_table(tables, pdos[pdo_order[k]].signals[s].value_table);
     }
   }
-  put_value_labels(sink, tables);
+  put_values(sink, tables);
 
   for (auto k = 0uz; k < layouts; ++k) {
     auto const& binding = rows[first_record[k]].binding;

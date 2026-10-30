@@ -536,9 +536,9 @@ concept some_storage = requires {
 The OD table keeps what genuinely belongs to CANopen — the index of each
 record, and the areas of indices, from which the class of an object
 follows — and takes everything else from the section and its schema
-through the parameter's declaration: the type, and the record's label,
+through the parameter's declaration: the type, and the record's info,
 its path being the parameter's name and its title the parameter's. Each
-parameter is a record, one row at an index of its own, whose label is
+parameter is a record, one row at an index of its own, whose info is
 empty (`can/canopen/od_settings.hpp`; the dictionary around it is
 described in `canopen-od-algorithm.ru.md`):
 
@@ -607,7 +607,7 @@ Completeness is checked at compile time, without coupling:
 - a parameter's path, its name, is a group and a name of a group the
   dictionary declares, and its title is not empty in any language (T2,
   T35 and T36 in `canopen-od-algorithm.ru.md`); a row of a parameter that
-  gives a label of its own is refused (T34);
+  gives info of its own is refused (T34);
 - the record's type and unit are the parameter's by construction,
   `named_unit` and `emb::clamped` included, and an actual value must be
   read in that type and in a type of no other unit (S4 and S5 in

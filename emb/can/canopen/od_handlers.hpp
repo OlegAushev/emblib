@@ -58,9 +58,9 @@ concept od_labelled = !std::is_enum_v<T> || enum_with_info<T>;
 // The info of the enumerators of the enumeration `E` as a table of values,
 // for the binding of an object of it.
 template<enum_with_info E>
-inline constexpr auto od_enum_value_labels = [] {
+inline constexpr auto od_enum_value_table = [] {
   constexpr auto info = enum_info_of<E>();
-  std::array<od_value_label, info.size()> out{};
+  std::array<od_value_info, info.size()> out{};
   for (auto i = 0uz; i < info.size(); ++i) {
     out[i] = {.value = std::to_underlying(info[i].value()),
               .name = info[i].name(),
@@ -72,11 +72,11 @@ inline constexpr auto od_enum_value_labels = [] {
 // The table of the values of an object whose value is of type `T`: that of
 // the enumerators of `T` if it is an enumeration, otherwise none.
 template<typename T>
-inline constexpr std::span<od_value_label const> od_value_labels_of{};
+inline constexpr std::span<od_value_info const> od_value_table_of{};
 
 template<enum_with_info E>
-inline constexpr std::span<od_value_label const> od_value_labels_of<E> =
-    od_enum_value_labels<E>;
+inline constexpr std::span<od_value_info const> od_value_table_of<E> =
+    od_enum_value_table<E>;
 
 // The values that the enumeration `E` labels, in their carrier, in increasing
 // order: all that a writer of `E` keeps of the info of its enumerators.
@@ -472,7 +472,7 @@ struct read_binding {
                 .type = od_type_of<od_carrier_t<value_type>>,
                 .read = &od_read_thunk<F, Ctx>,
                 .unit = unit_symbol_of<value_type>(),
-                .value_labels = od_value_labels_of<value_type>};
+                .value_table = od_value_table_of<value_type>};
       }
       else {
         return {.access = Access,
@@ -502,7 +502,7 @@ struct write_binding {
                 .type = od_type_of<od_carrier_t<value_type>>,
                 .write = &od_write_thunk<S, Ctx>,
                 .unit = unit_symbol_of<value_type>(),
-                .value_labels = od_value_labels_of<value_type>};
+                .value_table = od_value_table_of<value_type>};
       }
       else {
         return {.access = od_access::wo,
@@ -548,7 +548,7 @@ struct rw_binding {
                 .write = &od_write_thunk<S, Ctx>,
                 .unit = read_unit.empty() ? unit_symbol_of<written_type>()
                                           : read_unit,
-                .value_labels = od_value_labels_of<read_type>,
+                .value_table = od_value_table_of<read_type>,
                 .diagnosed = !agree};
       }
       else {
@@ -628,7 +628,7 @@ struct array_binding {
                 .read = &od_array_element_thunk<F, Ctx>,
                 .count = &od_array_count_thunk<Ctx, elements::count>,
                 .unit = unit_symbol_of<element_type>(),
-                .value_labels = od_value_labels_of<element_type>};
+                .value_table = od_value_table_of<element_type>};
       }
       else {
         return {.access = od_access::ro,

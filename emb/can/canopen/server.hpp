@@ -54,8 +54,8 @@ inline constexpr bool provides = [] {
 // `Provider` of `obj` returns, its counter, if the PDO has one, set to
 // `counter`, encoded by the rows of the PDO (`encode_pdo`). The setter of the
 // counter is a constant of the thunk, as the rows themselves are of
-// `encode_pdo`: at -O0 a reference to the rows would put them, labels and
-// all, in the image.
+// `encode_pdo`: at -O0 a reference to the rows would put them, names, titles
+// and all, in the image.
 template<auto const& Mapped, auto Provider, typename T>
 constexpr std::optional<payload_t> described_next(T* obj, std::uint8_t counter)
 {

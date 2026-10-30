@@ -186,9 +186,9 @@ struct command {
 
 // clang-format off
 inline constexpr pdo_row<command> command_rows[] = {
-{{ 0, 1}, {"stop", {"Stop", "Стоп"}},      pdo_map<&command::stop>},
-{{ 8, 8}, {"level", {"Level", "Уровень"}}, pdo_map<&command::level>},
-{{56, 2}, {},                              pdo_map_counter<&command::counter>},
+{{ 0, 1}, "stop", {"Stop", "Стоп"},      pdo_map<&command::stop>},
+{{ 8, 8}, "level", {"Level", "Уровень"}, pdo_map<&command::level>},
+{{56, 2}, {}, {},                        pdo_map_counter<&command::counter>},
 };
 // clang-format on
 
@@ -283,7 +283,7 @@ static_assert(test_received_refused());
 // The server takes a handler of the frames of the PDO, and no other: one of
 // the frames of other rows does not take them.
 inline constexpr pdo_row<command> other_rows[] = {
-    {{0, 1}, {"stop", {"Stop", "Стоп"}}, pdo_map<&command::stop>},
+    {{0, 1}, "stop", {"Stop", "Стоп"}, pdo_map<&command::stop>},
 };
 
 struct handlers {
