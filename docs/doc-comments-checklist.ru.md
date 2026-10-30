@@ -101,6 +101,9 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `detail::replicated`, `replicate`, `replicate_t`
 - [x] `emb/meta/same_as_any.hpp`
   - [x] `same_as_any`
+- [x] `emb/meta/scalar_wrapper.hpp`
+  - [x] `scalar_wrapper`, `unwrapped_t` (`detail::unwrapped` без комментария:
+    его покрывает псевдоним)
 - [x] `emb/meta/type_index.hpp`
   - [x] `type_index`, `type_index_v`
 - [x] `emb/meta/typelist.hpp`
@@ -119,9 +122,6 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `unroll`
 - [x] `emb/meta/visit_at.hpp`
   - [x] `visit_at`
-- [x] `emb/meta/wrapper.hpp`
-  - [x] `scalar_wrapper`, `unwrapped_t` (`detail::unwrapped` без комментария:
-    его покрывает псевдоним)
 - [x] `emb/mmio.hpp`
   - [x] `some_register`, `some_writable_register`, `mask_type`, `value_type`
   - [x] `detail::is_contiguous_mask`, `valid_mask`, `field_mask`, `mask_for`,

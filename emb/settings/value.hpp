@@ -3,7 +3,7 @@
 #include <emb/meta/alternative_of.hpp>
 #include <emb/meta/enum_carrier32.hpp>
 #include <emb/meta/enum_info.hpp>
-#include <emb/meta/wrapper.hpp>
+#include <emb/meta/scalar_wrapper.hpp>
 
 #include <bit>
 #include <concepts>

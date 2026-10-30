@@ -1,7 +1,7 @@
 #pragma once
 
 #include <emb/math/saturation.hpp>
-#include <emb/meta/wrapper.hpp>
+#include <emb/meta/scalar_wrapper.hpp>
 
 #include <cassert>
 #include <cmath>
