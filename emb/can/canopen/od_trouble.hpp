@@ -15,7 +15,7 @@
 #include "types.hpp"
 
 #include <emb/i18n.hpp>
-#include <emb/meta/enum_labels.hpp>
+#include <emb/meta/enum_info.hpp>
 #include <emb/meta/fixed_string.hpp>
 #include <emb/meta/typelist.hpp>
 #include <emb/trouble.hpp>
@@ -35,21 +35,21 @@ constexpr std::uint8_t severity_value_of(std::optional<Level> level)
 }
 
 // The scale of severity of the statuses whose levels are `Level`, a table of
-// values: `none`, 0, a status that stands at no level, then each label of
-// `Level` (`emb::enum_labels_of`) at the severity of its level, the level + 1
+// values: `none`, 0, a status that stands at no level, then each enumerator
+// of `Level` (`emb::enum_info_of`) at the severity of its level, the level + 1
 // (`severity_value_of`). Each member of the record of the statuses past 00h
 // takes its values from it.
-template<enum_with_labels Level>
+template<enum_with_info Level>
 inline constexpr auto od_severity_labels = [] {
-  constexpr auto labels = enum_labels_of<Level>();
-  std::array<od_value_label, labels.size() + 1> out{};
+  constexpr auto info = enum_info_of<Level>();
+  std::array<od_value_label, info.size() + 1> out{};
   out[0] = {.value = severity_value_of<Level>(std::nullopt),
             .name = "none",
             .title = {"None", "Нет"}};
-  for (auto i = 0uz; i < labels.size(); ++i) {
-    out[i + 1] = {.value = severity_value_of<Level>(labels[i].value()),
-                  .name = labels[i].name(),
-                  .title = labels[i].title()};
+  for (auto i = 0uz; i < info.size(); ++i) {
+    out[i + 1] = {.value = severity_value_of<Level>(info[i].value()),
+                  .name = info[i].name(),
+                  .title = info[i].title()};
   }
   return out;
 }();
@@ -93,17 +93,17 @@ consteval bool od_statuses_labelled(typelist<Statuses...>)
   return (od_labelled_status<Statuses> && ...);
 }
 
-// Whether the labels of `Level` name each of the `LevelCount` levels of a
-// registry, 0 to LevelCount - 1, and no other value: a member of the record of
-// the statuses would otherwise read a severity that the scale does not name.
+// Whether `Level` labels each of the `LevelCount` levels of a registry, 0 to
+// LevelCount - 1, and no other value: a member of the record of the statuses
+// would otherwise read a severity that the scale does not name.
 template<typename Level, std::size_t LevelCount>
 consteval bool od_levels_labelled()
 {
-  if constexpr (enum_with_labels<Level>) {
-    constexpr auto labels = enum_labels_of<Level>();
-    if (labels.size() != LevelCount) return false;
-    for (auto i = 0uz; i < labels.size(); ++i) {
-      if (std::cmp_not_equal(std::to_underlying(labels[i].value()), i)) {
+  if constexpr (enum_with_info<Level>) {
+    constexpr auto info = enum_info_of<Level>();
+    if (info.size() != LevelCount) return false;
+    for (auto i = 0uz; i < info.size(); ++i) {
+      if (std::cmp_not_equal(std::to_underlying(info[i].value()), i)) {
         return false;
       }
     }
@@ -145,8 +145,8 @@ template<std::size_t Id>
 inline constexpr auto od_retired_title_ru = "Снятый статус " + od_decimal<Id>;
 
 inline constexpr std::string_view od_unlabelled_levels =
-    "od: the labels of the levels of the statuses must name each level of "
-    "the registry, from 0, and no other value";
+    "od: the enumeration of the levels of the statuses must label each level "
+    "of the registry, from 0, and no other value";
 
 inline constexpr std::string_view od_too_many_statuses =
     "od: the ids of the statuses must be below 254: a status takes subindex "
@@ -293,13 +293,13 @@ struct statuses_binding {
 //
 // The bridge calls only `severity` of the registry, a status at a time, and
 // takes the statuses and the levels from the type of the registry
-// (`detail::od_registry_traits`). The labels of the levels must name each of
-// its levels from 0 and no other value, as the scale names the severities a
-// member reads; the ids must be below 254, as the last subindex is FEh; and
-// each status must state its name and its title. A registry that breaks one
-// fails to compile, at the row. Like the labels of the rows, the names and
-// the titles of the members exist at compile time only: the image holds the
-// layout and a reader for each status.
+// (`detail::od_registry_traits`). The enumeration of the levels must label
+// each of its levels from 0 and no other value, as the scale names the
+// severities a member reads; the ids must be below 254, as the last subindex
+// is FEh; and each status must state its name and its title. A registry that
+// breaks one fails to compile, at the row. Like the labels of the rows, the
+// names and the titles of the members exist at compile time only: the image
+// holds the layout and a reader for each status.
 template<auto& Registry>
   requires detail::od_known_registry<std::remove_cvref_t<decltype(Registry)>>
 inline constexpr detail::statuses_binding<Registry> od_statuses{};

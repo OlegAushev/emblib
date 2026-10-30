@@ -184,41 +184,41 @@ static_assert(unit_symbol_of<volts>() == "V");
 static_assert(unit_symbol_of<meters>().empty());
 static_assert(unit_symbol_of<float>().empty());
 
-// -- enum label tests --
+// -- enumerator info tests --
 
 // Labels three of its values, the last one apart from the others, and leaves
-// one without a label.
+// one unlabelled.
 enum class mode : std::uint8_t { off, slow, fast = 4, unlabelled = 7 };
 
-consteval std::span<enum_label<mode> const> enum_labels(mode)
+consteval std::span<enumerator_info<mode> const> enum_info(mode)
 {
-  static constexpr enum_label<mode> labels[] = {
+  static constexpr enumerator_info<mode> info[] = {
       {mode::off, "off", {"Off", "Выкл."}},
       {mode::slow, "slow", {"Slow", "Медленно"}},
       {mode::fast, "fast", {"Fast", "Быстро"}},
   };
-  return labels;
+  return info;
 }
 
 // Labels a negative value: its underlying type is signed.
 enum class level : std::int16_t { low = -2, high = 3 };
 
-consteval std::span<enum_label<level> const> enum_labels(level)
+consteval std::span<enumerator_info<level> const> enum_info(level)
 {
-  static constexpr enum_label<level> labels[] = {
+  static constexpr enumerator_info<level> info[] = {
       {level::low, "low", {"Low", "Низкий"}},
       {level::high, "high", {"High", "Высокий"}},
   };
-  return labels;
+  return info;
 }
 
-// A scoped enumeration without labels.
+// A scoped enumeration that does not label its values.
 enum class bare { a };
 
-// Returns its table as a span of labels that are not const.
+// Returns its table as a span of `enumerator_info` that is not const.
 enum class mutable_table { a };
 
-consteval std::span<enum_label<mutable_table>> enum_labels(mutable_table)
+consteval std::span<enumerator_info<mutable_table>> enum_info(mutable_table)
 {
   return {};
 }
@@ -226,27 +226,27 @@ consteval std::span<enum_label<mutable_table>> enum_labels(mutable_table)
 // An unscoped enumeration.
 enum plain { p };
 
-static_assert(enum_with_labels<mode>);
-static_assert(enum_with_labels<level>);
-static_assert(!enum_with_labels<bare>);
-static_assert(!enum_with_labels<mutable_table>);
-static_assert(!enum_with_labels<plain>);
-static_assert(!enum_with_labels<int>);
+static_assert(enum_with_info<mode>);
+static_assert(enum_with_info<level>);
+static_assert(!enum_with_info<bare>);
+static_assert(!enum_with_info<mutable_table>);
+static_assert(!enum_with_info<plain>);
+static_assert(!enum_with_info<int>);
 
-static_assert(enum_labels_of<mode>().size() == 3);
-static_assert(enum_labels_of<mode>()[0].value() == mode::off);
-static_assert(enum_labels_of<mode>()[2].value() == mode::fast);
-static_assert(enum_labels_of<mode>()[1].name() == "slow");
-static_assert(enum_labels_of<mode>()[1].title() == i18n{"Slow", "Медленно"});
-static_assert(enum_labels_of<level>().front().value() == level::low);
-static_assert(enum_labels_of<level>().back().value() == level::high);
+static_assert(enum_info_of<mode>().size() == 3);
+static_assert(enum_info_of<mode>()[0].value() == mode::off);
+static_assert(enum_info_of<mode>()[2].value() == mode::fast);
+static_assert(enum_info_of<mode>()[1].name() == "slow");
+static_assert(enum_info_of<mode>()[1].title() == i18n{"Slow", "Медленно"});
+static_assert(enum_info_of<level>().front().value() == level::low);
+static_assert(enum_info_of<level>().back().value() == level::high);
 
-// Returns the name of `m`, or an empty view if `m` has no label: an immediate
-// function reads labels.
+// Returns the name of `m`, or an empty view if `mode` does not label it: an
+// immediate function reads the info of an enumerator.
 consteval std::string_view name_of(mode m)
 {
-  for (auto const& label : enum_labels_of<mode>()) {
-    if (label.value() == m) return label.name();
+  for (auto const& enumerator : enum_info_of<mode>()) {
+    if (enumerator.value() == m) return enumerator.name();
   }
   return {};
 }
@@ -254,13 +254,14 @@ consteval std::string_view name_of(mode m)
 static_assert(name_of(mode::fast) == "fast");
 static_assert(name_of(mode::unlabelled).empty());
 
-// Returns the English title of `e`: reading a label makes this function
-// template an immediate function, which a constant expression may call.
+// Returns the English title of `e`: reading the info of an enumerator makes
+// this function template an immediate function, which a constant expression
+// may call.
 template<typename E>
 constexpr std::string_view english_title_of(E e)
 {
-  for (auto const& label : enum_labels_of<E>()) {
-    if (label.value() == e) return label.title().en;
+  for (auto const& enumerator : enum_info_of<E>()) {
+    if (enumerator.value() == e) return enumerator.title().en;
   }
   return {};
 }

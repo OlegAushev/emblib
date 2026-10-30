@@ -16,7 +16,7 @@
 #include "od_handlers.hpp"
 
 #include <emb/meta/alternative_of.hpp>
-#include <emb/meta/enum_labels.hpp>
+#include <emb/meta/enum_info.hpp>
 #include <emb/meta/fixed_string.hpp>
 #include <emb/meta/typelist.hpp>
 #include <emb/meta/unit_symbol.hpp>
@@ -66,10 +66,10 @@ enum class od_refusal : std::uint32_t {
   state_error = std::to_underlying(sdo_abort_code::state_error),
 };
 
-// Returns the labels of the values of `od_refusal`, by increasing code.
-consteval std::span<enum_label<od_refusal> const> enum_labels(od_refusal)
+// Returns the info of the enumerators of `od_refusal`, by increasing code.
+consteval std::span<enumerator_info<od_refusal> const> enum_info(od_refusal)
 {
-  static constexpr enum_label<od_refusal> labels[] = {
+  static constexpr enumerator_info<od_refusal> info[] = {
       {od_refusal::unsupported_access,
        "unsupported_access",
        {"Applies only after a restart",
@@ -88,7 +88,7 @@ consteval std::span<enum_label<od_refusal> const> enum_labels(od_refusal)
        {"Not admitted in this state, or values wait to be applied",
         "Не допускается в этом состоянии, или значения ждут применения"}},
   };
-  return labels;
+  return info;
 }
 
 // Returns the code that answers a refusal to apply settings: a parameter that
@@ -249,13 +249,13 @@ concept od_settings_access =
 //   05h  const      the lower bound
 //   06h  const      the upper bound
 //   07h  const u8   the apply policy: 0 on command, 1 on restart, named
-//                   by the labels of `settings::apply_policy`
+//                   as `settings::apply_policy` labels them
 //   08h  wo u32     applies the parameter, as `section::apply` does
 //   09h  wo u32     discards its value requested, as `section::discard` does
 //   0Ah  ro         the actual value, with `Actual` only
 //
-// The record of a parameter of an enumeration names its values by the labels
-// of the enumeration, which its members that show a value inherit.
+// The record of a parameter of an enumeration names its values by the info of
+// the enumerators, which its members that show a value inherit.
 //
 // `apply_all` and `discard_all` are commands for `od_exec`, `last_refusal` a
 // reader for `od_ro`: the abort that answered the last refusal of an

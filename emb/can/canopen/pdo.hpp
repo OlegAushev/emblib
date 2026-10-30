@@ -22,7 +22,7 @@
 #include <emb/can.hpp>
 #include <emb/math/scaled.hpp>
 #include <emb/meta/enum_carrier32.hpp>
-#include <emb/meta/enum_labels.hpp>
+#include <emb/meta/enum_info.hpp>
 #include <emb/meta/unit_symbol.hpp>
 
 namespace emb {
@@ -37,7 +37,7 @@ namespace detail {
 // value of the member, its bits sign-extended to 64 if it reads as signed,
 // and `set` stores the raw value of a signal in the member; `takes`, if set,
 // tells whether the member accepts a raw value, as an enumeration accepts only
-// the values that its labels name, and a member without it accepts any value
+// the values that it labels, and a member without it accepts any value
 // that its signal holds. `encoding` is how the signal reads, `max_width` the
 // bits of the member's type, which a signal may not exceed, and
 // `lowest_named` and `highest_named` the lowest and the highest values that an
@@ -66,7 +66,7 @@ struct pdo_member_codec {
 // `pdo_map_element`, `pdo_map_counter`), and the type of the member alone
 // gives what the description says: an `emb::scaled` the symbol of its
 // quantity (`emb::unit_symbol_of`) and its step, an enumeration the table of
-// its labels, the one that an object of it has in the dictionary, and any
+// its enumerators, the one that an object of it has in the dictionary, and any
 // other type the symbol of its own unit, if it names one, and a step of 1.
 // Like a row, a codec exists at compile time only.
 template<typename Message>
@@ -171,7 +171,7 @@ inline constexpr std::uint8_t bits_of =
 
 inline constexpr std::string_view pdo_unlabelled_enumeration =
     "pdo: an enumeration in a PDO must be scoped, label its values "
-    "(emb::enum_with_labels) and have at most 32 bits";
+    "(emb::enum_with_info) and have at most 32 bits";
 
 inline constexpr std::string_view pdo_uncarried_member =
     "pdo: a member in a PDO is a bool, an enumeration, an emb::scaled or an "
@@ -181,8 +181,8 @@ inline constexpr std::string_view pdo_uncarried_member =
 // `Message`, which `Ref` returns by reference from the message, const or not.
 // A `bool` takes one bit; an enumeration, which must label its values and fit
 // the carrier of the dictionary (`od_enumeration`), travels as its underlying
-// value and reads as signed if that does, accepts only the values that its
-// labels name (`od_names`), and its first and last labels give its lowest and
+// value and reads as signed if that does, accepts only the values that it
+// labels (`od_names`), and its first and last enumerators give its lowest and
 // highest values; an `emb::scaled` travels as its raw value, which
 // `std::bit_cast` makes back into it; any other integer travels as it is.
 // Compilation fails here, with a `static_assert`, for an enumeration that
@@ -198,11 +198,11 @@ consteval pdo_member_codec<Message> codec_of()
             .max_width = 1};
   }
   else if constexpr (std::is_enum_v<T>) {
-    constexpr bool carried = enum_with_labels<T> && od_enumeration<T>;
+    constexpr bool carried = enum_with_info<T> && od_enumeration<T>;
     static_assert(carried, pdo_unlabelled_enumeration);
     if constexpr (carried) {
       using underlying = std::underlying_type_t<T>;
-      constexpr auto labels = enum_labels_of<T>();
+      constexpr auto info = enum_info_of<T>();
       return {.get =
                   [](Message const& m) {
                     return raw_of(std::to_underlying(Ref(m)));
@@ -218,9 +218,9 @@ consteval pdo_member_codec<Message> codec_of()
               .encoding = encoding_of<underlying>,
               .max_width = bits_of<underlying>,
               .lowest_named = static_cast<std::int64_t>(
-                  std::to_underlying(labels.front().value())),
+                  std::to_underlying(info.front().value())),
               .highest_named = static_cast<std::int64_t>(
-                  std::to_underlying(labels.back().value()))};
+                  std::to_underlying(info.back().value()))};
     }
     else {
       return {};
@@ -275,7 +275,7 @@ consteval pdo_codec<Message> described(pdo_member_codec<Message> const& core)
 // The variable templates `pdo_map`, `pdo_map_element` and `pdo_map_counter`
 // are the builders of the codec of a row, each the codec of the member it
 // names. `pdo_map<&Message::m>` maps the member `m`: a `bool`, an enumeration
-// that labels its values (`emb::enum_with_labels`), an `emb::scaled` or an
+// that labels its values (`emb::enum_with_info`), an `emb::scaled` or an
 // integer. `pdo_map_element<&Message::m, I>` maps the element `I` of the array
 // `m`. `pdo_map_counter<&Message::m>` maps `m`, an unsigned integer and not a
 // `bool`, as the counter of the frames of the PDO: it is `pdo_map<&Message::m>`
@@ -424,7 +424,7 @@ inline constexpr std::uint64_t pdo_reserved_mask = [] {
 
 // The scoped enumeration `pdo_decode_refusal` defines why `decode_pdo` refuses
 // a frame: a reserved bit is set, or a signal holds a value that its member
-// does not accept, one that the labels of an enumeration do not name.
+// does not accept, one that an enumeration does not label.
 enum class pdo_decode_refusal : std::uint8_t {
   reserved_bit,
   unnamed_value
@@ -469,8 +469,8 @@ constexpr payload_t encode_pdo(pdo_message_t<Rows> const& message)
 // Returns the message that `payload`, a frame of the PDO that `Rows` lays out,
 // carries, or why the frame is refused (`pdo_decode_failure`): a reserved bit
 // is set (`reserved_bit`), or a signal holds a value that its member does not
-// accept (`unnamed_value`), as an enumeration accepts only the values that its
-// labels name; the first such row, in the order of `Rows`, is the one named.
+// accept (`unnamed_value`), as an enumeration accepts only the values that it
+// labels; the first such row, in the order of `Rows`, is the one named.
 // Each row stores the raw value of its signal in its member, sign-extended if
 // the signal reads as signed, and a member that no row maps is
 // value-initialized. The frame is 8 bytes, as the server hands no shorter RPDO
@@ -519,7 +519,7 @@ decode_pdo(payload_t const& payload)
 // that `Rows` lays out, carries, without the checks of `decode_pdo`: whatever
 // the reserved bits and the other signals hold, as a receiver needs to act on
 // a signal before it checks the frame, or on a frame that it refuses. The
-// value of an enumeration may be one that its labels do not name, for which
+// value of an enumeration may be one that it does not label, for which
 // `decode_pdo` refuses the frame. `Member` is a member of the message that a
 // row maps with `pdo_map` or `pdo_map_counter`, as their getter tells: the
 // program is ill-formed if no row does, as for a member that only rows of

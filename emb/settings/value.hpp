@@ -2,7 +2,7 @@
 
 #include <emb/meta/alternative_of.hpp>
 #include <emb/meta/enum_carrier32.hpp>
-#include <emb/meta/enum_labels.hpp>
+#include <emb/meta/enum_info.hpp>
 #include <emb/meta/wrapper.hpp>
 
 #include <bit>
@@ -65,14 +65,14 @@ template<typename T>
 concept some_wrapped_value = some_wrapper<T> && some_value<unwrapped_t<T>>;
 
 // The concept `some_enum_value<T>` is satisfied if and only if `T` is a
-// scoped enumeration that labels its values (`emb::enum_with_labels`) and
+// scoped enumeration that labels its values (`emb::enum_with_info`) and
 // whose values a 32-bit carrier holds (`emb::enum_carrier32_t`). A parameter
 // of such a `T` is stored and transported as its carrier, a `std::uint32_t`
 // or a `std::int32_t` as the underlying type of `T` is unsigned or signed,
-// and takes only the values that its labels name (`param`).
+// and takes only the values that `T` labels (`param`).
 template<typename T>
 concept some_enum_value =
-    enum_with_labels<T> && requires { typename enum_carrier32_t<T>; };
+    enum_with_info<T> && requires { typename enum_carrier32_t<T>; };
 
 // The concept `some_parameter_type<T>` is satisfied if and only if `T`
 // satisfies `some_value`, `some_wrapped_value` or `some_enum_value`, i.e. `T`
@@ -187,7 +187,7 @@ constexpr cell to_cell(T const& v)
 // non-zero `c` decodes as `true`; for any other scalar, `c` is its bit
 // pattern, so a `float` may decode as NaN. If `T` is a wrapper, returns `T`
 // constructed from that scalar, and if `T` is an enumeration, the value of `T`
-// that the scalar converts to: a value its labels name if the scalar lies in
+// that the scalar converts to: a value that `T` labels if the scalar lies in
 // the bounds of the parameter, as an image keeps every cell.
 template<some_parameter_type T>
 constexpr T from_cell(cell c)

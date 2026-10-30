@@ -125,10 +125,10 @@ reached by index only may be declared in the `make_schema` call.
 The type comes from the default, so a literal needs its suffix — `param("x",
 0.05)` does not compile. Per-parameter checks (default within bounds, min
 below max, a title for an exposed parameter, a unit that neither repeats the
-type's symbol nor is given to a `bool` or an enumeration, and a label for
-every value of an enumeration between the bounds) live in `param()` so that
-a bad declaration is reported on its own line; cross-parameter ones
-(duplicate name, identifier collision) live in `make_schema`.
+type's symbol nor is given to a `bool` or an enumeration, and every value of
+an enumeration between the bounds labelled) live in `param()` so that a bad
+declaration is reported on its own line; cross-parameter ones (duplicate
+name, identifier collision) live in `make_schema`.
 
 The title, in English and in Russian (`emb::i18n`), and the unit are for
 people: a transport shows them. A parameter `expose`d to a transport must
@@ -140,16 +140,17 @@ does not describe the parameter, e.g. "rpm/s" for a slope held as an
 schema keeps its descriptors in the image, and the texts stay out of it.
 
 A parameter may be an enumeration: a scoped one that labels its values for
-people (`emb::enum_with_labels`, `emb/meta/enum_labels.hpp`), e.g.
+people (`emb::enum_with_info`, `emb/meta/enum_info.hpp`), e.g.
 `param("model.pwm_mode", pmsm::pwm_mode::svpwm, {...})`. It is stored and
 transported as its carrier, `emb::enum_carrier32_t`, a `uint32` or an
 `int32` as its underlying type is unsigned or signed, so its scalar kind and
 identifier are the carrier's: declared in place of a `uint32` of the same
 name, it keeps the value stored. Its bounds default to the first and the
-last value labelled. `param()` rejects bounds between which a value has no
-label, since a write is checked against the bounds only, and any unit: the
-labels name the values instead. The labels stay out of the image; a cell
-becomes the enumeration only within the bounds, which a load checks first.
+last value labelled. `param()` rejects bounds between which a value is not
+labelled, since a write is checked against the bounds only, and any unit:
+the enumeration names the values instead. The info of its enumerators stays
+out of the image; a cell becomes the enumeration only within the bounds,
+which a load checks first.
 
 No offset and no size: every value occupies one four-byte cell, so a
 parameter's index *is* its position in the RAM image, and the image is a
@@ -564,18 +565,18 @@ a parameter:
 | 02h | ro | the value applied |
 | 03h | ro | the value stored |
 | 04h–06h | const | the default, the lower and the upper bound |
-| 07h | const u8 | the policy: 0 on command, 1 on restart, named by the labels of `apply_policy` |
+| 07h | const u8 | the policy: 0 on command, 1 on restart, named as `apply_policy` labels them |
 | 08h | wo u32 | applies the parameter |
 | 09h | wo u32 | discards its value requested |
 | 0Ah | ro | the actual value, with `param<Decl, Actual>` only |
 
 The record of a parameter of an enumeration travels as its carrier and
-names its values by the labels of the enumeration, which its members that
+names its values by the info of the enumerators, which its members that
 show a value inherit with the type.
 
 `apply_all`, `discard_all` and `last_refusal` serve `od_exec` and `od_ro`;
 `last_refusal`, 2100h:03, shows the abort of the last refusal of an
-application or a save, as an `od_refusal`, whose labels name it, and
+application or a save, as an `od_refusal`, which names it, and
 answers 08000024h while there was none. `od_section_status` reads the state
 of the section, 3000h, through the same function of the context as the
 bridge. What only a record has answers 08000024h while there is no record:
@@ -1418,7 +1419,7 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   from the number of modes and whose value code cast to its enumeration:
   nothing tied the bound to the enumeration, and a transport showed a
   number. A parameter may now be a scoped enumeration that labels its values
-  (`emb::enum_with_labels`). It is stored as its carrier, a 32-bit integer
+  (`emb::enum_with_info`). It is stored as its carrier, a 32-bit integer
   of the signedness of its underlying type (`emb::enum_carrier32_t`), so its
   kind and identifier are the carrier's, and a value stored under a `uint32`
   of the same name still matches. Its bounds default to the first and the

@@ -3,7 +3,7 @@
 #include <type_traits>
 
 #include <emb/math/clamped.hpp>
-#include <emb/meta/enum_labels.hpp>
+#include <emb/meta/enum_info.hpp>
 #include <emb/settings/image.hpp>
 #include <emb/units.hpp>
 
@@ -205,14 +205,14 @@ static_assert(test_cells());
 
 enum class pwm : std::uint8_t { svpwm, dpwm0, dpwm1 };
 
-consteval std::span<enum_label<pwm> const> enum_labels(pwm)
+consteval std::span<enumerator_info<pwm> const> enum_info(pwm)
 {
-  static constexpr enum_label<pwm> labels[] = {
+  static constexpr enumerator_info<pwm> info[] = {
       {pwm::svpwm, "svpwm", {"SVPWM", "SVPWM"}},
       {pwm::dpwm0, "dpwm0", {"DPWM0", "DPWM0"}},
       {pwm::dpwm1, "dpwm1", {"DPWM1", "DPWM1"}},
   };
-  return labels;
+  return info;
 }
 
 inline constexpr auto model_pwm_mode = param(

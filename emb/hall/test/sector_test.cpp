@@ -1,5 +1,5 @@
 #include <emb/hall/sector.hpp>
-#include <emb/meta/enum_labels.hpp>
+#include <emb/meta/enum_info.hpp>
 
 #include <cstdint>
 #include <string_view>
@@ -8,11 +8,11 @@ namespace {
 
 using namespace emb::hall;
 
-// Every sector has a label, in the order of the sectors.
-static_assert(emb::enum_with_labels<sector>);
-static_assert(emb::enum_labels_of<sector>().size() == 6);
-static_assert(emb::enum_labels_of<sector>()[3].value() == sector::bc);
-static_assert(emb::enum_labels_of<sector>()[3].name() == "bc");
+// Every sector is labelled, in the order of the sectors.
+static_assert(emb::enum_with_info<sector>);
+static_assert(emb::enum_info_of<sector>().size() == 6);
+static_assert(emb::enum_info_of<sector>()[3].value() == sector::bc);
+static_assert(emb::enum_info_of<sector>()[3].name() == "bc");
 
 // Returns whether the title of each sector, the same in both languages,
 // names the inputs high in it and gives its Hall code, the bits of C, B and
@@ -20,10 +20,10 @@ static_assert(emb::enum_labels_of<sector>()[3].name() == "bc");
 consteval bool test_the_titles_tell_the_hall_code()
 {
   constexpr std::string_view inputs = "ABC";
-  for (auto const& label : emb::enum_labels_of<sector>()) {
-    std::uint32_t const code = hall_code(label.value());
-    auto const title = label.title().en;
-    if (label.title().ru != title) return false;
+  for (auto const& enumerator : emb::enum_info_of<sector>()) {
+    std::uint32_t const code = hall_code(enumerator.value());
+    auto const title = enumerator.title().en;
+    if (enumerator.title().ru != title) return false;
 
     auto const space = title.find(' ');
     if (space == std::string_view::npos || title.size() != space + 6) {

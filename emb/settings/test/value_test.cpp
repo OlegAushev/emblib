@@ -5,7 +5,7 @@
 #include <variant>
 
 #include <emb/math/clamped.hpp>
-#include <emb/meta/enum_labels.hpp>
+#include <emb/meta/enum_info.hpp>
 #include <emb/settings/value.hpp>
 #include <emb/units.hpp>
 
@@ -251,37 +251,37 @@ static_assert(test_in_range());
 // A mode, its values labelled with a gap before the last one.
 enum class mode : std::uint8_t { off, slow, fast, turbo = 7 };
 
-consteval std::span<enum_label<mode> const> enum_labels(mode)
+consteval std::span<enumerator_info<mode> const> enum_info(mode)
 {
-  static constexpr enum_label<mode> labels[] = {
+  static constexpr enumerator_info<mode> info[] = {
       {mode::off, "off", {"Off", "Выкл."}},
       {mode::slow, "slow", {"Slow", "Медленно"}},
       {mode::fast, "fast", {"Fast", "Быстро"}},
       {mode::turbo, "turbo", {"Turbo", "Форсаж"}},
   };
-  return labels;
+  return info;
 }
 
 // A tilt, below zero: its underlying type is signed.
 enum class tilt : std::int16_t { left = -1, level, right };
 
-consteval std::span<enum_label<tilt> const> enum_labels(tilt)
+consteval std::span<enumerator_info<tilt> const> enum_info(tilt)
 {
-  static constexpr enum_label<tilt> labels[] = {
+  static constexpr enumerator_info<tilt> info[] = {
       {tilt::left, "left", {"Left", "Влево"}},
       {tilt::level, "level", {"Level", "Ровно"}},
       {tilt::right, "right", {"Right", "Вправо"}},
   };
-  return labels;
+  return info;
 }
 
 // Labelled, but too wide for a cell; and not labelled.
 enum class wide : std::uint64_t { a };
 
-consteval std::span<enum_label<wide> const> enum_labels(wide)
+consteval std::span<enumerator_info<wide> const> enum_info(wide)
 {
-  static constexpr enum_label<wide> labels[] = {{wide::a, "a", {"A", "А"}}};
-  return labels;
+  static constexpr enumerator_info<wide> info[] = {{wide::a, "a", {"A", "А"}}};
+  return info;
 }
 
 enum class unlabelled : std::uint8_t { a };

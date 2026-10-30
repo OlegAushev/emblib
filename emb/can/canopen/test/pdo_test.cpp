@@ -17,7 +17,7 @@
 #include <emb/can/rolling_counter.hpp>
 #include <emb/math/clamped.hpp>
 #include <emb/math/scaled.hpp>
-#include <emb/meta/enum_labels.hpp>
+#include <emb/meta/enum_info.hpp>
 #include <emb/units.hpp>
 
 namespace {
@@ -40,9 +40,9 @@ enum class state : std::uint32_t {
   fault
 };
 
-consteval std::span<emb::enum_label<state> const> enum_labels(state)
+consteval std::span<emb::enumerator_info<state> const> enum_info(state)
 {
-  static constexpr emb::enum_label<state> labels[] = {
+  static constexpr emb::enumerator_info<state> info[] = {
       {state::init, "init", {"Init", "Инициализация"}},
       {state::standby, "standby", {"Standby", "Ожидание"}},
       {state::powering_up, "powering_up", {"Powering up", "Включение"}},
@@ -54,7 +54,7 @@ consteval std::span<emb::enum_label<state> const> enum_labels(state)
       {state::calibrating, "calibrating", {"Calibrating", "Калибровка"}},
       {state::fault, "fault", {"Fault", "Авария"}},
   };
-  return labels;
+  return info;
 }
 
 enum class control_mode : std::uint32_t {
@@ -63,15 +63,15 @@ enum class control_mode : std::uint32_t {
   angle
 };
 
-consteval std::span<emb::enum_label<control_mode> const>
-enum_labels(control_mode)
+consteval std::span<emb::enumerator_info<control_mode> const>
+enum_info(control_mode)
 {
-  static constexpr emb::enum_label<control_mode> labels[] = {
+  static constexpr emb::enumerator_info<control_mode> info[] = {
       {control_mode::torque, "torque", {"Torque", "Момент"}},
       {control_mode::speed, "speed", {"Speed", "Скорость"}},
       {control_mode::angle, "angle", {"Angle", "Угол"}},
   };
-  return labels;
+  return info;
 }
 
 enum class model_mode : std::uint8_t {
@@ -83,9 +83,10 @@ enum class model_mode : std::uint8_t {
   direct_pwm
 };
 
-consteval std::span<emb::enum_label<model_mode> const> enum_labels(model_mode)
+consteval std::span<emb::enumerator_info<model_mode> const>
+enum_info(model_mode)
 {
-  static constexpr emb::enum_label<model_mode> labels[] = {
+  static constexpr emb::enumerator_info<model_mode> info[] = {
       {model_mode::idle, "idle", {"Idle", "Ожидание"}},
       {model_mode::closed_loop, "closed_loop", {"Closed loop", "Замкнутый"}},
       {model_mode::semiclosed_loop,
@@ -99,7 +100,7 @@ consteval std::span<emb::enum_label<model_mode> const> enum_labels(model_mode)
        {"Open voltage loop", "Разомкнутый V"}},
       {model_mode::direct_pwm, "direct_pwm", {"Direct PWM", "Тест ШИМ"}},
   };
-  return labels;
+  return info;
 }
 
 enum class level : std::uint8_t {
@@ -109,15 +110,15 @@ enum class level : std::uint8_t {
   emergency
 };
 
-consteval std::span<emb::enum_label<level> const> enum_labels(level)
+consteval std::span<emb::enumerator_info<level> const> enum_info(level)
 {
-  static constexpr emb::enum_label<level> labels[] = {
+  static constexpr emb::enumerator_info<level> info[] = {
       {level::warning, "warning", {"Warning", "Предупреждение"}},
       {level::error, "error", {"Error", "Ошибка"}},
       {level::critical, "critical", {"Critical", "Критическая ошибка"}},
       {level::emergency, "emergency", {"Emergency", "Авария"}},
   };
-  return labels;
+  return info;
 }
 
 // A signed enumeration with a gap: -1, 0 and 2.
@@ -127,14 +128,14 @@ enum class tilt : std::int8_t {
   up = 2
 };
 
-consteval std::span<emb::enum_label<tilt> const> enum_labels(tilt)
+consteval std::span<emb::enumerator_info<tilt> const> enum_info(tilt)
 {
-  static constexpr emb::enum_label<tilt> labels[] = {
+  static constexpr emb::enumerator_info<tilt> info[] = {
       {tilt::down, "down", {"Down", "Вниз"}},
       {tilt::level, "level", {"Level", "Ровно"}},
       {tilt::up, "up", {"Up", "Вверх"}},
   };
-  return labels;
+  return info;
 }
 
 } // namespace drive
@@ -343,8 +344,9 @@ consteval bool test_command_round_trip()
 
 static_assert(test_command_round_trip());
 
-// A control mode of 3, which no label names, refuses the frame at its row, the
-// fourth; a reserved bit refuses it before any row is read, wherever it lies.
+// A control mode of 3, which its enumeration does not label, refuses the frame
+// at its row, the fourth; a reserved bit refuses it before any row is read,
+// wherever it lies.
 static_assert(
     decode_pdo<drive_command_rows>({0x18, 0, 0, 0, 0, 0, 0, 0}).error()
     == pdo_decode_failure{.reason = pdo_decode_refusal::unnamed_value,
@@ -515,9 +517,10 @@ struct electrical_status {
 };
 
 // A scaled member gives the unit of its quantity and its step, and its signal
-// reads as its raw type does; an enumeration gives the table of its labels,
-// the one that the dictionary gives an object of it, and the lowest and
-// highest values named; a bool and an integer give neither unit nor table.
+// reads as its raw type does; an enumeration gives the table of its
+// enumerators, the one that the dictionary gives an object of it, and the
+// lowest and highest values named; a bool and an integer give neither unit nor
+// table.
 inline constexpr auto dc_voltage = pdo_map<&electrical_status::dc_voltage>;
 static_assert(dc_voltage.role == pdo_role::value);
 static_assert(dc_voltage.unit == "V");

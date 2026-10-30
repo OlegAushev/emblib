@@ -308,7 +308,7 @@ emblib не ломается: новое добавляется рядом с п
    задевает запрещённых диапазонов CiA 301.
 8. 2026-10-23. Каждый текст, который попадает в описание, проверяется при
    компиляции: `put_string` не экранирует (`detail/od_describe.hpp:135`), а
-   `enum_labels_of` содержимого имён не проверяет.
+   `enum_info_of` содержимого имён не проверяет.
 9. 2026-10-23, строки — 2026-10-27, отказы `send` и аргументы шаблона —
    2026-10-28. Сервер берёт всё из того же объекта, что и описание:
    `pdo_of<Rows>(pdo)` даёт объект `mapped_pdo<Rows>` (рабочее имя), чей тип
@@ -675,9 +675,9 @@ constexpr auto peek_pdo(payload_t const& payload);
 
 - `detail::codec_of<Message, T, Ref>()` ветвится по типу члена:
   - `bool` — ширина 1;
-  - перечисление — метки обязательны (`enum_with_labels`), знак — от
-    базового типа, `takes` — `od_names`, границы — первая и последняя
-    метки;
+  - перечисление — сведения об энумераторах обязательны
+    (`enum_with_info`), знак — от базового типа, `takes` — `od_names`,
+    границы — первый и последний энумераторы;
   - `emb::scaled` — сырое значение через `raw()` и обратно через
     `bit_cast` (`detail::is_scaled` узнаёт `emb::detail::scaled<R, Q, S>`);
   - целое.
@@ -1005,7 +1005,7 @@ struct od_process_data {
 - Правила текстов (решение 8): наименование PDO и сигнала — `title_error`,
   единица — `is_verbatim_text`, каждая новая таблица значений —
   `value_labels_error` (T49–T51). Одиночные отказы — `EMB_PANIC`, как в
-  `node_id` и `enum_labels_of`.
+  `node_id` и `enum_info_of`.
 
 В etk:
 
@@ -1191,7 +1191,7 @@ enum class od_class : std::uint8_t {
 template<typename Level>
 constexpr std::uint8_t severity_value_of(std::optional<Level> level);
 
-// The scale of severity: `none`, then the labels of the levels at their
+// The scale of severity: `none`, then the enumerators of the levels at their
 // values.
 template<typename Level>
 inline constexpr std::array<od_value_label, /* ... */> od_severity_labels =
@@ -1218,11 +1218,11 @@ inline constexpr /* ... */ od_statuses = /* ... */;
   его из `check_groups`): список — литеральный массив, и без правки T29
   молча пропустит новый класс.
 - `od_severity_labels<Level>`: `none` с наименованием из emblib, затем
-  метки уровней — `enum_labels_of<Level>()` — на значениях k + 1.
-  `enum_labels_of` допускает пропуски значений, поэтому `od_statuses`
-  проверяет `static_assert`'ом, что меток столько, сколько `LevelCount`
-  реестра, и метка i называет уровень i: иначе член отдаёт степень, которой
-  нет в шкале.
+  уровни — `enum_info_of<Level>()` — на значениях k + 1. `enum_info_of`
+  допускает пропуски значений, поэтому `od_statuses` проверяет
+  `static_assert`'ом, что перечисление называет столько уровней, сколько
+  `LevelCount` реестра, и i-й из них — уровень i: иначе член отдаёт
+  степень, которой нет в шкале.
 - `od_statuses<Registry>` — привязка составного объекта. Список статусов,
   `Level` и `LevelCount` реестр не открывает; мост выводит их из его типа
   трейтом `detail::od_registry_traits` — частичной специализацией по
@@ -2282,8 +2282,8 @@ etk K.
   &mapped_list<Mapped>`.
 - **`scanner.next()` без аргументов не связывается в поле `next` слота**,
   которое берёт счётчик: его связывает thunk `detail::scanned_next`.
-- **`enum_labels_of` допускает пропуски значений**: шкала степени
-  проверяет, что метки называют все уровни.
+- **`enum_info_of` допускает пропуски значений**: шкала степени
+  проверяет, что перечисление называет все уровни.
 - **Каждой строке словаря нужен свой обработчик** (`check_handlers`):
   синтетические строки для замера шагов читают через шаблон функции, по
   экземпляру на строку.

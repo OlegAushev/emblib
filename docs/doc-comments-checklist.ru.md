@@ -85,8 +85,8 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `is_alternative_of`, `is_alternative_of_v`, `alternative_of`
 - [ ] `emb/meta/enum_carrier32.hpp`
   - [ ] `enum_carrier32_t` (и `detail::fits_carrier32`) — вручную 2026-10-22
-- [ ] `emb/meta/enum_labels.hpp`
-  - [ ] `enum_label`, `enum_with_labels`, `enum_labels_of` — вручную 2026-10-22
+- [ ] `emb/meta/enum_info.hpp`
+  - [ ] `enumerator_info`, `enum_with_info`, `enum_info_of` — вручную 2026-10-22
 - [x] `emb/meta/fixed_string.hpp`
   - [x] `fixed_string` (правило вывода и `detail::concat_chars` без
     комментариев)
@@ -139,7 +139,7 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `error`
   - [x] `image`
 - [x] `emb/settings/param.hpp`
-  - [x] `apply_policy` (и `enum_labels(apply_policy)`, вручную 2026-10-22)
+  - [x] `apply_policy` (и `enum_info(apply_policy)`, вручную 2026-10-22)
   - [x] `descriptor`
   - [x] `detail::lowest`, `detail::highest`, `detail::identify`,
     `detail::labelled_between` (вручную 2026-10-22)

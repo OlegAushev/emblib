@@ -12,7 +12,7 @@
 #include <emb/can/canopen/od_handlers.hpp>
 #include <emb/can/canopen/od_trouble.hpp>
 #include <emb/i18n.hpp>
-#include <emb/meta/enum_labels.hpp>
+#include <emb/meta/enum_info.hpp>
 #include <emb/meta/typelist.hpp>
 #include <emb/trouble.hpp>
 
@@ -23,13 +23,13 @@ using namespace emb::can::canopen;
 // The levels of the statuses, labelled for a host.
 enum class level : std::uint8_t { warning, fault };
 
-consteval std::span<emb::enum_label<level> const> enum_labels(level)
+consteval std::span<emb::enumerator_info<level> const> enum_info(level)
 {
-  static constexpr emb::enum_label<level> labels[] = {
+  static constexpr emb::enumerator_info<level> info[] = {
       {level::warning, "warning", {"Warning", "Предупреждение"}},
       {level::fault, "fault", {"Fault", "Отказ"}},
   };
-  return labels;
+  return info;
 }
 
 struct overheat {
@@ -209,13 +209,13 @@ static_assert(is_block(od_statuses_scans<late, 0x4000>[1], 0x4000, 4, 1));
 
 enum class mode : std::uint8_t { idle, run };
 
-consteval std::span<emb::enum_label<mode> const> enum_labels(mode)
+consteval std::span<emb::enumerator_info<mode> const> enum_info(mode)
 {
-  static constexpr emb::enum_label<mode> labels[] = {
+  static constexpr emb::enumerator_info<mode> info[] = {
       {mode::idle, "idle", {"Idle", "Ожидание"}},
       {mode::run, "run", {"Run", "Работа"}},
   };
-  return labels;
+  return info;
 }
 
 constexpr mode read_mode()

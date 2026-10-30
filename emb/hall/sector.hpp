@@ -1,6 +1,6 @@
 #pragma once
 
-#include <emb/meta/enum_labels.hpp>
+#include <emb/meta/enum_info.hpp>
 #include <emb/units.hpp>
 
 #include <algorithm>
@@ -28,12 +28,12 @@ constexpr std::uint8_t hall_code(sector s)
   return codes[std::to_underlying(s)];
 }
 
-// Returns the labels of the sectors for a host: each is titled by the inputs
+// Returns the info of the sectors for a host: each is titled by the inputs
 // that are high in it and by its Hall code, the inputs C, B and A from the
 // highest bit, as `hall_code` gives it, alike in both languages.
-consteval std::span<enum_label<sector> const> enum_labels(sector)
+consteval std::span<enumerator_info<sector> const> enum_info(sector)
 {
-  static constexpr enum_label<sector> labels[] = {
+  static constexpr enumerator_info<sector> info[] = {
       {sector::a, "a", {"A (001)", "A (001)"}},
       {sector::ab, "ab", {"AB (011)", "AB (011)"}},
       {sector::b, "b", {"B (010)", "B (010)"}},
@@ -41,7 +41,7 @@ consteval std::span<enum_label<sector> const> enum_labels(sector)
       {sector::c, "c", {"C (100)", "C (100)"}},
       {sector::ca, "ca", {"CA (101)", "CA (101)"}},
   };
-  return labels;
+  return info;
 }
 
 constexpr std::optional<sector> decode_sector(std::uint8_t v)

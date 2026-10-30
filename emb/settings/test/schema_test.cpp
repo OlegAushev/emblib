@@ -4,7 +4,7 @@
 #include <type_traits>
 
 #include <emb/math/clamped.hpp>
-#include <emb/meta/enum_labels.hpp>
+#include <emb/meta/enum_info.hpp>
 #include <emb/settings/schema.hpp>
 #include <emb/units.hpp>
 
@@ -189,27 +189,27 @@ static_assert(renamed_for_people.desc == drive_stopping_torque.desc);
 // A mode of modulation, every value labelled.
 enum class pwm : std::uint8_t { svpwm, dpwm0, dpwm1 };
 
-consteval std::span<enum_label<pwm> const> enum_labels(pwm)
+consteval std::span<enumerator_info<pwm> const> enum_info(pwm)
 {
-  static constexpr enum_label<pwm> labels[] = {
+  static constexpr enumerator_info<pwm> info[] = {
       {pwm::svpwm, "svpwm", {"SVPWM", "SVPWM"}},
       {pwm::dpwm0, "dpwm0", {"DPWM0", "DPWM0"}},
       {pwm::dpwm1, "dpwm1", {"DPWM1", "DPWM1"}},
   };
-  return labels;
+  return info;
 }
 
 // A gear, with a gap in its values.
 enum class gear : std::uint8_t { park, drive, reverse = 4 };
 
-consteval std::span<enum_label<gear> const> enum_labels(gear)
+consteval std::span<enumerator_info<gear> const> enum_info(gear)
 {
-  static constexpr enum_label<gear> labels[] = {
+  static constexpr enumerator_info<gear> info[] = {
       {gear::park, "park", {"Park", "Стоянка"}},
       {gear::drive, "drive", {"Drive", "Вперёд"}},
       {gear::reverse, "reverse", {"Reverse", "Назад"}},
   };
-  return labels;
+  return info;
 }
 
 inline constexpr auto model_pwm_mode = param(
@@ -238,8 +238,8 @@ static_assert(model_pwm_mode.desc.min == to_cell(std::uint32_t{0}));
 static_assert(model_pwm_mode.desc.max == to_cell(std::uint32_t{2}));
 static_assert(model_pwm_mode.unit.empty());
 
-// Bounds narrower than the labels, a value between them each, or past a gap
-// of the labels.
+// Bounds narrower than the values labelled, a value between them each, or
+// past a gap in the values labelled.
 inline constexpr auto narrowed =
     param("model.pwm_discontinuous",
           pwm::dpwm0,

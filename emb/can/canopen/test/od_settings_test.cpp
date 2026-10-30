@@ -8,7 +8,7 @@
 #include <emb/can/canopen/od_dictionary.hpp>
 #include <emb/can/canopen/od_handlers.hpp>
 #include <emb/can/canopen/od_settings.hpp>
-#include <emb/meta/enum_labels.hpp>
+#include <emb/meta/enum_info.hpp>
 #include <emb/settings/section.hpp>
 #include <emb/test/mock/ram_storage.hpp>
 #include <emb/units.hpp>
@@ -22,13 +22,14 @@ namespace settings = emb::settings;
 // A mode of the drive, labelled for a host, that travels as a uint32.
 enum class drive_mode : std::uint32_t { idle, run };
 
-consteval std::span<emb::enum_label<drive_mode> const> enum_labels(drive_mode)
+consteval std::span<emb::enumerator_info<drive_mode> const>
+enum_info(drive_mode)
 {
-  static constexpr emb::enum_label<drive_mode> labels[] = {
+  static constexpr emb::enumerator_info<drive_mode> info[] = {
       {drive_mode::idle, "idle", {"Idle", "Ожидание"}},
       {drive_mode::run, "run", {"Run", "Работа"}},
   };
-  return labels;
+  return info;
 }
 
 inline constexpr auto drive_phase_swap =
@@ -205,8 +206,8 @@ static_assert(to_refusal(settings::save_refusal::unapplied)
               == od_refusal::state_error);
 static_assert(to_refusal(settings::apply_refusal::invalid)
               == to_refusal(settings::save_refusal::invalid));
-static_assert(emb::enum_labels_of<od_refusal>().size() == 5);
-static_assert(emb::enum_labels_of<od_refusal>()[4].name() == "state_error");
+static_assert(emb::enum_info_of<od_refusal>().size() == 5);
+static_assert(emb::enum_info_of<od_refusal>()[4].name() == "state_error");
 
 static_assert(detail::to_settings_value(od_value{1.5f})
               == settings::value{1.5f});

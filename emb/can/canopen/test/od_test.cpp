@@ -17,7 +17,7 @@
 #include <emb/can/canopen/pdo.hpp>
 #include <emb/can/canopen/types.hpp>
 #include <emb/math/scaled.hpp>
-#include <emb/meta/enum_labels.hpp>
+#include <emb/meta/enum_info.hpp>
 #include <emb/units.hpp>
 
 namespace {
@@ -584,30 +584,30 @@ static_assert(test_ro_array());
 // A gear of a drive, its values with a gap, labelled for a host.
 enum class gear : std::uint8_t { park, drive, reverse = 4 };
 
-consteval std::span<emb::enum_label<gear> const> enum_labels(gear)
+consteval std::span<emb::enumerator_info<gear> const> enum_info(gear)
 {
-  static constexpr emb::enum_label<gear> labels[] = {
+  static constexpr emb::enumerator_info<gear> info[] = {
       {gear::park, "park", {"Park", "Стоянка"}},
       {gear::drive, "drive", {"Drive", "Вперёд"}},
       {gear::reverse, "reverse", {"Reverse", "Назад"}},
   };
-  return labels;
+  return info;
 }
 
 // A tilt, below zero and without a gap.
 enum class tilt : std::int8_t { left = -1, level, right };
 
-consteval std::span<emb::enum_label<tilt> const> enum_labels(tilt)
+consteval std::span<emb::enumerator_info<tilt> const> enum_info(tilt)
 {
-  static constexpr emb::enum_label<tilt> labels[] = {
+  static constexpr emb::enumerator_info<tilt> info[] = {
       {tilt::left, "left", {"Left", "Влево"}},
       {tilt::level, "level", {"Level", "Ровно"}},
       {tilt::right, "right", {"Right", "Вправо"}},
   };
-  return labels;
+  return info;
 }
 
-// An enumeration without labels, and one too wide for the bus.
+// An enumeration that does not label its values, and one too wide for the bus.
 enum class unlabelled : std::uint8_t { a };
 enum class wide : std::uint64_t { a };
 
@@ -681,7 +681,7 @@ consteval bool test_enumeration_values()
 static_assert(test_enumeration_values());
 
 // The shapes of the handlers take an enumeration of at most 32 bits, labelled
-// or not: the builders ask for the labels.
+// or not: the builders ask for the info of its enumerators.
 static_assert(od_reader<read_gear, ctx>);
 static_assert(od_reader<read_tilt, ctx>);
 static_assert(od_reader<read_unlabelled, ctx>);
@@ -700,7 +700,7 @@ static_assert(detail::od_rw_values_disagreement
               != detail::od_rw_type_disagreement);
 
 // The binding of an enumeration takes the type of its carrier and the table
-// of its labels; a number has none.
+// of its enumerators; a number has none.
 static_assert(bind<od_ro<read_gear>>().type == od_data_type::uint32);
 static_assert(bind<od_ro<read_tilt>>().type == od_data_type::int32);
 static_assert(bind<od_wo<write_gear>>().type == od_data_type::uint32);
@@ -720,8 +720,8 @@ static_assert(bind<od_ro<read_value>>().value_labels.empty());
 static_assert(bind<od_ro<read_gear>>().unit.empty());
 static_assert(!bind<od_ro<read_gear>>().diagnosed);
 
-// A reader gives the carrier; a writer takes only the values the labels
-// name, checked in the carrier, and another type is a mismatch.
+// A reader gives the carrier; a writer takes only the values the enumeration
+// labels, checked in the carrier, and another type is a mismatch.
 consteval bool test_enumerations()
 {
   ctx c;
@@ -1447,8 +1447,8 @@ static_assert(as_view(described_policies)
 static_assert(occurrences(as_view(described_policies), "\"value_table\":1,")
               == 5);
 
-// An object of an enumeration names its values with the labels of the
-// enumeration.
+// An object of an enumeration names its values with the info of its
+// enumerators.
 // clang-format off
 inline constexpr od_row<ctx> geared[] = {
     {{0x5002, 0x01}, titled("b.gear"), od_ro<read_gear>},

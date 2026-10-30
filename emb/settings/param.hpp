@@ -1,7 +1,7 @@
 #pragma once
 
 #include <emb/i18n.hpp>
-#include <emb/meta/enum_labels.hpp>
+#include <emb/meta/enum_info.hpp>
 #include <emb/meta/unit_symbol.hpp>
 #include <emb/panic.hpp>
 #include <emb/settings/value.hpp>
@@ -32,17 +32,17 @@ enum class apply_policy : std::uint8_t {
   on_restart,
 };
 
-// Returns the labels of the values of `apply_policy`, by which a transport
+// Returns the info of the enumerators of `apply_policy`, by which a transport
 // names the policy of a parameter for people.
-consteval std::span<enum_label<apply_policy> const> enum_labels(apply_policy)
+consteval std::span<enumerator_info<apply_policy> const> enum_info(apply_policy)
 {
-  static constexpr enum_label<apply_policy> labels[] = {
+  static constexpr enumerator_info<apply_policy> info[] = {
       {apply_policy::on_command, "on_command", {"On command", "По команде"}},
       {apply_policy::on_restart,
        "on_restart",
        {"On restart", "После перезапуска"}},
   };
-  return labels;
+  return info;
 }
 
 // Type-erased description of one parameter, the same structure whatever the
@@ -84,12 +84,12 @@ namespace detail {
 
 // Returns `T` constructed from the lowest finite value of `scalar_t<T>`. The
 // constructor of a wrapper may clamp it, e.g. that of `emb::clamped` to its
-// lower limit. For an enumeration, returns the lowest value its labels name.
+// lower limit. For an enumeration, returns the lowest value it labels.
 template<some_parameter_type T>
 constexpr T lowest()
 {
   if constexpr (some_enum_value<T>) {
-    return enum_labels_of<T>().front().value();
+    return enum_info_of<T>().front().value();
   }
   else {
     return T(std::numeric_limits<scalar_t<T>>::lowest());
@@ -98,31 +98,30 @@ constexpr T lowest()
 
 // Returns `T` constructed from the highest finite value of `scalar_t<T>`. The
 // constructor of a wrapper may clamp it, e.g. that of `emb::clamped` to its
-// upper limit. For an enumeration, returns the highest value its labels name.
+// upper limit. For an enumeration, returns the highest value it labels.
 template<some_parameter_type T>
 constexpr T highest()
 {
   if constexpr (some_enum_value<T>) {
-    return enum_labels_of<T>().back().value();
+    return enum_info_of<T>().back().value();
   }
   else {
     return T(std::numeric_limits<scalar_t<T>>::max());
   }
 }
 
-// Whether the labels of the enumeration `T` name every value from `lo` to
-// `hi`, as they must between the bounds of a parameter: a write is checked
-// against the bounds only, so a value between them without a label would
-// pass.
+// Whether the enumeration `T` labels every value from `lo` to `hi`, as it
+// must between the bounds of a parameter: a write is checked against the
+// bounds only, so a value between them that `T` does not label would pass.
 template<some_enum_value T>
 consteval bool labelled_between(T lo, T hi)
 {
   auto const low = static_cast<std::int64_t>(std::to_underlying(lo));
   auto const high = static_cast<std::int64_t>(std::to_underlying(hi));
   std::int64_t named = 0;
-  for (auto const& label : enum_labels_of<T>()) {
+  for (auto const& enumerator : enum_info_of<T>()) {
     auto const value =
-        static_cast<std::int64_t>(std::to_underlying(label.value()));
+        static_cast<std::int64_t>(std::to_underlying(enumerator.value()));
     if (low <= value && value <= high) ++named;
   }
   return named == high - low + 1;
@@ -172,10 +171,9 @@ struct options {
   // Lower and upper bound of the value, inclusive. If left out, each is the
   // widest `T` admits: the lowest or the highest finite value of
   // `scalar_t<T>`, converted to `T`, and for an enumeration the lowest or the
-  // highest value its labels name. A wrapper that clamps, e.g.
-  // `emb::clamped`, thus brings its own bounds, and a floating-point
-  // parameter rejects infinities. The labels of an enumeration must name
-  // every value between the bounds.
+  // highest value it labels. A wrapper that clamps, e.g. `emb::clamped`, thus
+  // brings its own bounds, and a floating-point parameter rejects infinities.
+  // An enumeration must label every value between the bounds.
   T min = detail::lowest<T>();
   T max = detail::highest<T>();
   // Apply policy of the parameter, `apply_policy::on_restart` if left out: a
@@ -243,7 +241,7 @@ concept some_declaration = detail::is_declaration<std::remove_cvref_t<T>>;
 // above `opts.max`, if `def` lies outside [`opts.min`, `opts.max`], if the
 // parameter is exposed without a title in each language, if `opts.unit`
 // repeats the symbol of `T` or is given to a `bool` or to an enumeration, or
-// if the labels of an enumeration do not name every value from `opts.min` to
+// if an enumeration does not label every value from `opts.min` to
 // `opts.max`.
 template<some_parameter_type T>
 consteval declaration<T> param(std::string_view name,
@@ -262,7 +260,7 @@ consteval declaration<T> param(std::string_view name,
   }
   if constexpr (some_enum_value<T>) {
     if (!detail::labelled_between(opts.min, opts.max)) {
-      EMB_PANIC("a value of the enumeration between the bounds has no label");
+      EMB_PANIC("the enumeration does not label a value between the bounds");
     }
   }
   if (opts.expose && (opts.title.en.empty() || opts.title.ru.empty())) {

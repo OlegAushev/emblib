@@ -17,7 +17,7 @@
 #include "od_value_cast.hpp"
 
 #include <emb/meta/enum_carrier32.hpp>
-#include <emb/meta/enum_labels.hpp>
+#include <emb/meta/enum_info.hpp>
 #include <emb/meta/typelist.hpp>
 #include <emb/meta/unit_symbol.hpp>
 
@@ -53,47 +53,47 @@ concept od_carried = od_scalar<T> || wraps_od_scalar<T> || od_enumeration<T>;
 // Whether `T` is no enumeration, or one that labels its values, as an
 // enumeration on the bus must.
 template<typename T>
-concept od_labelled = !std::is_enum_v<T> || enum_with_labels<T>;
+concept od_labelled = !std::is_enum_v<T> || enum_with_info<T>;
 
-// The labels of the values of the enumeration `E` as a table of values, for
-// the binding of an object of it.
-template<enum_with_labels E>
+// The info of the enumerators of the enumeration `E` as a table of values,
+// for the binding of an object of it.
+template<enum_with_info E>
 inline constexpr auto od_enum_value_labels = [] {
-  constexpr auto labels = enum_labels_of<E>();
-  std::array<od_value_label, labels.size()> out{};
-  for (auto i = 0uz; i < labels.size(); ++i) {
-    out[i] = {.value = std::to_underlying(labels[i].value()),
-              .name = labels[i].name(),
-              .title = labels[i].title()};
+  constexpr auto info = enum_info_of<E>();
+  std::array<od_value_label, info.size()> out{};
+  for (auto i = 0uz; i < info.size(); ++i) {
+    out[i] = {.value = std::to_underlying(info[i].value()),
+              .name = info[i].name(),
+              .title = info[i].title()};
   }
   return out;
 }();
 
 // The table of the values of an object whose value is of type `T`: that of
-// the labels of `T` if it is an enumeration, otherwise none.
+// the enumerators of `T` if it is an enumeration, otherwise none.
 template<typename T>
 inline constexpr std::span<od_value_label const> od_value_labels_of{};
 
-template<enum_with_labels E>
+template<enum_with_info E>
 inline constexpr std::span<od_value_label const> od_value_labels_of<E> =
     od_enum_value_labels<E>;
 
-// The values that the labels of the enumeration `E` name, in their carrier,
-// in increasing order: all that a writer of `E` keeps of the labels.
-template<enum_with_labels E>
+// The values that the enumeration `E` labels, in their carrier, in increasing
+// order: all that a writer of `E` keeps of the info of its enumerators.
+template<enum_with_info E>
 inline constexpr auto od_enum_values = [] {
-  constexpr auto labels = enum_labels_of<E>();
-  std::array<enum_carrier32_t<E>, labels.size()> out{};
-  for (auto i = 0uz; i < labels.size(); ++i) {
-    out[i] = std::to_underlying(labels[i].value());
+  constexpr auto info = enum_info_of<E>();
+  std::array<enum_carrier32_t<E>, info.size()> out{};
+  for (auto i = 0uz; i < info.size(); ++i) {
+    out[i] = std::to_underlying(info[i].value());
   }
   return out;
 }();
 
-// Whether `value`, in the carrier of the enumeration `E`, is a value that the
-// labels of `E` name: one from the lowest to the highest if they name every
-// value between, one of those they name otherwise.
-template<enum_with_labels E>
+// Whether `value`, in the carrier of the enumeration `E`, is a value that `E`
+// labels: one from the lowest to the highest if it labels every value
+// between, one of those it labels otherwise.
+template<enum_with_info E>
 constexpr bool od_names(enum_carrier32_t<E> value)
 {
   constexpr auto& values = od_enum_values<E>;
@@ -298,8 +298,8 @@ constexpr od_read_result od_read_thunk(Ctx& ctx, std::uint16_t)
 }
 
 // Writes `value` through `S`. A value of an enumeration is checked in its
-// carrier, before the enumeration is formed: one that its labels do not name
-// answers `value_range_exceeded`, as 260 does for an enumeration of
+// carrier, before the enumeration is formed: one that the enumeration does
+// not label answers `value_range_exceeded`, as 260 does for an enumeration of
 // `std::uint8_t` that names 4.
 template<auto S, typename Ctx>
 constexpr od_write_result od_write_thunk(Ctx& ctx,
@@ -416,7 +416,7 @@ inline constexpr std::string_view od_array_shape =
 
 inline constexpr std::string_view od_unlabelled_enumeration =
     "od: an enumeration on the bus must be scoped and label its values "
-    "(emb::enum_with_labels)";
+    "(emb::enum_with_info)";
 
 inline constexpr std::string_view od_rw_type_disagreement =
     "od: the reader and the writer of an rw object disagree on the type";
@@ -445,7 +445,7 @@ inline constexpr bool od_units_agree = [] {
 // the same scalar (`od_rw_pair`), agree on the values: both read and write the
 // same enumeration, which names them, or neither reads or writes one. A reader
 // of an enumeration and a writer of its carrier do not agree: the writer would
-// take values the labels do not name.
+// take values the enumeration does not label.
 template<auto G, auto S, typename Ctx>
 inline constexpr bool od_values_agree = [] {
   using read_type = typename od_read_value<od_result_t<G>>::type;
@@ -650,11 +650,11 @@ struct array_binding {
 // handlers. The object's type is the scalar the handler's value travels as
 // (`od_carrier_t`), its unit the symbol of the type of that value
 // (`emb::unit_symbol_of`), if it names one, its table of values that of the
-// labels of the value's type, if it is an enumeration, which must label its
-// values (`emb::enum_with_labels`), and its access is the builder's; the
+// enumerators of the value's type, if it is an enumeration, which must label
+// its values (`emb::enum_with_info`), and its access is the builder's; the
 // row's context type is deduced from the row. A handler that does not fit its
 // builder is reported at the row. A writer of an enumeration gets only the
-// values its labels name: another value answers `value_range_exceeded`,
+// values it labels: another value answers `value_range_exceeded`,
 // 0609 0030h, and another type `data_type_mismatch`, 0607 0010h. A reader of
 // an object may return `std::optional`: an empty one answers
 // `no_data_available`, 0800 0024h, and the object's type, unit and table are

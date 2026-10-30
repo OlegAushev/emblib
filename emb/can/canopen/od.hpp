@@ -230,9 +230,9 @@ struct od_label {
 // value labels names the values of an object in increasing order, and the
 // object takes those values only: a host shows the title of a value in place
 // of the number and offers the values named when it writes one. A builder
-// makes the table of an object whose value is an enumeration from the labels
-// of the enumeration (`emb::enum_labels_of`). Like the label of a row, a
-// table exists at compile time only.
+// makes the table of an object whose value is an enumeration from the info of
+// its enumerators (`emb::enum_info_of`). Like the label of a row, a table
+// exists at compile time only.
 struct od_value_label {
   std::int64_t value;
   std::string_view name;
