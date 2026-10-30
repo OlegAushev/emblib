@@ -1,6 +1,6 @@
 #pragma once
 
-#include <emb/units/named_unit.hpp>
+#include <emb/units/quantity.hpp>
 
 #include <emb/i18n.hpp>
 
@@ -25,15 +25,15 @@ struct liter_per_minute {
 
 } // namespace tags
 
-// `cubic_meter_per_hour` is an alias template for a `named_unit` that holds a
+// `cubic_meter_per_hour` is an alias template for a `quantity` that holds a
 // volumetric flow rate in cubic meters per hour.
 template<std::floating_point T>
-using cubic_meter_per_hour = named_unit<T, tags::cubic_meter_per_hour>;
+using cubic_meter_per_hour = quantity<T, tags::cubic_meter_per_hour>;
 
-// `liter_per_minute` is an alias template for a `named_unit` that holds a
+// `liter_per_minute` is an alias template for a `quantity` that holds a
 // volumetric flow rate in liters per minute.
 template<std::floating_point T>
-using liter_per_minute = named_unit<T, tags::liter_per_minute>;
+using liter_per_minute = quantity<T, tags::liter_per_minute>;
 
 // `cubic_meter_per_hour_f32` is `cubic_meter_per_hour` with a numerical value
 // of type `float`.

@@ -25,7 +25,7 @@ static_assert(some_parameter_type<std::uint32_t>);
 static_assert(some_parameter_type<float>);
 
 // Recognised by a value_of overload that argument-dependent lookup finds,
-// not by name: a named_unit and a clamped go through the same path.
+// not by name: a quantity and a clamped go through the same path.
 static_assert(some_parameter_type<rpm>);
 static_assert(some_parameter_type<pu>);
 static_assert(some_wrapped_value<rpm>);

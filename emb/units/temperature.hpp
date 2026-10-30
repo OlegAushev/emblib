@@ -1,6 +1,6 @@
 #pragma once
 
-#include <emb/units/named_unit.hpp>
+#include <emb/units/quantity.hpp>
 
 #include <emb/i18n.hpp>
 
@@ -24,15 +24,15 @@ struct kelvin {
 
 } // namespace tags
 
-// `degree_celsius` is an alias template for a `named_unit` that holds a
+// `degree_celsius` is an alias template for a `quantity` that holds a
 // temperature in degrees Celsius.
 template<std::floating_point T>
-using degree_celsius = named_unit<T, tags::degree_celsius>;
+using degree_celsius = quantity<T, tags::degree_celsius>;
 
-// `kelvin` is an alias template for a `named_unit` that holds a temperature in
+// `kelvin` is an alias template for a `quantity` that holds a temperature in
 // kelvins.
 template<std::floating_point T>
-using kelvin = named_unit<T, tags::kelvin>;
+using kelvin = quantity<T, tags::kelvin>;
 
 // `degree_celsius_f32` is `degree_celsius` with a numerical value of type
 // `float`.

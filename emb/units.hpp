@@ -1,6 +1,6 @@
 #pragma once
 
-#include <emb/units/named_unit.hpp>
+#include <emb/units/quantity.hpp>
 
 #include <emb/units/angle.hpp>
 #include <emb/units/chrono.hpp>

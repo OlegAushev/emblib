@@ -2,7 +2,7 @@
 
 #include <emb/chrono.hpp>
 #include <emb/i18n.hpp>
-#include <emb/units/named_unit.hpp>
+#include <emb/units/quantity.hpp>
 
 #include <chrono>
 #include <concepts>
@@ -25,14 +25,14 @@ struct sec {
 
 } // namespace tags
 
-// `hz` is an alias template for a `named_unit` that holds a frequency in hertz.
+// `hz` is an alias template for a `quantity` that holds a frequency in hertz.
 template<std::floating_point T>
-using hz = named_unit<T, tags::hz>;
+using hz = quantity<T, tags::hz>;
 
-// `sec` is an alias template for a `named_unit` that holds a time interval in
+// `sec` is an alias template for a `quantity` that holds a time interval in
 // seconds.
 template<std::floating_point T>
-using sec = named_unit<T, tags::sec>;
+using sec = quantity<T, tags::sec>;
 
 // `hz_f32` is `hz` with a numerical value of type `float`.
 using hz_f32 = hz<float>;

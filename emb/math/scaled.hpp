@@ -123,7 +123,7 @@ constexpr Float dequantize(Int n)
 // is a wrapper (`some_wrapper`) of a floating-point type. It is modeled only
 // if `T(value_of(q))` wraps the same physical value as `q`.
 //
-// `units::named_unit` satisfies it, and so does `clamped` with floating-point
+// `units::quantity` satisfies it, and so does `clamped` with floating-point
 // bounds, e.g. `signed_pu_f32`; arithmetic types such as `float` do not.
 template<typename T>
 concept some_quantity = some_wrapper<T> && std::floating_point<unwrapped_t<T>>;

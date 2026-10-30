@@ -15,7 +15,7 @@ namespace emb {
 //
 // For an integer `T`, the output is rounded toward zero, and `WindowSize` times
 // the largest magnitude of a value pushed must be representable in `T`. For a
-// floating-point `T` or a `units::named_unit`, the output carries the rounding
+// floating-point `T` or a `units::quantity`, the output carries the rounding
 // errors of the sum, and a value much larger than the rest, an infinity or a
 // NaN can affect it for up to `WindowSize - 1` pushes after leaving the window.
 // The errors do not accumulate over time.

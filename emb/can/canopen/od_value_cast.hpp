@@ -17,7 +17,7 @@ namespace canopen {
 
 // The concept `wraps_od_scalar<T>` is satisfied if and only if `T` is a
 // wrapper (`some_wrapper`) of a scalar that satisfies `od_scalar`, e.g.
-// `emb::units::named_unit` or `emb::clamped` of a `float`. A new wrapper needs
+// `emb::units::quantity` or `emb::clamped` of a `float`. A new wrapper needs
 // no change here.
 template<typename T>
 concept wraps_od_scalar = some_wrapper<T> && od_scalar<unwrapped_t<T>>;

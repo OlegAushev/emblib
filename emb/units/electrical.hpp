@@ -1,6 +1,6 @@
 #pragma once
 
-#include <emb/units/named_unit.hpp>
+#include <emb/units/quantity.hpp>
 
 #include <emb/i18n.hpp>
 
@@ -31,19 +31,18 @@ struct ohm {
 
 } // namespace tags
 
-// `amp` is an alias template for a `named_unit` that holds an electric current
+// `amp` is an alias template for a `quantity` that holds an electric current
 // in amperes.
 template<std::floating_point T>
-using amp = named_unit<T, tags::amp>;
+using amp = quantity<T, tags::amp>;
 
-// `volt` is an alias template for a `named_unit` that holds a voltage in volts.
+// `volt` is an alias template for a `quantity` that holds a voltage in volts.
 template<std::floating_point T>
-using volt = named_unit<T, tags::volt>;
+using volt = quantity<T, tags::volt>;
 
-// `ohm` is an alias template for a `named_unit` that holds a resistance in
-// ohms.
+// `ohm` is an alias template for a `quantity` that holds a resistance in ohms.
 template<std::floating_point T>
-using ohm = named_unit<T, tags::ohm>;
+using ohm = quantity<T, tags::ohm>;
 
 // `amp_f32` is `amp` with a numerical value of type `float`.
 using amp_f32 = amp<float>;

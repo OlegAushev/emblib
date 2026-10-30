@@ -1,6 +1,6 @@
 #pragma once
 
-#include <emb/units/named_unit.hpp>
+#include <emb/units/quantity.hpp>
 
 #include <emb/i18n.hpp>
 #include <emb/math.hpp>
@@ -26,15 +26,15 @@ struct eradps {
 
 } // namespace tags
 
-// `rpm` is an alias template for a `named_unit` that holds a mechanical
+// `rpm` is an alias template for a `quantity` that holds a mechanical
 // rotational speed in revolutions per minute.
 template<std::floating_point T>
-using rpm = named_unit<T, tags::rpm>;
+using rpm = quantity<T, tags::rpm>;
 
-// `eradps` is an alias template for a `named_unit` that holds an electrical
+// `eradps` is an alias template for a `quantity` that holds an electrical
 // angular speed in electrical radians per second.
 template<std::floating_point T>
-using eradps = named_unit<T, tags::eradps>;
+using eradps = quantity<T, tags::eradps>;
 
 // `rpm_f32` is `rpm` with a numerical value of type `float`.
 using rpm_f32 = rpm<float>;
@@ -42,11 +42,11 @@ using rpm_f32 = rpm<float>;
 // `eradps_f32` is `eradps` with a numerical value of type `float`.
 using eradps_f32 = eradps<float>;
 
-// The concept `unit_of_rotational_speed<T>` is satisfied if and only if `T` is
-// a `named_unit` that holds a rotational speed, i.e. whose unit tag is
+// The concept `quantity_of_rotational_speed<T>` is satisfied if and only if
+// `T` is a `quantity` that holds a rotational speed, i.e. whose unit tag is
 // `tags::rpm` or `tags::eradps`.
 template<typename T>
-concept unit_of_rotational_speed =
+concept quantity_of_rotational_speed =
     some_unit<T>
     && (std::same_as<typename T::unit_type, tags::rpm>
         || std::same_as<typename T::unit_type, tags::eradps>);

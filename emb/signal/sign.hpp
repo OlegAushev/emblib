@@ -6,7 +6,7 @@ namespace emb::signal {
 
 // The concept `sign_reversible<T>` is satisfied if and only if `T` is not an
 // unsigned integer type and `-x`, for an lvalue `x` of type `T`, is a valid
-// expression of type `T`. Every specialization of `emb::units::named_unit`
+// expression of type `T`. Every specialization of `emb::units::quantity`
 // satisfies it, and so do `int`, `long`, `long long` and the floating-point
 // types, but not their cv-qualified versions or references to them.
 // `signed char`, `short` and `bool` do not satisfy it, since `-x` promotes them

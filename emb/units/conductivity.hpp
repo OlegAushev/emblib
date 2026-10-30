@@ -1,6 +1,6 @@
 #pragma once
 
-#include <emb/units/named_unit.hpp>
+#include <emb/units/quantity.hpp>
 
 #include <emb/i18n.hpp>
 
@@ -19,10 +19,10 @@ struct microsiemens_per_cm {
 
 } // namespace tags
 
-// `microsiemens_per_cm` is an alias template for a `named_unit` that holds an
+// `microsiemens_per_cm` is an alias template for a `quantity` that holds an
 // electrical conductivity in microsiemens per centimeter.
 template<std::floating_point T>
-using microsiemens_per_cm = named_unit<T, tags::microsiemens_per_cm>;
+using microsiemens_per_cm = quantity<T, tags::microsiemens_per_cm>;
 
 // `microsiemens_per_cm_f32` is `microsiemens_per_cm` with a numerical value of
 // type `float`.

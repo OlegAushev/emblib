@@ -615,7 +615,7 @@ Completeness is checked at compile time, without coupling:
   T35 and T36 in `canopen-od-algorithm.ru.md`); a row of a parameter that
   gives info of its own is refused (T34);
 - the record's type and unit are the parameter's by construction,
-  `named_unit` and `emb::clamped` included, and an actual value must be
+  `quantity` and `emb::clamped` included, and an actual value must be
   read in that type and in a type of no other unit (S4 and S5 in
   `canopen-od-algorithm.ru.md`).
 
@@ -793,7 +793,7 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   better modelled as `int32`. Widening the set later breaks nothing.
 - **Wrapper types are recognised by a `value_of` overload**, which
   argument-dependent lookup finds, plus `value_type` + explicit constructor,
-  not by naming `units::named_unit` and `emb::clamped`. `settings/value.hpp`
+  not by naming `units::quantity` and `emb::clamped`. `settings/value.hpp`
   therefore depends on neither header, and `emb::clamped` parameters come
   for free — which lets the application schema declare `unsigned_pu_f32`
   directly and drop the wrapping that `read_*_config()` did by hand. A free

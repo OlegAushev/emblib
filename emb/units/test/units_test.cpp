@@ -96,7 +96,7 @@ constexpr bool test_units_conversion()
 
 static_assert(test_units_conversion());
 
-// A named_unit is a structural type, so it can be a template argument.
+// A quantity is a structural type, so it can be a template argument.
 template<auto v>
 constexpr auto template_argument = v;
 
@@ -107,9 +107,8 @@ static_assert(template_argument<emb::units::volt_f32{1.5f}>
 
 using text = emb::i18n::text;
 
-// Each unit tag names the symbol of its unit in each language, and a
-// named_unit returns it through unit_symbol, found by argument-dependent
-// lookup.
+// Each unit tag names the symbol of its unit in each language, and a quantity
+// returns it through unit_symbol, found by argument-dependent lookup.
 static_assert(unit_symbol(emb::units::volt_f32{}) == text{"V", "В"});
 static_assert(emb::unit_with_symbol<emb::units::volt_f32>);
 
@@ -169,10 +168,9 @@ static_assert(emb::units::tags::degree_celsius::symbol.ru == "\u00B0C");
 // A tag without a symbol leaves its unit without one.
 struct untitled_unit {};
 static_assert(
-    !emb::unit_with_symbol<emb::units::named_unit<float, untitled_unit>>);
-static_assert(
-    emb::unit_symbol_of<emb::units::named_unit<float, untitled_unit>>()
-    == text{});
+    !emb::unit_with_symbol<emb::units::quantity<float, untitled_unit>>);
+static_assert(emb::unit_symbol_of<emb::units::quantity<float, untitled_unit>>()
+              == text{});
 
 // A tag whose symbol is in one language, a std::string_view, as before the
 // symbols took one in each, leaves its unit without one too.
@@ -180,6 +178,6 @@ struct one_language_unit {
   static constexpr std::string_view symbol = "u";
 };
 static_assert(
-    !emb::unit_with_symbol<emb::units::named_unit<float, one_language_unit>>);
+    !emb::unit_with_symbol<emb::units::quantity<float, one_language_unit>>);
 
 } // namespace

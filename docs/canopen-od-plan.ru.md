@@ -295,7 +295,7 @@ T13 ловит скопированную строку вроде второго
 | `od_restore_default` | — | wo, exec, без обработчиков |
 
 T — скаляр `od_value` или обёртка над ним (`wraps_od_scalar`:
-`units::named_unit`, `emb::clamped`); тип объекта — скаляр T. Построители —
+`units::quantity`, `emb::clamped`); тип объекта — скаляр T. Построители —
 это переменные-шаблоны с `consteval operator od_binding<Ctx>()`, так что
 `Ctx` выводится из `od_row<context>`. Thunk'и `read_thunk`, `write_thunk`,
 `command_thunk` и `text_thunk` — `constexpr`, чтобы тесты могли звать их

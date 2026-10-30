@@ -214,8 +214,8 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `tags::erad`, `tags::edeg`, `tags::rad`, `tags::deg`
   - [x] `erad`, `edeg`, `rad`, `deg`, `erad_f32`, `edeg_f32`, `rad_f32`,
     `deg_f32`
-  - [x] `unit_of_electrical_angle`, `unit_of_angle`, `unit_of_radians`,
-    `unit_of_degrees`
+  - [x] `quantity_of_electrical_angle`, `quantity_of_angle`,
+    `quantity_in_radians`, `quantity_in_degrees`
   - [x] `convert_to` (четыре перегрузки)
   - [x] `norm2pi`, `normpi`, `norm2pi_fast`, `normpi_fast`
   - [x] `norm360`, `norm180`, `norm360_fast`, `norm180_fast`
@@ -235,20 +235,20 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `cubic_meter_per_hour`, `liter_per_minute`, `cubic_meter_per_hour_f32`,
     `liter_per_minute_f32`
   - [x] `convert_to` (две перегрузки)
-- [x] `emb/units/named_unit.hpp`
-  - [x] `named_unit` (и друг `unit_symbol`), `some_unit`, `convert_to`
 - [x] `emb/units/pressure.hpp`
   - [x] `tags::pascal`, `tags::megapascal`, `tags::atmosphere`
   - [x] `pascal`, `megapascal`, `atmosphere`, `pascal_f32`, `megapascal_f32`,
     `atmosphere_f32`
   - [x] `convert_to` (шесть перегрузок)
+- [x] `emb/units/quantity.hpp`
+  - [x] `quantity` (и друг `unit_symbol`), `some_unit`, `convert_to`
 - [x] `emb/units/relations.hpp`
   - [x] `operator/`
   - [x] `operator*` (две перегрузки)
 - [x] `emb/units/speed.hpp`
   - [x] `tags::rpm`, `tags::eradps`
   - [x] `rpm`, `eradps`, `rpm_f32`, `eradps_f32`
-  - [x] `unit_of_rotational_speed`
+  - [x] `quantity_of_rotational_speed`
   - [x] `convert_to` (две перегрузки)
 - [x] `emb/units/temperature.hpp`
   - [x] `tags::degree_celsius`, `tags::kelvin`

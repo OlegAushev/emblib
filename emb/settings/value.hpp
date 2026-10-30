@@ -57,9 +57,9 @@ static_assert(std::to_underlying(scalar_kind::float32) == 3);
 
 // The concept `some_wrapped_value<T>` is satisfied if and only if `T` is a
 // wrapper (`some_wrapper`) of a scalar that satisfies `some_value`, e.g.
-// `emb::units::named_unit` or `emb::clamped` of a `float`. Only the scalar of
-// a wrapper is stored: conversions in this header go through `value_of` and
-// the constructor, never through the bytes of an object, so the layout of a
+// `emb::units::quantity` or `emb::clamped` of a `float`. Only the scalar of a
+// wrapper is stored: conversions in this header go through `value_of` and the
+// constructor, never through the bytes of an object, so the layout of a
 // wrapper does not matter.
 template<typename T>
 concept some_wrapped_value = some_wrapper<T> && some_value<unwrapped_t<T>>;

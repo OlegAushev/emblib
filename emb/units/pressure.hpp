@@ -1,6 +1,6 @@
 #pragma once
 
-#include <emb/units/named_unit.hpp>
+#include <emb/units/quantity.hpp>
 
 #include <emb/i18n.hpp>
 
@@ -29,20 +29,20 @@ struct atmosphere {
 
 } // namespace tags
 
-// `pascal` is an alias template for a `named_unit` that holds a pressure in
+// `pascal` is an alias template for a `quantity` that holds a pressure in
 // pascals.
 template<std::floating_point T>
-using pascal = named_unit<T, tags::pascal>;
+using pascal = quantity<T, tags::pascal>;
 
-// `megapascal` is an alias template for a `named_unit` that holds a pressure in
+// `megapascal` is an alias template for a `quantity` that holds a pressure in
 // megapascals.
 template<std::floating_point T>
-using megapascal = named_unit<T, tags::megapascal>;
+using megapascal = quantity<T, tags::megapascal>;
 
-// `atmosphere` is an alias template for a `named_unit` that holds a pressure in
+// `atmosphere` is an alias template for a `quantity` that holds a pressure in
 // standard atmospheres.
 template<std::floating_point T>
-using atmosphere = named_unit<T, tags::atmosphere>;
+using atmosphere = quantity<T, tags::atmosphere>;
 
 // `pascal_f32` is `pascal` with a numerical value of type `float`.
 using pascal_f32 = pascal<float>;

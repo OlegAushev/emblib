@@ -9,7 +9,7 @@ namespace emb {
 // constructible from `T::value_type`, and `value_of` called unqualified with a
 // `T const` lvalue returns `T::value_type`, not a reference to one.
 //
-// A wrapper, e.g. `emb::units::named_unit` or `emb::clamped`, opts in by
+// A wrapper, e.g. `emb::units::quantity` or `emb::clamped`, opts in by
 // declaring a `value_of` overload that argument-dependent lookup finds: in its
 // own namespace or as a friend defined in the class.
 template<typename T>
