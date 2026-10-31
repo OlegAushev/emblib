@@ -24,7 +24,7 @@ static_assert(some_parameter_type<std::int32_t>);
 static_assert(some_parameter_type<std::uint32_t>);
 static_assert(some_parameter_type<float>);
 
-// Recognised by a value_of overload that argument-dependent lookup finds,
+// Recognised by a scalar_of overload that argument-dependent lookup finds,
 // not by name: a quantity and a clamped go through the same path.
 static_assert(some_parameter_type<rpm>);
 static_assert(some_parameter_type<pu>);
@@ -43,7 +43,7 @@ static_assert(!some_parameter_type<value>);
 struct wraps_a_double {
   using value_type = double;
   constexpr explicit wraps_a_double(double) {}
-  friend constexpr double value_of(wraps_a_double)
+  friend constexpr double scalar_of(wraps_a_double)
   {
     return 0.0;
   }
@@ -51,7 +51,7 @@ struct wraps_a_double {
 
 struct not_reconstructible {
   using value_type = float;
-  friend constexpr float value_of(not_reconstructible)
+  friend constexpr float scalar_of(not_reconstructible)
   {
     return 0.0f;
   }
@@ -60,13 +60,13 @@ struct not_reconstructible {
 struct value_type_disagrees {
   using value_type = float;
   constexpr explicit value_type_disagrees(float) {}
-  friend constexpr double value_of(value_type_disagrees)
+  friend constexpr double scalar_of(value_type_disagrees)
   {
     return 0.0;
   }
 };
 
-// A value() member without value_of does not make a wrapper.
+// A value() member without scalar_of does not make a wrapper.
 struct value_member_only {
   using value_type = float;
   constexpr explicit value_member_only(float) {}
@@ -81,13 +81,13 @@ static_assert(!some_parameter_type<not_reconstructible>);
 static_assert(!some_parameter_type<value_type_disagrees>);
 static_assert(!some_parameter_type<value_member_only>);
 
-// Nor does a wrapper need a value() member: value_of may read a public
+// Nor does a wrapper need a value() member: scalar_of may read a public
 // field, which is where a structural type keeps its number.
 struct public_field {
   using value_type = float;
   float v;
   constexpr explicit public_field(float x) : v(x) {}
-  friend constexpr float value_of(public_field w)
+  friend constexpr float scalar_of(public_field w)
   {
     return w.v;
   }

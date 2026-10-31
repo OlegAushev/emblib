@@ -198,7 +198,7 @@ public:
 private:
   static constexpr raw_type encode(quantity_type q)
   {
-    return quantize<raw_type, step_type>(value_of(q));
+    return quantize<raw_type, step_type>(scalar_of(q));
   }
 };
 

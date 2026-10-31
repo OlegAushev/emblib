@@ -12,10 +12,10 @@ namespace emb {
 // `i18n::text`, e.g. "V" and "В" for `emb::units::volt_f32` and "pu" and
 // "о. е." for `emb::signed_pu_f32`.
 //
-// A type opts in as it does for `value_of` (see `scalar_wrapper`): by declaring
-// a `unit_symbol_of` overload that argument-dependent lookup finds, in its
-// own namespace or as a friend defined in the class. Generic code, e.g. a
-// transport that shows a value with its unit, then needs to know neither the
+// A type opts in as it does for `scalar_of` (see `scalar_wrapper`): by
+// declaring a `unit_symbol_of` overload that argument-dependent lookup finds,
+// in its own namespace or as a friend defined in the class. Generic code, e.g.
+// a transport that shows a value with its unit, then needs to know neither the
 // type nor where it is declared.
 template<typename T>
 concept unit_with_symbol = requires(T const& v) {

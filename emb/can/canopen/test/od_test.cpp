@@ -41,12 +41,12 @@ constexpr emb::units::hz_f32 read_freq(ctx const& c)
   return emb::units::hz_f32{c.value};
 }
 
-// A wrapper with no value() member: value_of alone makes it one.
+// A wrapper with no value() member: scalar_of alone makes it one.
 struct public_field {
   using value_type = float;
   float v;
   constexpr explicit public_field(float x) : v(x) {}
-  friend constexpr float value_of(public_field w)
+  friend constexpr float scalar_of(public_field w)
   {
     return w.v;
   }

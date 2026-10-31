@@ -58,7 +58,7 @@ static_assert(std::to_underlying(scalar_kind::float32) == 3);
 // The concept `some_wrapped_value<T>` is satisfied if and only if `T` is a
 // scalar wrapper (`scalar_wrapper`) of a type that satisfies `some_value`,
 // e.g. `emb::units::quantity` or `emb::clamped` of a `float`. Only the scalar
-// of a wrapper is stored: conversions in this header go through `value_of` and
+// of a wrapper is stored: conversions in this header go through `scalar_of` and
 // the constructor, never through the bytes of an object, so the layout of a
 // wrapper does not matter.
 template<typename T>
@@ -118,7 +118,7 @@ constexpr scalar_kind held_kind(value const& v)
 
 // Returns `v` in type-erased form: a `value` that holds `v` itself if `T`
 // satisfies `some_value`, the underlying value of `v` in its carrier if `T`
-// satisfies `some_enum_value`, otherwise `value_of(v)`.
+// satisfies `some_enum_value`, otherwise `scalar_of(v)`.
 template<some_parameter_type T>
 constexpr value to_value(T const& v)
 {
@@ -130,7 +130,7 @@ constexpr value to_value(T const& v)
     return value{carried};
   }
   else {
-    return value{value_of(v)};
+    return value{scalar_of(v)};
   }
 }
 
@@ -156,7 +156,7 @@ constexpr std::optional<T> from_value(value const& v)
 
 // Returns the cell that encodes `v`: `false` and `true` as 0 and 1, any other
 // scalar as its bit pattern, as if by `std::bit_cast<cell>`. A wrapper is
-// encoded as its scalar, `value_of(v)`, and an enumeration as its underlying
+// encoded as its scalar, `scalar_of(v)`, and an enumeration as its underlying
 // value in its carrier.
 template<some_parameter_type T>
 constexpr cell to_cell(T const& v)
@@ -170,7 +170,7 @@ constexpr cell to_cell(T const& v)
       return scalar{std::to_underlying(v)};
     }
     else {
-      return value_of(v);
+      return scalar_of(v);
     }
   }();
 

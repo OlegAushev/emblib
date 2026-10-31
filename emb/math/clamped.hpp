@@ -68,9 +68,9 @@ public:
 
   // Returns the value that `v` holds, i.e. `v.value()`. Generic code that
   // handles any type wrapping a single number, e.g. `emb::settings`, calls
-  // `value_of` unqualified: as a friend defined in the class, it is found
+  // `scalar_of` unqualified: as a friend defined in the class, it is found
   // only by argument-dependent lookup.
-  friend constexpr value_type value_of(clamped v)
+  friend constexpr value_type scalar_of(clamped v)
   {
     return v.value();
   }

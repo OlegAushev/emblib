@@ -54,7 +54,7 @@ using od_carrier_t = typename detail::od_carrier<T>::type;
 
 // Converts `v` to an `od_value`. If `T` satisfies `od_scalar`, the result
 // holds `v`; if `T` satisfies `wraps_od_scalar`, it holds the scalar that
-// `value_of(v)` returns; if `T` satisfies `od_enumeration`, it holds the
+// `scalar_of(v)` returns; if `T` satisfies `od_enumeration`, it holds the
 // underlying value of `v` in its carrier. The program is ill-formed if `T`
 // satisfies none of these concepts or if `sizeof(T)` is greater than 4.
 template<typename T>
@@ -65,7 +65,7 @@ constexpr od_value to_od_value(T const& v)
     return od_value{v};
   }
   else if constexpr (wraps_od_scalar<T>) {
-    return od_value{value_of(v)};
+    return od_value{scalar_of(v)};
   }
   else if constexpr (od_enumeration<T>) {
     od_carrier_t<T> const carried = std::to_underlying(v);

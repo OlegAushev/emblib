@@ -47,9 +47,9 @@ struct quantity {
 
   // Returns the numerical value of `v`, i.e. `v.value`. Generic code that
   // handles any type wrapping a single number, e.g. `emb::settings`, calls
-  // `value_of` unqualified: as a friend defined in the class, it is found
+  // `scalar_of` unqualified: as a friend defined in the class, it is found
   // only by argument-dependent lookup.
-  friend constexpr value_type value_of(quantity v)
+  friend constexpr value_type scalar_of(quantity v)
   {
     return v.value;
   }

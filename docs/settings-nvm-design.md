@@ -791,7 +791,7 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   `uint32`, `float`. Narrow integers buy nothing in a four-byte cell and
   would add a code path through every layer; a parameter that wants one is
   better modelled as `int32`. Widening the set later breaks nothing.
-- **Wrapper types are recognised by a `value_of` overload**, which
+- **Wrapper types are recognised by a `scalar_of` overload**, which
   argument-dependent lookup finds, plus `value_type` + explicit constructor,
   not by naming `units::quantity` and `emb::clamped`. `settings/value.hpp`
   therefore depends on neither header, and `emb::clamped` parameters come

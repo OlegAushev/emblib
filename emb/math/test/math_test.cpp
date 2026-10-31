@@ -71,8 +71,8 @@ constexpr bool test_math()
   assert(near(emb::normpi_fast(-pi + 0.5f), -pi + 0.5f));
   assert(emb::normpi_fast(-110000016.0f) < pi);
 
-  // value_of on clamped, found by argument-dependent lookup
-  assert(value_of(emb::signed_pu_f32{-0.5f}) == -0.5f);
+  // scalar_of on clamped, found by argument-dependent lookup
+  assert(scalar_of(emb::signed_pu_f32{-0.5f}) == -0.5f);
 
   return true;
 }
