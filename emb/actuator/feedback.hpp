@@ -1,7 +1,6 @@
 #pragma once
 
-#include <emb/actuator/concepts.hpp>
-
+#include <concepts>
 #include <type_traits>
 #include <utility>
 
@@ -11,8 +10,8 @@ namespace emb::actuator {
 // decodes it into the actual actuator state. The mirror image of the command
 // path, where an encoder turns a state into a driver command.
 template<typename State, typename Sensor, typename Decoder>
-  requires some_sensor<Sensor>
-        && some_decoder<Decoder, std::invoke_result_t<Sensor&>>
+  requires std::invocable<Sensor&>
+        && std::invocable<Decoder&, std::invoke_result_t<Sensor&>>
         && std::convertible_to<
                std::invoke_result_t<Decoder&, std::invoke_result_t<Sensor&>>,
                State>

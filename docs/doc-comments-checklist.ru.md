@@ -258,7 +258,6 @@ emblib не попал. Такие файлы помечены «песочни�
 ## Остальные
 
 - [ ] `emb/actuator.hpp`
-- [ ] `emb/actuator/concepts.hpp`
 - [ ] `emb/actuator/discrete.hpp`
 - [ ] `emb/actuator/feedback.hpp`
 - [ ] `emb/actuator/monitored.hpp`

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <emb/actuator/concepts.hpp>
-
+#include <concepts>
+#include <type_traits>
 #include <utility>
 
 namespace emb::actuator {
@@ -10,8 +10,8 @@ namespace emb::actuator {
 // a command, and applies it through a driver. state() reports the last command,
 // not the actual hardware state.
 template<typename State, typename Encoder, typename Driver>
-  requires some_encoder<Encoder, State>
-        && some_driver<Driver, std::invoke_result_t<Encoder&, State>>
+  requires std::invocable<Encoder&, State>
+        && std::invocable<Driver&, std::invoke_result_t<Encoder&, State>>
 class unmonitored {
 public:
   using state_type = State;
