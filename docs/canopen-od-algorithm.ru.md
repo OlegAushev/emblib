@@ -2282,7 +2282,7 @@ pairs», «Число пар полюсов» из объявления.
    подындекс 01.
 2. `find({0x3160, 0x01})`: составной объект найден; поле 01h — `rw`,
    `int32`, аргумент `arg = 16`.
-3. `settings_of(ctx).get_at(16)` → `settings::value{int32 11}` →
+3. `settings_of(ctx).get_at(16)` → `settings::scalar_variant{int32 11}` →
    `od_value{int32 11}`.
 4. Ответ `43 60 31 01 0B 00 00 00`.
 

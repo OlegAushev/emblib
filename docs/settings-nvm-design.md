@@ -174,13 +174,13 @@ Type-erased interface offered to transports:
 
 ```cpp
 namespace settings {
-using value = std::variant<bool, std::int32_t, std::uint32_t, float>;
+using scalar_variant = std::variant<bool, std::int32_t, std::uint32_t, float>;
 enum class error { unknown_parameter, read_only, type_mismatch, out_of_range };
 
 std::span<descriptor const> descriptors();
 std::optional<index> find(std::string_view name);
-std::expected<value, error> get_at(index);
-std::expected<void, error> set_at(index, value);
+std::expected<scalar_variant, error> get_at(index);
+std::expected<void, error> set_at(index, scalar_variant);
 }
 ```
 
@@ -629,7 +629,8 @@ take effect when applied.
 external/emblib/emb/
   meta/fixed_string.hpp        [done] structural string for NTTP names
   nvm/storage.hpp              [done] block storage concept + is_erased
-  settings/value.hpp           [done] scalar_kind, value, cell, conversions
+  settings/value.hpp           [done] scalar_kind, scalar_variant, cell,
+                                      conversions
   settings/param.hpp           [done] param(): def/min/max, writable,
                                       apply_policy, expose
   settings/schema.hpp          [done] make_schema, `parameter` by
@@ -800,7 +801,7 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   function rather than a `value()` member makes wrapping an explicit opt-in
   and lets a wrapper keep its number in a public field, as a structural
   type must.
-- **`from_cell` is total, `from_value` is not.** A cell read back from
+- **`from_cell` is total, `from_variant` is not.** A cell read back from
   storage may hold any bit pattern and must yield a value rather than a
   trap: a bool is any-non-zero rather than a `bit_cast`, and a float may
   come back NaN — which the range check then rejects, since NaN compares
@@ -1310,6 +1311,23 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   and `image::assign_defaults` writes without checks, as `assign_cell` does.
   Records keep matching: the identifier hashes the value of the enumerator,
   not its name.
+- **The variant is `scalar_variant`, and the concepts of a parameter's
+  type drop `some_`** (2026-10-31). The variant was `value`, a word that
+  also names the typed value of a parameter, `od_value`, the `value()` of
+  `scaled` and the number a quantity holds, and an unqualified call of a
+  hook named `value` would have found the type and made no
+  argument-dependent lookup. `scalar_variant` says what the type is: one
+  of the four scalars, chosen at run time from a set closed at compile
+  time. `any_` would have promised an open set, the one `std::any` and
+  the other type-erased wrappers accept, and `some_` a type fixed at compile
+  time. `to_variant` and `from_variant` convert a typed value to it and
+  back, as `to_cell` and `from_cell` do with the cell. `some_value`,
+  `some_wrapped_value`, `some_enum_value` and `some_parameter_type` test
+  for a closed set of types rather than for an interface with members,
+  which is what `some_` is kept for; they are `parameter_scalar`,
+  `wraps_parameter_scalar`, `parameter_enum` and `parameter_type`, as the
+  dictionary has `od_scalar`, `wraps_od_scalar` and `od_enumeration`.
+  Records keep matching: no record holds these names.
 - **A command is a write-only `uint32`** (2026-10-19). The dictionary had a
   type code of its own for commands, `exec`, which CiA 301 does not know,
   and which travelled as a `uint32` anyway; 1010h and 1011h, which now take
@@ -1431,7 +1449,7 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   of the same name still matches. Its bounds default to the first and the
   last value labelled; `param()` rejects bounds between which a value has no
   label, as the image checks a write against the bounds only, and a unit,
-  which the labels make needless. `from_value` gives nothing for a value
+  which the labels make needless. `from_variant` gives nothing for a value
   outside the underlying type rather than one cut to its width.
   `apply_policy` labels its values, for a transport to show. Rejected: a
   check of every write against the labels in the image, which would put the
@@ -1984,12 +2002,12 @@ on 2026-10-16 (§4); they stay for the record.
   concept directly. It needed the trait constants, a default timeout and
   `erase`, which on ferroelectric memory is an overwrite with
   `erased_value` — no adapter, no second layer to keep in step.
-- ~~**`settings::value` variant vs raw bytes + type tag**~~ at the
+- ~~**`settings::scalar_variant` vs raw bytes + type tag**~~ at the
   transport boundary. Settled by phase 2, which built the variant: the OD
-  accessors convert `od_value` to `settings::value` on the way in and visit
-  it on the way out. Raw bytes would feed `from_sdo_data(bytes, type)`
-  directly and avoid that variant-to-variant conversion, which nothing has
-  asked for since.
+  accessors convert `od_value` to `settings::scalar_variant` on the way in
+  and visit it on the way out. Raw bytes would feed
+  `from_sdo_data(bytes, type)` directly and avoid that variant-to-variant
+  conversion, which nothing has asked for since.
 - ~~**Exposing stored vs active value**~~ for `on_restart` parameters over
   the OD, beyond the `restart_required` and `unapplied` flags (`3000h`,
   sub-indices `11h` and `12h`). Settled on 2026-10-16 by the records (§7):

@@ -451,7 +451,8 @@ consteval bool test_an_unchanged_write_owes_nothing()
 
   if (!settings.set<motor_p>(std::int32_t{11})) return false;
   if (!owes_nothing()) return false;
-  if (!settings.set_at(pole_pairs, value{std::int32_t{11}})) return false;
+  if (!settings.set_at(pole_pairs, scalar_variant{std::int32_t{11}}))
+    return false;
   if (!owes_nothing()) return false;
   settings.restore_all_defaults();
   if (!owes_nothing()) return false;
@@ -823,17 +824,21 @@ consteval bool test_access_by_index()
   test_section settings;
   auto _ = settings.load(memory);
 
-  if (settings.get_at(runout) != value{std::uint32_t{100}}) return false;
+  if (settings.get_at(runout) != scalar_variant{std::uint32_t{100}})
+    return false;
 
-  auto const read_only = settings.set_at(serial, value{std::uint32_t{5}});
+  auto const read_only =
+      settings.set_at(serial, scalar_variant{std::uint32_t{5}});
   if (read_only || read_only.error() != error::read_only) return false;
-  auto const retyped = settings.set_at(runout, value{std::int32_t{5}});
+  auto const retyped = settings.set_at(runout, scalar_variant{std::int32_t{5}});
   if (retyped || retyped.error() != error::type_mismatch) return false;
-  auto const too_far = settings.set_at(runout, value{std::uint32_t{1001}});
+  auto const too_far =
+      settings.set_at(runout, scalar_variant{std::uint32_t{1001}});
   if (too_far || too_far.error() != error::out_of_range) return false;
   if (settings.unapplied()) return false;
 
-  if (!settings.set_at(runout, value{std::uint32_t{400}})) return false;
+  if (!settings.set_at(runout, scalar_variant{std::uint32_t{400}}))
+    return false;
   if (!settings.unapplied()) return false;
 
   return true;
@@ -853,12 +858,16 @@ consteval bool test_the_images_part_and_meet()
   if (settings.requested().get<drive_runout>() != 200) return false;
   if (settings.applied().get<drive_runout>() != 100) return false;
   if (settings.stored().get<drive_runout>() != 100) return false;
-  if (settings.applied_at(runout) != value{std::uint32_t{100}}) return false;
-  if (settings.stored_at(runout) != value{std::uint32_t{100}}) return false;
+  if (settings.applied_at(runout) != scalar_variant{std::uint32_t{100}})
+    return false;
+  if (settings.stored_at(runout) != scalar_variant{std::uint32_t{100}})
+    return false;
 
   if (!settings.apply(runout, applier)) return false;
-  if (settings.applied_at(runout) != value{std::uint32_t{200}}) return false;
-  if (settings.stored_at(runout) != value{std::uint32_t{100}}) return false;
+  if (settings.applied_at(runout) != scalar_variant{std::uint32_t{200}})
+    return false;
+  if (settings.stored_at(runout) != scalar_variant{std::uint32_t{100}})
+    return false;
 
   if (!settings.save(accepts)) return false;
   if (settings.stored().get<drive_runout>() != 200) return false;

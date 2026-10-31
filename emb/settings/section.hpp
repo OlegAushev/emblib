@@ -399,14 +399,16 @@ public:
 
   // Returns the value applied of the parameter at `index`, as
   // `image::get_at` does.
-  constexpr std::expected<value, error> applied_at(std::size_t index) const
+  constexpr std::expected<scalar_variant, error>
+  applied_at(std::size_t index) const
   {
     return applied_.get_at(index);
   }
 
   // Returns the value that the next startup would load for the parameter at
   // `index`, as `image::get_at` does.
-  constexpr std::expected<value, error> stored_at(std::size_t index) const
+  constexpr std::expected<scalar_variant, error>
+  stored_at(std::size_t index) const
   {
     return stored_.get_at(index);
   }
@@ -434,14 +436,15 @@ public:
 
   // -- Access by index --
 
-  constexpr std::expected<value, error> get_at(std::size_t index) const
+  constexpr std::expected<scalar_variant, error> get_at(std::size_t index) const
   {
     return requested_.get_at(index);
   }
 
   // Writes `v` to the parameter at `index`, as `image::set_at` does; unlike
   // `set`, refuses a parameter that is not `writable`.
-  constexpr std::expected<void, error> set_at(std::size_t index, value const& v)
+  constexpr std::expected<void, error> set_at(std::size_t index,
+                                              scalar_variant const& v)
   {
     return requested_.set_at(index, v);
   }

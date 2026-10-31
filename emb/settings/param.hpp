@@ -86,10 +86,10 @@ namespace detail {
 // Returns `T` constructed from the lowest finite value of `scalar_t<T>`. The
 // constructor of a wrapper may clamp it, e.g. that of `emb::clamped` to its
 // lower limit. For an enumeration, returns the lowest value it labels.
-template<some_parameter_type T>
+template<parameter_type T>
 constexpr T lowest()
 {
-  if constexpr (some_enum_value<T>) {
+  if constexpr (parameter_enum<T>) {
     return emb::enum_info_of<T>().front().value();
   }
   else {
@@ -100,10 +100,10 @@ constexpr T lowest()
 // Returns `T` constructed from the highest finite value of `scalar_t<T>`. The
 // constructor of a wrapper may clamp it, e.g. that of `emb::clamped` to its
 // upper limit. For an enumeration, returns the highest value it labels.
-template<some_parameter_type T>
+template<parameter_type T>
 constexpr T highest()
 {
-  if constexpr (some_enum_value<T>) {
+  if constexpr (parameter_enum<T>) {
     return emb::enum_info_of<T>().back().value();
   }
   else {
@@ -114,7 +114,7 @@ constexpr T highest()
 // Whether the enumeration `T` labels every value from `lo` to `hi`, as it
 // must between the bounds of a parameter: a write is checked against the
 // bounds only, so a value between them that `T` does not label would pass.
-template<some_enum_value T>
+template<parameter_enum T>
 consteval bool labelled_between(T lo, T hi)
 {
   auto const low = static_cast<std::int64_t>(std::to_underlying(lo));
@@ -156,7 +156,7 @@ constexpr std::uint32_t identify(std::string_view name, scalar_kind kind)
 // the field of the same name in the `descriptor` of the parameter; `label` and
 // `unit` are kept in the `declaration`, outside the descriptor, which a
 // schema keeps in the image.
-template<some_parameter_type T>
+template<parameter_type T>
 struct options {
   // Label of the parameter for people, in each language. `param` rejects an
   // exposed parameter (`expose`) without a label in each: a transport shows
@@ -197,7 +197,7 @@ struct options {
 //       "motor.pole_pairs", std::int32_t{11}, {.label = {"Pole pairs", "…"}});
 //   ...
 //   values.get<pole_pairs>()
-template<some_parameter_type T>
+template<parameter_type T>
 struct declaration {
   using type = T;
 
@@ -247,7 +247,7 @@ concept some_declaration = detail::is_declaration<std::remove_cvref_t<T>>;
 // the unit, `opts.unit` or the symbol of `T`, lacks a symbol in a language,
 // or if an enumeration does not label every value from `opts.min` to
 // `opts.max`.
-template<some_parameter_type T>
+template<parameter_type T>
 consteval declaration<T> param(std::string_view name,
                                T def,
                                options<T> opts = {})
@@ -262,7 +262,7 @@ consteval declaration<T> param(std::string_view name,
   if (!in_range(kind, to_cell(def), min, max)) {
     EMB_PANIC("the default of a parameter is outside its bounds");
   }
-  if constexpr (some_enum_value<T>) {
+  if constexpr (parameter_enum<T>) {
     if (!detail::labelled_between(opts.min, opts.max)) {
       EMB_PANIC("the enumeration does not label a value between the bounds");
     }
@@ -274,7 +274,7 @@ consteval declaration<T> param(std::string_view name,
     EMB_PANIC("the unit only repeats the symbol of the type");
   }
   if (!opts.unit.empty()
-      && (kind == scalar_kind::boolean || some_enum_value<T>)) {
+      && (kind == scalar_kind::boolean || parameter_enum<T>)) {
     EMB_PANIC("a bool or an enumeration takes no unit");
   }
   auto const unit = opts.unit.empty() ? emb::unit_symbol_of<T>() : opts.unit;

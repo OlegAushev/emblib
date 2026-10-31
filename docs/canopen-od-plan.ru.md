@@ -335,8 +335,8 @@ struct od_settings {
   `unknown_parameter` → `object_not_found`, `read_only` →
   `write_to_read_only`, `type_mismatch` → `data_type_mismatch`,
   `out_of_range` → `value_range_exceeded`.
-- Значение, которого нет среди альтернатив `settings::value` (узкие целые),
-  даёт `data_type_mismatch`.
+- Значение, которого нет среди альтернатив `settings::scalar_variant`
+  (узкие целые), даёт `data_type_mismatch`.
 - `rw` восстанавливается через 1011h:04 функцией `RestoreAt`, то есть
   `settings::restore_default_at`. Умолчания в образ не попадают.
 - Покрытие схемы проверяет T14 через `catalog`, который несёт каждая строка

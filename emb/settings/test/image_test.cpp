@@ -107,25 +107,25 @@ consteval bool test_erased_access()
   constexpr auto serial = *schema.index_of("prod.serial");
 
   auto const read = values.get_at(speed);
-  if (!read || *read != value{100.0f}) return false;
+  if (!read || *read != scalar_variant{100.0f}) return false;
 
-  if (!values.set_at(speed, value{250.0f})) return false;
+  if (!values.set_at(speed, scalar_variant{250.0f})) return false;
   if (values.get<drive_runout_speed>() != rpm{250.0f}) return false;
 
   // A wrapper is written as its scalar; the wrong alternative is refused.
-  auto const mismatch = values.set_at(speed, value{std::int32_t{250}});
+  auto const mismatch = values.set_at(speed, scalar_variant{std::int32_t{250}});
   if (mismatch || mismatch.error() != error::type_mismatch) return false;
 
-  auto const closed = values.set_at(serial, value{std::uint32_t{1}});
+  auto const closed = values.set_at(serial, scalar_variant{std::uint32_t{1}});
   if (closed || closed.error() != error::read_only) return false;
   // Closed comes before the type: a closed parameter refuses any value.
-  auto const closed_float = values.set_at(serial, value{1.0f});
+  auto const closed_float = values.set_at(serial, scalar_variant{1.0f});
   if (closed_float || closed_float.error() != error::read_only) return false;
 
-  auto const out = values.set_at(speed, value{9000.0f});
+  auto const out = values.set_at(speed, scalar_variant{9000.0f});
   if (out || out.error() != error::out_of_range) return false;
 
-  auto const nothing = values.set_at(img::count, value{1.0f});
+  auto const nothing = values.set_at(img::count, scalar_variant{1.0f});
   if (nothing || nothing.error() != error::unknown_parameter) return false;
   if (values.get_at(img::count).has_value()) return false;
 
@@ -154,7 +154,7 @@ consteval bool test_unchanged_write()
   // was, whichever path the write takes.
   if (!values.set<drive_runout_speed>(rpm{100.0f})) return false;
   if (values.cell_at(speed) != held) return false;
-  if (!values.set_at(speed, value{100.0f})) return false;
+  if (!values.set_at(speed, scalar_variant{100.0f})) return false;
   if (values.cell_at(speed) != held) return false;
   if (!values.restore_default<drive_runout_speed>()) return false;
   if (values.cell_at(speed) != held) return false;
@@ -231,17 +231,17 @@ consteval bool test_enumerations()
   if (!values.set<model_pwm_mode>(pwm::dpwm1)) return false;
   if (values.get<model_pwm_mode>() != pwm::dpwm1) return false;
 
-  if (!values.set_at(0, value{std::uint32_t{0}})) return false;
+  if (!values.set_at(0, scalar_variant{std::uint32_t{0}})) return false;
   if (values.get<model_pwm_mode>() != pwm::svpwm) return false;
   auto const read = values.get_at(0);
-  if (!read || *read != value{std::uint32_t{0}}) return false;
+  if (!read || *read != scalar_variant{std::uint32_t{0}}) return false;
 
   // Past the bounds, and past a byte where its low byte names dpwm0.
-  auto const past = values.set_at(0, value{std::uint32_t{3}});
+  auto const past = values.set_at(0, scalar_variant{std::uint32_t{3}});
   if (past || past.error() != error::out_of_range) return false;
-  auto const wrapped = values.set_at(0, value{std::uint32_t{257}});
+  auto const wrapped = values.set_at(0, scalar_variant{std::uint32_t{257}});
   if (wrapped || wrapped.error() != error::out_of_range) return false;
-  auto const mismatch = values.set_at(0, value{std::int32_t{1}});
+  auto const mismatch = values.set_at(0, scalar_variant{std::int32_t{1}});
   if (mismatch || mismatch.error() != error::type_mismatch) return false;
   return values.get<model_pwm_mode>() == pwm::svpwm;
 }

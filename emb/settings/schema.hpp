@@ -105,7 +105,7 @@ struct basic_schema {
 // The program is ill-formed if two parameters have the same name, even with
 // different types, or if two parameters with different names have the same
 // identifier, and the diagnostic says which.
-template<some_parameter_type... Ts>
+template<parameter_type... Ts>
 consteval basic_schema<typelist<Ts...>, sizeof...(Ts)>
 make_schema(declaration<Ts> const&... params)
 {

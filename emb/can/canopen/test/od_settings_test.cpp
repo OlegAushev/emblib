@@ -209,9 +209,9 @@ static_assert(to_refusal(settings::apply_refusal::invalid)
 static_assert(emb::enum_info_of<od_refusal>().size() == 5);
 static_assert(emb::enum_info_of<od_refusal>()[4].name() == "state_error");
 
-static_assert(detail::to_settings_value(od_value{1.5f})
-              == settings::value{1.5f});
-static_assert(!detail::to_settings_value(od_value{std::int8_t{7}}));
+static_assert(detail::to_settings_variant(od_value{1.5f})
+              == settings::scalar_variant{1.5f});
+static_assert(!detail::to_settings_variant(od_value{std::int8_t{7}}));
 
 static_assert(detail::not_exposed_message<"prod.secret">().view()
               == "od: settings parameter 'prod.secret' is not exposed");

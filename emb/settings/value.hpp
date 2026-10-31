@@ -19,10 +19,10 @@ namespace settings {
 
 // The scoped enumeration `scalar_kind` names the scalar types a parameter may
 // have: `bool`, `std::int32_t`, `std::uint32_t` and `float`. The value of
-// each enumerator is the index of its type among the alternatives of `value`.
-// Changing the value of an enumerator changes the identifier of every
-// parameter of its kind, so the cells stored before no longer match and those
-// parameters load their defaults.
+// each enumerator is the index of its type among the alternatives of
+// `scalar_variant`. Changing the value of an enumerator changes the identifier
+// of every parameter of its kind, so the cells stored before no longer match
+// and those parameters load their defaults.
 enum class scalar_kind : std::uint8_t {
   boolean,
   int32,
@@ -32,54 +32,58 @@ enum class scalar_kind : std::uint8_t {
 
 // Type-erased value of a parameter: the form in which code that does not
 // know the type of the parameter, e.g. a transport, reads and writes it.
-using value = std::variant<bool, std::int32_t, std::uint32_t, float>;
+using scalar_variant = std::variant<bool, std::int32_t, std::uint32_t, float>;
 
 // Type of a cell, i.e. the four-byte encoding of the value of one parameter,
 // whatever the type of the parameter. `to_cell` defines the encoding.
 using cell = std::uint32_t;
 
-// The concept `some_value<T>` is satisfied if and only if `T` is exactly one
-// of the alternatives of `value`: `bool`, `std::int32_t`, `std::uint32_t` or
-// `float`, not cv-qualified and not a reference.
+// The concept `parameter_scalar<T>` is satisfied if and only if `T` is exactly
+// one of the alternatives of `scalar_variant`: `bool`, `std::int32_t`,
+// `std::uint32_t` or `float`, not cv-qualified and not a reference.
 template<typename T>
-concept some_value = alternative_of<T, value>;
+concept parameter_scalar = alternative_of<T, scalar_variant>;
 
-// The enumerators of `scalar_kind` are the alternative indices of `value`, so
-// `kind_of` and `held_kind` below are casts of an index and the two cannot
-// silently drift apart.
-static_assert(std::variant_size_v<value> == 4);
-static_assert(std::same_as<std::variant_alternative_t<0, value>, bool>);
-static_assert(std::same_as<std::variant_alternative_t<1, value>, std::int32_t>);
+// The enumerators of `scalar_kind` are the alternative indices of
+// `scalar_variant`, so `kind_of` and `held_kind` below are casts of an index
+// and the two cannot silently drift apart.
+static_assert(std::variant_size_v<scalar_variant> == 4);
 static_assert(
-    std::same_as<std::variant_alternative_t<2, value>, std::uint32_t>);
-static_assert(std::same_as<std::variant_alternative_t<3, value>, float>);
+    std::same_as<std::variant_alternative_t<0, scalar_variant>, bool>);
+static_assert(
+    std::same_as<std::variant_alternative_t<1, scalar_variant>, std::int32_t>);
+static_assert(
+    std::same_as<std::variant_alternative_t<2, scalar_variant>, std::uint32_t>);
+static_assert(
+    std::same_as<std::variant_alternative_t<3, scalar_variant>, float>);
 static_assert(std::to_underlying(scalar_kind::float32) == 3);
 
-// The concept `some_wrapped_value<T>` is satisfied if and only if `T` is a
-// scalar wrapper (`scalar_wrapper`) of a type that satisfies `some_value`,
-// e.g. `emb::units::quantity` or `emb::clamped` of a `float`. Only the scalar
-// of a wrapper is stored: conversions in this header go through `scalar_of` and
-// the constructor, never through the bytes of an object, so the layout of a
-// wrapper does not matter.
+// The concept `wraps_parameter_scalar<T>` is satisfied if and only if `T` is a
+// scalar wrapper (`scalar_wrapper`) of a type that satisfies
+// `parameter_scalar`, e.g. `emb::units::quantity` or `emb::clamped` of a
+// `float`. Only the scalar of a wrapper is stored: conversions in this header
+// go through `scalar_of` and the constructor, never through the bytes of an
+// object, so the layout of a wrapper does not matter.
 template<typename T>
-concept some_wrapped_value = scalar_wrapper<T> && some_value<unwrapped_t<T>>;
+concept wraps_parameter_scalar =
+    scalar_wrapper<T> && parameter_scalar<unwrapped_t<T>>;
 
-// The concept `some_enum_value<T>` is satisfied if and only if `T` is a
+// The concept `parameter_enum<T>` is satisfied if and only if `T` is a
 // scoped enumeration that labels its values (`emb::enum_with_info`) and
 // whose values a 32-bit carrier holds (`emb::enum_carrier32_t`). A parameter
 // of such a `T` is stored and transported as its carrier, a `std::uint32_t`
 // or a `std::int32_t` as the underlying type of `T` is unsigned or signed,
 // and takes only the values that `T` labels (`param`).
 template<typename T>
-concept some_enum_value =
+concept parameter_enum =
     enum_with_info<T> && requires { typename enum_carrier32_t<T>; };
 
-// The concept `some_parameter_type<T>` is satisfied if and only if `T`
-// satisfies `some_value`, `some_wrapped_value` or `some_enum_value`, i.e. `T`
-// is a type that a parameter may have.
+// The concept `parameter_type<T>` is satisfied if and only if `T`
+// satisfies `parameter_scalar`, `wraps_parameter_scalar` or `parameter_enum`,
+// i.e. `T` is a type that a parameter may have.
 template<typename T>
-concept some_parameter_type =
-    some_value<T> || some_wrapped_value<T> || some_enum_value<T>;
+concept parameter_type =
+    parameter_scalar<T> || wraps_parameter_scalar<T> || parameter_enum<T>;
 
 namespace detail {
 
@@ -88,7 +92,7 @@ struct scalar {
   using type = unwrapped_t<T>;
 };
 
-template<some_enum_value T>
+template<parameter_enum T>
 struct scalar<T> {
   using type = enum_carrier32_t<T>;
 };
@@ -96,41 +100,41 @@ struct scalar<T> {
 } // namespace detail
 
 // Scalar type in which a parameter of type `T` is stored and transported:
-// `T` itself if `T` satisfies `some_value`, its carrier
-// (`emb::enum_carrier32_t`) if `T` satisfies `some_enum_value`, otherwise
+// `T` itself if `T` satisfies `parameter_scalar`, its carrier
+// (`emb::enum_carrier32_t`) if `T` satisfies `parameter_enum`, otherwise
 // `T::value_type`.
-template<some_parameter_type T>
+template<parameter_type T>
 using scalar_t = typename detail::scalar<T>::type;
 
 // The `scalar_kind` of a parameter of type `T`, i.e. the enumerator that
 // names `scalar_t<T>`.
-template<some_parameter_type T>
-inline constexpr scalar_kind kind_of =
-    static_cast<scalar_kind>(value(std::in_place_type<scalar_t<T>>).index());
+template<parameter_type T>
+inline constexpr scalar_kind kind_of = static_cast<scalar_kind>(
+    scalar_variant(std::in_place_type<scalar_t<T>>).index());
 
 // Returns the `scalar_kind` of the alternative that `v` holds.
-constexpr scalar_kind held_kind(value const& v)
+constexpr scalar_kind held_kind(scalar_variant const& v)
 {
   return static_cast<scalar_kind>(v.index());
 }
 
 // -- Typed value <-> type-erased value --
 
-// Returns `v` in type-erased form: a `value` that holds `v` itself if `T`
-// satisfies `some_value`, the underlying value of `v` in its carrier if `T`
-// satisfies `some_enum_value`, otherwise `scalar_of(v)`.
-template<some_parameter_type T>
-constexpr value to_value(T const& v)
+// Returns `v` in type-erased form: a `scalar_variant` that holds `v` itself if
+// `T` satisfies `parameter_scalar`, the underlying value of `v` in its carrier
+// if `T` satisfies `parameter_enum`, otherwise `scalar_of(v)`.
+template<parameter_type T>
+constexpr scalar_variant to_variant(T const& v)
 {
-  if constexpr (some_value<T>) {
-    return value{v};
+  if constexpr (parameter_scalar<T>) {
+    return scalar_variant{v};
   }
-  else if constexpr (some_enum_value<T>) {
+  else if constexpr (parameter_enum<T>) {
     scalar_t<T> const carried = std::to_underlying(v);
-    return value{carried};
+    return scalar_variant{carried};
   }
   else {
-    return value{scalar_of(v)};
+    return scalar_variant{scalar_of(v)};
   }
 }
 
@@ -140,11 +144,11 @@ constexpr value to_value(T const& v)
 // reinterpreted. An enumeration is returned only if the value is one of its
 // underlying type, and `std::nullopt` otherwise: 260 does not become 4 for an
 // enumeration of `std::uint8_t`.
-template<some_parameter_type T>
-constexpr std::optional<T> from_value(value const& v)
+template<parameter_type T>
+constexpr std::optional<T> from_variant(scalar_variant const& v)
 {
   if (auto const* p = std::get_if<scalar_t<T>>(&v)) {
-    if constexpr (some_enum_value<T>) {
+    if constexpr (parameter_enum<T>) {
       if (!std::in_range<std::underlying_type_t<T>>(*p)) return std::nullopt;
     }
     return T(*p);
@@ -158,15 +162,15 @@ constexpr std::optional<T> from_value(value const& v)
 // scalar as its bit pattern, as if by `std::bit_cast<cell>`. A wrapper is
 // encoded as its scalar, `scalar_of(v)`, and an enumeration as its underlying
 // value in its carrier.
-template<some_parameter_type T>
+template<parameter_type T>
 constexpr cell to_cell(T const& v)
 {
   using scalar = scalar_t<T>;
   scalar const s = [&] {
-    if constexpr (some_value<T>) {
+    if constexpr (parameter_scalar<T>) {
       return v;
     }
-    else if constexpr (some_enum_value<T>) {
+    else if constexpr (parameter_enum<T>) {
       return scalar{std::to_underlying(v)};
     }
     else {
@@ -189,7 +193,7 @@ constexpr cell to_cell(T const& v)
 // constructed from that scalar, and if `T` is an enumeration, the value of `T`
 // that the scalar converts to: a value that `T` labels if the scalar lies in
 // the bounds of the parameter, as an image keeps every cell.
-template<some_parameter_type T>
+template<parameter_type T>
 constexpr T from_cell(cell c)
 {
   using scalar = scalar_t<T>;
@@ -208,14 +212,14 @@ constexpr T from_cell(cell c)
 
 // Returns the cell that encodes `v`, i.e. `to_cell` applied to the scalar
 // that `v` holds.
-constexpr cell to_cell(value const& v)
+constexpr cell to_cell(scalar_variant const& v)
 {
   return v.visit([](auto const& x) { return to_cell(x); });
 }
 
 // Decodes the cell `c` as a value of the scalar type that `kind` names, as
 // `from_cell` does, and returns it in type-erased form.
-constexpr value to_value(scalar_kind kind, cell c)
+constexpr scalar_variant to_variant(scalar_kind kind, cell c)
 {
   switch (kind) {
   case scalar_kind::boolean: return from_cell<bool>(c);

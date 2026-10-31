@@ -21,7 +21,7 @@ enum class error : std::uint8_t {
   // Write by index to a parameter that is not `writable`, returned by
   // `image::set_at` and `image::restore_default_at`.
   read_only,
-  // `value` holding another alternative than the scalar type of the
+  // `scalar_variant` holding another alternative than the scalar type of the
   // parameter, returned by `image::set_at`.
   type_mismatch,
   // Value outside the bounds of the parameter, or a NaN, returned by
@@ -94,12 +94,12 @@ public:
 
   // Returns the value of the parameter at `index`, or
   // `error::unknown_parameter` if `index >= count`.
-  constexpr std::expected<value, error> get_at(std::size_t index) const
+  constexpr std::expected<scalar_variant, error> get_at(std::size_t index) const
   {
     if (index >= count) {
       return std::unexpected(error::unknown_parameter);
     }
-    return to_value(Schema.parameters[index].kind, cells_[index]);
+    return to_variant(Schema.parameters[index].kind, cells_[index]);
   }
 
   // Writes `v` to the parameter at `index`. Returns
@@ -108,7 +108,8 @@ public:
   // `error::type_mismatch` if `v` holds another alternative than the scalar
   // type of the parameter, otherwise `error::out_of_range` if `v` is outside
   // the bounds of the parameter.
-  constexpr std::expected<void, error> set_at(std::size_t index, value const& v)
+  constexpr std::expected<void, error> set_at(std::size_t index,
+                                              scalar_variant const& v)
   {
     if (index >= count) {
       return std::unexpected(error::unknown_parameter);

@@ -182,13 +182,13 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `store`
 - [x] `emb/settings/value.hpp`
   - [x] `scalar_kind`
-  - [x] `value`, `cell`
-  - [x] `some_value`, `some_wrapped_value`, `some_parameter_type`,
-    `some_enum_value` (вручную 2026-10-22)
+  - [x] `scalar_variant`, `cell`
+  - [x] `parameter_scalar`, `wraps_parameter_scalar`, `parameter_type`,
+    `parameter_enum` (вручную 2026-10-22)
   - [x] `scalar_t` (и `detail::scalar` без комментария: его покрывает
     псевдоним), `kind_of`
   - [x] `held_kind`
-  - [x] `to_value`, `from_value`, `to_cell`, `from_cell` (у `to_value` и
+  - [x] `to_variant`, `from_variant`, `to_cell`, `from_cell` (у `to_variant` и
     `to_cell` по две перегрузки, у каждой свой комментарий)
   - [x] `less_equal`, `in_range`
 - [x] `emb/signal.hpp` — только подключает заголовки `emb/signal/`, сущностей нет

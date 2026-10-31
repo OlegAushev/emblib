@@ -19,26 +19,26 @@ using pu = unsigned_pu_f32;
 
 // -- Parameter types --
 
-static_assert(some_parameter_type<bool>);
-static_assert(some_parameter_type<std::int32_t>);
-static_assert(some_parameter_type<std::uint32_t>);
-static_assert(some_parameter_type<float>);
+static_assert(parameter_type<bool>);
+static_assert(parameter_type<std::int32_t>);
+static_assert(parameter_type<std::uint32_t>);
+static_assert(parameter_type<float>);
 
 // Recognised by a scalar_of overload that argument-dependent lookup finds,
 // not by name: a quantity and a clamped go through the same path.
-static_assert(some_parameter_type<rpm>);
-static_assert(some_parameter_type<pu>);
-static_assert(some_wrapped_value<rpm>);
-static_assert(some_wrapped_value<pu>);
+static_assert(parameter_type<rpm>);
+static_assert(parameter_type<pu>);
+static_assert(wraps_parameter_scalar<rpm>);
+static_assert(wraps_parameter_scalar<pu>);
 
-static_assert(!some_parameter_type<double>);
-static_assert(!some_parameter_type<std::int8_t>);
-static_assert(!some_parameter_type<std::int64_t>);
-static_assert(!some_parameter_type<char const*>);
+static_assert(!parameter_type<double>);
+static_assert(!parameter_type<std::int8_t>);
+static_assert(!parameter_type<std::int64_t>);
+static_assert(!parameter_type<char const*>);
 
 // The type-erased value is not itself a parameter type — which is what
 // keeps to_cell(value) from being shadowed by the typed template.
-static_assert(!some_parameter_type<value>);
+static_assert(!parameter_type<scalar_variant>);
 
 struct wraps_a_double {
   using value_type = double;
@@ -76,10 +76,10 @@ struct value_member_only {
   }
 };
 
-static_assert(!some_parameter_type<wraps_a_double>);
-static_assert(!some_parameter_type<not_reconstructible>);
-static_assert(!some_parameter_type<value_type_disagrees>);
-static_assert(!some_parameter_type<value_member_only>);
+static_assert(!parameter_type<wraps_a_double>);
+static_assert(!parameter_type<not_reconstructible>);
+static_assert(!parameter_type<value_type_disagrees>);
+static_assert(!parameter_type<value_member_only>);
 
 // Nor does a wrapper need a value() member: scalar_of may read a public
 // field, which is where a structural type keeps its number.
@@ -93,7 +93,7 @@ struct public_field {
   }
 };
 
-static_assert(some_parameter_type<public_field>);
+static_assert(parameter_type<public_field>);
 
 // -- Type mapping --
 
@@ -108,36 +108,44 @@ static_assert(kind_of<float> == scalar_kind::float32);
 static_assert(kind_of<rpm> == scalar_kind::float32);
 static_assert(kind_of<pu> == scalar_kind::float32);
 
-static_assert(held_kind(value{true}) == scalar_kind::boolean);
-static_assert(held_kind(value{std::int32_t{-1}}) == scalar_kind::int32);
-static_assert(held_kind(value{std::uint32_t{1}}) == scalar_kind::uint32);
-static_assert(held_kind(value{1.0f}) == scalar_kind::float32);
+static_assert(held_kind(scalar_variant{true}) == scalar_kind::boolean);
+static_assert(held_kind(scalar_variant{std::int32_t{-1}})
+              == scalar_kind::int32);
+static_assert(held_kind(scalar_variant{std::uint32_t{1}})
+              == scalar_kind::uint32);
+static_assert(held_kind(scalar_variant{1.0f}) == scalar_kind::float32);
 
 // -- Typed value <-> type-erased value --
 
-consteval bool test_value_round_trip()
+consteval bool test_variant_round_trip()
 {
-  if (from_value<bool>(to_value(true)) != true) return false;
-  if (from_value<std::int32_t>(to_value(std::int32_t{-7})) != -7) return false;
-  if (from_value<std::uint32_t>(to_value(std::uint32_t{7})) != 7u) return false;
-  if (from_value<float>(to_value(2.5f)) != 2.5f) return false;
+  if (from_variant<bool>(to_variant(true)) != true) return false;
+  if (from_variant<std::int32_t>(to_variant(std::int32_t{-7})) != -7)
+    return false;
+  if (from_variant<std::uint32_t>(to_variant(std::uint32_t{7})) != 7u)
+    return false;
+  if (from_variant<float>(to_variant(2.5f)) != 2.5f) return false;
 
   // A wrapper is transported as its scalar and rebuilt from it.
-  if (to_value(rpm{100.0f}) != value{100.0f}) return false;
-  if (from_value<rpm>(value{100.0f}) != rpm{100.0f}) return false;
-  if (from_value<pu>(value{0.5f}) != pu{0.5f}) return false;
-  if (to_value(public_field{2.5f}) != value{2.5f}) return false;
+  if (to_variant(rpm{100.0f}) != scalar_variant{100.0f}) return false;
+  if (from_variant<rpm>(scalar_variant{100.0f}) != rpm{100.0f}) return false;
+  if (from_variant<pu>(scalar_variant{0.5f}) != pu{0.5f}) return false;
+  if (to_variant(public_field{2.5f}) != scalar_variant{2.5f}) return false;
 
   return true;
 }
 
-consteval bool test_value_type_mismatch()
+consteval bool test_variant_type_mismatch()
 {
   // A write carrying the wrong type is rejected, not reinterpreted.
-  if (from_value<float>(value{std::int32_t{1}}).has_value()) return false;
-  if (from_value<std::int32_t>(value{1.0f}).has_value()) return false;
-  if (from_value<bool>(value{std::uint32_t{1}}).has_value()) return false;
-  if (from_value<rpm>(value{std::int32_t{1}}).has_value()) return false;
+  if (from_variant<float>(scalar_variant{std::int32_t{1}}).has_value())
+    return false;
+  if (from_variant<std::int32_t>(scalar_variant{1.0f}).has_value())
+    return false;
+  if (from_variant<bool>(scalar_variant{std::uint32_t{1}}).has_value())
+    return false;
+  if (from_variant<rpm>(scalar_variant{std::int32_t{1}}).has_value())
+    return false;
   return true;
 }
 
@@ -169,22 +177,25 @@ consteval bool test_raw_bool_is_not_a_bit_cast()
   return true;
 }
 
-consteval bool test_erased_raw_conversions()
+consteval bool test_variant_cell_conversions()
 {
-  if (to_cell(value{std::int32_t{-1}}) != 0xFFFFFFFFu) return false;
-  if (to_cell(value{true}) != 1u) return false;
+  if (to_cell(scalar_variant{std::int32_t{-1}}) != 0xFFFFFFFFu) return false;
+  if (to_cell(scalar_variant{true}) != 1u) return false;
 
-  if (to_value(scalar_kind::int32, 0xFFFFFFFFu) != value{std::int32_t{-1}})
+  if (to_variant(scalar_kind::int32, 0xFFFFFFFFu)
+      != scalar_variant{std::int32_t{-1}})
     return false;
-  if (to_value(scalar_kind::uint32, 0xFFFFFFFFu) != value{0xFFFFFFFFu})
+  if (to_variant(scalar_kind::uint32, 0xFFFFFFFFu)
+      != scalar_variant{0xFFFFFFFFu})
     return false;
-  if (to_value(scalar_kind::boolean, 5u) != value{true}) return false;
-  if (to_value(scalar_kind::float32, to_cell(1.5f)) != value{1.5f})
+  if (to_variant(scalar_kind::boolean, 5u) != scalar_variant{true})
+    return false;
+  if (to_variant(scalar_kind::float32, to_cell(1.5f)) != scalar_variant{1.5f})
     return false;
 
   // A cell survives the round trip through the erased form.
-  auto const v = to_value(scalar_kind::float32, to_cell(rpm{750.0f}));
-  if (from_value<rpm>(v) != rpm{750.0f}) return false;
+  auto const v = to_variant(scalar_kind::float32, to_cell(rpm{750.0f}));
+  if (from_variant<rpm>(v) != rpm{750.0f}) return false;
 
   return true;
 }
@@ -239,11 +250,11 @@ consteval bool test_in_range()
   return true;
 }
 
-static_assert(test_value_round_trip());
-static_assert(test_value_type_mismatch());
+static_assert(test_variant_round_trip());
+static_assert(test_variant_type_mismatch());
 static_assert(test_raw_round_trip());
 static_assert(test_raw_bool_is_not_a_bit_cast());
-static_assert(test_erased_raw_conversions());
+static_assert(test_variant_cell_conversions());
 static_assert(test_in_range());
 
 // -- Enumerations --
@@ -288,11 +299,11 @@ enum class unlabelled : std::uint8_t { a };
 
 // A parameter may be an enumeration that labels its values and fits a cell;
 // it is stored as its carrier, of the signedness of its underlying type.
-static_assert(some_enum_value<mode>);
-static_assert(some_parameter_type<mode>);
-static_assert(some_parameter_type<tilt>);
-static_assert(!some_parameter_type<wide>);
-static_assert(!some_parameter_type<unlabelled>);
+static_assert(parameter_enum<mode>);
+static_assert(parameter_type<mode>);
+static_assert(parameter_type<tilt>);
+static_assert(!parameter_type<wide>);
+static_assert(!parameter_type<unlabelled>);
 static_assert(std::same_as<scalar_t<mode>, std::uint32_t>);
 static_assert(std::same_as<scalar_t<tilt>, std::int32_t>);
 static_assert(kind_of<mode> == scalar_kind::uint32);
@@ -300,22 +311,24 @@ static_assert(kind_of<tilt> == scalar_kind::int32);
 
 consteval bool test_enumerations()
 {
-  if (to_value(mode::turbo) != value{std::uint32_t{7}}) return false;
-  if (to_value(tilt::left) != value{std::int32_t{-1}}) return false;
-  if (from_value<mode>(value{std::uint32_t{7}}) != mode::turbo) return false;
-  if (from_value<tilt>(value{std::int32_t{-1}}) != tilt::left) return false;
+  if (to_variant(mode::turbo) != scalar_variant{std::uint32_t{7}}) return false;
+  if (to_variant(tilt::left) != scalar_variant{std::int32_t{-1}}) return false;
+  if (from_variant<mode>(scalar_variant{std::uint32_t{7}}) != mode::turbo)
+    return false;
+  if (from_variant<tilt>(scalar_variant{std::int32_t{-1}}) != tilt::left)
+    return false;
   // A value outside the underlying type is not cut to its width, nor is
   // another scalar converted.
-  if (from_value<mode>(value{std::uint32_t{263}})) return false;
-  if (from_value<tilt>(value{std::int32_t{40000}})) return false;
-  if (from_value<mode>(value{std::int32_t{7}})) return false;
+  if (from_variant<mode>(scalar_variant{std::uint32_t{263}})) return false;
+  if (from_variant<tilt>(scalar_variant{std::int32_t{40000}})) return false;
+  if (from_variant<mode>(scalar_variant{std::int32_t{7}})) return false;
 
   if (to_cell(mode::turbo) != 7u) return false;
   if (to_cell(tilt::left) != 0xFFFFFFFFu) return false;
   if (from_cell<mode>(to_cell(mode::fast)) != mode::fast) return false;
   if (from_cell<tilt>(to_cell(tilt::left)) != tilt::left) return false;
-  return to_value(scalar_kind::uint32, to_cell(mode::turbo))
-      == to_value(mode::turbo);
+  return to_variant(scalar_kind::uint32, to_cell(mode::turbo))
+      == to_variant(mode::turbo);
 }
 
 static_assert(test_enumerations());

@@ -16,7 +16,6 @@
 #include "od_handlers.hpp"
 
 #include <emb/i18n.hpp>
-#include <emb/meta/alternative_of.hpp>
 #include <emb/meta/enum_info.hpp>
 #include <emb/meta/fixed_string.hpp>
 #include <emb/meta/typelist.hpp>
@@ -142,14 +141,14 @@ constexpr sdo_abort_code to_sdo_abort(settings::save_refusal refusal)
 
 namespace detail {
 
-// Returns the value `value` holds as a settings value, or nullopt if no
+// Returns the value `value` holds as a settings variant, or nullopt if no
 // parameter can hold its alternative, e.g. a narrow integer.
-constexpr std::optional<settings::value>
-to_settings_value(od_value const& value)
+constexpr std::optional<settings::scalar_variant>
+to_settings_variant(od_value const& value)
 {
-  return value.visit([](auto v) -> std::optional<settings::value> {
-    if constexpr (alternative_of<decltype(v), settings::value>) {
-      return settings::value{v};
+  return value.visit([](auto v) -> std::optional<settings::scalar_variant> {
+    if constexpr (settings::parameter_scalar<decltype(v)>) {
+      return settings::scalar_variant{v};
     }
     else {
       return std::nullopt;
@@ -300,7 +299,7 @@ class od_settings {
   }();
 
   static constexpr od_read_result
-  as_od(std::expected<settings::value, settings::error> const& value)
+  as_od(std::expected<settings::scalar_variant, settings::error> const& value)
   {
     if (!value) return std::unexpected(to_sdo_abort(value.error()));
     return value->visit([](auto v) { return od_value{v}; });
@@ -329,7 +328,7 @@ class od_settings {
                                                std::uint16_t index,
                                                od_value value)
   {
-    auto const setting = detail::to_settings_value(value);
+    auto const setting = detail::to_settings_variant(value);
     if (!setting) return std::unexpected(sdo_abort_code::data_type_mismatch);
     if (auto const written = SectionOf(ctx).set_at(index, *setting); !written) {
       return std::unexpected(to_sdo_abort(written.error()));
@@ -352,17 +351,17 @@ class od_settings {
   static constexpr od_read_result read_default(context_type&,
                                                std::uint16_t index)
   {
-    return as_od(settings::to_value(desc(index).kind, desc(index).def));
+    return as_od(settings::to_variant(desc(index).kind, desc(index).def));
   }
 
   static constexpr od_read_result read_min(context_type&, std::uint16_t index)
   {
-    return as_od(settings::to_value(desc(index).kind, desc(index).min));
+    return as_od(settings::to_variant(desc(index).kind, desc(index).min));
   }
 
   static constexpr od_read_result read_max(context_type&, std::uint16_t index)
   {
-    return as_od(settings::to_value(desc(index).kind, desc(index).max));
+    return as_od(settings::to_variant(desc(index).kind, desc(index).max));
   }
 
   static constexpr od_read_result read_policy(context_type&,
