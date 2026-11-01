@@ -227,8 +227,7 @@ public:
   finite_state_machine(finite_state_machine&&) = default;
   finite_state_machine& operator=(finite_state_machine&&) = default;
 
-  template<typename State>
-    requires typelist_contains<state_list, State>
+  template<listed_in<state_list> State>
   constexpr finite_state_machine(State&& initial_state)
       : state_(std::forward<State>(initial_state))
   {
@@ -272,8 +271,7 @@ public:
     }
   }
 
-  template<typename State, typename... Args>
-    requires typelist_contains<state_list, State>
+  template<listed_in<state_list> State, typename... Args>
   constexpr void force_transition(Args&&... args)
   {
     exit_state();
@@ -281,8 +279,7 @@ public:
     enter_state();
   }
 public:
-  template<typename State, typename... Args>
-    requires typelist_contains<state_list, State>
+  template<listed_in<state_list> State, typename... Args>
   [[nodiscard]] static constexpr next_state_type transition_to(Args&&... args)
   {
     return state_type(std::in_place_type<State>, std::forward<Args>(args)...);
@@ -306,8 +303,8 @@ public:
 
   template<typename... State>
     requires(sizeof...(State) > 0)
-         && (typelist_contains<state_list, State> && ...)
-         && typelist_unique<typelist<State...>>
+         && (listed_in<State, state_list> && ...)
+         && duplicate_free_typelist<typelist<State...>>
   [[nodiscard]] constexpr bool in_state() const
   {
     return (std::holds_alternative<State>(state_) || ...);

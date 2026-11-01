@@ -55,6 +55,12 @@ static_assert(!is_alternative_of_v<A, int>);
 static_assert(alternative_of<B, std::variant<A, B>>);
 static_assert(!alternative_of<C, std::variant<A, B>>);
 
+// specialization
+static_assert(typelist_specialization<typelist<>>);
+static_assert(typelist_specialization<typelist<A, B>>);
+static_assert(!typelist_specialization<typelist<> const>);
+static_assert(!typelist_specialization<A>);
+
 // size
 static_assert(typelist<>::size == 0);
 static_assert(typelist<A>::size == 1);
@@ -63,17 +69,13 @@ static_assert(typelist_size_v<typelist<>> == 0);
 static_assert(typelist_size_v<typelist<A>> == 1);
 static_assert(typelist_size_v<typelist<A, B, C>> == 3);
 
-// contains
-static_assert(typelist_contains_v<typelist<A, B, C>, A>);
-static_assert(typelist_contains_v<typelist<A, B, C>, B>);
-static_assert(typelist_contains_v<typelist<A, B, C>, C>);
-static_assert(!typelist_contains_v<typelist<A, B>, C>);
-static_assert(!typelist_contains_v<typelist<>, A>);
-static_assert(!typelist_contains_v<A, A>);
-
-// contains concept
-static_assert(typelist_contains<typelist<A, B>, A>);
-static_assert(!typelist_contains<typelist<A, B>, C>);
+// listed_in
+static_assert(listed_in<A, typelist<A, B, C>>);
+static_assert(listed_in<B, typelist<A, B, C>>);
+static_assert(listed_in<C, typelist<A, B, C>>);
+static_assert(!listed_in<C, typelist<A, B>>);
+static_assert(!listed_in<A, typelist<>>);
+static_assert(!listed_in<A, A>);
 
 // at
 static_assert(std::is_same_v<typelist_at_t<typelist<A, B, C>, 0>, A>);
@@ -87,18 +89,45 @@ static_assert(typelist_count_v<typelist<A, B, A, C, A>, C> == 1);
 static_assert(typelist_count_v<typelist<A, B>, C> == 0);
 static_assert(typelist_count_v<typelist<>, A> == 0);
 
-// unique
-static_assert(typelist_unique_v<typelist<A, B, C>>);
-static_assert(typelist_unique_v<typelist<A>>);
-static_assert(typelist_unique_v<typelist<>>);
-static_assert(!typelist_unique_v<typelist<A, B, A>>);
-static_assert(!typelist_unique_v<typelist<A, A>>);
-static_assert(!typelist_unique_v<A>);
+// duplicate_free
+static_assert(duplicate_free_typelist<typelist<A, B, C>>);
+static_assert(duplicate_free_typelist<typelist<A>>);
+static_assert(duplicate_free_typelist<typelist<>>);
+static_assert(!duplicate_free_typelist<typelist<A, B, A>>);
+static_assert(!duplicate_free_typelist<typelist<A, A>>);
+static_assert(!duplicate_free_typelist<A>);
 
-// unique concept
-static_assert(typelist_unique<typelist<A, B, C>>);
-static_assert(!typelist_unique<typelist<A, A>>);
-static_assert(!typelist_unique<A>);
+// subsumption of typelist_specialization
+
+// Return, by overload resolution alone, whether a typelist lists `A` and
+// whether it is duplicate-free. A call that satisfies both overloads of a pair
+// is ambiguous unless the concept subsumes `typelist_specialization`.
+constexpr bool lists_a(typelist_specialization auto)
+{
+  return false;
+}
+
+template<typename List>
+  requires listed_in<A, List>
+constexpr bool lists_a(List)
+{
+  return true;
+}
+
+constexpr bool duplicate_free(typelist_specialization auto)
+{
+  return false;
+}
+
+constexpr bool duplicate_free(duplicate_free_typelist auto)
+{
+  return true;
+}
+
+static_assert(lists_a(typelist<A, B>{}));
+static_assert(!lists_a(typelist<B>{}));
+static_assert(duplicate_free(typelist<A, B>{}));
+static_assert(!duplicate_free(typelist<A, A>{}));
 
 // append
 static_assert(std::is_same_v<typelist_append_t<typelist<>, A>, typelist<A>>);

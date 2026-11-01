@@ -18,23 +18,21 @@ struct typelist {
   static constexpr std::size_t size = sizeof...(Ts);
 };
 
-// Checks whether `T` is a specialization of `typelist`. For a cv-qualified
-// specialization, e.g. `typelist<> const`, `value` is `false`.
+namespace detail {
+
 template<typename T>
-struct is_typelist : std::false_type {};
+inline constexpr bool is_typelist = false;
 
 template<typename... Ts>
-struct is_typelist<typelist<Ts...>> : std::true_type {};
+inline constexpr bool is_typelist<typelist<Ts...>> = true;
 
-// Helper variable template for `is_typelist`.
-template<typename T>
-inline constexpr bool is_typelist_v = is_typelist<T>::value;
+} // namespace detail
 
-// The concept `some_typelist<T>` is satisfied if and only if `T` is a
-// specialization of `typelist`. A cv-qualified specialization, e.g.
+// The concept `typelist_specialization<T>` is satisfied if and only if `T` is
+// a specialization of `typelist`. A cv-qualified specialization, e.g.
 // `typelist<> const`, does not satisfy it.
 template<typename T>
-concept some_typelist = is_typelist_v<T>;
+concept typelist_specialization = detail::is_typelist<T>;
 
 // Provides the member constant `value` equal to the number of elements of the
 // typelist `T`. The program is ill-formed if `T` is not a typelist.
@@ -50,24 +48,22 @@ struct typelist_size<typelist<Ts...>> {
 template<typename List>
 inline constexpr std::size_t typelist_size_v = typelist_size<List>::value;
 
-// Checks whether `T` is an element of the typelist `List`. If `List` is not a
-// typelist, `value` is `false`.
-template<typename List, typename T>
-struct typelist_contains_t : std::false_type {};
+namespace detail {
 
-template<typename... Ts, typename T>
-struct typelist_contains_t<typelist<Ts...>, T>
-    : std::bool_constant<(... || std::same_as<T, Ts>)> {};
+template<typename T, typename List>
+inline constexpr bool is_listed_in = false;
 
-// Helper variable template for `typelist_contains_t`.
-template<typename List, typename T>
-inline constexpr bool typelist_contains_v = typelist_contains_t<List, T>::value;
+template<typename T, typename... Ts>
+inline constexpr bool is_listed_in<T, typelist<Ts...>> =
+    (... || std::same_as<T, Ts>);
 
-// The concept `typelist_contains<List, T>` is satisfied if and only if `T` is
-// an element of the typelist `List`. If `List` is not a typelist, it is not
-// satisfied.
-template<typename List, typename T>
-concept typelist_contains = typelist_contains_v<List, T>;
+} // namespace detail
+
+// The concept `listed_in<T, List>` is satisfied if and only if `List`
+// satisfies `typelist_specialization` and `T` is an element of `List`.
+template<typename T, typename List>
+concept listed_in =
+    typelist_specialization<List> && detail::is_listed_in<T, List>;
 
 // Provides the member typedef `type`, which is the element at zero-based index
 // `I` of the typelist `List`. The program is ill-formed if `List` is not a
@@ -100,26 +96,23 @@ template<typename List, typename T>
 inline constexpr std::size_t typelist_count_v =
     typelist_count_t<List, T>::value;
 
-// Checks whether no two elements of the typelist `List` are the same type,
-// which holds for an empty typelist. If `List` is not a typelist, `value` is
-// `false`.
+namespace detail {
+
 template<typename List>
-struct typelist_unique_t : std::false_type {};
+inline constexpr bool is_duplicate_free = false;
 
 template<typename... Ts>
-struct typelist_unique_t<typelist<Ts...>>
-    : std::bool_constant<(...
-                          && (typelist_count_v<typelist<Ts...>, Ts> == 1))> {};
+inline constexpr bool is_duplicate_free<typelist<Ts...>> =
+    (... && (typelist_count_v<typelist<Ts...>, Ts> == 1));
 
-// Helper variable template for `typelist_unique_t`.
-template<typename List>
-inline constexpr bool typelist_unique_v = typelist_unique_t<List>::value;
+} // namespace detail
 
-// The concept `typelist_unique<List>` is satisfied if and only if no two
-// elements of the typelist `List` are the same type, which holds for an empty
-// typelist. If `List` is not a typelist, it is not satisfied.
+// The concept `duplicate_free_typelist<List>` is satisfied if and only if
+// `List` satisfies `typelist_specialization` and no two elements of `List` are
+// the same type, which holds for an empty typelist.
 template<typename List>
-concept typelist_unique = typelist_unique_v<List>;
+concept duplicate_free_typelist =
+    typelist_specialization<List> && detail::is_duplicate_free<List>;
 
 // Provides the member typedef `type`, which is the typelist `List` with `T`
 // added as its last element, even if `T` is itself a typelist. The program is

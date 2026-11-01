@@ -47,7 +47,7 @@ consteval auto redeclared_parameter_message()
 // parameters that `make_schema` returns: the descriptors of the `N`
 // parameters in `parameters` and their types in the typelist `Types`, both in
 // declaration order.
-template<some_typelist Types, std::size_t N>
+template<typelist_specialization Types, std::size_t N>
 struct basic_schema {
   using types = Types;
 

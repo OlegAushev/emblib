@@ -108,12 +108,15 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `type_index`, `type_index_v`
 - [x] `emb/meta/typelist.hpp`
   - [x] `typelist`
-  - [x] `is_typelist`, `is_typelist_v`, `some_typelist`
+  - [x] `typelist_specialization` (`detail::is_typelist` без комментария: его
+    покрывает концепт)
   - [x] `typelist_size`, `typelist_size_v`
-  - [x] `typelist_contains_t`, `typelist_contains_v`, `typelist_contains`
+  - [x] `listed_in` (`detail::is_listed_in` без комментария: его покрывает
+    концепт)
   - [x] `typelist_at`, `typelist_at_t`
   - [x] `typelist_count_t`, `typelist_count_v`
-  - [x] `typelist_unique_t`, `typelist_unique_v`, `typelist_unique`
+  - [x] `duplicate_free_typelist` (`detail::is_duplicate_free` без
+    комментария: его покрывает концепт)
   - [x] `typelist_append`, `typelist_append_t`
   - [x] `typelist_concat`, `typelist_concat_t`
 - [x] `emb/meta/unit_symbol.hpp`

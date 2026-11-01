@@ -95,7 +95,7 @@ struct condition {
 };
 
 template<typename List, typename S>
-concept contains = typelist_contains<List, S>;
+concept contains = listed_in<S, List>;
 
 template<typename List, typename S, auto Lvl>
 concept valid_level = contains<List, S>
@@ -151,7 +151,7 @@ consteval bool groups_valid(typelist<Statuses...>)
       else {
         // in the list, not grouped itself, and wide enough to carry every
         // level the status can be raised to
-        return typelist_contains_v<List, G>
+        return listed_in<G, List>
             && !grouped<G>
             && (G::level_min <= S::level_min)
             && (S::level_max <= G::level_max);
@@ -213,13 +213,13 @@ consteval bool levels_within(typelist<Statuses...>)
 // One past the largest id in the list. Storage and the flag masks are sized
 // by it, so retiring a status leaves a hole instead of renumbering the ones
 // after it — a protocol carrying the flags stays put.
-template<some_typelist StatusList>
+template<typelist_specialization StatusList>
 inline constexpr std::size_t id_space_v = detail::id_space(StatusList{});
 
 // Calls f(Status{}) for every status in the list, in declaration order. The
 // vocabulary a status carries beyond its id and levels — names, texts,
 // whatever the product needs — stays in the product: it reads it here.
-template<some_typelist StatusList, typename F>
+template<typelist_specialization StatusList, typename F>
 constexpr void for_each(F&& f)
 {
   [&]<typename... Statuses>(typelist<Statuses...>) {
@@ -255,7 +255,7 @@ class registry {
   static_assert(detail::all_status_like<Level>(StatusList{}),
                 "every status must provide an id and level_min/level_max of "
                 "type Level");
-  static_assert(typelist_unique_v<StatusList>,
+  static_assert(duplicate_free_typelist<StatusList>,
                 "status list must not contain duplicate statuses");
   static_assert(detail::valid_level_ranges(StatusList{}),
                 "level_min must be <= level_max");
@@ -753,7 +753,7 @@ class registry_mirror {
   static_assert(detail::all_status_like<Level>(StatusList{}),
                 "every status must provide an id and level_min/level_max of "
                 "type Level");
-  static_assert(typelist_unique_v<StatusList>,
+  static_assert(duplicate_free_typelist<StatusList>,
                 "status list must not contain duplicate statuses");
   static_assert(detail::all_empty(StatusList{}),
                 "statuses must be stateless tag types");

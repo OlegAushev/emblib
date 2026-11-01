@@ -124,8 +124,9 @@ concept channel_for =
 namespace detail {
 
 template<typename Machine>
-concept publishes_states = requires { typename Machine::state_list; }
-                        && some_typelist<typename Machine::state_list>;
+concept publishes_states = requires {
+  typename Machine::state_list;
+} && typelist_specialization<typename Machine::state_list>;
 
 template<typename Channel, typename StateList, typename Context>
 inline constexpr bool controls_every_state = false;
@@ -213,9 +214,7 @@ constexpr void deliver_each(typelist<Channels...>, Context& ctx)
 // channel's events must therefore bear repeating; a one-shot event is
 // dispatched by whoever raises it, not carried by a channel.
 template<typename ChannelList, typename Context>
-  requires some_typelist<ChannelList>
-        && (ChannelList::size > 0)
-        && typelist_unique<ChannelList>
+  requires duplicate_free_typelist<ChannelList> && (ChannelList::size > 0)
 constexpr void deliver_all(Context& ctx)
 {
   detail::deliver_each(ChannelList{}, ctx);
