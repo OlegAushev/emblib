@@ -137,16 +137,16 @@ emblib не попал. Такие файлы помечены «песочни�
   - [ ] `EMB_PANIC` (и шаблон `emb::panic<Message>`) — вручную
     2026-10-23
   - [ ] `EMB_PRE` (вместо `ASSUME`) — вручную 2026-10-24
-- [x] `emb/settings/image.hpp`
-  - [x] `error`
-  - [x] `image`
-- [x] `emb/settings/param.hpp`
+- [x] `emb/settings/declaration.hpp` (бывший `emb/settings/param.hpp`)
   - [x] `apply_policy` (и `enum_info_of(apply_policy)`, вручную 2026-10-22)
   - [x] `descriptor`
   - [x] `detail::lowest`, `detail::highest`, `detail::identify`,
     `detail::labelled_between` (вручную 2026-10-22)
   - [x] `options` (и поля `label`, `unit`), `declaration` (и поля `label`,
-    `unit`), `param`
+    `unit`), `declare_parameter`
+- [x] `emb/settings/image.hpp`
+  - [x] `error`
+  - [x] `image`
 - [x] `emb/settings/record.hpp`
   - [x] `record_format` (с описанием формата записи)
   - [x] `record_header_size`, `record_cell_size`, `record_footer_size`

@@ -33,42 +33,44 @@ enum_info_of(drive_mode)
 }
 
 inline constexpr auto drive_phase_swap =
-    settings::param("drive.phase_swap",
-                    false,
-                    {.label = {"Phase swap", "Перестановка фаз"},
-                     .apply = settings::apply_policy::on_command});
+    settings::declare_parameter("drive.phase_swap",
+                                false,
+                                {.label = {"Phase swap", "Перестановка фаз"},
+                                 .apply = settings::apply_policy::on_command});
 inline constexpr auto motor_p =
-    settings::param("motor.p",
-                    std::int32_t{11},
-                    {.label = {"Pole pairs", "Число пар полюсов"},
-                     .min = std::int32_t{1},
-                     .max = std::int32_t{64}});
+    settings::declare_parameter("motor.p",
+                                std::int32_t{11},
+                                {.label = {"Pole pairs", "Число пар полюсов"},
+                                 .min = std::int32_t{1},
+                                 .max = std::int32_t{64}});
 inline constexpr auto drive_freq =
-    settings::param("drive.freq",
-                    emb::units::hz_f32{10000.0f},
-                    {.label = {"Frequency", "Частота"},
-                     .min = emb::units::hz_f32{1000.0f},
-                     .max = emb::units::hz_f32{20000.0f},
-                     .apply = settings::apply_policy::on_command});
-inline constexpr auto prod_serial = settings::param(
+    settings::declare_parameter("drive.freq",
+                                emb::units::hz_f32{10000.0f},
+                                {.label = {"Frequency", "Частота"},
+                                 .min = emb::units::hz_f32{1000.0f},
+                                 .max = emb::units::hz_f32{20000.0f},
+                                 .apply = settings::apply_policy::on_command});
+inline constexpr auto prod_serial = settings::declare_parameter(
     "prod.serial",
     std::uint32_t{0},
     {.label = {"Serial number", "Серийный номер"}, .writable = false});
 inline constexpr auto prod_secret =
-    settings::param("prod.secret", std::uint32_t{0}, {.expose = false});
+    settings::declare_parameter("prod.secret",
+                                std::uint32_t{0},
+                                {.expose = false});
 // A slope held as rpm, whose unit replaces the symbol of its type.
-inline constexpr auto drive_slope =
-    settings::param("drive.slope",
-                    emb::units::rpm_f32{100.0f},
-                    {.label = {"Speed slope", "Темп изменения скорости"},
-                     .unit = {"rpm/s", "об/(мин·с)"},
-                     .apply = settings::apply_policy::on_command});
+inline constexpr auto drive_slope = settings::declare_parameter(
+    "drive.slope",
+    emb::units::rpm_f32{100.0f},
+    {.label = {"Speed slope", "Темп изменения скорости"},
+     .unit = {"rpm/s", "об/(мин·с)"},
+     .apply = settings::apply_policy::on_command});
 // A parameter of an enumeration, which names its values.
 inline constexpr auto drive_mode_param =
-    settings::param("drive.mode",
-                    drive_mode::idle,
-                    {.label = {"Drive mode", "Режим привода"},
-                     .apply = settings::apply_policy::on_command});
+    settings::declare_parameter("drive.mode",
+                                drive_mode::idle,
+                                {.label = {"Drive mode", "Режим привода"},
+                                 .apply = settings::apply_policy::on_command});
 
 inline constexpr auto schema = settings::make_schema(drive_phase_swap,
                                                      motor_p,

@@ -12,49 +12,50 @@ namespace {
 using namespace emb;
 using namespace emb::settings;
 
-inline constexpr auto drive_runout = param("drive.runout",
-                                           std::uint32_t{100},
-                                           {.label = {"Runout", "Выбег"},
-                                            .max = std::uint32_t{1000},
-                                            .apply = apply_policy::on_command});
+inline constexpr auto drive_runout =
+    declare_parameter("drive.runout",
+                      std::uint32_t{100},
+                      {.label = {"Runout", "Выбег"},
+                       .max = std::uint32_t{1000},
+                       .apply = apply_policy::on_command});
 inline constexpr auto drive_phase_swap =
-    param("drive.phase_swap",
-          false,
-          {.label = {"Phase swap", "Перестановка фаз"},
-           .apply = apply_policy::on_command});
+    declare_parameter("drive.phase_swap",
+                      false,
+                      {.label = {"Phase swap", "Перестановка фаз"},
+                       .apply = apply_policy::on_command});
 inline constexpr auto motor_p =
-    param("motor.p",
-          std::int32_t{11},
-          {.label = {"Pole pairs", "Число пар полюсов"},
-           .min = std::int32_t{1},
-           .max = std::int32_t{64},
-           .apply = apply_policy::on_restart});
-inline constexpr auto prod_serial =
-    param("prod.serial",
-          std::uint32_t{0},
-          {.label = {"Serial number", "Серийный номер"}, .writable = false});
+    declare_parameter("motor.p",
+                      std::int32_t{11},
+                      {.label = {"Pole pairs", "Число пар полюсов"},
+                       .min = std::int32_t{1},
+                       .max = std::int32_t{64},
+                       .apply = apply_policy::on_restart});
+inline constexpr auto prod_serial = declare_parameter(
+    "prod.serial",
+    std::uint32_t{0},
+    {.label = {"Serial number", "Серийный номер"}, .writable = false});
 inline constexpr auto motor_R =
-    param("motor.R",
-          0.0014f,
-          {.label = {"Stator resistance", "Сопротивление статора"},
-           .min = 0.0f,
-           .max = 10.0f,
-           .apply = apply_policy::on_command});
+    declare_parameter("motor.R",
+                      0.0014f,
+                      {.label = {"Stator resistance", "Сопротивление статора"},
+                       .min = 0.0f,
+                       .max = 10.0f,
+                       .apply = apply_policy::on_command});
 inline constexpr auto limit_low =
-    param("limit.low",
-          std::uint32_t{10},
-          {.label = {"Low limit", "Нижний предел"},
-           .apply = apply_policy::on_command});
+    declare_parameter("limit.low",
+                      std::uint32_t{10},
+                      {.label = {"Low limit", "Нижний предел"},
+                       .apply = apply_policy::on_command});
 inline constexpr auto limit_high =
-    param("limit.high",
-          std::uint32_t{20},
-          {.label = {"High limit", "Верхний предел"},
-           .apply = apply_policy::on_command});
+    declare_parameter("limit.high",
+                      std::uint32_t{20},
+                      {.label = {"High limit", "Верхний предел"},
+                       .apply = apply_policy::on_command});
 inline constexpr auto limit_top =
-    param("limit.top",
-          std::uint32_t{30},
-          {.label = {"Top limit", "Наибольший предел"},
-           .apply = apply_policy::on_command});
+    declare_parameter("limit.top",
+                      std::uint32_t{30},
+                      {.label = {"Top limit", "Наибольший предел"},
+                       .apply = apply_policy::on_command});
 
 // motor.R, applied on command, follows two parameters applied after a
 // restart, one of them read-only, so that the order of the cells hides

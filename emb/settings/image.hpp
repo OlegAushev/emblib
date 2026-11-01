@@ -1,6 +1,6 @@
 #pragma once
 
-#include <emb/settings/param.hpp>
+#include <emb/settings/declaration.hpp>
 #include <emb/settings/schema.hpp>
 
 #include <array>
@@ -60,7 +60,7 @@ public:
   // Returns the value of the parameter that `Decl` declares, of the type
   // `parameter<Schema, Decl>::type`.
   template<auto& Decl>
-    requires some_declaration<decltype(Decl)>
+    requires parameter_declaration<decltype(Decl)>
   constexpr typename parameter<Schema, Decl>::type get() const
   {
     using param_type = parameter<Schema, Decl>;
@@ -73,7 +73,7 @@ public:
   // Returns `error::out_of_range` if `v` is outside the bounds of the
   // parameter.
   template<auto& Decl>
-    requires some_declaration<decltype(Decl)>
+    requires parameter_declaration<decltype(Decl)>
   constexpr std::expected<void, error>
   set(typename parameter<Schema, Decl>::type const& v)
   {
@@ -83,7 +83,7 @@ public:
 
   // Writes the default of the parameter that `Decl` declares, as `set` does.
   template<auto& Decl>
-    requires some_declaration<decltype(Decl)>
+    requires parameter_declaration<decltype(Decl)>
   constexpr std::expected<void, error> restore_default()
   {
     using param_type = parameter<Schema, Decl>;

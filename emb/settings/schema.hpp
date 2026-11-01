@@ -3,7 +3,7 @@
 #include <emb/meta/fixed_string.hpp>
 #include <emb/meta/typelist.hpp>
 #include <emb/panic.hpp>
-#include <emb/settings/param.hpp>
+#include <emb/settings/declaration.hpp>
 
 #include <algorithm>
 #include <array>
@@ -92,11 +92,13 @@ struct basic_schema {
 // duration:
 //
 //   inline constexpr auto phase_swap =
-//       param("drive.phase_swap", false, {.label = {"Phase swap", "…"}});
-//   inline constexpr auto pole_pairs =
-//       param("motor.pole_pairs",
-//             std::int32_t{11},
-//             {.label = {"Pole pairs", "…"}, .min = std::int32_t{1}});
+//       declare_parameter("drive.phase_swap",
+//                         false,
+//                         {.label = {"Phase swap", "…"}});
+//   inline constexpr auto pole_pairs = declare_parameter(
+//       "motor.pole_pairs",
+//       std::int32_t{11},
+//       {.label = {"Pole pairs", "…"}, .min = std::int32_t{1}});
 //   inline constexpr auto schema = make_schema(phase_swap, pole_pairs);
 //
 // A parameter that is reached only by index, e.g. by a transport, may be
@@ -145,8 +147,8 @@ template<auto& Schema>
 using schema_t = std::remove_cvref_t<decltype(Schema)>;
 
 // Type of the parameter at index `I` of the schema `Schema`, i.e. the type of
-// the default passed to `param`, e.g. `units::rpm_f32` rather than its scalar
-// `float`. The program is ill-formed if `I` is not less than
+// the default passed to `declare_parameter`, e.g. `units::rpm_f32` rather than
+// its scalar `float`. The program is ill-formed if `I` is not less than
 // `schema_t<Schema>::count`.
 template<auto& Schema, std::size_t I>
 using type_at = typelist_at_t<typename schema_t<Schema>::types, I>;
@@ -166,7 +168,7 @@ using type_at = typelist_at_t<typename schema_t<Schema>::types, I>;
 // alias would mangle as its expansion, which spells out the types of all
 // parameters of `Schema`.
 template<auto& Schema, auto& Decl>
-  requires some_declaration<decltype(Decl)>
+  requires parameter_declaration<decltype(Decl)>
 struct parameter {
   static constexpr auto name = detail::name_of<Decl>;
 

@@ -527,7 +527,7 @@ public:
   static constexpr od_catalog catalog{"settings parameter", names, exposed};
 
   template<auto& Decl, auto Actual = nullptr>
-    requires settings::some_declaration<decltype(Decl)>
+    requires settings::parameter_declaration<decltype(Decl)>
   static constexpr param_binding<Decl, Actual> param{};
 
   static constexpr od_write_result apply_all(context_type& ctx)

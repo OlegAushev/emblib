@@ -93,23 +93,23 @@ Declared as:
 
 ```cpp
 inline constexpr auto phase_swap =
-  param("drive.phase_swap", false,
-        {.label = {"Phase swap", "Перестановка фаз"},
-         .apply = apply_policy::on_command});
-inline constexpr auto runout_speed =
-  param("drive.runout_speed", rpm{100.0f},           // unit "rpm" from the type
-        {.label = {"Runout speed", "Скорость выбега"},
-         .min = rpm{0.0f}, .max = rpm{5000.0f},
-         .apply = apply_policy::on_command});
-inline constexpr auto stopping_torque =
-  param("drive.stopping_torque", pu{0.05f},          // clamped: own bounds
-        {.label = {"Stopping torque", "Момент останова"},
-         .apply = apply_policy::on_command});
-inline constexpr auto Ld =
-  param("motor.Ld", 30.0e-6f,                        // a float names no unit
-        {.label = {"d-axis inductance", "Индуктивность по оси d"},
-         .unit = {"H", "Гн"},
-         .apply = apply_policy::on_command});
+  declare_parameter("drive.phase_swap", false,
+                    {.label = {"Phase swap", "Перестановка фаз"},
+                     .apply = apply_policy::on_command});
+inline constexpr auto runout_speed =     // unit "rpm" from the type
+  declare_parameter("drive.runout_speed", rpm{100.0f},
+                    {.label = {"Runout speed", "Скорость выбега"},
+                     .min = rpm{0.0f}, .max = rpm{5000.0f},
+                     .apply = apply_policy::on_command});
+inline constexpr auto stopping_torque =  // clamped: own bounds
+  declare_parameter("drive.stopping_torque", pu{0.05f},
+                    {.label = {"Stopping torque", "Момент останова"},
+                     .apply = apply_policy::on_command});
+inline constexpr auto Ld =               // a float names no unit
+  declare_parameter("motor.Ld", 30.0e-6f,
+                    {.label = {"d-axis inductance", "Индуктивность по оси d"},
+                     .unit = {"H", "Гн"},
+                     .apply = apply_policy::on_command});
 
 inline constexpr auto schema = settings::make_schema(
     phase_swap, runout_speed, stopping_torque, Ld);
@@ -123,14 +123,14 @@ compile. The name remains what a stored value is matched by (§5): the
 variable can be renamed and the value stays, the name cannot. A parameter
 reached by index only may be declared in the `make_schema` call.
 
-The type comes from the default, so a literal needs its suffix — `param("x",
-0.05)` does not compile. Per-parameter checks (default within bounds, min
-below max, a label for an exposed parameter, a unit that neither repeats the
-type's symbol nor is given to a `bool` or an enumeration and has a symbol in
-each language, and every value of an enumeration between the bounds
-labelled) live in `param()` so that a bad
-declaration is reported on its own line; cross-parameter ones (duplicate
-name, identifier collision) live in `make_schema`.
+The type comes from the default, so a literal needs its suffix —
+`declare_parameter("x", 0.05)` does not compile. Per-parameter checks
+(default within bounds, min below max, a label for an exposed parameter, a
+unit that neither repeats the type's symbol nor is given to a `bool` or an
+enumeration and has a symbol in each language, and every value of an
+enumeration between the bounds labelled) live in `declare_parameter()` so
+that a bad declaration is reported on its own line; cross-parameter ones
+(duplicate name, identifier collision) live in `make_schema`.
 
 The label and the unit, each in English and in Russian (`emb::i18n::text`),
 are for people: a transport shows them. A parameter `expose`d to a transport
@@ -147,16 +147,16 @@ descriptors in the image, and the texts stay out of it.
 
 A parameter may be an enumeration: a scoped one that labels its values for
 people (`emb::enum_with_info`, `emb/meta/enum_info.hpp`), e.g.
-`param("model.pwm_mode", pmsm::pwm_mode::svpwm, {...})`. It is stored and
-transported as its carrier, `emb::enum_carrier32_t`, a `uint32` or an
-`int32` as its underlying type is unsigned or signed, so its scalar kind and
-identifier are the carrier's: declared in place of a `uint32` of the same
-name, it keeps the value stored. Its bounds default to the first and the
-last value labelled. `param()` rejects bounds between which a value is not
-labelled, since a write is checked against the bounds only, and any unit:
-the enumeration names the values instead. The info of its enumerators stays
-out of the image; a cell becomes the enumeration only within the bounds,
-which a load checks first.
+`declare_parameter("model.pwm_mode", pmsm::pwm_mode::svpwm, {...})`. It is
+stored and transported as its carrier, `emb::enum_carrier32_t`, a `uint32`
+or an `int32` as its underlying type is unsigned or signed, so its scalar
+kind and identifier are the carrier's: declared in place of a `uint32` of
+the same name, it keeps the value stored. Its bounds default to the first
+and the last value labelled. `declare_parameter()` rejects bounds between
+which a value is not labelled, since a write is checked against the bounds
+only, and any unit: the enumeration names the values instead. The info of
+its enumerators stays out of the image; a cell becomes the enumeration only
+within the bounds, which a load checks first.
 
 No offset and no size: every value occupies one four-byte cell, so a
 parameter's index *is* its position in the RAM image, and the image is a
@@ -631,8 +631,8 @@ external/emblib/emb/
   nvm/storage.hpp              [done] block storage concept + is_erased
   settings/value.hpp           [done] scalar_kind, scalar_variant, cell,
                                       conversions
-  settings/param.hpp           [done] param(): def/min/max, writable,
-                                      apply_policy, expose
+  settings/declaration.hpp     [done] declare_parameter(): def/min/max,
+                                      writable, apply_policy, expose
   settings/schema.hpp          [done] make_schema, `parameter` by
                                       declaration, lookup by name and by id,
                                       descriptor table, uniqueness checks
@@ -689,7 +689,7 @@ firmware behaviourally unchanged.
 1. `meta/fixed_string.hpp` — **done**
 2. `nvm/storage.hpp` + mock backend — **done**
 3. `settings/value.hpp` — **done**
-4. `settings/param.hpp` + `settings/schema.hpp` — **done**
+4. `settings/declaration.hpp` + `settings/schema.hpp` — **done**
 5. `settings/image.hpp` + `settings/pending.hpp` — **done**; the second
    has since gone: on 2026-10-05 the section replaced its masks with the
    values applied (§4, §10)
@@ -1173,8 +1173,8 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   are a class and a variable template, which cannot be overloaded on the
   kind of their parameter, and a key type taking either would keep two
   spellings for good. A declaration is taken as `auto& Decl` constrained by
-  `some_declaration<decltype(Decl)>`: Clang rejects the shorter
-  `some_declaration auto& Decl`.
+  `parameter_declaration<decltype(Decl)>`: Clang rejects the shorter
+  `parameter_declaration auto& Decl`.
 
 - **Application is a transaction on command** (2026-10-16). `apply`,
   `apply_group` and `apply_all` replace `take` and the periodic task that
@@ -1328,6 +1328,26 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   `wraps_parameter_scalar`, `parameter_enum` and `parameter_type`, as the
   dictionary has `od_scalar`, `wraps_od_scalar` and `od_enumeration`.
   Records keep matching: no record holds these names.
+- **A parameter is declared by `declare_parameter`, and the concept of a
+  declaration drops `some_`** (2026-11-01). The factory was `param`, an
+  abbreviation, and a noun where the library's other factories,
+  `make_schema`, `make_dictionary` and `make_description`, are verbs; it
+  also read as a short form of `parameter`, the class template of the facts
+  a schema holds of a parameter. `declare_parameter` says what a call does,
+  in the words the comments already used, and its header is
+  `declaration.hpp`, after its main type, as `schema.hpp`, `image.hpp` and
+  `section.hpp` are named. `some_declaration` tests for a specialization of
+  `declaration` rather than for an interface with members, so it is
+  `parameter_declaration`, beside `parameter_type`, `parameter_scalar` and
+  `parameter_enum`; what `declare_parameter` returns satisfies it. The
+  dictionary's binding `od_settings<...>::param` is another entity and keeps
+  its name. Rejected: `declare`, a verb too general for a call that the
+  inverter and the tests make unqualified; `make_declaration`, which names
+  the type returned rather than the parameter declared; `make_parameter`,
+  which would promise a `parameter`; and the name `parameter` for the
+  declaration, which would leave its concept no name in that series and
+  rename what this document calls a declaration. Records keep matching: no
+  record holds these names.
 - **A command is a write-only `uint32`** (2026-10-19). The dictionary had a
   type code of its own for commands, `exec`, which CiA 301 does not know,
   and which travelled as a `uint32` anyway; 1010h and 1011h, which now take
@@ -1447,10 +1467,10 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   of the signedness of its underlying type (`emb::enum_carrier32_t`), so its
   kind and identifier are the carrier's, and a value stored under a `uint32`
   of the same name still matches. Its bounds default to the first and the
-  last value labelled; `param()` rejects bounds between which a value has no
-  label, as the image checks a write against the bounds only, and a unit,
-  which the labels make needless. `from_variant` gives nothing for a value
-  outside the underlying type rather than one cut to its width.
+  last value labelled; `declare_parameter()` rejects bounds between which a
+  value has no label, as the image checks a write against the bounds only,
+  and a unit, which the labels make needless. `from_variant` gives nothing
+  for a value outside the underlying type rather than one cut to its width.
   `apply_policy` labels its values, for a transport to show. Rejected: a
   check of every write against the labels in the image, which would put the
   values of each enumeration in the image for what the bounds already
@@ -1533,13 +1553,13 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   "motor.pole_pairs", and a unit typed by hand in the table of the dictionary,
   which nothing checked against the parameter. `options` takes a `title`, in
   English and in Russian (`emb::i18n`, taken from the inverter's faults into
-  emblib), and a `unit`; `param()` rejects an exposed parameter without a
-  title in each language, a unit that repeats the symbol of the type and a
-  unit given to a `bool`. The unit is the symbol of the type unless `.unit`
-  replaces it. Both stay in the declaration, outside the descriptor, so that
-  the image, which keeps the descriptors, does not carry them; renaming a
-  title therefore changes no identifier. Rejected: the title in the
-  descriptor, which would put every title in flash.
+  emblib), and a `unit`; `declare_parameter()` rejects an exposed parameter
+  without a title in each language, a unit that repeats the symbol of the
+  type and a unit given to a `bool`. The unit is the symbol of the type
+  unless `.unit` replaces it. Both stay in the declaration, outside the
+  descriptor, so that the image, which keeps the descriptors, does not carry
+  them; renaming a title therefore changes no identifier. Rejected: the
+  title in the descriptor, which would put every title in flash.
 - **A unit has a symbol in each language** (2026-10-30). The label of a
   parameter came in English and in Russian, its unit in English alone, so
   a host would have shown "Напряжение DC, V". Russian writes the units by
@@ -1547,11 +1567,11 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   some symbols are English abbreviations, "rpm", which Russian writes
   "об/мин", and "pu", "о. е.". `options::unit` and `declaration::unit` are
   `emb::i18n::text`, as the symbol of each unit tag and of a per-unit
-  value is, and `param()` rejects a unit, given or the type's, without a
-  symbol in each language. The inverter declares the 13 parameters whose
-  `.unit` only named the symbol of a tag, "V", "A", "°C" and "Ω", in the
-  types of those units, so the translation of each is written in its tag;
-  `.unit` stays for the units no tag names, "ms", "H", "Wb", "A/A",
+  value is, and `declare_parameter()` rejects a unit, given or the type's,
+  without a symbol in each language. The inverter declares the 13 parameters
+  whose `.unit` only named the symbol of a tag, "V", "A", "°C" and "Ω", in
+  the types of those units, so the translation of each is written in its
+  tag; `.unit` stays for the units no tag names, "ms", "H", "Wb", "A/A",
   "pu/s" and "rpm/s". Rejected: a table from the English symbol to the
   Russian one, in emblib or in the host, which an application's own unit
   such as "rpm/s" would not be in.

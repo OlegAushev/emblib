@@ -4,8 +4,8 @@
 #include <emb/meta/unroll.hpp>
 #include <emb/nvm/storage.hpp>
 #include <emb/panic.hpp>
+#include <emb/settings/declaration.hpp>
 #include <emb/settings/image.hpp>
-#include <emb/settings/param.hpp>
 #include <emb/settings/rule.hpp>
 #include <emb/settings/schema.hpp>
 #include <emb/settings/store.hpp>
@@ -418,7 +418,7 @@ public:
   // Returns the value requested of the parameter that `Decl` declares, as
   // `image::get` does.
   template<auto& Decl>
-    requires some_declaration<decltype(Decl)>
+    requires parameter_declaration<decltype(Decl)>
   constexpr typename parameter<Schema, Decl>::type get() const
   {
     return requested_.template get<Decl>();
@@ -427,7 +427,7 @@ public:
   // Writes `v` to the parameter that `Decl` declares whether or not it is
   // `writable`, as `image::set` does.
   template<auto& Decl>
-    requires some_declaration<decltype(Decl)>
+    requires parameter_declaration<decltype(Decl)>
   constexpr std::expected<void, error>
   set(typename parameter<Schema, Decl>::type const& v)
   {

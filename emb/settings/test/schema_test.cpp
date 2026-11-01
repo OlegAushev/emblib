@@ -18,34 +18,32 @@ using rpm = units::rpm_f32;
 using pu = unsigned_pu_f32;
 
 inline constexpr auto drive_phase_swap =
-    param("drive.phase_swap",
-          false,
-          {.label = {"Phase swap", "Перестановка фаз"}});
+    declare_parameter("drive.phase_swap",
+                      false,
+                      {.label = {"Phase swap", "Перестановка фаз"}});
 inline constexpr auto drive_runout_speed =
-    param("drive.runout_speed",
-          rpm{100.0f},
-          {.label = {"Runout speed", "Скорость выбега"},
-           .min = rpm{0.0f},
-           .max = rpm{5000.0f},
-           .apply = apply_policy::on_command});
+    declare_parameter("drive.runout_speed",
+                      rpm{100.0f},
+                      {.label = {"Runout speed", "Скорость выбега"},
+                       .min = rpm{0.0f},
+                       .max = rpm{5000.0f},
+                       .apply = apply_policy::on_command});
 inline constexpr auto motor_p =
-    param("motor.p",
-          std::int32_t{11},
-          {.label = {"Pole pairs", "Число пар полюсов"},
-           .min = std::int32_t{1},
-           .max = std::int32_t{64}});
+    declare_parameter("motor.p",
+                      std::int32_t{11},
+                      {.label = {"Pole pairs", "Число пар полюсов"},
+                       .min = std::int32_t{1},
+                       .max = std::int32_t{64}});
 // A clamped brings its own bounds: nothing to spell out.
 inline constexpr auto drive_stopping_torque =
-    param("drive.stopping_torque",
-          pu{0.05f},
-          {.label = {"Stopping torque", "Момент остановки"},
-           .apply = apply_policy::on_command});
-inline constexpr auto prot_watchdog_timeout =
-    param("prot.watchdog_timeout",
-          std::uint32_t{1000},
-          {.max = std::uint32_t{60000},
-           .writable = false,
-           .expose = false});
+    declare_parameter("drive.stopping_torque",
+                      pu{0.05f},
+                      {.label = {"Stopping torque", "Момент остановки"},
+                       .apply = apply_policy::on_command});
+inline constexpr auto prot_watchdog_timeout = declare_parameter(
+    "prot.watchdog_timeout",
+    std::uint32_t{1000},
+    {.max = std::uint32_t{60000}, .writable = false, .expose = false});
 
 inline constexpr auto schema = make_schema(drive_phase_swap,
                                            drive_runout_speed,
@@ -119,9 +117,9 @@ consteval bool test_ids_are_unique_and_sorted()
 // The same name with a different type is a different parameter as far as
 // stored data is concerned.
 inline constexpr auto as_float =
-    make_schema(param("x", 1.0f, {.label = {"X", "X"}}));
+    make_schema(declare_parameter("x", 1.0f, {.label = {"X", "X"}}));
 inline constexpr auto as_int =
-    make_schema(param("x", std::int32_t{1}, {.label = {"X", "X"}}));
+    make_schema(declare_parameter("x", std::int32_t{1}, {.label = {"X", "X"}}));
 static_assert(as_float.parameters[0].id != as_int.parameters[0].id);
 
 consteval bool test_find_by_id()
@@ -163,15 +161,15 @@ static_assert(drive_phase_swap.unit.empty());
 // A unit replaces the symbol of a type that names none, or one that does not
 // describe the parameter.
 inline constexpr auto dc_undervoltage =
-    param("protection.uvp_dc",
-          35.0f,
-          {.label = {"DC undervoltage", "Пониженное напряжение"},
-           .unit = {"V", "В"}});
+    declare_parameter("protection.uvp_dc",
+                      35.0f,
+                      {.label = {"DC undervoltage", "Пониженное напряжение"},
+                       .unit = {"V", "В"}});
 inline constexpr auto speed_slope =
-    param("model.speed_slope",
-          rpm{1000.0f},
-          {.label = {"Speed slope", "Скорость нарастания скорости"},
-           .unit = {"rpm/s", "об/(мин·с)"}});
+    declare_parameter("model.speed_slope",
+                      rpm{1000.0f},
+                      {.label = {"Speed slope", "Скорость нарастания скорости"},
+                       .unit = {"rpm/s", "об/(мин·с)"}});
 static_assert(dc_undervoltage.unit == i18n::text{"V", "В"});
 static_assert(speed_slope.unit == i18n::text{"rpm/s", "об/(мин·с)"});
 
@@ -180,11 +178,11 @@ static_assert(prot_watchdog_timeout.label.en.empty());
 
 // The label and the unit stay out of the descriptor, which the schema keeps:
 // declarations that differ in them alone describe the same parameter.
-inline constexpr auto renamed_for_people =
-    param("drive.stopping_torque",
-          pu{0.05f},
-          {.label = {"Torque while stopping", "Момент при остановке"},
-           .apply = apply_policy::on_command});
+inline constexpr auto renamed_for_people = declare_parameter(
+    "drive.stopping_torque",
+    pu{0.05f},
+    {.label = {"Torque while stopping", "Момент при остановке"},
+     .apply = apply_policy::on_command});
 static_assert(renamed_for_people.desc == drive_stopping_torque.desc);
 
 // -- Enumerations --
@@ -215,18 +213,18 @@ consteval std::span<enumerator_info<gear> const> enum_info_of(gear)
   return info;
 }
 
-inline constexpr auto model_pwm_mode = param(
+inline constexpr auto model_pwm_mode = declare_parameter(
     "model.pwm_mode",
     pwm::svpwm,
     {.label = {"PWM mode", "Режим ШИМ"}, .apply = apply_policy::on_command});
 
 // The same parameter declared as the uint32 it is stored as.
 inline constexpr auto model_pwm_number =
-    param("model.pwm_mode",
-          std::uint32_t{0},
-          {.label = {"PWM mode", "Режим ШИМ"},
-           .max = std::uint32_t{2},
-           .apply = apply_policy::on_command});
+    declare_parameter("model.pwm_mode",
+                      std::uint32_t{0},
+                      {.label = {"PWM mode", "Режим ШИМ"},
+                       .max = std::uint32_t{2},
+                       .apply = apply_policy::on_command});
 
 // A parameter of an enumeration is stored as its carrier, and its bounds are
 // the first and the last value labelled: the descriptor, and so the
@@ -243,14 +241,14 @@ static_assert(model_pwm_mode.unit.empty());
 
 // Bounds narrower than the values labelled, a value between them each, or
 // past a gap in the values labelled.
-inline constexpr auto narrowed =
-    param("model.pwm_discontinuous",
-          pwm::dpwm0,
-          {.label = {"Discontinuous PWM", "Разрывная ШИМ"}, .min = pwm::dpwm0});
+inline constexpr auto narrowed = declare_parameter(
+    "model.pwm_discontinuous",
+    pwm::dpwm0,
+    {.label = {"Discontinuous PWM", "Разрывная ШИМ"}, .min = pwm::dpwm0});
 inline constexpr auto drive_gear =
-    param("drive.gear",
-          gear::park,
-          {.label = {"Gear", "Передача"}, .max = gear::drive});
+    declare_parameter("drive.gear",
+                      gear::park,
+                      {.label = {"Gear", "Передача"}, .max = gear::drive});
 static_assert(narrowed.desc.min == to_cell(std::uint32_t{1}));
 static_assert(narrowed.desc.max == to_cell(std::uint32_t{2}));
 static_assert(drive_gear.desc.max == to_cell(std::uint32_t{1}));

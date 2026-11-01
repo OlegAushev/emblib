@@ -17,47 +17,47 @@ using rpm = units::rpm_f32;
 inline constexpr std::uint32_t magic = 0x53544553u; // "SETS"
 
 inline constexpr auto motor_p =
-    param("motor.p",
-          std::int32_t{11},
-          {.label = {"Pole pairs", "Число пар полюсов"},
-           .min = std::int32_t{1},
-           .max = std::int32_t{64}});
+    declare_parameter("motor.p",
+                      std::int32_t{11},
+                      {.label = {"Pole pairs", "Число пар полюсов"},
+                       .min = std::int32_t{1},
+                       .max = std::int32_t{64}});
 inline constexpr auto motor_R =
-    param("motor.R",
-          0.0014f,
-          {.label = {"Stator resistance", "Сопротивление статора"},
-           .min = 0.0f,
-           .max = 1.0f});
+    declare_parameter("motor.R",
+                      0.0014f,
+                      {.label = {"Stator resistance", "Сопротивление статора"},
+                       .min = 0.0f,
+                       .max = 1.0f});
 inline constexpr auto drive_phase_swap =
-    param("drive.phase_swap",
-          false,
-          {.label = {"Phase swap", "Перестановка фаз"}});
+    declare_parameter("drive.phase_swap",
+                      false,
+                      {.label = {"Phase swap", "Перестановка фаз"}});
 inline constexpr auto drive_runout_speed =
-    param("drive.runout_speed",
-          rpm{100.0f},
-          {.label = {"Runout speed", "Скорость выбега"},
-           .min = rpm{0.0f},
-           .max = rpm{5000.0f}});
-inline constexpr auto hall_enabled =
-    param("hall.enabled",
-          true,
-          {.label = {"Hall sensor enabled", "Датчик Холла включён"}});
-inline constexpr auto hall_poll_num =
-    param("hall.poll_num",
-          std::int32_t{4},
-          {.label = {"Hall sensor polls", "Число опросов датчика Холла"}});
+    declare_parameter("drive.runout_speed",
+                      rpm{100.0f},
+                      {.label = {"Runout speed", "Скорость выбега"},
+                       .min = rpm{0.0f},
+                       .max = rpm{5000.0f}});
+inline constexpr auto hall_enabled = declare_parameter(
+    "hall.enabled",
+    true,
+    {.label = {"Hall sensor enabled", "Датчик Холла включён"}});
+inline constexpr auto hall_poll_num = declare_parameter(
+    "hall.poll_num",
+    std::int32_t{4},
+    {.label = {"Hall sensor polls", "Число опросов датчика Холла"}});
 
 inline constexpr auto schema =
     make_schema(motor_p, motor_R, drive_phase_swap, drive_runout_speed);
 
 // A later firmware: one parameter added, one retyped, one dropped.
-inline constexpr auto next_schema =
-    make_schema(motor_p,
-                motor_R,
-                param("drive.phase_swap",
+inline constexpr auto next_schema = make_schema(
+    motor_p,
+    motor_R,
+    declare_parameter("drive.phase_swap",
                       std::int32_t{0},
                       {.label = {"Phase swap", "Перестановка фаз"}}),
-                hall_enabled);
+    hall_enabled);
 
 // A later firmware, two parameters richer.
 inline constexpr auto richer_schema = make_schema(motor_p,
@@ -451,7 +451,9 @@ consteval std::span<enumerator_info<pwm> const> enum_info_of(pwm)
 }
 
 inline constexpr auto model_pwm_mode =
-    param("model.pwm_mode", pwm::dpwm0, {.label = {"PWM mode", "Режим ШИМ"}});
+    declare_parameter("model.pwm_mode",
+                      pwm::dpwm0,
+                      {.label = {"PWM mode", "Режим ШИМ"}});
 
 inline constexpr auto enum_schema = make_schema(motor_p, model_pwm_mode);
 

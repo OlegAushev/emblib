@@ -73,7 +73,7 @@ concept wraps_parameter_scalar =
 // whose values a 32-bit carrier holds (`emb::enum_carrier32_t`). A parameter
 // of such a `T` is stored and transported as its carrier, a `std::uint32_t`
 // or a `std::int32_t` as the underlying type of `T` is unsigned or signed,
-// and takes only the values that `T` labels (`param`).
+// and takes only the values that `T` labels (`declare_parameter`).
 template<typename T>
 concept parameter_enum =
     enum_with_info<T> && requires { typename enum_carrier32_t<T>; };

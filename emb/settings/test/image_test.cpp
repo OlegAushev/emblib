@@ -16,32 +16,32 @@ using rpm = units::rpm_f32;
 using pu = unsigned_pu_f32;
 
 inline constexpr auto drive_phase_swap =
-    param("drive.phase_swap",
-          false,
-          {.label = {"Phase swap", "Перестановка фаз"}});
+    declare_parameter("drive.phase_swap",
+                      false,
+                      {.label = {"Phase swap", "Перестановка фаз"}});
 inline constexpr auto drive_runout_speed =
-    param("drive.runout_speed",
-          rpm{100.0f},
-          {.label = {"Runout speed", "Скорость выбега"},
-           .min = rpm{0.0f},
-           .max = rpm{5000.0f},
-           .apply = apply_policy::on_command});
+    declare_parameter("drive.runout_speed",
+                      rpm{100.0f},
+                      {.label = {"Runout speed", "Скорость выбега"},
+                       .min = rpm{0.0f},
+                       .max = rpm{5000.0f},
+                       .apply = apply_policy::on_command});
 inline constexpr auto motor_p =
-    param("motor.p",
-          std::int32_t{11},
-          {.label = {"Pole pairs", "Число пар полюсов"},
-           .min = std::int32_t{1},
-           .max = std::int32_t{64},
-           .apply = apply_policy::on_restart});
+    declare_parameter("motor.p",
+                      std::int32_t{11},
+                      {.label = {"Pole pairs", "Число пар полюсов"},
+                       .min = std::int32_t{1},
+                       .max = std::int32_t{64},
+                       .apply = apply_policy::on_restart});
 inline constexpr auto model_torque_slope =
-    param("model.torque_slope",
-          pu{0.5f},
-          {.label = {"Torque slope", "Скорость нарастания момента"},
-           .apply = apply_policy::on_command});
-inline constexpr auto prod_serial =
-    param("prod.serial",
-          std::uint32_t{0},
-          {.label = {"Serial number", "Серийный номер"}, .writable = false});
+    declare_parameter("model.torque_slope",
+                      pu{0.5f},
+                      {.label = {"Torque slope", "Скорость нарастания момента"},
+                       .apply = apply_policy::on_command});
+inline constexpr auto prod_serial = declare_parameter(
+    "prod.serial",
+    std::uint32_t{0},
+    {.label = {"Serial number", "Серийный номер"}, .writable = false});
 
 inline constexpr auto schema = make_schema(drive_phase_swap,
                                            drive_runout_speed,
@@ -215,7 +215,7 @@ consteval std::span<enumerator_info<pwm> const> enum_info_of(pwm)
   return info;
 }
 
-inline constexpr auto model_pwm_mode = param(
+inline constexpr auto model_pwm_mode = declare_parameter(
     "model.pwm_mode",
     pwm::dpwm0,
     {.label = {"PWM mode", "Режим ШИМ"}, .apply = apply_policy::on_command});

@@ -1,8 +1,8 @@
 #pragma once
 
 #include <emb/meta/typelist.hpp>
+#include <emb/settings/declaration.hpp>
 #include <emb/settings/image.hpp>
-#include <emb/settings/param.hpp>
 #include <emb/settings/schema.hpp>
 
 #include <array>
@@ -34,7 +34,7 @@ inline constexpr bool same_declaration =
 // (`some_rule`). It converts implicitly from an image, to which it refers and
 // which must outlive it; it is not built from a temporary image.
 template<auto& Schema, auto&... Decls>
-  requires(some_declaration<decltype(Decls)> && ...)
+  requires(parameter_declaration<decltype(Decls)> && ...)
 class inputs {
 public:
   // The indices of the parameters in `Schema`, in the order of `Decls`.

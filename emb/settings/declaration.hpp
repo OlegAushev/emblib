@@ -152,23 +152,23 @@ constexpr std::uint32_t identify(std::string_view name, scalar_kind kind)
 } // namespace detail
 
 // The class template `options` holds the optional part of the declaration of
-// a parameter of type `T`, as `param` takes it. Each field from `min` on sets
-// the field of the same name in the `descriptor` of the parameter; `label` and
-// `unit` are kept in the `declaration`, outside the descriptor, which a
-// schema keeps in the image.
+// a parameter of type `T`, as `declare_parameter` takes it. Each field from
+// `min` on sets the field of the same name in the `descriptor` of the
+// parameter; `label` and `unit` are kept in the `declaration`, outside the
+// descriptor, which a schema keeps in the image.
 template<parameter_type T>
 struct options {
-  // Label of the parameter for people, in each language. `param` rejects an
-  // exposed parameter (`expose`) without a label in each: a transport shows
-  // it to them.
+  // Label of the parameter for people, in each language. `declare_parameter`
+  // rejects an exposed parameter (`expose`) without a label in each: a
+  // transport shows it to them.
   i18n::text label{};
   // Symbol of the unit of the value, in each language, for a type that names
   // no unit or one that does not describe the parameter, e.g. "rpm/s" and
   // "об/(мин·с)" for a slope held as an `rpm_f32`: it replaces the symbol of
-  // the type (`emb::unit_symbol_of<T>()`). `param` rejects a unit equal to
-  // that symbol, which would only repeat it, any unit of a `bool` or of an
-  // enumeration, whose values are named instead, and a unit without a symbol
-  // in each language: a transport shows it with the value.
+  // the type (`emb::unit_symbol_of<T>()`). `declare_parameter` rejects a unit
+  // equal to that symbol, which would only repeat it, any unit of a `bool` or
+  // of an enumeration, whose values are named instead, and a unit without a
+  // symbol in each language: a transport shows it with the value.
   i18n::text unit{};
   // Lower and upper bound of the value, inclusive. If left out, each is the
   // widest `T` admits: the lowest or the highest finite value of
@@ -186,14 +186,14 @@ struct options {
   bool expose = true;
 };
 
-// The class template `declaration` holds a parameter as `param` declares it:
-// its `descriptor`, its label and unit for people, and its type as `T`, which
-// `type` names and from which `make_schema` builds the typelist of the
-// schema. Kept in a `constexpr` variable with static storage duration, a
-// declaration is also what names its parameter to `parameter`, `image` and
+// The class template `declaration` holds a parameter as `declare_parameter`
+// declares it: its `descriptor`, its label and unit for people, and its type
+// as `T`, which `type` names and from which `make_schema` builds the typelist
+// of the schema. Kept in a `constexpr` variable with static storage duration,
+// a declaration is also what names its parameter to `parameter`, `image` and
 // `section`:
 //
-//   inline constexpr auto pole_pairs = param(
+//   inline constexpr auto pole_pairs = declare_parameter(
 //       "motor.pole_pairs", std::int32_t{11}, {.label = {"Pole pairs", "…"}});
 //   ...
 //   values.get<pole_pairs>()
@@ -220,26 +220,27 @@ inline constexpr bool is_declaration<declaration<T>> = true;
 
 } // namespace detail
 
-// The concept `some_declaration<T>` is satisfied if and only if
+// The concept `parameter_declaration<T>` is satisfied if and only if
 // `std::remove_cvref_t<T>` is a specialization of `declaration`, as is
 // `decltype(Decl)` for a template parameter `auto& Decl` that refers to a
 // declaration. Templates that take a declaration state it as
-// `template<auto& Decl> requires some_declaration<decltype(Decl)>` rather
-// than as `some_declaration auto& Decl`, which Clang does not accept.
+// `template<auto& Decl> requires parameter_declaration<decltype(Decl)>` rather
+// than as `parameter_declaration auto& Decl`, which Clang does not accept.
 template<typename T>
-concept some_declaration = detail::is_declaration<std::remove_cvref_t<T>>;
+concept parameter_declaration = detail::is_declaration<std::remove_cvref_t<T>>;
 
 // Declares a parameter for `make_schema`: named `name`, with the default value
 // `def` and the rest of the declaration in `opts`.
 //
-//   param("motor.pole_pairs", std::int32_t{11},
-//         {.label = {"Pole pairs", "…"}, .min = 1, .max = 64, .apply = ...})
+//   declare_parameter("motor.pole_pairs", std::int32_t{11},
+//                     {.label = {"Pole pairs", "…"}, .min = 1, .max = 64,
+//                      .apply = ...})
 //
 // The type of the parameter is that of `def`, so a literal must have that
 // type exactly: `0.05f`, not `0.05`, and `std::int32_t{1}`, not `1`, an `int`,
 // which on some targets is not `std::int32_t`. A parameter of an enumeration,
-// e.g. `param("model.pwm_mode", pwm_mode::svpwm, {...})`, is stored as its
-// carrier (`scalar_t`) and its identifier is that of a parameter of the
+// e.g. `declare_parameter("model.pwm_mode", pwm_mode::svpwm, {...})`, is stored
+// as its carrier (`scalar_t`) and its identifier is that of a parameter of the
 // carrier of the same name. Compilation fails at the call if `opts.min` is
 // above `opts.max`, if `def` lies outside [`opts.min`, `opts.max`], if the
 // parameter is exposed without a label in each language, if `opts.unit`
@@ -248,9 +249,9 @@ concept some_declaration = detail::is_declaration<std::remove_cvref_t<T>>;
 // or if an enumeration does not label every value from `opts.min` to
 // `opts.max`.
 template<parameter_type T>
-consteval declaration<T> param(std::string_view name,
-                               T def,
-                               options<T> opts = {})
+consteval declaration<T> declare_parameter(std::string_view name,
+                                           T def,
+                                           options<T> opts = {})
 {
   constexpr scalar_kind kind = kind_of<T>;
   auto const min = to_cell(opts.min);
