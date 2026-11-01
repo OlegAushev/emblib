@@ -94,11 +94,8 @@ struct condition {
   bool clear = false;
 };
 
-template<typename List, typename S>
-concept contains = listed_in<S, List>;
-
-template<typename List, typename S, auto Lvl>
-concept valid_level = contains<List, S>
+template<auto Lvl, typename S, typename List>
+concept valid_level = listed_in<S, List>
                    && status_like<S, decltype(Lvl)>
                    && (S::level_min <= Lvl)
                    && (Lvl <= S::level_max);
@@ -288,7 +285,7 @@ public:
   // expiring status is marked as seen in the same write, so a sweep running
   // concurrently cannot mistake it for stale.
   template<typename Status, Level L>
-    requires valid_level<StatusList, Status, L>
+    requires valid_level<L, Status, StatusList>
   void raise(Status, std::integral_constant<Level, L>)
   {
     escalate<Status>(index_of(L));
@@ -298,9 +295,8 @@ public:
   }
 
   // for statuses confined to a single level it can be deduced
-  template<typename Status>
-    requires contains<StatusList, Status>
-          && (Status::level_min == Status::level_max)
+  template<listed_in<StatusList> Status>
+    requires(Status::level_min == Status::level_max)
   void raise(Status s)
   {
     raise(s, std::integral_constant<Level, Status::level_min>{});
@@ -311,7 +307,7 @@ public:
   // — cooling below the warning threshold must not take back the trip above
   // it — so a status can track at one level and latch at another.
   template<typename Status, Level L>
-    requires valid_level<StatusList, Status, L>
+    requires valid_level<L, Status, StatusList>
           && (hold_of<Status>() == hold_policy::tracking)
   void update(Status s, std::integral_constant<Level, L> lvl, condition cond)
   {
@@ -325,7 +321,7 @@ public:
 
   // no hysteresis: the condition is the whole story
   template<typename Status, Level L>
-    requires valid_level<StatusList, Status, L>
+    requires valid_level<L, Status, StatusList>
           && (hold_of<Status>() == hold_policy::tracking)
   void update(Status s, std::integral_constant<Level, L> lvl, bool active)
   {
@@ -334,8 +330,7 @@ public:
 
   // Takes the status down whatever it holds and whatever its policy: an
   // acknowledgement, not a retraction.
-  template<typename Status>
-    requires contains<StatusList, Status>
+  template<listed_in<StatusList> Status>
   void clear(Status)
   {
     words_[word_of(Status::id)].fetch_and(~(slot_mask << shift_of(Status::id)),
@@ -375,15 +370,13 @@ public:
   // ---- querying ----
   //
 
-  template<typename Status>
-    requires contains<StatusList, Status>
+  template<listed_in<StatusList> Status>
   bool active(Status) const
   {
     return (slot_of(Status::id) & level_mask) != 0;
   }
 
-  template<typename Status>
-    requires contains<StatusList, Status>
+  template<listed_in<StatusList> Status>
   std::optional<Level> severity(Status) const
   {
     auto const slot = slot_of(Status::id) & level_mask;
@@ -772,8 +765,7 @@ public:
     flags_[index_of(lvl)] = flags;
   }
 
-  template<typename Status>
-    requires contains<StatusList, Status>
+  template<listed_in<StatusList> Status>
   bool active(Status) const
   {
     for (auto const& flags : flags_) {
@@ -782,8 +774,7 @@ public:
     return false;
   }
 
-  template<typename Status>
-    requires contains<StatusList, Status>
+  template<listed_in<StatusList> Status>
   std::optional<Level> severity(Status) const
   {
     for (auto l = LevelCount; l > 0uz; --l) {
