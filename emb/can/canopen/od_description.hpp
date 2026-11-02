@@ -27,7 +27,7 @@ namespace canopen {
 // the header,
 //
 //   {"type":"header","format":"emb-canopen-od","version":1,
-//    "device":"ADPT-ETK Inverter","fingerprint":"0x806A81B2"}
+//    "device":"Example device","fingerprint":"0x3F2A9C17"}
 //
 // on one line, the fingerprint being that of the dictionary
 // (`od_dictionary::fingerprint`), the hash of every line after the header.

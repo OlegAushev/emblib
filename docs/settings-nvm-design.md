@@ -12,12 +12,12 @@ save (§10a) and the sections beyond `config` (§5); the trigger that applies
 a batch whole came with applying on command. Checked against the code on 2026-09-28. The
 CANopen binding (§7) was built on 2026-09-29, as a binding per row of the
 dictionary rather than a generated section. On 2026-10-02 the facade the
-application kept in `params.hpp/.cpp` moved into emblib as
-`settings::section`, and what had been `section`, the place on a medium,
-became `placement`. The same day the store stopped letting a run of failed
-saves reach the newest record, and a load that restores nothing stopped
-resetting the sequence (§10). On 2026-10-03 the store was rewritten to
-keep nothing about the medium between calls: each call reads every slot
+application kept moved into emblib as `settings::section`, and what
+had been `section`, the place on a medium, became `placement`. The
+same day the store stopped letting a run of failed saves reach the
+newest record, and a load that restores nothing stopped resetting
+the sequence (§10). On 2026-10-03 the store was rewritten to keep
+nothing about the medium between calls: each call reads every slot
 whole and trusts only whole records (§5, §10). The store's algorithms,
 invariants and failure scenarios are described in detail, in Russian, in
 `settings-store-algorithms.ru.md`. On 2026-10-05 the section stopped
@@ -41,8 +41,8 @@ has no records of groups (§3, §4, §7, §10).
 
 ## 1. Scope
 
-A replacement for the current NVM parameter stack (`emb/nvm.hpp` +
-`app/inverter/settings/`) that:
+A replacement for the current NVM parameter stack (`emb/nvm.hpp` + the
+application's settings) that:
 
 - works the same on external FRAM, external EEPROM and internal flash;
 - survives power loss during a write, and survives firmware upgrades that
@@ -92,31 +92,31 @@ struct descriptor {
 Declared as:
 
 ```cpp
-inline constexpr auto phase_swap =
-  declare_parameter("drive.phase_swap", false,
-                    {.label = {"Phase swap", "Перестановка фаз"},
+inline constexpr auto inverted =
+  declare_parameter("sensor.inverted", false,
+                    {.label = {"Inverted", "Инверсия"},
                      .apply = apply_policy::on_command});
-inline constexpr auto runout_speed =     // unit "rpm" from the type
-  declare_parameter("drive.runout_speed", rpm{100.0f},
-                    {.label = {"Runout speed", "Скорость выбега"},
+inline constexpr auto speed_limit =      // unit "rpm" from the type
+  declare_parameter("limits.speed", rpm{100.0f},
+                    {.label = {"Speed limit", "Предел скорости"},
                      .min = rpm{0.0f}, .max = rpm{5000.0f},
                      .apply = apply_policy::on_command});
-inline constexpr auto stopping_torque =  // clamped: own bounds
-  declare_parameter("drive.stopping_torque", pu{0.05f},
-                    {.label = {"Stopping torque", "Момент останова"},
+inline constexpr auto gain =             // clamped: own bounds
+  declare_parameter("sensor.gain", pu{0.05f},
+                    {.label = {"Gain", "Коэффициент усиления"},
                      .apply = apply_policy::on_command});
-inline constexpr auto Ld =               // a float names no unit
-  declare_parameter("motor.Ld", 30.0e-6f,
-                    {.label = {"d-axis inductance", "Индуктивность по оси d"},
+inline constexpr auto inductance =       // a float names no unit
+  declare_parameter("filter.inductance", 30.0e-6f,
+                    {.label = {"Inductance", "Индуктивность"},
                      .unit = {"H", "Гн"},
                      .apply = apply_policy::on_command});
 
 inline constexpr auto schema = settings::make_schema(
-    phase_swap, runout_speed, stopping_torque, Ld);
+    inverted, speed_limit, gain, inductance);
 ```
 
-The declaration is also the key of the typed access: `get<runout_speed>()`
-returns an `rpm`, and `parameter<schema, runout_speed>` gives the index,
+The declaration is also the key of the typed access: `get<speed_limit>()`
+returns an `rpm`, and `parameter<schema, speed_limit>` gives the index,
 the default and the descriptor. The schema must hold the declaration
 itself, one of the same name, type and descriptor, or the access does not
 compile. The name remains what a stored value is matched by (§5): the
@@ -147,7 +147,7 @@ descriptors in the image, and the texts stay out of it.
 
 A parameter may be an enumeration: a scoped one that labels its values for
 people (`emb::enum_with_info`, `emb/meta/enum_info.hpp`), e.g.
-`declare_parameter("model.pwm_mode", pmsm::pwm_mode::svpwm, {...})`. It is
+`declare_parameter("sensor.mode", sensor_mode::fast, {...})`. It is
 stored and transported as its carrier, `emb::enum_carrier32_t`, a `uint32`
 or an `int32` as its underlying type is unsigned or signed, so its scalar
 kind and identifier are the carrier's: declared in place of a `uint32` of
@@ -189,26 +189,17 @@ std::expected<void, error> set_at(index, scalar_variant);
 Parameters split into two classes, declared in the schema:
 
 1. `on_command` — take effect when the application applies them on
-   command: PI gains, limits, slopes, angle correction, protection
-   thresholds, the machine's electrical parameters, the hall sensor's
-   sector angles, the PWM frequency.
+   command: PI gains, limits, slopes, protection thresholds.
 2. `on_restart` — change the *set* of objects that exist or the peripheral
-   setup (`hall.enabled`), or are handed to an object only when it is built
-   (`motor.p`, `isense.zero_drift_th`). Never applied on command; the
-   section reports `restart_required` instead of pretending.
+   setup (`sensor.enabled`), or are handed to an object only when it is
+   built (`sensor.samples`). Never applied on command; the section reports
+   `restart_required` instead of pretending.
 
 When a change may take effect is not the schema's to say. A "safe state"
-means different things to different parameters — the phase order needs the
-bridge off, the machine model of the observer a rotor that is not driven,
-the gains nothing at all — and the application has to know it anyway. It
-says so when a change is applied: its applier compares what it builds from
-the values applied before the change and after it, and asks for a safe
-state only where something that needs one differs. In the inverter
-`change_between` tells which configs differ, and whether the change
-touches the phase order, the machine, whether the current controllers are
-tuned, or the calibration of the hall sensor: `drive.phase_swap` and the
-protection thresholds feed one `drive_config`, yet only a change of the
-phase order waits for the drive to stand.
+means different things to different parameters, and the application has to
+know it anyway. It says so when a change is applied: its applier compares
+what it builds from the values applied before the change and after it,
+and asks for a safe state only where something that needs one differs.
 
 Mechanism: **a command applies, through the application's applier, all or
 nothing.**
@@ -240,46 +231,35 @@ the guard ends
 ```
 
 The applier is the application's (`some_applier`): `check` is a pure
-function of the values, in the inverter every rule holding (below), which
+function of the values, e.g. every rule holding (below), which
 also runs before a save; `admit` compares the values applied before and
 after the change and reads the state under the lock, so the state it read
 holds until the configure ends; `configure` rebuilds what derives from the
 parameters that differ, in an order the application keeps, hands each
 config to its owner and cannot fail, which is why whatever can refuse is
-asked before. Each is asked once per change. In the inverter
-`settings::applier` masks the timebase and below; admits a change to the
-phase order, the machine, autotune or the calibration of the hall sensor
-only while the drive stands with its bridge off, in a safe state with the
-model idle and the PWM stopped, since the bridge stops a step after
-stopping hands over to ready; and has the drive rebuild the hall sensor's
-sector maps with the PWM update and the hall capture masked too, since a
-rotor that stands may still turn.
+asked before. Each is asked once per change.
 
-The inverter's configs compare with `==`, i.e. as numbers: a cell that
-changes from `+0.0` to `-0.0` is recorded as applied and rebuilds nothing,
-as no number changes. Whether a change waits for the drive to stand, each
-config says in its `needs_standstill` by listing what may change while the
-drive runs: anything else waits, so a field added later waits until it is
-listed, and a config without a `needs_standstill` does not compile into
-`change_between`.
+Configs compared with `==` compare as numbers: a cell that changes from
+`+0.0` to `-0.0` is recorded as applied and rebuilds nothing, as no number
+changes.
 
-Command, not pull. The seam used to be the drive's periodic task, which
-took what it could every 33 ms: a value written while the drive ran took
-effect, silently, whenever the drive next stopped, the client never
+Command, not pull. The seam used to be a periodic task of the application,
+which took what it could: a value written while the machine ran took
+effect, silently, whenever the machine next stopped, the client never
 learned which, and a value that had to wait held its whole group back.
 Applied on command, the answer to the command is the result. The work runs
 in the SDO handler, in the main loop, the context the task ran in.
 
 `configure()` decides explicitly what survives a reconfiguration: changing
 `Kp/Ki` keeps the integrator (they are tuned while running, and a reset
-would jerk the torque), changing motor parameters resets the MRAS observer.
+would jerk the torque), changing motor parameters resets the observer.
 Blind reconstruction has no vocabulary for that distinction, which is why
 `configure()` beats "build a new object".
 
 Anti-pattern, deliberately rejected: handing deep objects a reference into
-the settings image to read parameters lazily. It makes `pmsm/` and `sense/`
-depend on `settings/`, lets a value change between two reads inside one
-control step, and throws away precomputation.
+the settings image to read parameters lazily. It makes them depend on
+`settings/`, lets a value change between two reads inside one control
+step, and throws away precomputation.
 
 A save keeps what the machine runs on: it refuses while a value applied on
 command waits, and checks the image, the values that wait for a restart
@@ -300,9 +280,8 @@ Rules may share inputs, and a fallback that moves a shared input may break
 another rule, so the passes repeat until every rule holds; each pass checks
 every rule before it falls back any, so the order of the rules does not
 matter, and a rule falls back at most once, its inputs staying at their
-defaults. The program is ill-formed if a rule breaks on the defaults. In
-the inverter the rules are `dc_window`, `ot_margins` and `hall_angles`: a
-broken window of the DC voltage resets `prot.uvp_dc` and `prot.ovp_dc` and
+defaults. The program is ill-formed if a rule breaks on the defaults. A
+broken window of two limits resets `limits.low` and `limits.high` and
 nothing else. Until the fallback, values loaded that break a rule hold
 back every change and every save, since a change is checked as the values
 applied with it taken in.
@@ -310,11 +289,11 @@ applied with it taken in.
 A batch is applied whole by `apply_all`. One parameter at a time, each step
 is checked as the values applied with that one value taken in, so values a
 rule relates may have to be applied in an order: raising both bounds of a
-window, the upper first. A calibration of the hall sensor goes from the
-timebase interrupt into a mailbox of the drive; the main loop requests its
-twelve angles, and an operator applies them with 2100h:01, the twelve
-together: one at a time, a step either breaks the rule of the angles or
-leaves a geometry that belongs to neither the old calibration nor the new.
+window, the upper first. A calibration of a hall sensor goes from an
+interrupt into a mailbox; the main loop requests its twelve angles, and a
+client applies them with `apply_all`, the twelve together: one at a time, a
+step either breaks the rule of the angles or leaves a geometry that belongs
+to neither the old calibration nor the new.
 
 ## 5. NVM record format
 
@@ -387,13 +366,12 @@ current parameter count** — otherwise adding a parameter would shift the
 slot stride and invalidate everything already stored.
 `static_assert(record_size <= slot_capacity)`.
 
-For the 60 parameters of the current product: record = 504 B,
-`slot_capacity` = 1024 B (room for 125).
+For 60 parameters: record = 504 B, `slot_capacity` = 1024 B (room for 125).
 
 - FRAM (FM25W256, 32 KB): two slots, 2 KB of 32; endurance is a non-issue.
 - EEPROM: identical; page splitting is the driver's business.
 - Internal flash (APM32F405/F407): the top two sectors of the bank, 10 and
-  11, 128 KiB each, which both linker scripts hold back from the code.
+  11, 128 KiB each, which the linker script holds back from the code.
   Records are appended at `slot_capacity` stride — 128 slots per sector;
   on overflow switch to the other sector, erasing it on entry, and leave
   the old one holding the newest record until the next rollover erases
@@ -402,11 +380,10 @@ For the 60 parameters of the current product: record = 504 B,
   The price is a stalled CPU: programming halts instruction fetch, and
   erasing a sector halts it for the better part of a second.
 
-The build picks the medium: `SETTINGS_STORAGE` selects the internal flash,
-the default since it costs no board area, or the FRAM, where a save must
-not stall the CPU. Both layouts live in the application's `hw/hw_nvm.hpp`,
-since how big a slot is worth making and how many share an erase block are
-facts about the memory.
+The build picks the medium: the internal flash, which costs no board area,
+or the FRAM, where a save must not stall the CPU. Both layouts live in the
+application, since how big a slot is worth making and how many share an
+erase block are facts about the memory.
 
 ### Commit protocol (identical on all three media)
 
@@ -463,9 +440,8 @@ facts about the memory.
 6. Produce a load report — which slot and generation, whether the record
    was whole and written by this schema, whether a read failed, and how
    many values were stored, loaded, unknown, rejected and missing — and
-   expose it for diagnostics (object `3000h` in the inverter). Before,
-   "the parameter did not read" was indistinguishable from "the parameter
-   is like that".
+   expose it for diagnostics. Before, "the parameter did not read" was
+   indistinguishable from "the parameter is like that".
 
 ### Region layout
 
@@ -485,8 +461,8 @@ FM25W256 status register has `bp0/bp1/wpen`, so placing it in the top block
 locks it with one SR write.
 
 Only `config` is built, at the start of whichever medium the build picks;
-`calibration` and `factory` are still a plan, and the hall calibration
-lives in `config` meanwhile.
+`calibration` and `factory` are still a plan, and calibrations live in
+`config` meanwhile.
 
 ### Rejected alternatives
 
@@ -553,8 +529,8 @@ using setting = emb::can::canopen::od_settings<settings_of, applier_of>;
 namespace params = settings::params;
 
 inline constexpr emb::can::canopen::od_row<context> rows[] = {
-  {{0x3120, 0x00}, {}, setting::param<params::drive::phase_swap>},
-  {{0x3127, 0x00}, {}, setting::param<params::drive::pwm_frequency, pwm_frequency_actual>},
+  {{0x3100, 0x00}, {}, setting::param<params::sensor::enabled>},
+  {{0x3101, 0x00}, {}, setting::param<params::sensor::rate, rate_actual>},
   // ...
 };
 ```
@@ -581,10 +557,10 @@ names its values by the info of the enumerators, which its members that
 show a value inherit with the type.
 
 `apply_all`, `discard_all` and `last_refusal` serve `od_exec` and `od_ro`;
-`last_refusal`, 2100h:03, shows the abort of the last refusal of an
-application or a save, as an `od_refusal`, which names it, and
-answers 08000024h while there was none. `od_section_status` reads the state
-of the section, 3000h, through the same function of the context as the
+`last_refusal` shows the abort of the last refusal of an application
+or a save, as an `od_refusal`, which names it, and answers 08000024h
+while there was none. `od_section_status` reads the state of the
+section, 3000h, through the same function of the context as the
 bridge. What only a record has answers 08000024h while there is no record:
 the number of the record last restored or written (05h), the erase cycles
 on flash (06h), and of the report of the last load the slot, the number,
@@ -620,8 +596,8 @@ Completeness is checked at compile time, without coupling:
   `canopen-od-algorithm.ru.md`).
 
 1011h:04, which restored one default, is gone: a client reads 04h and
-writes it to 01h. Restoring all defaults (2102h:01) requests them; they
-take effect when applied.
+writes it to 01h. Restoring all defaults requests them; they take effect
+when applied.
 
 ## 8. File layout
 
@@ -656,33 +632,17 @@ external/emblib/emb/
 
 external/embdev/emb/dev/
   fm25w256.hpp                 [done] the driver itself models the concept:
-                                      traits, erase(), default timeout; in
-                                      src/common/nvm/ until 2026-09-09
+                                      traits, erase(), default timeout
 
 external/mcudrv-apm32/apm32/f4/flash/
   flash.hpp                    [done] flash::region models it too: a run of
                                       whole sectors
-
-src/app/inverter/hw/
-  hw_nvm.hpp                   [done] both media and the section's layout
-                                      on each; SETTINGS_STORAGE picks one
-
-src/app/inverter/settings/
-  schema.hpp                   [done] the product's parameter list, with
-                                      bounds and apply policies
-  params.hpp / params.cpp      [done] the config section; load/save/wipe
-                                      and the service warnings as trouble
-  settings.hpp / settings.cpp  [done] the config readers, what a change
-                                      rebuilds, the rules, and the request
-                                      of a hall calibration
-  apply.hpp / apply.cpp        [done] the applier: when a change may take
-                                      effect, and what it rebuilds
 ```
 
 ## 9. Implementation plan
 
 Each step is a separate commit; every step through phase 1 leaves the
-firmware behaviourally unchanged.
+application behaviourally unchanged.
 
 **Phase 0 — foundation in emblib, nothing existing is touched.**
 
@@ -704,13 +664,12 @@ firmware behaviourally unchanged.
 
 **Phase 1 — the application, alongside the old stack, nothing switched.**
 
-9. `src/common/nvm/fm25w256_fram.hpp` — **done**: the driver models
-   `some_storage` directly, no adapter; it has since moved to embdev
-   as `emb/dev/fm25w256.hpp`
-10. `src/app/inverter/settings/schema.hpp` — **done**: same parameters,
-    plus bounds, groups and apply policies; checked against the old layout
-    mechanically, same names in the same order with the same defaults
-11. `src/app/inverter/settings/params.hpp/.cpp` — **done**
+9. The FRAM driver — **done**: the driver models `some_storage` directly,
+   no adapter; it has since moved to embdev as `emb/dev/fm25w256.hpp`
+10. The application's schema — **done**: same parameters, plus bounds,
+    groups and apply policies; checked against the old layout mechanically,
+    same names in the same order with the same defaults
+11. The application's facade — **done**
 
 Not called by anything yet; instantiation was verified with `nm` on the
 object file rather than the map, since `--gc-sections` drops unreferenced
@@ -728,53 +687,50 @@ The first has since lost its argument: the build picks the medium, and
 **Phase 2 — consumers, one at a time.**
 
 12-14. **done, and necessarily as one change**: reading from the new image
-    while writes still went to the old registry would have left the firmware
-    unable to persist anything, and `settings::init` — which built the old
-    registry — had to go at the same time. So the config readers, the OD
+    while writes still went to the old registry would have left the
+    application unable to persist anything, and the code that built the old
+    registry had to go at the same time. So the config readers, the OD
     accessors and the save commands switched together. The OD accessors are
     per-row thunks into one shared by-index body, which needs no change to
     emblib's `od.hpp`. Binding the rows to the schema (dropping the
     hand-written type and default columns, and the thunks with them)
     followed on 2026-09-29, see §7.
 15. `configure()` entry points and unapplied groups — **done**. The seam is
-    the drive's periodic task tick, which already runs in task context with
-    the control timebase masked: `motor_drive::apply_pending_settings()`
-    decides from its own state what it can promise (`on_safe_state` when
-    standing still, `live` otherwise) and applies the groups it can reach —
-    drive, motor, model and hall, and pwm since the PWM frequency is
-    stored. `pmsm::model`, `pmsm::mras_observer` and `hall::angle_sensor`
-    grew a `configure()`; each keeps what it has learned, since gains are
-    tuned while running. Latency is one task tick, 33 ms. Superseded on
-    2026-10-16 by applying on command (§4): the task is gone, and
-    `settings::applier` admits and configures each group when a command
-    applies it.
-16. Cleanup — **done**: `parameters.hpp`, `emb/nvm.hpp`, `od_nvm.hpp` and
-    the registry's test are deleted rather than parked; git keeps the
-    history. The one thing the FRAM driver still needed from the old header
+    a periodic task of the application, which already runs in task context
+    with the control timebase masked: it decides from its own state what it
+    can promise (`on_safe_state` when standing still, `live` otherwise) and
+    applies the groups it can reach. The objects it rebuilds grew a
+    `configure()`; each keeps what it has learned, since gains are tuned
+    while running. Latency is one task tick. Superseded on 2026-10-16 by
+    applying on command (§4): the task is gone, and the applier admits and
+    configures each group when a command applies it.
+16. Cleanup — **done**: `emb/nvm.hpp`, `od_nvm.hpp` and the registry's
+    test are deleted rather than parked; git keeps the history.
+    The one thing the FRAM driver still needed from the old header
     — an error vocabulary — became its own: the codes are the part's, not
     non-volatile memory's in general, which is what the storage concept
     says in the first place. Integrity left the vocabulary altogether; it
     is a record's business now, reported as a load result.
 
-Verification after each step of phases 1-2: both presets
-(`miniboard-debug`, `rev-a-debug`); for emblib headers additionally a host
+Verification after each step of phases 1-2: the application's
+presets; for emblib headers additionally a host
 `g++ -std=c++26 -Wall -Wextra -Wconversion` run.
 
 Stored data is not migrated: the format is new and the first boot after
 phase 2 comes up with defaults. Decided deliberately — no converter.
 
-Since then the application has chosen its medium at build time (the
-internal flash by default, §5), published the storage's layout, its
-sequence number and the last load report under `3000h`, restricted a
-restore of defaults to the parameters a protocol may write, and stored the
-PWM frequency as `drive.pwm_freq` — live, in a group of its own.
+Since then the application has chosen its medium at build time (§5),
+published the storage's layout, its sequence number and the last load
+report, and restricted a restore of defaults to the parameters a protocol
+may write.
 
 ## 10. Decision log
 
 - **`fixed_string`: array named `chars`, `data()`/`size()` as functions.**
   Frees the two names for member functions, which makes the type a valid
   `static_assert` message: a failed compile-time lookup can then print
-  `Parameter 'motor.p' is not in the schema` in the diagnostic line itself.
+  `Parameter 'sensor.samples' is not in the schema` in the diagnostic line
+  itself.
 - **No implicit conversion from `fixed_string` to `string_view`.** Template
   parameter objects have static storage, so the intended use is safe either
   way, but the type is general-purpose and an implicit view turns any
@@ -797,7 +753,7 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   not by naming `units::quantity` and `emb::clamped`. `settings/value.hpp`
   therefore depends on neither header, and `emb::clamped` parameters come
   for free — which lets the application schema declare `unsigned_pu_f32`
-  directly and drop the wrapping that `read_*_config()` did by hand. A free
+  directly and drop the wrapping that its config readers did by hand. A free
   function rather than a `value()` member makes wrapping an explicit opt-in
   and lets a wrapper keep its number in a public field, as a structural
   type must.
@@ -837,8 +793,7 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   not overlap any other call, while const calls may overlap each other.
   Sharing one between contexts is the application's business. A section
   can no longer be called from an interrupt handler, which nothing did: an
-  interrupt with a value to write hands it to a task, as the inverter's
-  drive does with a hall calibration.
+  interrupt with a value to write hands it to a task.
 - ~~**`take()` instead of `changed()` + `acknowledge()`.**~~ Superseded on
   2026-10-16 by "Application is a transaction on command". Check-and-record
   in one operation cannot drop a change that arrives between the two calls.
@@ -871,11 +826,11 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   value written and put back stayed marked. An `on_restart` parameter put
   back kept `restart_required` and the unapplied warning lit until the
   restart, and its mark held every later `live` or `on_safe_state` change of
-  its group until then. An `on_safe_state` parameter written while the drive
-  ran and put back kept the warning lit and the live changes of its group
-  waiting until the drive stopped, and then had the group rebuilt for
-  nothing. Now the flags follow the values: a value put back before it was
-  applied owes nothing. The price is one image more — four bytes per
+  its group until then. An `on_safe_state` parameter written while the
+  machine ran and put back kept the warning lit and the live changes of its
+  group waiting until the machine stopped, and then had the group rebuilt
+  for nothing. Now the flags follow the values: a value put back before it
+  was applied owes nothing. The price is one image more — four bytes per
   parameter, less the twelve bytes the masks took — which a
   constant-initialized section pays in RAM and again in the flash that holds
   its initial values. Every `take` costs a pass over the cells. An owner
@@ -891,15 +846,15 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   the comparison stays a loop over the cells, a word at a time.
 - ~~**`adopt` records a value its owner has applied itself.**~~ Superseded
   on 2026-10-16 by "A calibration is requested, not adopted". `adopt<Name>`
-  writes like `set<Name>` and records the value as applied too. The hall
-  sensor applies a calibration result in the timebase interrupt, and the
-  drive's task records the twelve angles with `adopt` before it takes group
-  `hall`: a `take` that another value of the group calls for still rebuilds
-  the sensor from the image, so the angles have to be there first. Written
+  writes like `set<Name>` and records the value as applied too. A
+  hall sensor applies a calibration result in an interrupt, and a task
+  records the twelve angles with `adopt` before it takes their group:
+  a `take` that another value of the group calls for still rebuilds the
+  sensor from the image, so the angles have to be there first. Written
   with `set`, the angles would wait for a `take` to rebuild a sensor that
   already holds them. Worse, when the group cannot be taken as the
-  calibration finishes — the drive already started again, or a stricter
-  value of the group differs — an operator who writes the old angles back
+  calibration finishes — the machine already started again, or a stricter
+  value of the group differs — a client who writes the old angles back
   leaves the image saying the old calibration while the sensor keeps the
   new one, and once nothing else differs, no flag says so.
 - **The erased accessors are spelled apart from the typed ones** —
@@ -928,7 +883,7 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   flash, and when the CRC ran twice a boot it would have saved
   microseconds. Since every call checks every whole record ("Only whole
   records count"), it runs some 130 to 260 times a load or a save once the
-  product's flash has gone round its ring, about 0.1 ms each — most of the
+  flash of §5 has gone round its ring, about 0.1 ms each — most of the
   16 to 31 ms a load now takes, and still not worth a kilobyte. If it ever
   is, a table of sixteen words read a nibble at a time gives the same CRC
   about three times faster for 64 bytes, and costs less in constant
@@ -995,13 +950,13 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   more ways to lose a save, two of them from a single rotted bit (the
   entries below). Which slots are erased, which record is newest and what to
   number next are facts about the medium, and reading them again costs less
-  than proving a copy of them right. The price is the pass: on the product's
-  flash, 256 reads of a kilobyte and a CRC of every whole record make a load
-  16 to 31 ms and a save 25 to 40 ms, against 0.2 and 8 before; on FRAM a
-  load takes 12 ms at 2 MHz and 49 at 500 kHz, a save 16 and 66. The product
-  loads once at startup and saves only while the drive stands still. The
-  table takes about a kilobyte of stack in the flash geometry, as the header
-  map did.
+  than proving a copy of them right. The price is the pass: on the flash
+  of §5, 256 reads of a kilobyte and a CRC of every whole record make a
+  load 16 to 31 ms and a save 25 to 40 ms, against 0.2 and 8 before; on
+  FRAM a load takes 12 ms at 2 MHz and 49 at 500 kHz, a save 16 and 66.
+  The application loads once at startup and saves only while the machine
+  stands still. The table takes about a kilobyte of stack in the flash
+  geometry, as the header map did.
 - **Only whole records count.** A slot is a record only if `check_record`
   accepts it: the header's magic and format, a size that fits the slot,
   the footer's magic and the CRC. A header with nothing whole behind it —
@@ -1025,7 +980,7 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   modular, which lets the counter wrap, but it is not an ordering: it is
   not transitive, and of two numbers 2^31 apart neither is newer. The old
   load took a running maximum under it, which on numbers that far apart
-  depends on the order of the slots: on the product's flash, 300 saves and
+  depends on the order of the slots: on the flash of §5, 300 saves and
   one rotted top bit in slot 0 made it restore the 256th, and the next
   save erased block 0, holding the 257th to the 300th. The newest record
   is now the whole record newer than every other whole one; of two with
@@ -1059,8 +1014,8 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   reads erased, which rules out cells an interrupted erase left weak, at
   the cost of one needless erase per block on a fresh medium and as many
   after every wipe — the wipe erases every block, and the saves after it
-  erase each again on entry: two sector erases each time on the product's
-  flash. Inside a block a refused write or a medium that keeps nothing
+  erase each again on entry: two sector erases each time on the flash
+  of §5. Inside a block a refused write or a medium that keeps nothing
   costs nothing, since the next save finds the same slot erased; at the
   start of a block every failed attempt erases the block again.
 - **Sequence numbers follow the ring.** A record is numbered with the
@@ -1092,7 +1047,7 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   one and erased block 0, and a load that missed some headers numbered the
   next record below records it could not see. A load still restores the
   newest record among those it read and reports that a read failed, and a
-  wipe erases whether it read or not (below). On the product's media a
+  wipe erases whether it read or not (below). On the media of §5 a
   refused read is a failing FRAM bus — the internal flash refuses none —
   so a save goes through again once the bus does.
 - **A save checks before writing that the next load would restore it.** It
@@ -1153,21 +1108,21 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   price is a blind spot: a dictionary without a single settings row is not
   checked, since there is nothing to find the catalog through.
 - **The row states the type the schema already fixes.** A host's table
-  (ucan-monitor) is to be generated by a text parser, and the parser cannot
+  is to be generated by a text parser, and the parser cannot
   evaluate the schema's expressions (`U::rpm_f32{100.0f}`, a board's
   frequency). The type column is checked against the binding, so the
   duplication cannot drift. Bounds and defaults stay out of the row: some
-  depend on the build (`drive.pwm_freq` differs between debug and release)
+  depend on the build (a default may differ between debug and release)
   or on the type (`pu`, `spu`), and a copy in the row would be wrong for
   some build.
 - **A parameter is named by its declaration, not by its name** (2026-10-15).
   The typed access and a dictionary row take the `constexpr` variable that
-  holds the declaration, `get<params::motor::p>()` and
-  `rw<params::motor::p>`, and `parameter` checks that the schema holds that
-  declaration, of the same type and descriptor. A misspelt key is then an
-  unknown identifier, which an editor completes and finds the uses of, and
-  the key leads to the parameter's type, default and bounds in one step.
-  The name stays the key of the stored value and of the catalog, so
+  holds the declaration, `get<params::sensor::samples>()` and
+  `rw<params::sensor::samples>`, and `parameter` checks that the schema
+  holds that declaration, of the same type and descriptor. A misspelt key is
+  then an unknown identifier, which an editor completes and finds the uses
+  of, and the key leads to the parameter's type, default and bounds in one
+  step. The name stays the key of the stored value and of the catalog, so
   renaming the variable keeps what is stored and changing the name loses
   it, as before. Both keys side by side were rejected: `parameter` and `rw`
   are a class and a variable template, which cannot be overloaded on the
@@ -1200,7 +1155,7 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   freeze its group. Read from the values applied, a config carries exactly
   what was applied, so groups that feed one config may be applied apart.
 - **The applier is passed to each call, not kept by the section.** At
-  startup there is no applier yet — it holds the drive, built from the
+  startup there is no applier yet — it holds what is built from the
   values loaded — and a section that kept one would have a state without
   it and a template parameter naming the application. The checks are a
   concept of their own, `some_checker`, since a save and a startup need them
@@ -1224,9 +1179,9 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   save refuses until it does. The defaults of each group pass its check,
   which the application holds with a `static_assert`.
 - **A calibration is requested, not adopted.** A hall calibration reached
-  the sensor from the interrupt and the settings through `adopt`, behind
+  the sensor from an interrupt and the settings through `adopt`, behind
   the take. It goes through a mailbox to the main loop now, which requests
-  the angles for an operator to apply; `adopt` is gone.
+  the angles for a client to apply; `adopt` is gone.
 - **Records, not single objects** (2026-10-16). A parameter shows its value
   requested, applied and stored, its default, bounds, policy and group, and
   the commands that apply and discard it, as members of one record, and a
@@ -1248,17 +1203,16 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   link and the second argument of a record in the dictionary, which nothing
   else used. Rejected: groups kept inside and dropped from the bus only,
   which kept the duplication and the groups of one parameter that existed
-  to be admitted apart (`phase_order`, `autotune` in the inverter); and the
-  number of the broken rule in place of 3001h:04, which would have made the
-  order of the rules a contract.
+  to be admitted apart; and the number of the broken rule in place of
+  3001h:04, which would have made the order of the rules a contract.
 - **A rule names its inputs, and reads nothing else** (2026-10-17).
   `inputs<schema, Decls...>` shows a rule its parameters and deletes `get`
   of any other, so the list cannot miss a parameter the rule reads, and
   the defaults of the inputs mend a rule that breaks, since they pass it.
   What falls back is the inputs of the rule, not the config it guards:
-  falling back everything `drive_config` reads would reset the phase order
-  with a threshold. Rejected: the whole image, which would build `motor.p`
-  and the current scales from defaults that only a restart replaces;
+  falling back everything a config reads would reset, with the inputs,
+  parameters the rule does not name. Rejected: the whole image, which
+  would build `sensor.samples` from a default that only a restart replaces;
   inputs found by changing each parameter at compile time, which sees only
   what changes the result near the defaults; and rules over whole configs,
   whose inputs would be the whole config.
@@ -1270,34 +1224,19 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   depends on the order of the list; and forbidding rules to share inputs,
   which would merge them and coarsen both the fallback and the refusal.
 - **One parameter still applies alone** (2026-10-17). It is the one way to
-  apply part of what waits, e.g. a gain while a change that needs the drive
-  to stand stays requested. Each step is checked as the values applied with
-  that one value taken in, so values a rule relates may need an order, and
-  the twelve hall angles of a calibration go together through 3001h:01.
-- **What may change while the drive runs is listed; anything else waits**
-  (2026-10-19). The inverter named what needed the drive to stand — the
-  phase order, the machine, autotune, the hall sensor — and static
-  assertions pinned that list, but only for the parameters they named: a
-  field added to `drive_config` that needed the drive to stand would have
-  taken effect on the run. Each config now lists its live fields in
-  `needs_standstill`, and `change_between` reads every config through it, so
-  a new field waits until it is listed and a new config does not compile
-  until it says. A mistake now refuses a change on the run, which the client
-  sees, rather than letting one through, and the static assertions went with
-  the risk they guarded against. The live fields are blanked in both configs
-  before they compare. Rejected: copying them over from one config to the
-  other, which leaves a float to compare with itself, which the compiler
-  keeps for the sake of NaN — 678 bytes of flash more.
+  apply part of what waits, e.g. a gain while a change that needs the
+  machine to stand stays requested. Each step is checked as the values
+  applied with that one value taken in, so values a rule relates may need
+  an order, and the twelve hall angles of a calibration go together
+  through `apply_all`.
 - **The calibration of the hall sensor is a config of its own**
   (2026-10-19). `emb::hall::angle_sensor_config` held the time constant of
   the speed filter beside the calibration, so the time constant waited for
-  the drive to stand only because it shared a struct with the angles, and
-  the rule of the angles had to be handed a calibration built apart from
+  the machine to stand only because it shared a struct with the angles, and
+  a rule of the angles had to be handed a calibration built apart from
   the config. The config keeps the time constant alone, a place for the
   sensor's tuning to come; the sensor takes the calibration beside it and
-  applies one through `apply_calibration`. `hall.speed_tc` may change while
-  the drive runs, like the filters of the temperatures, and the rule and the
-  drive read the calibration with one reader.
+  applies one through `apply_calibration`.
 - **The scalar of a parameter is its `scalar_kind`, its encoding a `cell`**
   (2026-10-19). The tag was `value_type`, while the same header named a
   wrapper's scalar `T::value_type`; the descriptor's `type` named the scalar
@@ -1342,12 +1281,12 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   `parameter_enum`; what `declare_parameter` returns satisfies it. The
   dictionary's binding `od_settings<...>::param` is another entity and keeps
   its name. Rejected: `declare`, a verb too general for a call that the
-  inverter and the tests make unqualified; `make_declaration`, which names
-  the type returned rather than the parameter declared; `make_parameter`,
-  which would promise a `parameter`; and the name `parameter` for the
-  declaration, which would leave its concept no name in that series and
-  rename what this document calls a declaration. Records keep matching: no
-  record holds these names.
+  application and the tests make unqualified; `make_declaration`, which
+  names the type returned rather than the parameter declared;
+  `make_parameter`, which would promise a `parameter`; and the name
+  `parameter` for the declaration, which would leave its concept no name in
+  that series and rename what this document calls a declaration. Records
+  keep matching: no record holds these names.
 - **A command is a write-only `uint32`** (2026-10-19). The dictionary had a
   type code of its own for commands, `exec`, which CiA 301 does not know,
   and which travelled as a `uint32` anyway; 1010h and 1011h, which now take
@@ -1369,47 +1308,11 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   alternatives of `od_value`, one to one. Rejected: four characters to an
   element, which keeps the traffic of before but makes the elements words
   of text, and a type `char`, which CiA 301 does not have.
-- **The node id is the inverter's first parameter** (2026-10-23). The
-  server took its node id as a template parameter, so an inverter had one
-  address per image. emblib takes it as a value now, and the inverter
-  reads it from the parameter `canopen.node_id`, a `uint32` from 1 to 127,
-  default 1, applied on restart: the server is built after the settings
-  load. Its record is 3100h, the first of the parameters, and the other 67
-  records moved one block of 20h up, to 3120h–3242h; no host reads the
-  dictionary by its addresses yet. A value stored before keeps its
-  parameter, whose identifier comes from its name, not from its index;
-  the new parameter loads its default, and `params_defaulted` shows until
-  the first save. The group is `canopen`: the node id is a notion of
-  CANopen, not of CAN, and its likely neighbours, the periods of the
-  heartbeat and of the PDOs and the timeouts of the RPDOs, are CANopen's
-  too; the name enters the identifier of the value stored, so it is not
-  to change. Rejected: 3240h, the first free block, which kept the
-  addresses but put the node id last; `can` for the group, inexact for a
-  node id; `comm`, which would be ambiguous once a second interface came,
-  with a path of only two segments.
-- **The inverter reads its Hall readings in their types** (2026-10-22).
-  The group `hall` at 5070h gave the sector and the inputs as `float32`, 0
-  to 5 and 0 or 1, and without telemetry of the sensor NaN for the speed,
-  the angle, the sector and the inputs and 0 for the objects of the
-  emulator, which read as angles that agree. The sector is an
-  `emb::hall::sector` now, a `uint32` that the description names by the
-  labels of the sectors, the inputs are booleans, and every object of the
-  group answers 08000024h without telemetry, its reader returning
-  `std::optional`. Rejected: NaN for no data, which a host has to know to
-  test for and which neither an integer nor a boolean holds.
-- **The inverter names the values of its objects** (2026-10-22).
-  `model.pwm_mode` was a `uint32` whose upper bound counted the
-  alternatives of the modulator by hand and whose value the config reader
-  cast to `pmsm::pwm_mode`. It is a parameter of `pmsm::pwm_mode` now,
-  which labels its nine modes beside its declaration, a static assertion
-  holding the labels to the alternatives; its bounds are the first and the
-  last mode, the casts went, and its descriptor, its identifier included,
-  is that of the `uint32` before, so the value stored stays. With the
-  bridge and the section, the description names the modes at 3165h, the
-  policy at 07h of every parameter and the codes of 2100h:03, and the
-  inverter answers 08000024h where it showed a number standing for no
-  data: at 2100h:03 before the first refusal, and at 3000h without a
-  record. The types on the bus do not change.
+- **The server's node id is a value** (2026-10-23). The server took its
+  node id as a template parameter, so a device had one address per image.
+  emblib takes it as a value now, and an application can read it from a
+  parameter applied on restart: the server is built after the settings
+  load.
 - **No record is no data** (2026-10-22). The state of the section at
   3000h answered a load that restored nothing with the defaults of its
   report — FFFFFFFFh for the slot, 0 for the number, false for the schema,
@@ -1458,8 +1361,8 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   variant of both refusals, already takes; a value `none`, a number that a
   host would take for a code; and the refusals as values, which a host
   would have to map to the aborts it was answered with.
-- **A parameter may be an enumeration** (2026-10-22). A choice such as the
-  PWM mode was a `uint32` parameter whose upper bound was written by hand
+- **A parameter may be an enumeration** (2026-10-22). A choice among modes
+  was a `uint32` parameter whose upper bound was written by hand
   from the number of modes and whose value code cast to its enumeration:
   nothing tied the bound to the enumeration, and a transport showed a
   number. A parameter may now be a scoped enumeration that labels its values
@@ -1477,35 +1380,21 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   enforce once the labels between them leave no gap; and an enumeration
   stored in the width of its underlying type, which would change its kind,
   and so the identifier of a parameter declared before as a `uint32`.
-- **The values a host watches take an index per group** (2026-10-21).
-  5000h held them all, a block of 10h subindices for each group, 37
-  objects on 121 subindices. CiA 301 allows it, as subindex 00h of a
-  record is the highest subindex supported and the others answer
-  06090011h, but it made one record of unrelated values, which a tool
-  that walks the record from 01h to 00h meets with 84 refusals, and left a
-  group room for 15 objects, the electrical one already 14. Each group now
-  has an index of its own, in steps of 10h as the parameters have, with
-  its members from 01h on: 5000h system, 5010h electrical, 5020h
-  temperatures, 5030h torque, 5040h speed, 5050h angle and 5070h hall; the
-  arrays follow their groups, 5021h and 5022h the sensors of temperature,
-  5080h the external inputs and 5090h the probe. The dictionary adds six
-  entries at 00h, 96 bytes of flash. Rejected: one record without gaps,
-  where an object added to a group moves those after it.
 - **The dictionary describes itself for a host** (2026-10-21). A host
-  decoded the inverter by a table that a script built by parsing `od.cpp`,
-  for which a row stated its type, and checked it by a fingerprint it had
-  to recompute from a canonical text of its own. `make_description` now
-  builds a description of the dictionary at compile time, in JSON Lines: a
-  header with the format, its version, the device and the fingerprint, a
-  line for each group, for each member of each layout of a record, and for
-  each object, array or record, with its path, titles, class, type,
-  access, unit and flags. The fingerprint at 2000h:00 is the hash of the
-  description's body, so a host compares two numbers and recomputes
+  decoded a device by a table that a script built by parsing the source of
+  its dictionary, for which a row stated its type, and checked it by a
+  fingerprint it had to recompute from a canonical text of its own.
+  `make_description` now builds a description of the dictionary at compile
+  time, in JSON Lines: a header with the format, its version, the device
+  and the fingerprint, a line for each group, for each member of each
+  layout of a record, and for each object, array or record, with its path,
+  titles, class, type, access, unit and flags. The fingerprint is the hash
+  of the description's body, so a host compares two numbers and recomputes
   nothing. The members of a record are labelled for it: the bridge to the
   settings names and titles the members of a parameter's record and marks
   those that hold its value, which inherit its type and unit, and the
   commands. The text is canonical, so that two builds of one dictionary
-  describe it byte for byte the same. The firmware keeps the description
+  describe it byte for byte the same. The application keeps the description
   in a section of the ELF that is not loaded. Rejected: building the
   description on the host from the source, which knows neither the types
   nor the units the compiler derives; a separate program or build target,
@@ -1534,10 +1423,10 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   name, with a rule for none of them: the category, which told a host
   whether to poll an object or let it be changed, followed from the area
   of the index and still took a typo; a parameter was named twice, in the
-  schema and in the table, alike for 20 of 67; and the type was written in
-  the row for a text parser that built a host's table. A row now holds its
-  key, a label — a path `group.name`, a title in English and in Russian
-  and a unit — and its binding; a parameter's record takes its label from
+  schema and in the table; and the type was written in the row for a
+  text parser that built a host's table. A row now holds its key, a
+  label — a path `group.name`, a title in English and in Russian and
+  a unit — and its binding; a parameter's record takes its label from
   the declaration, the path being its name in the schema, so its row
   writes `{}`. `make_dictionary` takes the areas, `od_area{first, last, class_}`,
   from which the class of an object follows, `about`, `control`,
@@ -1546,20 +1435,20 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   the type column with the rule that checked it; the fingerprint describes
   paths and classes. Rejected: the class in the row, checked against its
   area, which only repeats the area; a path of three segments, the class
-  first, which repeats it in every path; titles in English only, while the
+  first, which repeats it in every path; titles in English only, while a
   host shows Russian.
 - **A parameter has a title and a unit** (2026-10-21). A transport that
   shows a parameter to people had only its name, an identifier such as
-  "motor.pole_pairs", and a unit typed by hand in the table of the dictionary,
+  "sensor.samples", and a unit typed by hand in the table of the dictionary,
   which nothing checked against the parameter. `options` takes a `title`, in
-  English and in Russian (`emb::i18n`, taken from the inverter's faults into
-  emblib), and a `unit`; `declare_parameter()` rejects an exposed parameter
-  without a title in each language, a unit that repeats the symbol of the
-  type and a unit given to a `bool`. The unit is the symbol of the type
-  unless `.unit` replaces it. Both stay in the declaration, outside the
-  descriptor, so that the image, which keeps the descriptors, does not carry
-  them; renaming a title therefore changes no identifier. Rejected: the
-  title in the descriptor, which would put every title in flash.
+  English and in Russian (`emb::i18n`), and a `unit`; `declare_parameter()`
+  rejects an exposed parameter without a title in each language, a unit
+  that repeats the symbol of the type and a unit given to a `bool`. The
+  unit is the symbol of the type unless `.unit` replaces it. Both stay in
+  the declaration, outside the descriptor, so that the image, which keeps
+  the descriptors, does not carry them; renaming a title therefore changes
+  no identifier. Rejected: the title in the descriptor, which would put
+  every title in flash.
 - **A unit has a symbol in each language** (2026-10-30). The label of a
   parameter came in English and in Russian, its unit in English alone, so
   a host would have shown "Напряжение DC, V". Russian writes the units by
@@ -1568,33 +1457,30 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   "об/мин", and "pu", "о. е.". `options::unit` and `declaration::unit` are
   `emb::i18n::text`, as the symbol of each unit tag and of a per-unit
   value is, and `declare_parameter()` rejects a unit, given or the type's,
-  without a symbol in each language. The inverter declares the 13 parameters
-  whose `.unit` only named the symbol of a tag, "V", "A", "°C" and "Ω", in
-  the types of those units, so the translation of each is written in its
-  tag; `.unit` stays for the units no tag names, "ms", "H", "Wb", "A/A",
+  without a symbol in each language. Parameters whose `.unit` only named
+  the symbol of a tag, "V", "A", "°C" and "Ω", are declared in the types
+  of those units, so the translation of each is written in its tag;
+  `.unit` stays for the units no tag names, "ms", "H", "Wb", "A/A",
   "pu/s" and "rpm/s". Rejected: a table from the English symbol to the
   Russian one, in emblib or in the host, which an application's own unit
   such as "rpm/s" would not be in.
-- **The dictionary has a fingerprint** (2026-10-20). A host decodes what
-  the inverter sends by a table generated from `od.cpp`, and nothing told
-  a stale table from a fresh one: addresses and types moved three times in
-  two days. `make_dictionary` hashes, with FNV-1a, a text that describes
-  every row in the order of keys, its key, names, type, kind and access,
-  and every field of a record's layout, and the inverter shows the hash at
-  2006h:00, `dictionary_id`. A host that writes the same text from its
-  table compares the two. The unit is left out of the text: it changes how
-  a value reads, not where it is or how it travels.
-- **A list of values is an array** (2026-10-20). The temperatures of the
-  power module's and the motor's sensors, the external inputs and the
-  probe channels were objects at subindices of 5000h, one each, and where
-  a board had fewer sensors than subindices, a template reader answered
+- **The dictionary has a fingerprint** (2026-10-20). A host decodes what a
+  device sends by a table generated from the source of its dictionary, and
+  nothing told a stale table from a fresh one. `make_dictionary` hashes,
+  with FNV-1a, a text that describes every row in the order of keys, its
+  key, names, type, kind and access, and every field of a record's layout,
+  and the application shows the hash in an object. A host that writes the
+  same text from its table compares the two. The unit is left out of the
+  text: it changes how a value reads, not where it is or how it travels.
+- **A list of values is an array** (2026-10-20). The readings of a set of
+  sensors were objects at subindices of one index, one each, and where a
+  board had fewer sensors than subindices, a template reader answered
   06020000h: a host could not learn how many sensors a board had.
   `od_ro_array` binds a reader that returns a `std::array` as an array:
   subindex 00h reads its length, which the type gives, and each subindex
-  after it one read-only element. The inverter serves its four lists so,
-  at 5001h–5004h. Rejected: a reader of one element by its position, with
-  the length written in the builder, which could disagree with the source
-  and let the element's handler read past its end.
+  after it one read-only element. Rejected: a reader of one element by its
+  position, with the length written in the builder, which could disagree
+  with the source and let the element's handler read past its end.
 - **The dictionary serves subindex 00h of an index with members**
   (2026-10-20). An index of several objects from 01h on, such as 3000h or
   5000h, answered 06090011h at 00h, where CiA 301 puts the highest
@@ -1606,44 +1492,8 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   describe the entries added: they follow from the rows. Rejected: a row
   at 00h written by hand, which would have to follow every object added
   to the index.
-- **The inverter shows its MCU's unique ID, not a serial number**
-  (2026-11-02). 2002h, `device.serial_number`, read U_ID[31:0], the first
-  of the three words of the ID that the maker of the MCU programs into
-  it. That ID names the MCU, so it goes with the control board, and
-  nobody assigns it; and the manual promises only the 96 bits together to
-  be unique: the word read on a bench, 00070039h, is two small halves, as
-  the X and Y of a die on its wafer are on an STM32, so it may repeat from
-  wafer to wafer. 2002h is `device.mcu_uid` now and reads the whole ID as
-  text, U_ID[95:0] in 24 uppercase hexadecimal digits, the highest first,
-  which a host shows with the inverter's other texts; the inverter formats
-  it once, before `main`, from mcudrv's `core::uid()`, the three words,
-  which replaced `core::serial_number()`. A serial number, which the
-  maker of the inverter would assign and keep where neither an image nor
-  an erase reaches, such as the OTP area of the MCU, waits until the
-  inverter has one. Rejected: an array of three `uint32`, which reads as
-  three numbers rather than one ID; a 32-bit hash of the ID, unique enough
-  but still no serial number.
-- **The fingerprint is the inverter's first object** (2026-10-20). A host
-  reads `dictionary_id` before it knows which table to decode the
-  inverter by, so its address must not move when the table does. It
-  moved from 2006h to 2000h, the first index of the manufacturer's area;
-  `device_name` and `serial_number`, which tell one inverter from
-  another, follow it at 2001h and 2002h, and the rest of the information
-  after them.
-- **The inverter's objects left the area of CiA 301** (2026-10-19). Its
-  dictionary kept objects in 1000h–1FFFh that the standard defines
-  otherwise: strings at 1008h–100Ah, two of them at subindices a VAR does
-  not have, a serial number at 1018h without the identity's other
-  members, and at 1010h:03 and 1011h:03 a save with a reset and an erase,
-  where CiA 301 puts the application's parameters. They moved to the area
-  of the manufacturer, which the standard leaves to the device: the
-  information at 2000h–2005h, the work with the settings at 2100h–2102h,
-  the control at 2200h–2206h, each command of which has an index of its
-  own. The area of the standard holds nothing until the inverter
-  implements an object of it as the standard says. The names stay, so a
-  host that finds objects by name finds them once it reads the new table.
 
-## 10a. What changed for an operator
+## 10a. What changed for a client
 
 The switch-over changed two behaviours on purpose, and both are visible
 from a CANopen tool:
@@ -1658,7 +1508,7 @@ from a CANopen tool:
   save still takes `1010h`.
 - **A value outside a parameter's bounds is refused**, with
   `value_range_exceeded`, where before it was silently clamped by the
-  wrapper the config reader applied. The operator now learns.
+  wrapper the config reader applied. The client now learns.
 
 The rewrite of the store on 2026-10-03 (§10) changed three more:
 
@@ -1674,42 +1524,36 @@ The rewrite of the store on 2026-10-03 (§10) changed three more:
   to the number of the record it restored, or zero if none; a save that
   succeeds, to its record's; a wipe that succeeds, to zero. A failed save
   leaves it as it was, where it used to count the attempt. Right after the
-  update both can read lower than the old firmware showed, since it
-  numbered above the headers of torn saves and counted every failed
-  attempt.
+  update both can read lower than with the old store, since it numbered
+  above the headers of torn saves and counted every failed attempt.
 - **A save refuses a medium it cannot read.** If any slot fails to read,
-  `1010h` answers `data_store_error` and `nvm_write_error` is raised, as
-  for any failed save, but nothing was written: the slot that did not read
-  may hold the newest record, which the old firmware, writing blind, could
-  erase or number below. The save goes through once the medium reads
-  again. On a medium the old firmware numbered above a rotted header, a
-  save can be refused the same way with every read succeeding, when no
-  record it could write would come out newest; erasing all parameters
-  (`1011h:03`) clears that, and the next `1010h` stores the values in use.
+  `1010h` answers `data_store_error`, as for any failed save, but nothing
+  was written: the slot that did not read may hold the newest record, which
+  the old store, writing blind, could erase or number below. The save goes
+  through once the medium reads again. On a medium the old store numbered
+  above a rotted header, a save can be refused the same way with every read
+  succeeding, when no record it could write would come out newest; a wipe
+  clears that, and the next `1010h` stores the values in use.
 - **A save on FRAM fills its slot before writing the record**, and every
   load and save reads the whole section first. On FRAM a save takes about
-  16 ms on the rev_a's 2 MHz bus and 66 on the miniboard's 500 kHz, where
-  it took 4 and 16, and a load 12 and 49, where it took 2 and 9. On the
-  product's flash a load takes 16 to 31 ms and a save 25 to 40, where they
-  took 0.2 and 8.
+  16 ms on a 2 MHz bus and 66 on a 500 kHz one, where it took 4 and 16, and
+  a load 12 and 49, where it took 2 and 9. On the flash of §5 a load takes
+  16 to 31 ms and a save 25 to 40, where they took 0.2 and 8.
 
 Counting as unapplied what differs from the values applied, on 2026-10-05
 (§10), changed three more:
 
 - **`restart_required` and `unapplied` follow the values.** `unapplied`
-  (`3000h:12`) and the warning `unapplied_changes` stand while any value
-  differs from the one applied, `restart_required` (`3000h:11`) and its
-  warning while an `on_restart` value does, and each clears once the
-  values are applied — at the restart, for `on_restart` — or put back.
-  Before, a write kept them lit until its group was applied, even after
-  the value was put back: an `on_restart` parameter until the restart,
-  holding back every later change of its group, and an `on_safe_state`
-  one written while the drive ran until the drive stopped. Put back means
-  bit for bit, since cells are compared by their encoding: `-0.0` does not
-  put back `+0.0`. A value put back before it was applied rebuilds nothing
-  either: put back in group `motor`, it no longer resets the observer, and
-  a value set through the `ctl` objects `2001h:03` to `2001h:05`, which
-  bypass the image, survives such a pair of writes.
+  (`3000h:12`) stands while any value differs from the one applied,
+  `restart_required` (`3000h:11`) while an `on_restart` value does, and
+  each clears once the values are applied — at the restart, for
+  `on_restart` — or put back. Before, a write kept them lit until its group
+  was applied, even after the value was put back: an `on_restart` parameter
+  until the restart, holding back every later change of its group, and an
+  `on_safe_state` one written while the machine ran until it stopped. Put
+  back means bit for bit, since cells are compared by their encoding:
+  `-0.0` does not put back `+0.0`. A value put back before it was applied
+  rebuilds nothing either.
 - **`1011h:04` clears them only where the value applied is the default.**
   It restores the default, not the value applied, so it undoes a change
   only of a parameter that runs on its default. For any other, write back
@@ -1723,14 +1567,10 @@ Applying on command, on 2026-10-16 (§4, §7), changed more:
 - **A write takes effect only when applied.** Writing 01h of a record
   requests the value; 09h of the record, 01h of its group's record, or
   3001h:01 for everything applies it, and the answer of the command is the
-  result: 06040043h if a check refuses, 08000022h if the drive cannot take
-  the change in its state, 06010000h for a parameter applied only after a
-  restart. 0Ah, 02h of the group's record and 3001h:02 discard. 3001h:03
-  and 3001h:04 show the abort and the group of the last refusal.
-- **The settings moved.** Every parameter is a record at an index of its
-  own, from 3100h, in blocks of 20h by category, its category and name as
-  before; every group is a record at 3010h-3019h. The gains the current
-  controllers work with moved from 3006h:09-0Ch to 0Bh of their records.
+  result: 06040043h if a check refuses, 08000022h if the application cannot
+  take the change in its state, 06010000h for a parameter applied only
+  after a restart. 0Ah, 02h of the group's record and 3001h:02 discard.
+  3001h:03 and 3001h:04 show the abort and the group of the last refusal.
 - **A save refuses what waits.** 1010h answers 08000022h while a value
   waits to be applied and 06040043h while a value waiting for a restart
   fails its check, so restoring the defaults (1011h:01) takes an
@@ -1738,13 +1578,12 @@ Applying on command, on 2026-10-16 (§4, §7), changed more:
   only requests. 3000h:13 tells whether a value waits to be saved.
 - **1011h:04 is gone**: a client reads 04h of a record and writes it to
   01h.
-- **A calibration of the hall sensor waits to be applied.** Its twelve
-  angles are requested, and the sensor keeps its own until the group `hall`
-  is applied.
+- **A calibration of a hall sensor waits to be applied.** Its twelve
+  angles are requested, and the sensor keeps its own until they are
+  applied.
 - **`restart_required` stays lit after a save and a discard**, until the
   value stored is again the one the machine runs on.
-- **A group that fails its check at startup runs on its defaults**, with
-  `invalid_config` (`hall_invalid_calibration` for the hall sensor), and
+- **A group that fails its check at startup runs on its defaults**, and
   the values loaded wait to be corrected or discarded.
 
 Dropping the groups, on 2026-10-17 (§4, §7), changed:
@@ -1756,37 +1595,25 @@ Dropping the groups, on 2026-10-17 (§4, §7), changed:
   applies the parameter, 09h discards it, 0Ah shows the actual value, and
   00h reads 09h, or 0Ah with an actual value.
 - **Part of what waits applies one parameter at a time**, by 08h. A rule
-  may ask for an order — raising both bounds of the DC window, `ovp_dc`
-  first — and a calibration of the hall sensor applies with 3001h:01, the
+  may ask for an order — raising both bounds of a window, the upper
+  first — and a calibration of a hall sensor applies with 3001h:01, the
   twelve angles together.
 - **A rule that the values loaded break resets only its inputs** to their
-  defaults: `uvp_dc` and `ovp_dc` for the DC window, the two margins for
-  the overtemperature warning, `hall.enabled` and the twelve angles for the
-  hall sensor, where a group reset all fourteen of its parameters —
-  `runout_speed` and the stopping parameters with the thresholds, or
-  `hall.speed_tc` with the angles.
-- **A cell changed from `+0.0` to `-0.0` is applied without a rebuild**, as
-  no number changes; it needs no standstill either.
-
-Cutting the calibration out of the hall sensor's config, on 2026-10-19
-(§4), changed:
-
-- **`hall.speed_tc` applies while the drive runs.** Only the twelve angles
-  of the calibration wait for the drive to stand with its bridge off.
+  defaults, where a group reset all of its parameters.
 
 Checking what a client writes, on 2026-10-19 (§7), changed:
 
 - **1010h and 1011h ask for their signatures**, as CiA 301 does: a save
-  (1010h:01, :03) runs only when the word written is "save", 0x65766173,
-  and restoring the defaults or erasing (1011h:01, :03) only when it is
-  "load", 0x64616F6C. Any other word answers 08000020h, and nothing is
-  saved or erased. A client that writes zeros to these objects is refused
-  until it writes the signatures.
+  (1010h) runs only when the word written is "save", 0x65766173, and
+  restoring the defaults (1011h) only when it is "load", 0x64616F6C. Any
+  other word answers 08000020h, and nothing is saved or restored. A client
+  that writes zeros to these objects is refused until it writes the
+  signatures.
 - **A command is a write-only UNSIGNED32**, as in CiA 301: the dictionary
-  has no type `exec` any more, and the type of every command, 1010h,
-  1011h, 2000h, 2001h:01, 3001h:01 and :02 and the members 08h and 09h of
-  a parameter's record, reads `uint32`. A host that told commands by the
-  type `exec` tells them by their write-only access.
+  has no type `exec` any more, and the type of every command, 1010h, 1011h,
+  3001h:01 and :02 and the members 08h and 09h of a parameter's record,
+  reads `uint32`. A host that told commands by the type `exec` tells them
+  by their write-only access.
 - **A write must carry the object's size.** An expedited download that
   tells another size than the object's answers 06070010h; a download that
   is not expedited, which would carry the size of a segmented transfer,
@@ -1797,187 +1624,48 @@ Checking what a client writes, on 2026-10-19 (§7), changed:
   fails. It showed only the refusals of applications, and of a save only
   the one of its check, under the name `last_failure`.
 
-Moving the objects out of the area of CiA 301, on 2026-10-19 (§7),
-changed:
-
-- **The objects left the area of CiA 301** for the area of the
-  manufacturer, under the same names:
-
-  | Was | Object | Is |
-  |---|---|---|
-  | 1008h:00 | `device_name` | 2000h:00 |
-  | 1009h:00 | `hardware_version` | 2001h:00 |
-  | 100Ah:00 | `firmware_version` | 2002h:00 |
-  | 100Ah:01 | `firmware_commitdate` | 2003h:00 |
-  | 100Ah:02 | `firmware_branch` | 2004h:00 |
-  | 1018h:04 | `serial_number` | 2005h:00 |
-  | 3001h:01–03 | `apply_all`, `discard_all`, `last_refusal` | 2100h:01–03 |
-  | 1010h:01, :03 | `save_all_parameters`, `save_all_parameters_and_reset` | 2101h:01, :02 |
-  | 1011h:01, :03 | `restore_all_default_parameters`, `erase_all_parameters` | 2102h:01, :02 |
-  | 2000h:01–03 | `reset_device`, `clear_errors`, `emergency` | 2200h–2202h |
-  | 2001h:01, :06–08 | `calibrate_angle_sensor`, `dc_a`, `dc_b`, `dc_c` | 2203h–2206h |
-
-  The signatures stay with the commands that moved from 1010h and 1011h.
-
 Reading text as arrays, on 2026-10-19 (§7), changed:
 
-- **The device's strings are arrays** at 2000h–2004h: 00h reads the
-  length, 01h and on one character each, and a subindex past the length
-  answers 06090011h. A client that read a string four bytes at a time from
-  subindex 00h reads its length there now.
-
-Fingerprinting the dictionary, on 2026-10-20 (§7), changed:
-
-- **2006h:00, `dictionary_id`**, shows the fingerprint of the dictionary:
-  the FNV-1a hash of a text that describes its rows, which a host writes
-  from its own table to tell whether that table is the inverter's.
-
-Serving the lists of values as arrays, on 2026-10-20 (§7), changed:
-
-- **The lists are arrays**, each at an index of its own, and the objects
-  at subindices of 5000h they replace are gone:
-
-  | Was | Objects | Is |
-  |---|---|---|
-  | 5000h:24–26 | `temp/Tpwr_a`–`Tpwr_c` | 5001h, `temp/Tpwr_sensors` |
-  | 5000h:27–2B | `temp/Tmot1`–`Tmot5` | 5002h, `temp/Tmot_sensors` |
-  | 5000h:81–84 | `ext/V1`–`V4` | 5003h, `ext/V` |
-  | 5000h:F1–FA | `logger/ch0`–`ch9` | 5004h, `logger/ch` |
-
-  00h reads the number of elements: three sensors of the power module and
-  five of the motor on rev-a, one of each on the miniboard, four external
-  inputs and ten probe channels on both. The first element is at 01h; one
-  past the last answers 06090011h, where a sensor the board lacks answered
-  06020000h.
+- **Strings are arrays**: 00h reads the length, 01h and on one character
+  each, and a subindex past the length answers 06090011h. A client that
+  read a string four bytes at a time from subindex 00h reads its length
+  there now.
 
 Serving subindex 00h of the indices with members, on 2026-10-20 (§7),
 changed:
 
-- **Subindex 00h reads the highest subindex** at 2100h (03h), 2101h and
-  2102h (02h), 3000h (13h), 3008h (06h), 3009h (02h) and 5000h (79h), as
-  a `const` `uint8`. It answered 06090011h.
-
-Telling the build and putting the fingerprint first, on 2026-10-20 (§7),
-changed:
-
-- **2007h, `build_type`, and 2008h, `settings_storage`**, read
-  "debug" or "release" and "flash" or "fram", as arrays of characters.
-- **The information moved** so that the fingerprint comes first, under
-  the same names:
-
-  | Object | Was | Is |
-  |---|---|---|
-  | `dictionary_id` | 2006h:00 | 2000h:00 |
-  | `device_name` | 2000h:00 | 2001h:00 |
-  | `serial_number` | 2005h:00 | 2002h:00 |
-  | `hardware_version` | 2001h:00 | 2003h:00 |
-  | `firmware_version` | 2002h:00 | 2004h:00 |
-  | `firmware_commitdate` | 2003h:00 | 2005h:00 |
-  | `firmware_branch` | 2004h:00 | 2006h:00 |
+- **Subindex 00h reads the highest subindex** at each index whose objects
+  all lie past it, as a `const` `uint8`. It answered 06090011h.
 
 Naming objects by path, on 2026-10-21 (§7, §10), changed what a tool
 shows:
 
 - **Objects have a path and a title.** A tool finds an object by its path,
-  `group.name`, e.g. `electrical.Vdc` or `motor.R`, where it had a
+  `group.name`, e.g. `sensor.gain` or `limits.high`, where it had a
   category, a subcategory and a name; a parameter's path is its name in
   the schema. Every object, and every group, has a title in English and
   in Russian. The class follows from the index: `about` (was `info`),
   `control` (was `ctl`), `parameters` (was `config`) and `watch`.
-  Addresses do not change; the fingerprint at 2000h:00 does, and a tool
-  that built its table by parsing `od.cpp` no longer can.
-- **Units come from types.** The 18 objects of an electrical angle — the
-  12 angles of the hall sensor, `model.angle_correction`, the reference
-  and actual angle, the hall angle and the two angles of the emulator —
-  show "°el" where they showed "°"; `hall_calibration.phase_current_slope`
-  shows "pu/s" where it showed "pu", `model.Vd_limit_factor` "pu" where it
-  showed none, and `motor.R` "Ω" where it showed "Ohm". Every other unit
-  is as before.
-
-An index for each group of watched values, on 2026-10-21 (§10), moved
-them:
-
-| Was | Now | Objects |
-|---|---|---|
-| 5000h:11–1E | 5010h:01–0E | `electrical.*`, from `Vdc` to `Vq_comp` |
-| 5000h:21–23 | 5020h:01–03 | `temperature.Tmcu`, `Tpwr`, `Tmot` |
-| 5001h, 5002h | 5021h, 5022h | `temperature.Tpwr_sensors`, `Tmot_sensors` |
-| 5000h:31–33 | 5030h:01–03 | `torque.*` |
-| 5000h:41–43 | 5040h:01–03 | `speed.*` |
-| 5000h:51–52 | 5050h:01–02 | `angle.*` |
-| 5000h:71–79 | 5070h:01–09 | `hall.*` |
-| 5003h | 5080h | `ext_input.V` |
-| 5004h | 5090h | `probe.channels` |
-
-`system.uptime` stays at 5000h:01. Subindex 00h of each new index reads
-the number of its objects; paths and titles do not change, and a host
-that reads the description finds the objects where they now are.
+  Addresses do not change; the fingerprint does, and a tool that built
+  its table by parsing the source of the dictionary no longer can.
 
 Naming the values, on 2026-10-22 (§10), changed what a tool shows:
 
-- **Values are named.** The description gives the titles of the nine
-  PWM modes of `model.pwm_mode`, 3165h, of the apply policy at 07h of
-  every parameter, "On command" and "On restart", and of the five codes
-  of `settings.last_refusal`, 2100h:03, so that a tool shows a title
-  where it showed a number and offers the named values when it writes
-  one. `model.pwm_mode` keeps the value it has stored: its identifier is
-  the one before.
-- **No data is no longer a number.** 2100h:03 answers 08000024h until the
-  first refusal, where it read 0. At 3000h, after a load that restored no
-  record, 07h, 08h, 0Ah and 0Ch–10h answer 08000024h, where they read
+- **Values are named.** The description gives the titles of the values
+  of a parameter of an enumeration, of the apply policy at 07h of every
+  parameter, "On command" and "On restart", and of the five codes of
+  `last_refusal`, so that a tool shows a title where it showed a number
+  and offers the named values when it writes one. A parameter that was a
+  `uint32` keeps the value it has stored: its identifier is the one
+  before.
+- **No data is no longer a number.** `last_refusal` answers 08000024h until
+  the first refusal, where it read 0. At 3000h, after a load that restored
+  no record, 07h, 08h, 0Ah and 0Ch–10h answer 08000024h, where they read
   FFFFFFFFh, 0, false and zeros; 05h, and 06h on flash, answer it while
   the section has no record — until the first save on a clean medium and
   after an erase — where they read 0. 09h tells whether a record was
   restored, and 0Bh whether the medium refused a read, as before.
-- **The types on the bus do not change**, and 2000h:00 gives a new
-  fingerprint.
-
-Reading the Hall group in its types, on 2026-10-22 (§10), changed:
-
-- **5070h:03, `hall.sector`, is a `uint32`** that the description names
-  "A (001)" to "CA (101)", the inputs high in the sector and its Hall code,
-  where it was a `float32` from 0 to 5; **5070h:04–06**, the inputs, are
-  booleans, where they were `float32` 0 or 1.
-- **Without telemetry of the Hall sensor, every object of the group**,
-  5070h:01–09, answers 08000024h, where the speed, the angle, the sector
-  and the inputs read NaN and the objects of the emulator 0.
-- 2000h:00 gives a new fingerprint.
-
-Taking the node id from the settings, on 2026-10-23 (§10), changed:
-
-- **3100h, `canopen.node_id`**, is the inverter's CANopen node id, a
-  `uint32` from 1 to 127, default 1, applied on restart. It is written at
-  3100h:01 and takes effect after a save and a reset, 2101h:02; until
-  then 3100h:02 keeps the id in use, 3000h:11 reads true and 3100h:08
-  answers 06010000h.
-- **The parameters moved one block of 20h up**, under the same names:
-
-  | Block | Was | Is |
-  |---|---|---|
-  | drive, with `model.torque_slope` and `model.speed_slope` | 3100h–3107h | 3120h–3127h |
-  | protection | 3120h–3129h | 3140h–3149h |
-  | motor | 3140h–3144h | 3160h–3164h |
-  | model | 3160h–3167h | 3180h–3187h |
-  | controllers | 3180h–3187h | 31A0h–31A7h |
-  | mras | 31A0h–31A2h | 31C0h–31C2h |
-  | current_sensor | 31C0h–31C3h | 31E0h–31E3h |
-  | hall | 31E0h–31EDh | 3200h–320Dh |
-  | hall_calibration | 3200h–3203h | 3220h–3223h |
-  | temperature_sensor | 3220h–3222h | 3240h–3242h |
-
-- **The values stored stay.** The first start of the new firmware loads
-  the 67 values into their new records; the node id, missing from the
-  record (3000h:10 reads 1), takes its default, and `params_defaulted`
-  shows until the first save.
-- 2000h:00 gives a new fingerprint.
-
-Showing the MCU's unique ID, on 2026-11-02 (§10), changed:
-
-- **2002h, `device.mcu_uid`**, reads the MCU's unique ID whole, as an
-  array of characters: U_ID[95:0] in 24 uppercase hexadecimal digits, the
-  highest first. It was `device.serial_number`, a `uint32` that read
-  U_ID[31:0].
-- 2000h:00 gives a new fingerprint.
+- **The types on the bus do not change**; the fingerprint does.
 
 ## 10b. What applying taught us
 
@@ -1985,50 +1673,38 @@ The first two lessons concern `take()`, which applying on command replaced
 on 2026-10-16 (§4); they stay for the record.
 
 - **A group is applied whole, so a group that also waits on something
-  stricter must not be applied at all.** Group `drive` holds fifteen live
-  protection thresholds next to `drive.phase_swap`, which may only change
-  standing still; taking the live part would rebuild `drive_config` from
-  values that include the swap. The rule lives inside `take()` rather than
-  in its callers: a caller that forgets it gets no diagnostic, only a phase
-  swap in a spinning machine. A consequence worth knowing: one parameter
-  needing a restart freezes live tuning of its group until the restart or
-  until the value is put back, which is the safe direction.
+  stricter must not be applied at all.** A group may hold live protection
+  thresholds next to `sensor.inverted`, which may only change standing
+  still; taking the live part would rebuild its config from values that
+  include the inversion. The rule lives inside `take()` rather than in its
+  callers: a caller that forgets it gets no diagnostic, only an inversion
+  in a running machine. A consequence worth knowing: one parameter needing
+  a restart freezes live tuning of its group until the restart or until the
+  value is put back, which is the safe direction.
 - **`take()` has a precondition**: writes to the parameters of the group
   must not run between `take` and the caller's reading of the image. A
   value written in between reaches the caller whatever its policy — a
   stricter one too, which `take` never saw. No check inside `take` closes
   that window: the take and the reading of the configuration would have to
-  be one operation. In the inverter the precondition holds by
-  construction: every call on the section runs in the main loop — SDO in
-  `can_server.run()`, the drive's task, the trouble task — so nothing
-  writes between a `take` and the reading after it.
+  be one operation. Where every call on the section runs in the main loop,
+  the precondition holds by construction: nothing writes between a `take`
+  and the reading after it.
 - **Reconfiguration is not atomic against the current loop.** The task
-  tick masks the timebase and below; the ADC and PWM interrupts (priority
-  0 and 2) still preempt. No value tears — every one is a word — and each
-  group's derived state tolerates a single control step built from a mix of
-  old and new coefficients. The one structure that would not, the angle
+  tick masks the timebase and below; the interrupts above it still
+  preempt. No value tears — every one is a word — and each group's
+  derived state tolerates a single control step built from a mix of
+  old and new coefficients. The one structure that would not, a hall
   sensor's sector maps, is only ever rebuilt in a state where no current
   flows, which is what its `on_safe_state` policy is for. Masking the
-  timebase does a second job: the drive's state machine moves in the
+  timebase does a second job: the state machine moves in the
   timebase interrupt, so the state `up_to` was read from holds until the
   rebuild ends.
-- **`isense.zero_drift_th` went back to `on_restart`.** Nothing can reach
-  the zero-drift calibrator to tell it otherwise: it is not owned by the
-  drive and has no periodic task of its own. Declaring it live would have
-  been a promise the code does not keep.
 
 - **Building from the values applied is what lets groups apply apart.**
   Rebuilt from the values requested, a config carried every value waiting
   in it, which is why a group had to be taken whole and why one value that
   waited froze the rest; rebuilt from the values applied, it carries only
   what was applied.
-- **A safe state is not a stopped bridge.** Stopping hands over to ready a
-  step before the model goes idle and the PWM stops, so an admission that
-  read only the state could rebuild the machine while the bridge still
-  switched. The inverter's admission reads the bridge as well.
-- **A drive that stands may still turn.** The PWM update and the hall
-  capture read the hall sensor's sector maps, and a rotor coasting below
-  the runout speed keeps both firing; rebuilding the maps masks both.
 
 - **Once configs come from the values applied, a group says nothing the
   configs do not.** What a change rebuilds is what differs between the
@@ -2038,8 +1714,7 @@ on 2026-10-16 (§4); they stay for the record.
   compare, which a defaulted `operator==` gives each.
 - **A fallback needs the scope of the check, not of the config.** The
   inputs of a rule are the least that mends it and the most it may reset;
-  a config holds parameters that a failed check has nothing to say about,
-  the phase order among them.
+  a config holds parameters that a failed check has nothing to say about.
 
 ## 11. Open questions
 

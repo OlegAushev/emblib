@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A model of the MPDO source of canopen-pdo-plan.ru.md (decision 4, 2.7).
+"""A model of the MPDO source of canopen-pdo-plan.ru.md (decision 4, 2.6).
 
 Run: python3 -I canopen-mpdo-model.py [--runs 1000] [--only abcdef]
 (about 40 s)

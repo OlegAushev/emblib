@@ -193,10 +193,10 @@ struct options {
 // a declaration is also what names its parameter to `parameter`, `image` and
 // `section`:
 //
-//   inline constexpr auto pole_pairs = declare_parameter(
-//       "motor.pole_pairs", std::int32_t{11}, {.label = {"Pole pairs", "…"}});
+//   inline constexpr auto samples = declare_parameter(
+//       "sensor.samples", std::int32_t{16}, {.label = {"Samples", "…"}});
 //   ...
-//   values.get<pole_pairs>()
+//   values.get<samples>()
 template<parameter_type T>
 struct declaration {
   using type = T;
@@ -232,14 +232,14 @@ concept parameter_declaration = detail::is_declaration<std::remove_cvref_t<T>>;
 // Declares a parameter for `make_schema`: named `name`, with the default value
 // `def` and the rest of the declaration in `opts`.
 //
-//   declare_parameter("motor.pole_pairs", std::int32_t{11},
-//                     {.label = {"Pole pairs", "…"}, .min = 1, .max = 64,
+//   declare_parameter("sensor.samples", std::int32_t{16},
+//                     {.label = {"Samples", "…"}, .min = 1, .max = 64,
 //                      .apply = ...})
 //
 // The type of the parameter is that of `def`, so a literal must have that
 // type exactly: `0.05f`, not `0.05`, and `std::int32_t{1}`, not `1`, an `int`,
 // which on some targets is not `std::int32_t`. A parameter of an enumeration,
-// e.g. `declare_parameter("model.pwm_mode", pwm_mode::svpwm, {...})`, is stored
+// e.g. `declare_parameter("sensor.mode", sensor_mode::fast, {...})`, is stored
 // as its carrier (`scalar_t`) and its identifier is that of a parameter of the
 // carrier of the same name. Compilation fails at the call if `opts.min` is
 // above `opts.max`, if `def` lies outside [`opts.min`, `opts.max`], if the

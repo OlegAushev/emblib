@@ -25,7 +25,7 @@ void exercise(Buffer& buffer)
   [[maybe_unused]] auto const got = buffer.load();
 }
 
-// Both scopes compile here, whichever of them the firmware uses.
+// Both scopes compile here.
 [[maybe_unused]] void instantiate_triple_buffer()
 {
   emb::triple_buffer<sample> smp;

@@ -91,15 +91,15 @@ struct basic_schema {
 // declarations are kept in `constexpr` variables with static storage
 // duration:
 //
-//   inline constexpr auto phase_swap =
-//       declare_parameter("drive.phase_swap",
+//   inline constexpr auto enabled =
+//       declare_parameter("sensor.enabled",
 //                         false,
-//                         {.label = {"Phase swap", "…"}});
-//   inline constexpr auto pole_pairs = declare_parameter(
-//       "motor.pole_pairs",
-//       std::int32_t{11},
-//       {.label = {"Pole pairs", "…"}, .min = std::int32_t{1}});
-//   inline constexpr auto schema = make_schema(phase_swap, pole_pairs);
+//                         {.label = {"Enabled", "…"}});
+//   inline constexpr auto samples = declare_parameter(
+//       "sensor.samples",
+//       std::int32_t{16},
+//       {.label = {"Samples", "…"}, .min = std::int32_t{1}});
+//   inline constexpr auto schema = make_schema(enabled, samples);
 //
 // A parameter that is reached only by index, e.g. by a transport, may be
 // declared in the call itself.
@@ -157,7 +157,7 @@ using type_at = typelist_at_t<typename schema_t<Schema>::types, I>;
 // parameter that the declaration `Decl` declares in the schema `Schema`: its
 // `name` as a `fixed_string`, its `index`, its `type` as `type_at` gives it,
 // its descriptor `desc` and its `default_value` of type `type`, e.g.
-// `parameter<schema, pole_pairs>::default_value`. The program is ill-formed
+// `parameter<schema, samples>::default_value`. The program is ill-formed
 // unless `Schema` holds `Decl`, i.e. has a parameter of its name whose type
 // and descriptor are those of `Decl`: the declaration `make_schema` was
 // given, or one equal to it. The message of the failed `static_assert`

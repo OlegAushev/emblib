@@ -23,7 +23,7 @@ void exercise(Counter& counter)
   [[maybe_unused]] auto const got = counter.load();
 }
 
-// Both scopes compile here, whichever one the firmware uses.
+// Both scopes compile here.
 [[maybe_unused]] void instantiate_wide_counter()
 {
   emb::wide_counter<> smp;

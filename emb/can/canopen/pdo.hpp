@@ -84,12 +84,12 @@ struct pdo_codec : detail::pdo_member_codec<Message> {
 // name and its label, and the codec of the member it carries, which a builder
 // gives:
 //
-//   inline constexpr pdo_row<drive_command> drive_command_rows[] = {
+//   inline constexpr pdo_row<command> command_rows[] = {
 //       {{16, 16},
-//        "torque_ref",
-//        {"Torque reference", "Задание момента"},
-//        pdo_map<&drive_command::torque_ref>},
-//       {{56, 2}, {}, {}, pdo_map_counter<&drive_command::counter>},
+//        "setpoint",
+//        {"Setpoint", "Уставка"},
+//        pdo_map<&command::setpoint>},
+//       {{56, 2}, {}, {}, pdo_map_counter<&command::counter>},
 //   };
 //
 // An array of rows lays the PDO out, and `encode_pdo`, `decode_pdo` and
@@ -622,9 +622,9 @@ inline constexpr std::uint8_t counter_mask_of = [] {
 // (`od_process_data`). An application writes the two once, in an
 // `inline constexpr` variable of a named namespace that both take:
 //
-//   inline constexpr auto drive_status_pdo = pdo_of<drive_status_rows>(
-//       {.name = "drive_status",
-//        .label = {"Drive status", "Состояние привода"},
+//   inline constexpr auto machine_status_pdo = pdo_of<machine_status_rows>(
+//       {.name = "machine_status",
+//        .label = {"Machine status", "Состояние машины"},
 //        .direction = pdo_direction::tx,
 //        .number = 1,
 //        .cob_id = pdo_id::predefined(),

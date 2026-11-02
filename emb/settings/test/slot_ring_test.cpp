@@ -145,8 +145,8 @@ consteval bool no_record()
 
 // -- Every view --
 
-// Two slots of one each, the FRAM of the product: every save fills the slot
-// it takes, the one that does not hold the newest record.
+// Two slots of one each, as on a FRAM: every save fills the slot it takes,
+// the one that does not hold the newest record.
 consteval bool test_two_slots_in_blocks_of_one()
 {
   return every_view<2, 1>(varied::all) && no_record<2, 1>();
@@ -186,8 +186,8 @@ consteval bool test_six_slots_in_blocks_of_three()
 
 static_assert(test_six_slots_in_blocks_of_three());
 
-// Two blocks of four, the flash of the product in small: up to three slots
-// lie after the newest record in its block. Every combination of them is
+// Two blocks of four, a flash in small: up to three slots lie after the
+// newest record in its block. Every combination of them is
 // checked; of the other slots, only whether each is whole.
 consteval bool test_eight_slots_with_the_newest_in_the_first_block()
 {

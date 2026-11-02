@@ -154,7 +154,7 @@ constexpr T from_raw(typename T::raw_type raw)
   return std::bit_cast<T>(raw);
 }
 
-// -- the drive's status, as etk's TPDO1 lays it out ---------------------------
+// -- the drive's status, in TPDO1 ---------------------------------------------
 
 struct drive_status {
   drive::state state;
@@ -249,8 +249,8 @@ static_assert(status_word([](drive_status& m) { m.counter = 3; })
 static_assert(status_word([](drive_status& m) { m.counter = 6; })
               == std::uint64_t{2} << 56);
 
-// A TPDO decodes as a host would read it: the frame that the inverter sent
-// in standby, with a warning and a critical fault, counter 3.
+// A TPDO decodes as a host would read it: the frame that the drive sent in
+// standby, with a warning and a critical fault, counter 3.
 consteval bool test_decode_status()
 {
   auto const status = decode_pdo<drive_status_rows>(
@@ -269,7 +269,7 @@ consteval bool test_decode_status()
 
 static_assert(test_decode_status());
 
-// -- the drive's command, as etk's RPDO1 lays it out --------------------------
+// -- the drive's command, in RPDO1 --------------------------------------------
 
 struct drive_command {
   bool emergency;
@@ -391,7 +391,7 @@ static_assert(
         .raw()
     == -10000);
 
-// -- the status flags of one level, as etk's TPDO4 lays them out --------------
+// -- the status flags of one level, in TPDO4 ----------------------------------
 
 struct status_flags {
   std::uint64_t flags;

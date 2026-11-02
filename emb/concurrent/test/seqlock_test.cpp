@@ -25,7 +25,7 @@ void exercise(Lock& lock)
   [[maybe_unused]] auto const got = lock.load();
 }
 
-// No firmware code uses either scope, so this is where both compile.
+// Both scopes compile here.
 [[maybe_unused]] void instantiate_seqlock()
 {
   emb::seqlock<sample> smp;

@@ -15,13 +15,13 @@ namespace emb::fsm::command {
 // store, save or restore, and a state that names no control does not compile.
 //
 //   struct stopping {
-//     using start_control = vcu_control;    // an event: start or stop
-//     using run_control = stopping_control; // data: what the model runs on
+//     using start_control = remote_control; // an event: start or stop
+//     using run_control = stopping_control; // data: what the machine runs on
 //     ...
 //   };
 //
-//   emb::fsm::command::deliver_all<channels>(drive);
-//   auto const run = emb::fsm::command::read<run_channel>(drive);
+//   emb::fsm::command::deliver_all<channels>(machine);
+//   auto const run = emb::fsm::command::read<run_channel>(machine);
 
 namespace detail {
 
@@ -41,7 +41,7 @@ concept declares_command = requires { typename Channel::command; };
 //     using control = typename S::power_control;
 //   };
 //
-//   static power_command value(power_channel, motor_drive const&); // a control
+//   static power_command value(power_channel, machine const&); // a control
 //
 // The command is an event, or a std::variant of events of which the control
 // picks one, and delivery dispatches it to the machine. A command that is data
@@ -139,8 +139,7 @@ inline constexpr bool
 } // namespace detail
 
 // Every state of the context names a control for the channel. The context is
-// the state machine and what the controls read, both at once: on a drive it is
-// one object.
+// the state machine and what the controls read, both at once.
 template<typename Channel, typename Context>
 concept readable = some_channel<Channel>
                 && detail::publishes_states<Context>

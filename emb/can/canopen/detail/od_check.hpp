@@ -80,8 +80,7 @@ constexpr i18n::text const& unit_of(od_row<Ctx> const& row)
   return unit.empty() ? row.binding.unit : unit;
 }
 
-// Renders a row as "3100h:00 drive.phase_swap", or as "3100h:00" if it has no
-// path.
+// Renders a row as "3100h:00 group.name", or as "3100h:00" if it has no path.
 template<typename Ctx>
 constexpr void append_row(std::string& out, od_row<Ctx> const& row)
 {
@@ -149,7 +148,7 @@ constexpr std::string item_error(od_catalog const& catalog,
   return out;
 }
 
-// Renders a PDO as "TPDO1 drive_status", or as "TPDO1" if it has no name.
+// Renders a PDO as "TPDO1 machine_status", or as "TPDO1" if it has no name.
 constexpr void append_pdo(std::string& out, od_pdo const& pdo)
 {
   out += pdo.direction == pdo_direction::tx ? "TPDO" : "RPDO";

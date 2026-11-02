@@ -30,7 +30,7 @@ void exercise(Latch& latch)
   [[maybe_unused]] auto const got = latch.load();
 }
 
-// No firmware code uses either scope, so this is where both compile.
+// Both scopes compile here.
 [[maybe_unused]] void instantiate_latched_seqlock()
 {
   emb::latched_seqlock<sample> smp;

@@ -6,7 +6,7 @@ compile time only, and none of it may reach the image.
 
 A string counts only as a whole: the image is split at its NUL bytes and
 each piece compared, so that a path that begins or ends another one, e.g.
-hall.speed of hall.speed_time_constant, the name of a parameter, which the
+sensor.gain of sensor.gain_limit, the name of a parameter, which the
 image holds, is not reported. From a description are taken the paths of
 objects, arrays and records, as the source writes them, the group and the
 name joined by a dot, though not those of the records of the class

@@ -32,7 +32,7 @@ void exercise(Buffer& buffer)
   [[maybe_unused]] auto const got = std::as_const(buffer).load();
 }
 
-// Both scopes compile here, whichever of them the firmware uses.
+// Both scopes compile here.
 [[maybe_unused]] void instantiate_spmc_buffer()
 {
   emb::spmc_buffer<sample, 2> smp;
