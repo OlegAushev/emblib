@@ -1606,6 +1606,23 @@ PWM frequency as `drive.pwm_freq` — live, in a group of its own.
   describe the entries added: they follow from the rows. Rejected: a row
   at 00h written by hand, which would have to follow every object added
   to the index.
+- **The inverter shows its MCU's unique ID, not a serial number**
+  (2026-11-02). 2002h, `device.serial_number`, read U_ID[31:0], the first
+  of the three words of the ID that the maker of the MCU programs into
+  it. That ID names the MCU, so it goes with the control board, and
+  nobody assigns it; and the manual promises only the 96 bits together to
+  be unique: the word read on a bench, 00070039h, is two small halves, as
+  the X and Y of a die on its wafer are on an STM32, so it may repeat from
+  wafer to wafer. 2002h is `device.mcu_uid` now and reads the whole ID as
+  text, U_ID[95:0] in 24 uppercase hexadecimal digits, the highest first,
+  which a host shows with the inverter's other texts; the inverter formats
+  it once, before `main`, from mcudrv's `core::uid()`, the three words,
+  which replaced `core::serial_number()`. A serial number, which the
+  maker of the inverter would assign and keep where neither an image nor
+  an erase reaches, such as the OTP area of the MCU, waits until the
+  inverter has one. Rejected: an array of three `uint32`, which reads as
+  three numbers rather than one ID; a 32-bit hash of the ID, unique enough
+  but still no serial number.
 - **The fingerprint is the inverter's first object** (2026-10-20). A host
   reads `dictionary_id` before it knows which table to decode the
   inverter by, so its address must not move when the table does. It
@@ -1952,6 +1969,14 @@ Taking the node id from the settings, on 2026-10-23 (§10), changed:
   the 67 values into their new records; the node id, missing from the
   record (3000h:10 reads 1), takes its default, and `params_defaulted`
   shows until the first save.
+- 2000h:00 gives a new fingerprint.
+
+Showing the MCU's unique ID, on 2026-11-02 (§10), changed:
+
+- **2002h, `device.mcu_uid`**, reads the MCU's unique ID whole, as an
+  array of characters: U_ID[95:0] in 24 uppercase hexadecimal digits, the
+  highest first. It was `device.serial_number`, a `uint32` that read
+  U_ID[31:0].
 - 2000h:00 gives a new fingerprint.
 
 ## 10b. What applying taught us
