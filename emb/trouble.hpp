@@ -28,11 +28,6 @@ concept status_like = level_like<L> && requires {
   { S::level_max } -> std::same_as<L const&>;
 };
 
-// A status may name a group it belongs to: raising it raises the group too,
-// so the aggregate cannot be forgotten at a call site.
-template<typename S>
-concept grouped = requires { typename S::group; };
-
 // What may take a status down. The policy is a property of the status, not
 // of the code that raises it: it decides which calls a call site is allowed
 // to make at all.
@@ -132,33 +127,6 @@ template<typename... Statuses>
 consteval bool any_expiring(typelist<Statuses...>)
 {
   return ((hold_of<Statuses>() == hold_policy::expiring) || ...);
-}
-
-template<typename... Statuses>
-consteval bool groups_valid(typelist<Statuses...>)
-{
-  using List = typelist<Statuses...>;
-  auto valid = []<typename S>() {
-    if constexpr (grouped<S>) {
-      using G = typename S::group;
-      using L = std::remove_cv_t<decltype(S::level_min)>;
-      if constexpr (!status_like<G, L>) {
-        return false;
-      }
-      else {
-        // in the list, not grouped itself, and wide enough to carry every
-        // level the status can be raised to
-        return listed_in<G, List>
-            && !grouped<G>
-            && (G::level_min <= S::level_min)
-            && (S::level_max <= G::level_max);
-      }
-    }
-    else {
-      return true;
-    }
-  };
-  return (valid.template operator()<Statuses>() && ...);
 }
 
 template<typename L, typename... Statuses>
@@ -261,9 +229,6 @@ class registry {
   static_assert(detail::levels_within<LevelCount>(StatusList{}),
                 "status levels must lie between 0 and LevelCount - 1");
   static_assert(detail::ids_unique(StatusList{}), "status ids must be unique");
-  static_assert(detail::groups_valid(StatusList{}),
-                "a status's group must be a status in the list, must not be "
-                "grouped itself, and must span the status's levels");
   static_assert(detail::expiry_levels_valid<Level>(StatusList{}),
                 "expires_at must lie within the status's levels, and only an "
                 "expiring status may name one");
@@ -279,9 +244,7 @@ public:
   //
 
   // Raises the status to L, or leaves it where it stands if that is higher.
-  // One atomic or: safe from any interrupt, and no interrupt is masked. A
-  // status that names a group raises the group with it — the aggregate is a
-  // consequence of the declaration, not of remembering a second call. An
+  // One atomic or: safe from any interrupt, and no interrupt is masked. An
   // expiring status is marked as seen in the same write, so a sweep running
   // concurrently cannot mistake it for stale.
   template<typename Status, Level L>
@@ -289,9 +252,6 @@ public:
   void raise(Status, std::integral_constant<Level, L>)
   {
     escalate<Status>(index_of(L));
-    if constexpr (grouped<Status>) {
-      escalate<typename Status::group>(index_of(L));
-    }
   }
 
   // for statuses confined to a single level it can be deduced
