@@ -365,7 +365,7 @@ public:
 
       unroll<sizeof...(R)>([&]<std::size_t I>() {
         if (!broken[I]) return;
-        using rule = typelist_at_t<typelist<R...>, I>;
+        using rule = typelist_element_t<I, typelist<R...>>;
         for (auto const i : rule::in::indices) {
           applied_.assign_cell(i, Schema.parameters[i].def);
         }

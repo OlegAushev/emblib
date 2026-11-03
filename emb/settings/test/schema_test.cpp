@@ -67,9 +67,9 @@ static_assert(!schema.index_of("nope"));
 
 // -- Static types recovered --
 
-static_assert(std::same_as<type_at<schema, 0>, bool>);
-static_assert(std::same_as<type_at<schema, 1>, rpm>);
-static_assert(std::same_as<type_at<schema, 3>, pu>);
+static_assert(std::same_as<type_at<0, schema>, bool>);
+static_assert(std::same_as<type_at<1, schema>, rpm>);
+static_assert(std::same_as<type_at<3, schema>, pu>);
 
 using speed = parameter<schema, drive_runout_speed>;
 static_assert(speed::index == 1);

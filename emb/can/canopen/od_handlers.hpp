@@ -187,11 +187,12 @@ template<auto F>
 concept od_context_function =
     od_function<F>
     && (od_args_t<F>::size == 1)
-    && std::is_lvalue_reference_v<typelist_at_t<od_args_t<F>, 0>>;
+    && std::is_lvalue_reference_v<typelist_element_t<0, od_args_t<F>>>;
 
 // The context that the function `F` takes.
 template<auto F>
-using od_context_of = std::remove_reference_t<typelist_at_t<od_args_t<F>, 0>>;
+using od_context_of =
+    std::remove_reference_t<typelist_element_t<0, od_args_t<F>>>;
 
 } // namespace detail
 

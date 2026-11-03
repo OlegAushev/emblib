@@ -77,10 +77,10 @@ static_assert(!listed_in<C, typelist<A, B>>);
 static_assert(!listed_in<A, typelist<>>);
 static_assert(!listed_in<A, A>);
 
-// at
-static_assert(std::is_same_v<typelist_at_t<typelist<A, B, C>, 0>, A>);
-static_assert(std::is_same_v<typelist_at_t<typelist<A, B, C>, 1>, B>);
-static_assert(std::is_same_v<typelist_at_t<typelist<A, B, C>, 2>, C>);
+// element
+static_assert(std::is_same_v<typelist_element_t<0, typelist<A, B, C>>, A>);
+static_assert(std::is_same_v<typelist_element_t<1, typelist<A, B, C>>, B>);
+static_assert(std::is_same_v<typelist_element_t<2, typelist<A, B, C>>, C>);
 
 // index
 static_assert(typelist_index_v<A, typelist<A, B, C>> == 0);
@@ -89,11 +89,11 @@ static_assert(typelist_index_v<B, typelist<A, B, B>> == 1);
 static_assert(typelist_index<B, typelist<A, B>>::value == 1);
 
 // count
-static_assert(typelist_count_v<typelist<A, B, A, C, A>, A> == 3);
-static_assert(typelist_count_v<typelist<A, B, A, C, A>, B> == 1);
-static_assert(typelist_count_v<typelist<A, B, A, C, A>, C> == 1);
-static_assert(typelist_count_v<typelist<A, B>, C> == 0);
-static_assert(typelist_count_v<typelist<>, A> == 0);
+static_assert(typelist_count_v<A, typelist<A, B, A, C, A>> == 3);
+static_assert(typelist_count_v<B, typelist<A, B, A, C, A>> == 1);
+static_assert(typelist_count_v<C, typelist<A, B, A, C, A>> == 1);
+static_assert(typelist_count_v<C, typelist<A, B>> == 0);
+static_assert(typelist_count_v<A, typelist<>> == 0);
 
 // duplicate_free
 static_assert(duplicate_free_typelist<typelist<A, B, C>>);

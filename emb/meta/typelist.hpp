@@ -69,17 +69,17 @@ concept listed_in =
 // Provides the member typedef `type`, which is the element at zero-based index
 // `I` of the typelist `List`. The program is ill-formed if `List` is not a
 // typelist or `I >= List::size`.
-template<typename List, std::size_t I>
-struct typelist_at;
+template<std::size_t I, typename List>
+struct typelist_element;
 
-template<typename... Ts, std::size_t I>
-struct typelist_at<typelist<Ts...>, I> {
+template<std::size_t I, typename... Ts>
+struct typelist_element<I, typelist<Ts...>> {
   using type = nth_type_t<I, Ts...>;
 };
 
-// Helper alias template for `typelist_at`.
-template<typename List, std::size_t I>
-using typelist_at_t = typename typelist_at<List, I>::type;
+// Helper alias template for `typelist_element`.
+template<std::size_t I, typename List>
+using typelist_element_t = typename typelist_element<I, List>::type;
 
 // Provides the member constant `value` equal to the zero-based index of the
 // first element of the typelist `List` that is the same type as `T`. The
@@ -98,18 +98,17 @@ inline constexpr std::size_t typelist_index_v = typelist_index<T, List>::value;
 // Provides the member constant `value` equal to the number of elements of the
 // typelist `List` that are the same type as `T`. The program is ill-formed if
 // `List` is not a typelist.
-template<typename List, typename T>
-struct typelist_count_t;
+template<typename T, typename List>
+struct typelist_count;
 
-template<typename... Ts, typename T>
-struct typelist_count_t<typelist<Ts...>, T>
+template<typename T, typename... Ts>
+struct typelist_count<T, typelist<Ts...>>
     : std::integral_constant<std::size_t,
                              (0 + ... + (std::same_as<T, Ts> ? 1 : 0))> {};
 
-// Helper variable template for `typelist_count_t`.
-template<typename List, typename T>
-inline constexpr std::size_t typelist_count_v =
-    typelist_count_t<List, T>::value;
+// Helper variable template for `typelist_count`.
+template<typename T, typename List>
+inline constexpr std::size_t typelist_count_v = typelist_count<T, List>::value;
 
 namespace detail {
 
@@ -118,7 +117,7 @@ inline constexpr bool is_duplicate_free = false;
 
 template<typename... Ts>
 inline constexpr bool is_duplicate_free<typelist<Ts...>> =
-    (... && (typelist_count_v<typelist<Ts...>, Ts> == 1));
+    (... && (typelist_count_v<Ts, typelist<Ts...>> == 1));
 
 } // namespace detail
 

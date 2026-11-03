@@ -112,9 +112,9 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `typelist_size`, `typelist_size_v`
   - [x] `listed_in` (`detail::is_listed_in` без комментария: его покрывает
     концепт)
-  - [x] `typelist_at`, `typelist_at_t`
+  - [x] `typelist_element`, `typelist_element_t`
   - [x] `typelist_index`, `typelist_index_v`
-  - [x] `typelist_count_t`, `typelist_count_v`
+  - [x] `typelist_count`, `typelist_count_v`
   - [x] `duplicate_free_typelist` (`detail::is_duplicate_free` без
     комментария: его покрывает концепт)
   - [x] `typelist_append`, `typelist_append_t`

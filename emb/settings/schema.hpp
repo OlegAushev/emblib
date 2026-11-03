@@ -150,8 +150,8 @@ using schema_t = std::remove_cvref_t<decltype(Schema)>;
 // the default passed to `declare_parameter`, e.g. `units::rpm_f32` rather than
 // its scalar `float`. The program is ill-formed if `I` is not less than
 // `schema_t<Schema>::count`.
-template<auto& Schema, std::size_t I>
-using type_at = typelist_at_t<typename schema_t<Schema>::types, I>;
+template<std::size_t I, auto& Schema>
+using type_at = typelist_element_t<I, typename schema_t<Schema>::types>;
 
 // The class template `parameter` provides the compile-time facts of the
 // parameter that the declaration `Decl` declares in the schema `Schema`: its
@@ -181,7 +181,7 @@ struct parameter {
   // the failed `static_assert` is the only error `parameter` causes.
   static constexpr std::size_t index = lookup.value_or(0);
 
-  using type = type_at<Schema, index>;
+  using type = type_at<index, Schema>;
 
   static constexpr descriptor const& desc = Schema.parameters[index];
   static_assert(
