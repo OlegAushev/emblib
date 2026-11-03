@@ -33,7 +33,6 @@ consteval std::span<emb::enumerator_info<level> const> enum_info_of(level)
 }
 
 struct overheat {
-  static constexpr emb::trouble::id_type id = 0;
   static constexpr level level_min = level::warning;
   static constexpr level level_max = level::fault;
   static constexpr std::string_view name = "overheat";
@@ -41,17 +40,13 @@ struct overheat {
 };
 
 struct overvoltage {
-  static constexpr emb::trouble::id_type id = 1;
   static constexpr level level_min = level::fault;
   static constexpr level level_max = level::fault;
   static constexpr std::string_view name = "overvoltage";
   static constexpr emb::i18n::text label = {"Overvoltage", "Перенапряжение"};
 };
 
-// The status of the id 2 is retired.
-
 struct stall {
-  static constexpr emb::trouble::id_type id = 3;
   static constexpr level level_min = level::warning;
   static constexpr level level_max = level::fault;
   static constexpr std::string_view name = "stall";
@@ -64,17 +59,17 @@ using statuses = emb::typelist<overheat, overvoltage, stall>;
 // whose words are atomics that constant evaluation does not read: the bridge
 // calls only `severity`.
 struct fixed_registry {
-  std::array<std::optional<level>, 4> severities{};
+  std::array<std::optional<level>, 3> severities{};
 
   template<typename Status>
   constexpr std::optional<level> severity(Status) const
   {
-    return severities[Status::id];
+    return severities[emb::trouble::id_of<Status, statuses>()];
   }
 };
 
 inline constexpr fixed_registry registry{
-    {level::fault, std::nullopt, std::nullopt, level::warning}};
+    {level::fault, std::nullopt, level::warning}};
 
 } // namespace
 
@@ -110,13 +105,6 @@ static_assert(od_severity_scale<level>[2].name == "fault");
 static_assert(od_severity_scale<level>[2].label
               == emb::i18n::text{"Fault", "Отказ"});
 
-// The stub of a retired status is named after its id, in decimal digits.
-static_assert(detail::od_decimal<0>.view() == "0");
-static_assert(detail::od_decimal<10>.view() == "10");
-static_assert(detail::od_retired_name<22>.view() == "retired_22");
-static_assert(detail::od_retired_label_en<253>.view() == "Retired status 253");
-static_assert(detail::od_retired_label_ru<7>.view() == "Снятый статус 7");
-
 // -- Binding --
 
 struct ctx {};
@@ -127,33 +115,32 @@ consteval od_binding<ctx> bind()
   return Binding;
 }
 
-// A member a subindex, 00h and one for each id, the retired one included;
-// the row gives the info, and the record has no value of its own.
-static_assert(bind<od_statuses<registry>>().layout.size() == 5);
-static_assert(bind<od_statuses<registry>>().field_info.size() == 5);
+// A member a subindex, 00h and one for each status, by its position in the
+// list; the row gives the info, and the record has no value of its own.
+static_assert(bind<od_statuses<registry>>().layout.size() == 4);
+static_assert(bind<od_statuses<registry>>().field_info.size() == 4);
 static_assert(bind<od_statuses<registry>>().layout[0].access
               == od_access::const_);
-static_assert(bind<od_statuses<registry>>().layout[3].access == od_access::ro);
-static_assert(bind<od_statuses<registry>>().layout[4].type
+static_assert(bind<od_statuses<registry>>().layout[2].access == od_access::ro);
+static_assert(bind<od_statuses<registry>>().layout[3].type
               == od_data_type::uint8);
-static_assert(bind<od_statuses<registry>>().layout[4].write == nullptr);
+static_assert(bind<od_statuses<registry>>().layout[3].write == nullptr);
 static_assert(bind<od_statuses<registry>>().info.path.empty());
 static_assert(bind<od_statuses<registry>>().value_table.empty());
 
-// The member of a status bears its name and label, that of a retired one
-// those of the stub, and each past 00h the scale.
+// The member of a status bears its name and label, and each past 00h the
+// scale.
 static_assert(bind<od_statuses<registry>>().field_info[0].name
               == "highest_subindex");
 static_assert(bind<od_statuses<registry>>().field_info[0].value_table.empty());
 static_assert(bind<od_statuses<registry>>().field_info[1].name == "overheat");
 static_assert(bind<od_statuses<registry>>().field_info[1].label
               == overheat::label);
-static_assert(bind<od_statuses<registry>>().field_info[3].name == "retired_2");
-static_assert(bind<od_statuses<registry>>().field_info[3].label
-              == emb::i18n::text{"Retired status 2", "Снятый статус 2"});
-static_assert(bind<od_statuses<registry>>().field_info[3].value_table.data()
+static_assert(bind<od_statuses<registry>>().field_info[2].name
+              == "overvoltage");
+static_assert(bind<od_statuses<registry>>().field_info[2].value_table.data()
               == od_severity_scale<level>.data());
-static_assert(bind<od_statuses<registry>>().field_info[4].name == "stall");
+static_assert(bind<od_statuses<registry>>().field_info[3].name == "stall");
 
 // The trait names the statuses and the levels of emb::trouble::registry, and
 // the bridge binds one.
@@ -169,8 +156,8 @@ static_assert(detail::od_registry_traits<trouble_registry>::level_count == 2);
 
 constinit trouble_registry raised{};
 
-static_assert(bind<od_statuses<raised>>().layout.size() == 5);
-static_assert(bind<od_statuses<raised>>().field_info[4].name == "stall");
+static_assert(bind<od_statuses<raised>>().layout.size() == 4);
+static_assert(bind<od_statuses<raised>>().field_info[3].name == "stall");
 
 // -- The list of an MPDO --
 
@@ -184,25 +171,17 @@ consteval bool is_block(mpdo_scan const& scan,
       && scan.count == count;
 }
 
-// A block for each run of live statuses, by id, at their subindices: two
-// around the retired status 2, one without a hole, and none for 00h or for a
-// hole at id 0.
-static_assert(od_statuses_scans<registry, 0x4000>.size() == 2);
-static_assert(is_block(od_statuses_scans<registry, 0x4000>[0], 0x4000, 1, 2));
-static_assert(is_block(od_statuses_scans<registry, 0x4000>[1], 0x4000, 4, 1));
-static_assert(od_statuses_scans<raised, 0x4100>.size() == 2);
-static_assert(is_block(od_statuses_scans<raised, 0x4100>[1], 0x4100, 4, 1));
+// One block of all the statuses, from subindex 01h, without 00h.
+static_assert(od_statuses_scans<registry, 0x4000>.size() == 1);
+static_assert(is_block(od_statuses_scans<registry, 0x4000>[0], 0x4000, 1, 3));
+static_assert(od_statuses_scans<raised, 0x4100>.size() == 1);
+static_assert(is_block(od_statuses_scans<raised, 0x4100>[0], 0x4100, 1, 3));
 
-constinit emb::trouble::registry<emb::typelist<overheat, overvoltage>, level, 2>
-    unbroken{};
 constinit emb::trouble::registry<emb::typelist<overvoltage, stall>, level, 2>
-    late{};
+    pair{};
 
-static_assert(od_statuses_scans<unbroken, 0x4000>.size() == 1);
-static_assert(is_block(od_statuses_scans<unbroken, 0x4000>[0], 0x4000, 1, 2));
-static_assert(od_statuses_scans<late, 0x4000>.size() == 2);
-static_assert(is_block(od_statuses_scans<late, 0x4000>[0], 0x4000, 2, 1));
-static_assert(is_block(od_statuses_scans<late, 0x4000>[1], 0x4000, 4, 1));
+static_assert(od_statuses_scans<pair, 0x4000>.size() == 1);
+static_assert(is_block(od_statuses_scans<pair, 0x4000>[0], 0x4000, 1, 2));
 
 // -- Dictionary --
 
@@ -241,8 +220,8 @@ inline constexpr od_row<ctx> rows[] = {
 
 inline constexpr auto dictionary = make_dictionary<rows, areas, groups>();
 
-// Member id + 1 reads the severity of the status of the id, 00h the highest
-// subindex, and the stub of the retired status 0.
+// Member id + 1 reads the severity of the status of the id, and 00h the
+// highest subindex.
 consteval bool test_members_read_the_severities()
 {
   ctx c;
@@ -253,16 +232,15 @@ consteval bool test_members_read_the_severities()
     return member->read(c, member->arg);
   };
 
-  if (read(0x00) != od_read_result{std::uint8_t{4}}) return false;
+  if (read(0x00) != od_read_result{std::uint8_t{3}}) return false;
   if (read(0x01) != od_read_result{std::uint8_t{2}}) return false;
   if (read(0x02) != od_read_result{std::uint8_t{0}}) return false;
-  if (read(0x03) != od_read_result{std::uint8_t{0}}) return false;
-  if (read(0x04) != od_read_result{std::uint8_t{1}}) return false;
-  if (read(0x05) != std::unexpected(sdo_abort_code::subindex_not_found)) {
+  if (read(0x03) != od_read_result{std::uint8_t{1}}) return false;
+  if (read(0x04) != std::unexpected(sdo_abort_code::subindex_not_found)) {
     return false;
   }
 
-  auto const status = view.find({0x4000, 0x04});
+  auto const status = view.find({0x4000, 0x03});
   return status
       && (status->access == od_access::ro)
       && (status->type == od_data_type::uint8)
@@ -286,7 +264,7 @@ static_assert(od_description_fingerprint(description)
 
 // The record of the class status, of no value of its own: no datatype, unit
 // or table. The scale is the table of its members, numbered before the table
-// of a row; the members state their type, and the stub is one of them.
+// of a row, and the members state their type.
 inline constexpr std::string_view body =
     R"({"type":"group","name":"trouble","label_en":"Trouble","label_ru":"Неисправности"})"
     "\n"
@@ -308,9 +286,7 @@ inline constexpr std::string_view body =
     "\n"
     R"({"type":"field","layout":0,"sub":"0x02","name":"overvoltage","label_en":"Overvoltage","label_ru":"Перенапряжение","datatype":"uint8","access":"ro","value_table":0})"
     "\n"
-    R"({"type":"field","layout":0,"sub":"0x03","name":"retired_2","label_en":"Retired status 2","label_ru":"Снятый статус 2","datatype":"uint8","access":"ro","value_table":0})"
-    "\n"
-    R"({"type":"field","layout":0,"sub":"0x04","name":"stall","label_en":"Stall","label_ru":"Заклинивание","datatype":"uint8","access":"ro","value_table":0})"
+    R"({"type":"field","layout":0,"sub":"0x03","name":"stall","label_en":"Stall","label_ru":"Заклинивание","datatype":"uint8","access":"ro","value_table":0})"
     "\n"
     R"({"type":"record","index":"0x4000","group":"trouble","name":"statuses","label_en":"Trouble statuses","label_ru":"Статусы неисправностей","class":"status","layout":0})"
     "\n"

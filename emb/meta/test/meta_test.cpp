@@ -82,6 +82,12 @@ static_assert(std::is_same_v<typelist_at_t<typelist<A, B, C>, 0>, A>);
 static_assert(std::is_same_v<typelist_at_t<typelist<A, B, C>, 1>, B>);
 static_assert(std::is_same_v<typelist_at_t<typelist<A, B, C>, 2>, C>);
 
+// index
+static_assert(typelist_index_v<A, typelist<A, B, C>> == 0);
+static_assert(typelist_index_v<C, typelist<A, B, C>> == 2);
+static_assert(typelist_index_v<B, typelist<A, B, B>> == 1);
+static_assert(typelist_index<B, typelist<A, B>>::value == 1);
+
 // count
 static_assert(typelist_count_v<typelist<A, B, A, C, A>, A> == 3);
 static_assert(typelist_count_v<typelist<A, B, A, C, A>, B> == 1);

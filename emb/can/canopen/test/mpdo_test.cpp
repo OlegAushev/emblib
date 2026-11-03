@@ -6,7 +6,6 @@
 #include <emb/can/canopen/od_dictionary.hpp>
 #include <emb/can/canopen/od_handlers.hpp>
 #include <emb/can/canopen/od_process_data.hpp>
-#include <emb/can/canopen/od_trouble.hpp>
 #include <emb/can/canopen/pdo.hpp>
 #include <emb/can/canopen/server.hpp>
 #include <emb/can/canopen/types.hpp>
@@ -23,6 +22,7 @@
 #include <utility>
 
 #include <emb/can.hpp>
+#include <emb/meta/fixed_string.hpp>
 #include <emb/test/mock/can_bus.hpp>
 
 namespace {
@@ -110,14 +110,33 @@ inline constexpr auto status_layout = [] {
   return fields;
 }();
 
-template<std::size_t K>
-inline constexpr auto status_name = "status_" + detail::od_decimal<K>;
+// The decimal digits of `Value`.
+template<std::size_t Value>
+inline constexpr auto decimal = [] {
+  constexpr auto digits = [] {
+    auto count = 1uz;
+    for (auto left = Value / 10; left != 0; left /= 10) {
+      ++count;
+    }
+    return count;
+  }();
+  emb::fixed_string<digits + 1> out;
+  auto rest = Value;
+  for (auto i = digits; i > 0; --i) {
+    out.chars[i - 1] = static_cast<char>('0' + rest % 10);
+    rest /= 10;
+  }
+  return out;
+}();
 
 template<std::size_t K>
-inline constexpr auto status_label_en = "Status " + detail::od_decimal<K>;
+inline constexpr auto status_name = "status_" + decimal<K>;
 
 template<std::size_t K>
-inline constexpr auto status_label_ru = "Статус " + detail::od_decimal<K>;
+inline constexpr auto status_label_en = "Status " + decimal<K>;
+
+template<std::size_t K>
+inline constexpr auto status_label_ru = "Статус " + decimal<K>;
 
 template<std::size_t N>
 inline constexpr auto status_field_info = [] {

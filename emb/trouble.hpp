@@ -16,6 +16,9 @@
 
 namespace emb::trouble {
 
+// The id of a status: its zero-based position in the list of statuses
+// (`id_of`), by which a protocol addresses it. Inserting or retiring a status
+// moves the ones after it.
 using id_type = std::uint8_t;
 
 template<typename L>
@@ -23,7 +26,6 @@ concept level_like = std::is_scoped_enum_v<L>;
 
 template<typename S, typename L>
 concept status_like = level_like<L> && requires {
-  { S::id } -> std::same_as<id_type const&>;
   { S::level_min } -> std::same_as<L const&>;
   { S::level_max } -> std::same_as<L const&>;
 };
@@ -95,32 +97,22 @@ concept valid_level = listed_in<S, List>
                    && (S::level_min <= Lvl)
                    && (Lvl <= S::level_max);
 
-namespace detail {
-
-template<typename... Statuses>
-consteval bool ids_unique(typelist<Statuses...>)
+// The id of the status `S` in `StatusList`: its zero-based position there.
+template<typename S, typename StatusList>
+  requires listed_in<S, StatusList>
+consteval id_type id_of()
 {
-  std::array<id_type, sizeof...(Statuses)> const ids{Statuses::id...};
-  for (auto i = 0uz; i < ids.size(); ++i) {
-    for (auto j = i + 1; j < ids.size(); ++j) {
-      if (ids[i] == ids[j]) return false;
-    }
-  }
-  return true;
+  return static_cast<id_type>(typelist_index_v<S, StatusList>);
 }
 
-template<typename... Statuses>
-consteval std::size_t id_space(typelist<Statuses...>)
+namespace detail {
+
+// Whether every position in the list fits in an id.
+template<typename StatusList>
+consteval bool ids_fit()
 {
-  if constexpr (sizeof...(Statuses) == 0) {
-    return 0;
-  }
-  else {
-    std::size_t top = 0;
-    ((top = std::size_t{Statuses::id} > top ? std::size_t{Statuses::id} : top),
-     ...);
-    return top + 1;
-  }
+  return StatusList::size
+      <= std::size_t{std::numeric_limits<id_type>::max()} + 1;
 }
 
 template<typename... Statuses>
@@ -175,12 +167,6 @@ consteval bool levels_within(typelist<Statuses...>)
 
 } // namespace detail
 
-// One past the largest id in the list. Storage and the flag masks are sized
-// by it, so retiring a status leaves a hole instead of renumbering the ones
-// after it — a protocol carrying the flags stays put.
-template<typelist_specialization StatusList>
-inline constexpr std::size_t id_space_v = detail::id_space(StatusList{});
-
 // Calls f(Status{}) for every status in the list, in declaration order. The
 // vocabulary a status carries beyond its id and levels — names, texts,
 // whatever the product needs — stays in the product: it reads it here.
@@ -228,16 +214,16 @@ class registry {
                 "statuses must be stateless tag types");
   static_assert(detail::levels_within<LevelCount>(StatusList{}),
                 "status levels must lie between 0 and LevelCount - 1");
-  static_assert(detail::ids_unique(StatusList{}), "status ids must be unique");
+  static_assert(detail::ids_fit<StatusList>(),
+                "a status's id, its position in the list, must fit in id_type");
   static_assert(detail::expiry_levels_valid<Level>(StatusList{}),
                 "expires_at must lie within the status's levels, and only an "
                 "expiring status may name one");
 
 public:
   static constexpr std::size_t status_count = StatusList::size;
-  static constexpr std::size_t id_space = id_space_v<StatusList>;
   static constexpr std::size_t level_count = LevelCount;
-  using flags_type = std::bitset<id_space>;
+  using flags_type = std::bitset<status_count>;
 
   //
   // ---- asserting ----
@@ -275,7 +261,7 @@ public:
       raise(s, lvl);
     }
     else if (cond.clear) {
-      deassert(Status::id, index_of(L));
+      deassert(id_of<Status, StatusList>(), index_of(L));
     }
   }
 
@@ -293,8 +279,9 @@ public:
   template<listed_in<StatusList> Status>
   void clear(Status)
   {
-    words_[word_of(Status::id)].fetch_and(~(slot_mask << shift_of(Status::id)),
-                                          std::memory_order::relaxed);
+    constexpr auto id = id_of<Status, StatusList>();
+    words_[word_of(id)].fetch_and(~(slot_mask << shift_of(id)),
+                                  std::memory_order::relaxed);
   }
 
   void clear()
@@ -318,7 +305,8 @@ public:
         (
             [this] {
               if constexpr (hold_of<Statuses>() == hold_policy::expiring) {
-                sweep(Statuses::id, index_of(expires_at_of<Statuses, Level>()));
+                sweep(id_of<Statuses, StatusList>(),
+                      index_of(expires_at_of<Statuses, Level>()));
               }
             }(),
             ...);
@@ -333,13 +321,13 @@ public:
   template<listed_in<StatusList> Status>
   bool active(Status) const
   {
-    return (slot_of(Status::id) & level_mask) != 0;
+    return (slot_of(id_of<Status, StatusList>()) & level_mask) != 0;
   }
 
   template<listed_in<StatusList> Status>
   std::optional<Level> severity(Status) const
   {
-    auto const slot = slot_of(Status::id) & level_mask;
+    auto const slot = slot_of(id_of<Status, StatusList>()) & level_mask;
     if (slot == 0) return std::nullopt;
     return static_cast<Level>(std::bit_width(slot) - 1);
   }
@@ -403,7 +391,7 @@ public:
       if (bits == 0) continue;
       for (auto s = 0uz; s < slots_per_word; ++s) {
         auto const id = w * slots_per_word + s;
-        if (id >= id_space) break;
+        if (id >= status_count) break;
         if (((bits >> (s * slot_bits + l)) & 1u) != 0) flags.set(id);
       }
     }
@@ -432,7 +420,7 @@ private:
 
   static constexpr std::size_t slots_per_word = word_bits / slot_bits;
   static constexpr std::size_t word_count =
-      (id_space + slots_per_word - 1) / slots_per_word;
+      (status_count + slots_per_word - 1) / slots_per_word;
 
   static constexpr word_type slot_mask =
       ~word_type{0} >> (word_bits - slot_bits);
@@ -491,11 +479,11 @@ private:
   template<typename Status>
   void escalate(std::size_t lvl)
   {
+    constexpr auto id = id_of<Status, StatusList>();
     constexpr word_type mark =
         hold_of<Status>() == hold_policy::expiring ? seen_bit : word_type{0};
-    words_[word_of(Status::id)].fetch_or((prefix_of(lvl) | mark)
-                                             << shift_of(Status::id),
-                                         std::memory_order::relaxed);
+    words_[word_of(id)].fetch_or((prefix_of(lvl) | mark) << shift_of(id),
+                                 std::memory_order::relaxed);
   }
 
   void deassert(id_type id, std::size_t lvl)
@@ -712,13 +700,13 @@ class registry_mirror {
                 "statuses must be stateless tag types");
   static_assert(detail::levels_within<LevelCount>(StatusList{}),
                 "status levels must lie between 0 and LevelCount - 1");
-  static_assert(detail::ids_unique(StatusList{}), "status ids must be unique");
+  static_assert(detail::ids_fit<StatusList>(),
+                "a status's id, its position in the list, must fit in id_type");
 
 public:
   static constexpr std::size_t status_count = StatusList::size;
-  static constexpr std::size_t id_space = id_space_v<StatusList>;
   static constexpr std::size_t level_count = LevelCount;
-  using flags_type = std::bitset<id_space>;
+  using flags_type = std::bitset<status_count>;
 
   void store(Level lvl, flags_type flags)
   {
@@ -729,7 +717,7 @@ public:
   bool active(Status) const
   {
     for (auto const& flags : flags_) {
-      if (flags.test(Status::id)) return true;
+      if (flags.test(id_of<Status, StatusList>())) return true;
     }
     return false;
   }
@@ -738,7 +726,7 @@ public:
   std::optional<Level> severity(Status) const
   {
     for (auto l = LevelCount; l > 0uz; --l) {
-      if (flags_[l - 1].test(Status::id)) {
+      if (flags_[l - 1].test(id_of<Status, StatusList>())) {
         return static_cast<Level>(l - 1);
       }
     }

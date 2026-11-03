@@ -1,6 +1,7 @@
 #pragma once
 
 #include <emb/meta/nth_type.hpp>
+#include <emb/meta/type_index.hpp>
 
 #include <concepts>
 #include <type_traits>
@@ -79,6 +80,20 @@ struct typelist_at<typelist<Ts...>, I> {
 // Helper alias template for `typelist_at`.
 template<typename List, std::size_t I>
 using typelist_at_t = typename typelist_at<List, I>::type;
+
+// Provides the member constant `value` equal to the zero-based index of the
+// first element of the typelist `List` that is the same type as `T`. The
+// program is ill-formed if `List` is not a typelist or `T` is not an element
+// of `List`.
+template<typename T, typename List>
+struct typelist_index;
+
+template<typename T, typename... Ts>
+struct typelist_index<T, typelist<Ts...>> : type_index<T, Ts...> {};
+
+// Helper variable template for `typelist_index`.
+template<typename T, typename List>
+inline constexpr std::size_t typelist_index_v = typelist_index<T, List>::value;
 
 // Provides the member constant `value` equal to the number of elements of the
 // typelist `List` that are the same type as `T`. The program is ill-formed if
