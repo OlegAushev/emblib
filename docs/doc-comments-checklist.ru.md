@@ -244,7 +244,8 @@ emblib не попал. Такие файлы помечены «песочни�
     `atmosphere_f32`
   - [x] `convert_to` (шесть перегрузок)
 - [x] `emb/units/quantity.hpp`
-  - [x] `quantity` (и друг `unit_symbol_of`), `some_quantity`, `convert_to`
+  - [x] `quantity` (и друг `unit_symbol_of`), `quantity_specialization`,
+    `convert_to`
 - [x] `emb/units/relations.hpp`
   - [x] `operator/`
   - [x] `operator*` (две перегрузки)
