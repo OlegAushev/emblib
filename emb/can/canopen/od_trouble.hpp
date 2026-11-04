@@ -144,7 +144,7 @@ struct statuses_binding {
   // The subindex of the member of `S`.
   template<typename S>
   static constexpr std::size_t subindex_of =
-      std::size_t{trouble::id_of<S, status_list>()} + 1;
+      trouble::id_of<S, status_list>() + 1;
 
   // -- Members of the record, whose arg is not used --
 

@@ -9,6 +9,7 @@
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
+#include <iterator>
 #include <limits>
 #include <optional>
 #include <type_traits>
@@ -16,126 +17,57 @@
 
 namespace emb::trouble {
 
-// The id of a status: its zero-based position in the list of statuses
-// (`id_of`), by which a protocol addresses it. Inserting or retiring a status
-// moves the ones after it.
-using id_type = std::uint8_t;
-
 template<typename L>
 concept level_like = std::is_scoped_enum_v<L>;
 
+// A status names the levels it can stand at, as an array of them:
+//   static constexpr level levels[] = {level::warning, level::critical};
+// The count is taken with std::size, not from the declared type: in a class
+// template the bound of such an array is known only once its definition is
+// instantiated, and decltype does not instantiate it.
 template<typename S, typename L>
 concept status_like = level_like<L> && requires {
-  { S::level_min } -> std::same_as<L const&>;
-  { S::level_max } -> std::same_as<L const&>;
+  requires std::is_array_v<decltype(S::levels)>;
+  requires std::same_as<
+      std::remove_cv_t<std::remove_extent_t<decltype(S::levels)>>,
+      L>;
+  requires(std::size(S::levels) > 0);
 };
-
-// What may take a status down. The policy is a property of the status, not
-// of the code that raises it: it decides which calls a call site is allowed
-// to make at all.
-enum class hold_policy : std::uint8_t {
-  latched,  // an operator's clear, and nothing else
-  tracking, // update() may retract it at the level it watches
-  expiring, // refresh() retracts it unless it has been raised again
-};
-
-inline constexpr hold_policy latched = hold_policy::latched;
-inline constexpr hold_policy tracking = hold_policy::tracking;
-inline constexpr hold_policy expiring = hold_policy::expiring;
-
-template<typename S>
-concept declares_hold = requires {
-  { S::hold } -> std::same_as<hold_policy const&>;
-};
-
-// Latched unless the status says otherwise: the policy that keeps whatever
-// was raised is the safe default.
-template<typename S>
-consteval hold_policy hold_of()
-{
-  if constexpr (declares_hold<S>) {
-    return S::hold;
-  }
-  else {
-    return hold_policy::latched;
-  }
-}
-
-template<typename S, typename L>
-concept declares_expiry_level = requires {
-  { S::expires_at } -> std::same_as<L const&>;
-};
-
-// The level a sweep governs: what recurs at it is retracted, what stands
-// above it is somebody else's trip and stays. It defaults to level_min, the
-// level a recurring condition normally uses, but a status whose condition
-// recurs higher must say so — otherwise the sweep would find a level it does
-// not govern and leave the status standing for good.
-template<typename S, typename L>
-consteval L expires_at_of()
-{
-  if constexpr (declares_expiry_level<S, L>) {
-    return S::expires_at;
-  }
-  else {
-    return S::level_min;
-  }
-}
-
-// The two conditions a producer evaluates from its own thresholds: one to
-// raise on, one to clear on. Between them nothing changes, which is what
-// hysteresis is — and the memory it needs is the severity the registry
-// already holds, so the producer keeps no state of its own.
-struct condition {
-  bool raise = false;
-  bool clear = false;
-};
-
-template<auto Lvl, typename S, typename List>
-concept valid_level = listed_in<S, List>
-                   && status_like<S, decltype(Lvl)>
-                   && (S::level_min <= Lvl)
-                   && (Lvl <= S::level_max);
-
-// The id of the status `S` in `StatusList`: its zero-based position there.
-template<typename S, typename StatusList>
-  requires listed_in<S, StatusList>
-consteval id_type id_of()
-{
-  return static_cast<id_type>(typelist_index_v<S, StatusList>);
-}
 
 namespace detail {
 
-// Whether every position in the list fits in an id.
-template<typename StatusList>
-consteval bool ids_fit()
+// Whether the status `S` declares the level `lvl`.
+template<typename S, typename L>
+consteval bool declares_level(L lvl)
 {
-  return StatusList::size
-      <= std::size_t{std::numeric_limits<id_type>::max()} + 1;
+  for (auto const l : S::levels) {
+    if (l == lvl) return true;
+  }
+  return false;
 }
 
-template<typename... Statuses>
-consteval bool any_expiring(typelist<Statuses...>)
+template<typename S>
+concept declares_single_level =
+    requires { requires(std::size(S::levels) == 1); };
+
+} // namespace detail
+
+template<auto Lvl, typename S, typename List>
+concept level_for = listed_in<S, List>
+                 && status_like<S, decltype(Lvl)>
+                 && detail::declares_level<S>(Lvl);
+
+// The id of the status `S` in `StatusList`: its zero-based position there, by
+// which a protocol addresses it. Inserting or retiring a status moves the
+// ones after it.
+template<typename S, typename StatusList>
+  requires listed_in<S, StatusList>
+consteval std::size_t id_of()
 {
-  return ((hold_of<Statuses>() == hold_policy::expiring) || ...);
+  return typelist_index_v<S, StatusList>;
 }
 
-template<typename L, typename... Statuses>
-consteval bool expiry_levels_valid(typelist<Statuses...>)
-{
-  auto valid = []<typename S>() {
-    if constexpr (hold_of<S>() == hold_policy::expiring) {
-      auto const lvl = expires_at_of<S, L>();
-      return (S::level_min <= lvl) && (lvl <= S::level_max);
-    }
-    else {
-      // naming a level a sweep will never read is a copy-paste, not a wish
-      return !declares_expiry_level<S, L>;
-    }
-  };
-  return (valid.template operator()<Statuses>() && ...);
-}
+namespace detail {
 
 template<typename L, typename... Statuses>
 consteval bool all_status_like(typelist<Statuses...>)
@@ -144,32 +76,55 @@ consteval bool all_status_like(typelist<Statuses...>)
 }
 
 template<typename... Statuses>
-consteval bool valid_level_ranges(typelist<Statuses...>)
-{
-  return ((Statuses::level_min <= Statuses::level_max) && ...);
-}
-
-template<typename... Statuses>
 consteval bool all_empty(typelist<Statuses...>)
 {
   return (std::is_empty_v<Statuses> && ...);
 }
 
-template<std::size_t LevelCount, typename... Statuses>
+// Whether every level a status declares lies in 0 ... LevelCount - 1. A
+// status that declares no levels of type L passes: it is all_status_like's
+// to report.
+template<typename L, std::size_t LevelCount, typename... Statuses>
 consteval bool levels_within(typelist<Statuses...>)
 {
   auto within = []<typename S>() {
-    return std::cmp_greater_equal(std::to_underlying(S::level_min), 0)
-        && std::cmp_less(std::to_underlying(S::level_max), LevelCount);
+    if constexpr (status_like<S, L>) {
+      for (auto const l : S::levels) {
+        auto const value = std::to_underlying(l);
+        if (std::cmp_less(value, 0) || !std::cmp_less(value, LevelCount)) {
+          return false;
+        }
+      }
+    }
+    return true;
   };
   return (within.template operator()<Statuses>() && ...);
+}
+
+// Whether no status declares a level twice. A status that declares no levels
+// of type L passes, as above.
+template<typename L, typename... Statuses>
+consteval bool levels_distinct(typelist<Statuses...>)
+{
+  auto distinct = []<typename S>() {
+    if constexpr (status_like<S, L>) {
+      constexpr auto count = std::size(S::levels);
+      for (auto i = 0uz; i < count; ++i) {
+        for (auto j = i + 1; j < count; ++j) {
+          if (S::levels[i] == S::levels[j]) return false;
+        }
+      }
+    }
+    return true;
+  };
+  return (distinct.template operator()<Statuses>() && ...);
 }
 
 } // namespace detail
 
 // Calls f(Status{}) for every status in the list, in declaration order. The
-// vocabulary a status carries beyond its id and levels — names, texts,
-// whatever the product needs — stays in the product: it reads it here.
+// vocabulary a status carries beyond its levels — names, texts, whatever the
+// product needs — stays in the product: it reads it here.
 template<typelist_specialization StatusList, typename F>
 constexpr void for_each(F&& f)
 {
@@ -178,110 +133,203 @@ constexpr void for_each(F&& f)
   }(StatusList{});
 }
 
+namespace detail {
+
+// Where the flags of the statuses lie in the words of a registry: a slot of
+// LevelCount bits per status, bit l the flag of level l, as many slots to a
+// word as fit whole. The masks and the rules here take words as values, so
+// they can be checked at compile time, which the registry's atomics cannot.
+template<std::size_t LevelCount>
+struct slot_layout {
+  using word_type = std::uint32_t;
+
+  static constexpr std::size_t word_bits =
+      std::size_t{std::numeric_limits<word_type>::digits};
+
+  static_assert(LevelCount > 0 && LevelCount <= word_bits,
+                "the levels of a status must fit in one word");
+
+  static constexpr std::size_t slot_bits = LevelCount;
+  static constexpr std::size_t slots_per_word = word_bits / slot_bits;
+  static constexpr word_type slot_mask =
+      ~word_type{0} >> (word_bits - slot_bits);
+
+  // The word that holds the slot of the status of id `id`, and the bit its
+  // slot starts at there.
+  static constexpr std::size_t word_of(std::size_t id)
+  {
+    return id / slots_per_word;
+  }
+
+  static constexpr std::size_t shift_of(std::size_t id)
+  {
+    return (id % slots_per_word) * slot_bits;
+  }
+
+  // The flag of level lvl of the status of id `id`, in the word that holds
+  // its slot.
+  static constexpr word_type flag_of(std::size_t id, std::size_t lvl)
+  {
+    return word_type{1} << (shift_of(id) + lvl);
+  }
+
+  // level_masks[l] picks the flag of level l out of every slot in a word
+  static constexpr std::array<word_type, LevelCount> level_masks = [] {
+    std::array<word_type, LevelCount> p{};
+    for (auto l = 0uz; l < LevelCount; ++l) {
+      for (auto s = 0uz; s < slots_per_word; ++s) {
+        p[l] |= word_type{1} << (s * slot_bits + l);
+      }
+    }
+    return p;
+  }();
+
+  // level_masks_from[l] picks the flags of level l and of every level above it
+  static constexpr std::array<word_type, LevelCount> level_masks_from = [] {
+    std::array<word_type, LevelCount> p{};
+    word_type from = 0;
+    for (auto l = LevelCount; l > 0uz; --l) {
+      from |= level_masks[l - 1];
+      p[l - 1] = from;
+    }
+    return p;
+  }();
+
+  // The level of the top flag among the flags of one slot, which is the
+  // severity of its status.
+  static constexpr std::optional<std::size_t> severity_of(word_type flags)
+  {
+    if (flags == 0) return std::nullopt;
+    return static_cast<std::size_t>(std::bit_width(flags) - 1);
+  }
+
+  // The flags of level lvl in a word that are the top flag of their slot, with
+  // no flag standing above them: the statuses whose severity is lvl. A flag
+  // above is moved down to lvl inside its own slot, so no slot reads its
+  // neighbour.
+  static constexpr word_type top_flags_at(word_type word, std::size_t lvl)
+  {
+    auto bits = word & level_masks[lvl];
+    for (auto k = lvl + 1; k < LevelCount; ++k) {
+      bits &= ~((word & level_masks[k]) >> (k - lvl));
+    }
+    return bits;
+  }
+};
+
+} // namespace detail
+
+// Every level a status declares has a flag of its own, and the status stands
+// at the highest level whose flag stands: its severity. A call sets or clears
+// one flag and leaves the others as they stand, so no call has to know what
+// else does.
 //
-// ---- registry ----
+// What takes a level down is the kind of call that puts it up:
 //
-// A status holds one severity at a time: the highest level asserted since it
-// was last cleared. Every level of a status lives in one slot of one word,
-// thermometer-coded — bit k of the slot reads "severity is at least k" — so
-// that
+//   - raise() sets a flag that stays until an acknowledgement, clear();
+//   - track() follows a condition its producer evaluates: the flag stands
+//     while the condition holds.
 //
-//   - each update to a status is a single atomic read-modify-write. Nothing
-//     can interleave inside an escalation, so a status can never end up
-//     visible at a high level while missing from the low ones;
-//   - escalating is a plain fetch_or of the prefix: monotone, lock-free,
-//     callable from any interrupt without masking anything;
+// How long an event keeps a status up, and the hysteresis of a threshold, are
+// the producer's: it keeps the state they need and passes track() what it
+// decided.
+//
+// The flags of a status share one slot of one word, so that
+//
+//   - every change to a status is a single atomic read-modify-write of one
+//     word, callable from any interrupt without masking anything;
 //   - "is anything at least this bad" is one masked load per word;
-//   - the statuses sitting exactly at level l, which is what a protocol
+//   - the statuses whose severity is exactly l, which is what a protocol
 //     usually puts on the wire, come out of the same masks.
 //
 // Nothing here locks, so nothing has to be told about interrupt priorities.
 // The accesses are relaxed: a flag carries no data of its own, and on a
 // single core an interrupt sees the writes of what it preempted.
-//
 template<typename StatusList, typename Level, std::size_t LevelCount>
 class registry {
   static_assert(level_like<Level>, "Level must be a scoped enum");
   static_assert(LevelCount > 0, "LevelCount must not be zero");
   static_assert(detail::all_status_like<Level>(StatusList{}),
-                "every status must provide an id and level_min/level_max of "
-                "type Level");
+                "every status must declare levels, a non-empty array of "
+                "Level");
   static_assert(duplicate_free_typelist<StatusList>,
                 "status list must not contain duplicate statuses");
-  static_assert(detail::valid_level_ranges(StatusList{}),
-                "level_min must be <= level_max");
   static_assert(detail::all_empty(StatusList{}),
                 "statuses must be stateless tag types");
-  static_assert(detail::levels_within<LevelCount>(StatusList{}),
+  static_assert(detail::levels_within<Level, LevelCount>(StatusList{}),
                 "status levels must lie between 0 and LevelCount - 1");
-  static_assert(detail::ids_fit<StatusList>(),
-                "a status's id, its position in the list, must fit in id_type");
-  static_assert(detail::expiry_levels_valid<Level>(StatusList{}),
-                "expires_at must lie within the status's levels, and only an "
-                "expiring status may name one");
+  static_assert(detail::levels_distinct<Level>(StatusList{}),
+                "a status must not declare a level twice");
+
+  using layout = detail::slot_layout<LevelCount>;
 
 public:
   static constexpr std::size_t status_count = StatusList::size;
   static constexpr std::size_t level_count = LevelCount;
   using flags_type = std::bitset<status_count>;
 
-  //
-  // ---- asserting ----
-  //
-
-  // Raises the status to L, or leaves it where it stands if that is higher.
-  // One atomic or: safe from any interrupt, and no interrupt is masked. An
-  // expiring status is marked as seen in the same write, so a sweep running
-  // concurrently cannot mistake it for stale.
+  // Raises the status at L: sets the flag of L, which stays until an
+  // acknowledgement, and leaves the other levels as they stand. One atomic
+  // or: safe from any interrupt, and no interrupt is masked.
   template<typename Status, Level L>
-    requires valid_level<L, Status, StatusList>
+    requires level_for<L, Status, StatusList>
   void raise(Status, std::integral_constant<Level, L>)
   {
-    escalate<Status>(index_of(L));
+    constexpr auto id = id_of<Status, StatusList>();
+    words_[layout::word_of(id)].fetch_or(layout::flag_of(id, index_of(L)),
+                                         std::memory_order::relaxed);
   }
 
-  // for statuses confined to a single level it can be deduced
+  // for a status of a single level it can be deduced
   template<listed_in<StatusList> Status>
-    requires(Status::level_min == Status::level_max)
+    requires detail::declares_single_level<Status>
   void raise(Status s)
   {
-    raise(s, std::integral_constant<Level, Status::level_min>{});
+    raise(s, std::integral_constant<Level, Status::levels[0]>{});
   }
 
-  // Follows a condition at L: raises on one edge, retracts on the other,
-  // holds between them. Retracting at L leaves a status that stands above it
-  // — cooling below the warning threshold must not take back the trip above
-  // it — so a status can track at one level and latch at another.
+  // Follows a condition at L: the flag of L stands while `active` is true and
+  // goes down once it is false; the other levels stay as they stand. A
+  // tracked level belongs to its producer, which calls this from one context
+  // whenever it evaluates the condition: whatever else sets or clears the
+  // flag — a raise(), another context, an acknowledgement — lasts until the
+  // producer's next call. Most calls change nothing and cost one load: the
+  // write a call skips would not have changed the flag, so skipping it is
+  // right whoever else writes the word.
   template<typename Status, Level L>
-    requires valid_level<L, Status, StatusList>
-          && (hold_of<Status>() == hold_policy::tracking)
-  void update(Status s, std::integral_constant<Level, L> lvl, condition cond)
+    requires level_for<L, Status, StatusList>
+  void track(Status, std::integral_constant<Level, L>, bool active)
   {
-    if (cond.raise) {
-      raise(s, lvl);
+    constexpr auto id = id_of<Status, StatusList>();
+    constexpr auto flag = layout::flag_of(id, index_of(L));
+    auto& word = words_[layout::word_of(id)];
+    bool const stands = (word.load(std::memory_order::relaxed) & flag) != 0;
+    if (active == stands) return;
+    if (active) {
+      word.fetch_or(flag, std::memory_order::relaxed);
     }
-    else if (cond.clear) {
-      deassert(id_of<Status, StatusList>(), index_of(L));
+    else {
+      word.fetch_and(~flag, std::memory_order::relaxed);
     }
   }
 
-  // no hysteresis: the condition is the whole story
-  template<typename Status, Level L>
-    requires valid_level<L, Status, StatusList>
-          && (hold_of<Status>() == hold_policy::tracking)
-  void update(Status s, std::integral_constant<Level, L> lvl, bool active)
+  // for a status of a single level it can be deduced
+  template<listed_in<StatusList> Status>
+    requires detail::declares_single_level<Status>
+  void track(Status s, bool active)
   {
-    update(s, lvl, condition{.raise = active, .clear = !active});
+    track(s, std::integral_constant<Level, Status::levels[0]>{}, active);
   }
 
-  // Takes the status down whatever it holds and whatever its policy: an
-  // acknowledgement, not a retraction.
+  // Takes the status down at every level, raised or tracked: an
+  // acknowledgement. A tracked level is back at its producer's next call.
   template<listed_in<StatusList> Status>
   void clear(Status)
   {
     constexpr auto id = id_of<Status, StatusList>();
-    words_[word_of(id)].fetch_and(~(slot_mask << shift_of(id)),
-                                  std::memory_order::relaxed);
+    words_[layout::word_of(id)].fetch_and(
+        ~(layout::slot_mask << layout::shift_of(id)),
+        std::memory_order::relaxed);
   }
 
   void clear()
@@ -291,53 +339,26 @@ public:
     }
   }
 
-  // Retracts every expiring status that has not been raised since the last
-  // call. Run it from one periodic task: a status then outlives its condition
-  // by between one and two periods, and the period is the only thing anyone
-  // has to know to read that. A sweep retracts at the status's expires_at,
-  // level_min unless it says otherwise, and leaves anything standing above
-  // it: the same rule update() follows, so a condition that recurs at its own
-  // level cannot take back a trip somebody else raised higher.
-  void refresh()
-  {
-    if constexpr (has_expiring) {
-      [this]<typename... Statuses>(typelist<Statuses...>) {
-        (
-            [this] {
-              if constexpr (hold_of<Statuses>() == hold_policy::expiring) {
-                sweep(id_of<Statuses, StatusList>(),
-                      index_of(expires_at_of<Statuses, Level>()));
-              }
-            }(),
-            ...);
-      }(StatusList{});
-    }
-  }
-
-  //
-  // ---- querying ----
-  //
-
   template<listed_in<StatusList> Status>
   bool active(Status) const
   {
-    return (slot_of(id_of<Status, StatusList>()) & level_mask) != 0;
+    return flags_of(id_of<Status, StatusList>()) != 0;
   }
 
   template<listed_in<StatusList> Status>
   std::optional<Level> severity(Status) const
   {
-    auto const slot = slot_of(id_of<Status, StatusList>()) & level_mask;
-    if (slot == 0) return std::nullopt;
-    return static_cast<Level>(std::bit_width(slot) - 1);
+    auto const lvl = layout::severity_of(flags_of(id_of<Status, StatusList>()));
+    if (!lvl) return std::nullopt;
+    return static_cast<Level>(*lvl);
   }
 
-  // Anything active at lvl or above it.
+  // Anything standing at lvl or above it.
   bool at_least(Level lvl) const
   {
-    auto const plane = planes[index_of(lvl)];
+    auto const mask = layout::level_masks_from[index_of(lvl)];
     for (auto const& word : words_) {
-      if ((word.load(std::memory_order::relaxed) & plane) != 0) return true;
+      if ((word.load(std::memory_order::relaxed) & mask) != 0) return true;
     }
     return false;
   }
@@ -348,7 +369,7 @@ public:
     auto const l = index_of(lvl);
     for (auto const& word : words_) {
       auto const bits = word.load(std::memory_order::relaxed);
-      if (exactly_bits(bits, l) != 0) return true;
+      if (layout::top_flags_at(bits, l) != 0) return true;
     }
     return false;
   }
@@ -361,7 +382,9 @@ public:
       seen |= word.load(std::memory_order::relaxed);
     }
     for (auto l = LevelCount; l > 0uz; --l) {
-      if ((seen & planes[l - 1]) != 0) return static_cast<Level>(l - 1);
+      if ((seen & layout::level_masks[l - 1]) != 0) {
+        return static_cast<Level>(l - 1);
+      }
     }
     return std::nullopt;
   }
@@ -380,184 +403,57 @@ public:
     }(StatusList{});
   }
 
-  // The statuses sitting exactly at lvl — the view a protocol carries.
+  // The statuses whose severity is lvl — the view a protocol carries. A
+  // status whose flag of lvl stands under a higher one is not among them.
   flags_type flags_at(Level lvl) const
   {
     auto const l = index_of(lvl);
     flags_type flags;
     for (auto w = 0uz; w < word_count; ++w) {
       auto const word = words_[w].load(std::memory_order::relaxed);
-      auto const bits = exactly_bits(word, l);
+      auto const bits = layout::top_flags_at(word, l);
       if (bits == 0) continue;
-      for (auto s = 0uz; s < slots_per_word; ++s) {
-        auto const id = w * slots_per_word + s;
+      for (auto s = 0uz; s < layout::slots_per_word; ++s) {
+        auto const id = w * layout::slots_per_word + s;
         if (id >= status_count) break;
-        if (((bits >> (s * slot_bits + l)) & 1u) != 0) flags.set(id);
+        if ((bits & layout::flag_of(id, l)) != 0) flags.set(id);
       }
     }
     return flags;
   }
 
 private:
-  using word_type = std::uint32_t;
+  using word_type = typename layout::word_type;
 
   static_assert(std::atomic<word_type>::is_always_lock_free,
                 "the registry's word must be lock-free");
 
-  static constexpr std::size_t word_bits =
-      std::size_t{std::numeric_limits<word_type>::digits};
-
-  // one bit per level, all of a status's levels in one slot; a list with
-  // expiring statuses takes one bit more, the mark a sweep reads and clears.
-  // It shares the slot rather than sitting in a word of its own so that
-  // raising stays a single write: a sweep can then neither see half a raise
-  // nor undo one it did not see.
-  static constexpr bool has_expiring = detail::any_expiring(StatusList{});
-  static constexpr std::size_t slot_bits = LevelCount + (has_expiring ? 1 : 0);
-
-  static_assert(slot_bits <= word_bits,
-                "a status's levels must fit in one word");
-
-  static constexpr std::size_t slots_per_word = word_bits / slot_bits;
   static constexpr std::size_t word_count =
-      (status_count + slots_per_word - 1) / slots_per_word;
-
-  static constexpr word_type slot_mask =
-      ~word_type{0} >> (word_bits - slot_bits);
-  static constexpr word_type level_mask =
-      ~word_type{0} >> (word_bits - LevelCount);
-  static constexpr word_type seen_bit =
-      has_expiring ? word_type{1} << LevelCount : word_type{0};
-
-  // planes[l] picks bit l out of every slot in a word
-  static constexpr std::array<word_type, LevelCount> planes = [] {
-    std::array<word_type, LevelCount> p{};
-    for (auto l = 0uz; l < LevelCount; ++l) {
-      for (auto s = 0uz; s < slots_per_word; ++s) {
-        p[l] |= word_type{1} << (s * slot_bits + l);
-      }
-    }
-    return p;
-  }();
+      (status_count + layout::slots_per_word - 1) / layout::slots_per_word;
 
   static constexpr std::size_t index_of(Level lvl)
   {
     return static_cast<std::size_t>(std::to_underlying(lvl));
   }
 
-  static constexpr std::size_t word_of(id_type id)
+  word_type flags_of(std::size_t id) const
   {
-    return std::size_t{id} / slots_per_word;
-  }
-
-  static constexpr std::size_t shift_of(id_type id)
-  {
-    return (std::size_t{id} % slots_per_word) * slot_bits;
-  }
-
-  // the thermometer for severity l: bits 0..l of a slot
-  static constexpr word_type prefix_of(std::size_t lvl)
-  {
-    return level_mask >> (LevelCount - 1 - lvl);
-  }
-
-  static constexpr word_type exactly_bits(word_type word, std::size_t lvl)
-  {
-    auto bits = word & planes[lvl];
-    if (lvl + 1 < LevelCount) {
-      bits &= ~((word & planes[lvl + 1]) >> 1);
-    }
-    return bits;
-  }
-
-  word_type slot_of(id_type id) const
-  {
-    auto const word = words_[word_of(id)].load(std::memory_order::relaxed);
-    return (word >> shift_of(id)) & slot_mask;
-  }
-
-  template<typename Status>
-  void escalate(std::size_t lvl)
-  {
-    constexpr auto id = id_of<Status, StatusList>();
-    constexpr word_type mark =
-        hold_of<Status>() == hold_policy::expiring ? seen_bit : word_type{0};
-    words_[word_of(id)].fetch_or((prefix_of(lvl) | mark) << shift_of(id),
-                                 std::memory_order::relaxed);
-  }
-
-  void deassert(id_type id, std::size_t lvl)
-  {
-    auto const shift = shift_of(id);
-    auto const above =
-        lvl + 1 < LevelCount ? word_type{1} << (lvl + 1) : word_type{0};
-
-    auto& word = words_[word_of(id)];
-    auto current = word.load(std::memory_order::relaxed);
-    while (true) {
-      auto const slot = (current >> shift) & level_mask;
-      // already down, or standing above the level being retracted
-      if (slot == 0 || (slot & above) != 0) return;
-      auto const wanted = current & ~(slot_mask << shift);
-      if (word.compare_exchange_weak(current,
-                                     wanted,
-                                     std::memory_order::relaxed)) {
-        return;
-      }
-    }
-  }
-
-  // One sweep of an expiring status: the mark set by the last raise buys it
-  // this round and is spent doing so; a status that arrives here unmarked has
-  // not been raised since the previous sweep and goes down, unless it stands
-  // above lvl, which is somebody else's trip and not this sweep's business.
-  // Every outcome is one compare-exchange on the word the status lives in, so
-  // a raise landing mid-sweep either wins the exchange or is seen by it.
-  void sweep(id_type id, std::size_t lvl)
-  {
-    auto const shift = shift_of(id);
-    auto const above =
-        lvl + 1 < LevelCount ? word_type{1} << (lvl + 1) : word_type{0};
-
-    auto& word = words_[word_of(id)];
-    auto current = word.load(std::memory_order::relaxed);
-    while (true) {
-      auto const slot = (current >> shift) & slot_mask;
-      if ((slot & level_mask) == 0) return;
-
-      word_type wanted;
-      if ((slot & seen_bit) != 0) {
-        wanted = current & ~(seen_bit << shift);
-      }
-      else if ((slot & above) != 0) {
-        return;
-      }
-      else {
-        wanted = current & ~(slot_mask << shift);
-      }
-
-      if (word.compare_exchange_weak(current,
-                                     wanted,
-                                     std::memory_order::relaxed)) {
-        return;
-      }
-    }
+    auto const word =
+        words_[layout::word_of(id)].load(std::memory_order::relaxed);
+    return (word >> layout::shift_of(id)) & layout::slot_mask;
   }
 
   std::array<std::atomic<word_type>, word_count> words_{};
 };
 
-//
-// ---- app-side forwarding function objects ----
-//
-// Instantiate as inline constexpr objects in the namespace holding the
-// statuses, naming the registry they speak for:
+// App-side forwarding function objects. Instantiate them as inline constexpr
+// objects in the namespace holding the statuses, naming the registry they
+// speak for:
 //   inline constinit registry_type registry{};
 //   inline constexpr emb::trouble::raise_fn<registry> raise{};
 //
 // The parameter is the object, not its type: the call sites keep saying what
 // happened, and which registry remembers it is settled once, here.
-//
 template<auto& Registry>
 struct raise_fn {
   template<typename Status, typename LevelTag>
@@ -576,31 +472,19 @@ struct raise_fn {
 };
 
 template<auto& Registry>
-struct update_fn {
+struct track_fn {
   template<typename Status, typename LevelTag>
-    requires requires(Status s, LevelTag l, condition c) {
-      Registry.update(s, l, c);
-    }
-  static void operator()(Status s, LevelTag l, condition cond)
-  {
-    Registry.update(s, l, cond);
-  }
-
-  template<typename Status, typename LevelTag>
-    requires requires(Status s, LevelTag l, bool b) {
-      Registry.update(s, l, b);
-    }
+    requires requires(Status s, LevelTag l, bool b) { Registry.track(s, l, b); }
   static void operator()(Status s, LevelTag l, bool active)
   {
-    Registry.update(s, l, active);
+    Registry.track(s, l, active);
   }
-};
 
-template<auto& Registry>
-struct refresh_fn {
-  static void operator()()
+  template<typename Status>
+    requires requires(Status s, bool b) { Registry.track(s, b); }
+  static void operator()(Status s, bool active)
   {
-    Registry.refresh();
+    Registry.track(s, active);
   }
 };
 
@@ -680,28 +564,24 @@ struct clear_fn {
   }
 };
 
-//
-// ---- registry_mirror ----
-//
 // The read side of a protocol that carries one level's flags per frame: it
-// keeps what the wire carries — the statuses sitting exactly at each level —
+// keeps what the wire carries — the statuses whose severity is each level —
 // and answers in the same vocabulary as the registry.
-//
 template<typename StatusList, typename Level, std::size_t LevelCount>
 class registry_mirror {
   static_assert(level_like<Level>, "Level must be a scoped enum");
   static_assert(LevelCount > 0, "LevelCount must not be zero");
   static_assert(detail::all_status_like<Level>(StatusList{}),
-                "every status must provide an id and level_min/level_max of "
-                "type Level");
+                "every status must declare levels, a non-empty array of "
+                "Level");
   static_assert(duplicate_free_typelist<StatusList>,
                 "status list must not contain duplicate statuses");
   static_assert(detail::all_empty(StatusList{}),
                 "statuses must be stateless tag types");
-  static_assert(detail::levels_within<LevelCount>(StatusList{}),
+  static_assert(detail::levels_within<Level, LevelCount>(StatusList{}),
                 "status levels must lie between 0 and LevelCount - 1");
-  static_assert(detail::ids_fit<StatusList>(),
-                "a status's id, its position in the list, must fit in id_type");
+  static_assert(detail::levels_distinct<Level>(StatusList{}),
+                "a status must not declare a level twice");
 
 public:
   static constexpr std::size_t status_count = StatusList::size;

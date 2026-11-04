@@ -33,22 +33,19 @@ consteval std::span<emb::enumerator_info<level> const> enum_info_of(level)
 }
 
 struct overheat {
-  static constexpr level level_min = level::warning;
-  static constexpr level level_max = level::fault;
+  static constexpr level levels[] = {level::warning, level::fault};
   static constexpr std::string_view name = "overheat";
   static constexpr emb::i18n::text label = {"Overheat", "Перегрев"};
 };
 
 struct overvoltage {
-  static constexpr level level_min = level::fault;
-  static constexpr level level_max = level::fault;
+  static constexpr level levels[] = {level::fault};
   static constexpr std::string_view name = "overvoltage";
   static constexpr emb::i18n::text label = {"Overvoltage", "Перенапряжение"};
 };
 
 struct stall {
-  static constexpr level level_min = level::warning;
-  static constexpr level level_max = level::fault;
+  static constexpr level levels[] = {level::warning, level::fault};
   static constexpr std::string_view name = "stall";
   static constexpr emb::i18n::text label = {"Stall", "Заклинивание"};
 };
