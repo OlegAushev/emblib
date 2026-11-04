@@ -50,8 +50,11 @@ constexpr std::expected<void, error> validate(angle_sensor_config const& conf)
   return {};
 }
 
-// --------------------------------------------------------------- Angle Sensor
-
+// The class template `angle_sensor` estimates the electrical angle and speed
+// of a rotor from three hall sensors that the capture timer `Timer` reads. It
+// does not check the config and the calibration it is given: the behavior is
+// undefined if one passed to the constructor, to `configure` or to
+// `apply_calibration` fails `validate`.
 template<some_capture_timer Timer>
 class angle_sensor {
 private:
@@ -175,26 +178,16 @@ public:
     return conf_;
   }
 
-  [[nodiscard]] std::expected<void, error>
-  configure(angle_sensor_config const& conf)
+  void configure(angle_sensor_config const& conf)
   {
-    if (auto const checked = validate(conf); !checked) {
-      return checked;
-    }
     conf_ = conf;
     std::get<speed_smoother_type>(speedfilter_.stages)
         .set_smoothing(timestep_, conf.speed_timeconstant);
-    return {};
   }
 
-  [[nodiscard]] std::expected<void, error>
-  apply_calibration(calibration_result const& data)
+  void apply_calibration(calibration_result const& data)
   {
-    if (auto const checked = validate(data); !checked) {
-      return checked;
-    }
     geometry_ = make_geometry(data);
-    return {};
   }
 private:
   std::optional<error> on_new_transition()
