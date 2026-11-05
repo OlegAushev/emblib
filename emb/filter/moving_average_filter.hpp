@@ -8,12 +8,13 @@
 namespace emb {
 
 // The class template `moving_average_filter` is a filter whose output is the
-// arithmetic mean of the last `WindowSize` values pushed. Construction leaves
-// the window empty: the output is the initial output until the next `push`,
-// then the mean of the values pushed since. `reset(value)` fills the window
-// with copies of `value`, which count as values pushed, so the output is
-// `value` and moves away from it as the copies leave the window. `data()`
-// returns the window, oldest value first.
+// arithmetic mean of the last `WindowSize` values pushed. Default construction
+// leaves the window empty: the output is `T{}` until the next `push`, then the
+// mean of the values pushed since. Construction with an initial output and
+// `reset(value)` fill the window with copies of the value, which count as
+// values pushed, so the output is that value and moves away from it as the
+// copies leave the window; passing zero is thus not the same as passing
+// nothing. `data()` returns the window, oldest value first.
 //
 // For an integer `T`, the output is rounded toward zero, and `WindowSize` times
 // the largest magnitude of a value pushed must be representable in `T`. For a
@@ -35,12 +36,13 @@ private:
   value_type sum_{};
   value_type fresh_sum_{};
   size_type fresh_count_ = 0;
-  value_type output_;
+  value_type output_{};
 public:
-  constexpr explicit moving_average_filter(
-      value_type init_output = value_type{})
-      : output_(init_output)
+  constexpr moving_average_filter() = default;
+
+  constexpr explicit moving_average_filter(value_type init_output)
   {
+    reset(init_output);
   }
 
   constexpr void push(value_type input)

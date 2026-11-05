@@ -114,6 +114,23 @@ constexpr bool test_moving_average_reset_int()
 
 static_assert(test_moving_average_reset_int());
 
+// An initial output starts the filter settled on the value, as after `reset`;
+// without one the window is empty, and the first value pushed is the mean.
+constexpr bool test_moving_average_start()
+{
+  emb::moving_average_filter<float, 4> settled{10.0f};
+  if (settled.output() != 10.0f || !settled.data().full()) return false;
+  settled.push(0.0f);
+  if (settled.output() != 7.5f) return false;
+
+  emb::moving_average_filter<float, 4> empty;
+  if (empty.output() != 0.0f || !empty.data().empty()) return false;
+  empty.push(8.0f);
+  return empty.output() == 8.0f;
+}
+
+static_assert(test_moving_average_start());
+
 // A value much larger than the rest no longer affects the output
 // `WindowSize - 1` pushes after it has left the window, wherever it falls
 // among the pushes. An infinity or a NaN can't be tested here: constant
