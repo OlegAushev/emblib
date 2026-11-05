@@ -16,9 +16,6 @@ test_moving_average_filter(Filter filter,
 
   assert(filter.output() == init_output);
 
-  filter.reset(value_type{-42});
-  assert(filter.output() == value_type{-42});
-
   std::array<value_type, 7> input{value_type{10},
                                   value_type{9},
                                   value_type{8},
@@ -52,8 +49,9 @@ test_moving_average_filter(Filter filter,
   }
   assert(filter.output() == sum / static_cast<divider_type>(capacity));
 
-  filter.reset(init_output);
-  assert(filter.output() == init_output);
+  filter.reset(value_type{-42});
+  assert(filter.output() == value_type{-42});
+  assert(filter.data().full());
 
   return true;
 }
@@ -79,6 +77,42 @@ static_assert(
 static_assert(test_moving_average_filter(
     emb::moving_average_filter<emb::units::erad_f32, 4>{},
     emb::units::erad_f32{0}));
+
+// `reset` fills the window, whatever it held: the output moves away from the
+// value as the copies leave the window, and the sum is exact once they have.
+constexpr bool test_moving_average_reset()
+{
+  emb::moving_average_filter<float, 4> filter;
+  filter.push(1.0f);
+  filter.push(2.0f);
+
+  filter.reset(10.0f);
+  if (filter.output() != 10.0f || !filter.data().full()) return false;
+
+  std::array const expected{7.5f, 5.0f, 2.5f, 0.0f, 0.0f};
+  for (auto const output : expected) {
+    filter.push(0.0f);
+    if (filter.output() != output) return false;
+  }
+  return true;
+}
+
+static_assert(test_moving_average_reset());
+
+// For an integer type the output after `reset` is rounded toward zero, as after
+// any push.
+constexpr bool test_moving_average_reset_int()
+{
+  emb::moving_average_filter<int, 2> filter;
+  filter.reset(7);
+  if (filter.output() != 7) return false;
+  filter.push(0);
+  if (filter.output() != 3) return false;
+  filter.push(0);
+  return filter.output() == 0;
+}
+
+static_assert(test_moving_average_reset_int());
 
 // A value much larger than the rest no longer affects the output
 // `WindowSize - 1` pushes after it has left the window, wherever it falls

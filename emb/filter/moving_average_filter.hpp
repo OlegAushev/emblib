@@ -8,10 +8,12 @@
 namespace emb {
 
 // The class template `moving_average_filter` is a filter whose output is the
-// arithmetic mean of the last `WindowSize` values pushed. Construction and
-// `reset(value)` leave the window empty: the output is the initial output or
-// `value` until the next `push`, then the mean of the values pushed since.
-// `data()` returns the window, oldest value first.
+// arithmetic mean of the last `WindowSize` values pushed. Construction leaves
+// the window empty: the output is the initial output until the next `push`,
+// then the mean of the values pushed since. `reset(value)` fills the window
+// with copies of `value`, which count as values pushed, so the output is
+// `value` and moves away from it as the copies leave the window. `data()`
+// returns the window, oldest value first.
 //
 // For an integer `T`, the output is rounded toward zero, and `WindowSize` times
 // the largest magnitude of a value pushed must be representable in `T`. For a
@@ -70,8 +72,8 @@ public:
 
   constexpr void reset(value_type value)
   {
-    data_.clear();
-    sum_ = value_type{0};
+    data_.fill(value);
+    sum_ = static_cast<divider_type>(window_size) * value;
     fresh_sum_ = value_type{0};
     fresh_count_ = 0;
     output_ = value;

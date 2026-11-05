@@ -112,8 +112,8 @@ consteval bool test_nested()
 
 static_assert(test_nested());
 
-// `reset` gives every stage the value, so the median's window fills with it and
-// holds it for the next push.
+// `reset` gives every stage the value, so both windows fill with it: the median
+// holds it for the next push, and then the average moves away from it.
 consteval bool test_reset()
 {
   emb::cascaded_filter cascade{emb::median_filter<float, 3>{1.0f},
@@ -127,7 +127,9 @@ consteval bool test_reset()
   if (median.output() != -3.0f || average.output() != -3.0f) return false;
   if (cascade.output() != -3.0f) return false;
   cascade.push(10.0f);
-  return cascade.output() == -3.0f;
+  if (cascade.output() != -3.0f) return false;
+  cascade.push(10.0f);
+  return cascade.output() == 0.25f;
 }
 
 static_assert(test_reset());
