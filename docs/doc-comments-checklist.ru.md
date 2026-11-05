@@ -36,6 +36,8 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `some_filter`
 - [x] `emb/filter/exponential_filter.hpp`
   - [x] `exponential_filter`
+- [x] `emb/filter/median_exponential_filter.hpp`
+  - [x] `median_exponential_filter`
 - [x] `emb/filter/median_filter.hpp`
   - [x] `median_filter`
 - [x] `emb/filter/moving_average_filter.hpp`
