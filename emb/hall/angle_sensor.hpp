@@ -1,9 +1,7 @@
 #pragma once
 
 #include <emb/container/circular_buffer.hpp>
-#include <emb/filter/cascaded_filter.hpp>
-#include <emb/filter/exponential_filter.hpp>
-#include <emb/filter/median_filter.hpp>
+#include <emb/filter/median_exponential_filter.hpp>
 #include <emb/gpio.hpp>
 #include <emb/hall/calibration.hpp>
 #include <emb/hall/error.hpp>
@@ -16,7 +14,6 @@
 #include <cstdint>
 #include <expected>
 #include <optional>
-#include <tuple>
 
 namespace emb::hall {
 
@@ -58,11 +55,10 @@ constexpr std::expected<void, error> validate(angle_sensor_config const& conf)
 template<some_capture_timer Timer>
 class angle_sensor {
 private:
-  using speed_median_type = emb::median_filter<emb::units::eradps_f32, 3>;
-  using speed_smoother_type =
-      emb::exponential_filter<emb::units::eradps_f32, emb::units::sec_f32>;
   using speed_filter_type =
-      emb::cascaded_filter<speed_median_type, speed_smoother_type>;
+      emb::median_exponential_filter<emb::units::eradps_f32,
+                                     3,
+                                     emb::units::sec_f32>;
 
   angle_sensor_config conf_;
 
@@ -88,9 +84,9 @@ public:
       : conf_(sensor_conf),
         timestep_(timebase.period()),
         capture_timer_(capture_timer),
-        speedfilter_(
-            speed_median_type{},
-            speed_smoother_type{timestep_, sensor_conf.speed_timeconstant})
+        speedfilter_(timestep_,
+                     sensor_conf.speed_timeconstant,
+                     emb::units::eradps_f32{0})
   {
     geometry_ = make_geometry(calibration);
 
@@ -181,8 +177,7 @@ public:
   void configure(angle_sensor_config const& conf)
   {
     conf_ = conf;
-    std::get<speed_smoother_type>(speedfilter_.stages)
-        .set_smoothing(timestep_, conf.speed_timeconstant);
+    speedfilter_.set_smoothing(timestep_, conf.speed_timeconstant);
   }
 
   void apply_calibration(calibration_result const& data)
@@ -216,8 +211,7 @@ private:
 
     auto const raw_speed =
         sectors[sector_from].width / transition_period * sign;
-    std::get<speed_smoother_type>(speedfilter_.stages)
-        .set_timestep(transition_period);
+    speedfilter_.set_timestep(transition_period);
     speedfilter_.push(raw_speed);
 
     sector_span_ = sectors[sector_to];

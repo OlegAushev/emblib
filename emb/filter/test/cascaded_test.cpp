@@ -62,10 +62,9 @@ consteval bool test_three_stages()
 
 static_assert(test_three_stages());
 
-// A median feeding an exponential filter, as for the speed of
-// `hall::angle_sensor`: the output is that of the same two stages driven by
-// hand, before the first push and after every push, also once a stage is
-// retuned through `stages`.
+// A median feeding an exponential filter: the output is that of the same two
+// stages driven by hand, before the first push and after every push, also once
+// a stage is retuned through `stages`.
 consteval bool test_median_into_exponential()
 {
   emb::median_filter<eradps_f32, 3> median;
