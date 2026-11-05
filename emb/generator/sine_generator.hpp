@@ -27,7 +27,7 @@ public:
       value_type ampl,
       units::hz_f32 freq,
       emb::units::rad_f32 init_phase = emb::units::rad_f32(0),
-      value_type bias = value_type())
+      value_type bias = value_type{})
       : update_period_(update_period),
         ampl_(ampl),
         wfreq_(2 * std::numbers::pi_v<float> * freq.value),

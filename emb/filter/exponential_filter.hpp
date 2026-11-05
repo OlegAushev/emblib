@@ -41,7 +41,7 @@ private:
 public:
   constexpr exponential_filter(duration_type sampling_period,
                                duration_type time_constant,
-                               value_type init_output = value_type())
+                               value_type init_output = value_type{})
       : init_output_(init_output)
   {
     set_smoothing(sampling_period, time_constant);
