@@ -14,10 +14,10 @@ constexpr bool test_median_filter(Filter filter,
 
   assert(filter.output() == init_output);
 
-  filter.set_output(value_type{-42});
+  filter.reset(value_type{-42});
   assert(filter.output() == value_type{-42});
 
-  filter.reset();
+  filter.reset(init_output);
   assert(filter.output() == init_output);
 
   // Test with known sequence
@@ -50,7 +50,7 @@ constexpr bool test_median_filter(Filter filter,
   }
   assert(output >= min_val && output <= max_val);
 
-  filter.reset();
+  filter.reset(init_output);
   assert(filter.output() == init_output);
 
   return true;

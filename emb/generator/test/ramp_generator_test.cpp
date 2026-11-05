@@ -85,7 +85,7 @@ constexpr bool test_ramp_reset()
   }
   assert(ramp.output() == 10.0f);
 
-  ramp.reset();
+  ramp.reset(5.0f);
   assert(ramp.output() == 5.0f);
   assert(ramp.target() == 5.0f);
   assert(ramp.at_target());
@@ -93,7 +93,7 @@ constexpr bool test_ramp_reset()
   return true;
 }
 
-constexpr bool test_ramp_set_output()
+constexpr bool test_ramp_reset_midway()
 {
   emb::ramp_generator<float> ramp(emb::units::sec_f32{0.1f}, 1.0f, 0.0f);
 
@@ -102,7 +102,7 @@ constexpr bool test_ramp_set_output()
   ramp.update();
   assert(!ramp.at_target());
 
-  ramp.set_output(3.5f);
+  ramp.reset(3.5f);
   assert(ramp.output() == 3.5f);
   assert(ramp.target() == 3.5f);
   assert(ramp.at_target());
@@ -160,7 +160,7 @@ constexpr bool test_ramp_change_target_midway()
 }
 
 static_assert(test_ramp_reset());
-static_assert(test_ramp_set_output());
+static_assert(test_ramp_reset_midway());
 static_assert(test_ramp_set_timestep());
 static_assert(test_ramp_set_slope());
 static_assert(test_ramp_change_target_midway());

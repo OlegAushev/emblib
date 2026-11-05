@@ -16,7 +16,7 @@ test_moving_average_filter(Filter filter,
 
   assert(filter.output() == init_output);
 
-  filter.set_output(value_type{-42});
+  filter.reset(value_type{-42});
   assert(filter.output() == value_type{-42});
 
   std::array<value_type, 7> input{value_type{10},
@@ -52,7 +52,7 @@ test_moving_average_filter(Filter filter,
   }
   assert(filter.output() == sum / static_cast<divider_type>(capacity));
 
-  filter.reset();
+  filter.reset(init_output);
   assert(filter.output() == init_output);
 
   return true;

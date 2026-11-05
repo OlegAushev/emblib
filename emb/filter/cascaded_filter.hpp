@@ -13,9 +13,8 @@ namespace emb {
 // The class template `cascaded_filter` is a filter that connects the filters
 // `Stages` in series. `push(input)` pushes `input` into the first stage and the
 // new output of each stage into the next one, and the output is the output of
-// the last stage. `set_output(value)` and `reset()` make the same call on every
-// stage, and each exists only if every stage has a member function of that
-// name.
+// the last stage. `reset(value)` makes the same call on every stage, and exists
+// only if every stage has such a member function.
 //
 // The stage objects are kept in the public tuple `stages`, so that a stage can
 // be read and changed, e.g. by calling `set_timestep` on an
@@ -48,16 +47,10 @@ public:
     return std::get<stage_count - 1>(stages).output();
   }
 
-  constexpr void set_output(value_type value)
-    requires(requires(Stages& s, value_type v) { s.set_output(v); } && ...)
+  constexpr void reset(value_type value)
+    requires(requires(Stages& s, value_type v) { s.reset(v); } && ...)
   {
-    std::apply([&](auto&... s) { (s.set_output(value), ...); }, stages);
-  }
-
-  constexpr void reset()
-    requires(requires(Stages& s) { s.reset(); } && ...)
-  {
-    std::apply([](auto&... s) { (s.reset(), ...); }, stages);
+    std::apply([&](auto&... s) { (s.reset(value), ...); }, stages);
   }
 };
 

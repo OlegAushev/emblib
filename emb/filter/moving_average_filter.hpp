@@ -8,10 +8,10 @@
 namespace emb {
 
 // The class template `moving_average_filter` is a filter whose output is the
-// arithmetic mean of the last `WindowSize` values pushed. Construction,
-// `reset()` and `set_output(value)` leave the window empty: the output is the
-// initial output or `value` until the next `push`, then the mean of the values
-// pushed since. `data()` returns the window, oldest value first.
+// arithmetic mean of the last `WindowSize` values pushed. Construction and
+// `reset(value)` leave the window empty: the output is the initial output or
+// `value` until the next `push`, then the mean of the values pushed since.
+// `data()` returns the window, oldest value first.
 //
 // For an integer `T`, the output is rounded toward zero, and `WindowSize` times
 // the largest magnitude of a value pushed must be representable in `T`. For a
@@ -30,17 +30,15 @@ public:
   static constexpr std::size_t window_size = WindowSize;
 private:
   underlying_type data_;
-  value_type sum_;
-  value_type fresh_sum_;
-  size_type fresh_count_;
-  value_type init_output_;
+  value_type sum_{};
+  value_type fresh_sum_{};
+  size_type fresh_count_ = 0;
   value_type output_;
 public:
   constexpr explicit moving_average_filter(
       value_type init_output = value_type{})
-      : init_output_(init_output)
+      : output_(init_output)
   {
-    reset();
   }
 
   constexpr void push(value_type input)
@@ -70,18 +68,13 @@ public:
     return output_;
   }
 
-  constexpr void set_output(value_type value)
+  constexpr void reset(value_type value)
   {
     data_.clear();
     sum_ = value_type{0};
     fresh_sum_ = value_type{0};
     fresh_count_ = 0;
     output_ = value;
-  }
-
-  constexpr void reset()
-  {
-    set_output(init_output_);
   }
 
   constexpr underlying_type const& data() const

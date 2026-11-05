@@ -13,10 +13,10 @@ constexpr bool test_exponential_filter(Filter filter,
 
   assert(filter.output() == init_output);
 
-  filter.set_output(value_type{100});
+  filter.reset(value_type{100});
   assert(filter.output() == value_type{100});
 
-  filter.reset();
+  filter.reset(init_output);
   assert(filter.output() == init_output);
 
   // Test with step input - output should approach input value
@@ -47,7 +47,7 @@ constexpr bool test_exponential_filter(Filter filter,
   assert(factor >= decltype(factor)(0));
   assert(factor <= decltype(factor)(1));
 
-  filter.reset();
+  filter.reset(init_output);
   assert(filter.output() == init_output);
 
   return true;

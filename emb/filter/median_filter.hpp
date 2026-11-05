@@ -9,10 +9,10 @@
 namespace emb {
 
 // The class template `median_filter` is a filter whose output is the median of
-// the last `WindowSize` values pushed. Construction and `reset()` fill the
-// window with copies of the initial output, and `set_output(value)` with copies
-// of `value`. The copies count as values pushed, so the output is their value
-// and keeps it for the next `WindowSize / 2` pushes.
+// the last `WindowSize` values pushed. Construction fills the window with
+// copies of the initial output, and `reset(value)` with copies of `value`. The
+// copies count as values pushed, so the output is their value and keeps it for
+// the next `WindowSize / 2` pushes.
 //
 // The values in the window must not be NaN: with a NaN and two unequal numbers
 // in it, `<` is not the strict weak ordering that `std::sort` requires, and the
@@ -26,13 +26,11 @@ public:
   static constexpr std::size_t window_size = WindowSize;
 private:
   emb::circular_buffer<value_type, window_size> window_;
-  value_type init_output_;
   value_type output_;
 public:
   constexpr explicit median_filter(value_type init_output = value_type{})
-      : init_output_(init_output)
   {
-    reset();
+    reset(init_output);
   }
 
   constexpr void push(value_type input)
@@ -51,15 +49,10 @@ public:
     return output_;
   }
 
-  constexpr void set_output(value_type value)
+  constexpr void reset(value_type value)
   {
     window_.fill(value);
     output_ = value;
-  }
-
-  constexpr void reset()
-  {
-    set_output(init_output_);
   }
 };
 

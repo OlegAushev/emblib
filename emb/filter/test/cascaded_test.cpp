@@ -19,11 +19,7 @@ template<typename... Stages>
 concept cascadable = requires { typename emb::cascaded_filter<Stages...>; };
 
 template<typename F>
-concept has_set_output =
-    requires(F f, typename F::value_type v) { f.set_output(v); };
-
-template<typename F>
-concept has_reset = requires(F f) { f.reset(); };
+concept has_reset = requires(F f, typename F::value_type v) { f.reset(v); };
 
 using median_into_average =
     emb::cascaded_filter<emb::median_filter<float, 3>,
@@ -42,10 +38,8 @@ static_assert(cascadable<emb::median_filter<float, 3>>);
 static_assert(std::same_as<median_into_average::value_type, float>);
 static_assert(emb::some_filter<median_into_average>);
 
-// `set_output` and `reset` exist only if every stage has them.
-static_assert(has_set_output<median_into_average>);
+// `reset` exists only if every stage has it.
 static_assert(has_reset<median_into_average>);
-static_assert(!has_set_output<passthrough_into_median>);
 static_assert(!has_reset<passthrough_into_median>);
 
 // Three stages, each output worked out by hand: the median gives 0 10 10 40
@@ -118,10 +112,9 @@ consteval bool test_nested()
 
 static_assert(test_nested());
 
-// `set_output` gives every stage the value, so the median's window fills with
-// it and holds it for the next push; `reset` returns every stage to its own
-// initial output.
-consteval bool test_set_output_and_reset()
+// `reset` gives every stage the value, so the median's window fills with it and
+// holds it for the next push.
+consteval bool test_reset()
 {
   emb::cascaded_filter cascade{emb::median_filter<float, 3>{1.0f},
                                emb::moving_average_filter<float, 4>{2.0f}};
@@ -130,18 +123,13 @@ consteval bool test_set_output_and_reset()
   cascade.push(5.0f);
   cascade.push(6.0f);
 
-  cascade.set_output(-3.0f);
+  cascade.reset(-3.0f);
   if (median.output() != -3.0f || average.output() != -3.0f) return false;
   if (cascade.output() != -3.0f) return false;
   cascade.push(10.0f);
-  if (cascade.output() != -3.0f) return false;
-
-  cascade.reset();
-  return median.output() == 1.0f
-      && average.output() == 2.0f
-      && cascade.output() == 2.0f;
+  return cascade.output() == -3.0f;
 }
 
-static_assert(test_set_output_and_reset());
+static_assert(test_reset());
 
 } // namespace

@@ -11,8 +11,8 @@ namespace emb {
 // The class template `exponential_filter` is a filter whose output is an
 // exponential moving average of the values pushed: `push(input)` moves the
 // output toward `input` by the smoothing factor times their difference.
-// Construction and `reset()` set the output to the initial output, and
-// `set_output(value)` to `value`.
+// Construction sets the output to the initial output, and `reset(value)` to
+// `value`.
 //
 // The smoothing factor is the sampling period divided by the time constant,
 // clamped to [0, 1]; `set_smoothing` sets both durations and `set_timestep`
@@ -36,16 +36,14 @@ private:
   duration_type sampling_period_;
   duration_type time_constant_;
   factor_type smooth_factor_;
-  value_type init_output_;
   value_type output_;
 public:
   constexpr exponential_filter(duration_type sampling_period,
                                duration_type time_constant,
                                value_type init_output = value_type{})
-      : init_output_(init_output)
+      : output_(init_output)
   {
     set_smoothing(sampling_period, time_constant);
-    reset();
   }
 
   constexpr void push(value_type input)
@@ -58,14 +56,9 @@ public:
     return output_;
   }
 
-  constexpr void set_output(value_type value)
+  constexpr void reset(value_type value)
   {
     output_ = value;
-  }
-
-  constexpr void reset()
-  {
-    set_output(init_output_);
   }
 
   constexpr void set_smoothing(duration_type sampling_period,

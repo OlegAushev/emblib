@@ -18,16 +18,14 @@ private:
   value_type step_;
 
   value_type target_;
-  value_type init_output_;
   value_type output_;
 public:
   constexpr ramp_generator(units::sec_f32 timestep,
                            value_type slope,
-                           value_type init_output = T{})
-      : init_output_(init_output)
+                           value_type init_output = value_type{})
   {
     set_slope(timestep, slope);
-    reset();
+    reset(init_output);
   }
 
   constexpr value_type target() const
@@ -45,15 +43,10 @@ public:
     target_ = value;
   }
 
-  constexpr void set_output(value_type value)
+  constexpr void reset(value_type value)
   {
     target_ = value;
     output_ = value;
-  }
-
-  constexpr void reset()
-  {
-    set_output(init_output_);
   }
 
   constexpr void set_slope(units::sec_f32 timestep, value_type slope)
