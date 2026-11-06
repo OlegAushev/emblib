@@ -268,7 +268,8 @@ emblib не попал. Такие файлы помечены «песочни�
 - [ ] `emb/actuator/feedback.hpp`
 - [ ] `emb/actuator/monitored.hpp`
 - [ ] `emb/actuator/unmonitored.hpp`
-- [ ] `emb/algorithm.hpp` — песочница: `median3`
+- [x] `emb/algorithm.hpp`
+  - [x] `median`
 - [ ] `emb/can.hpp`
 - [ ] `emb/can/bus.hpp`
 - [ ] `emb/can/canopen/detail/emcy_producer.hpp`
