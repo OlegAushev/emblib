@@ -1,6 +1,7 @@
 #include <emb/filter/median_filter.hpp>
 #include <emb/units.hpp>
 
+#include <array>
 #include <cassert>
 
 namespace {
@@ -74,5 +75,64 @@ static_assert(test_median_filter(emb::median_filter<float, 3>{3.14f}, 3.14f));
 // Test with units
 static_assert(test_median_filter(emb::median_filter<emb::units::erad_f32, 3>{},
                                  emb::units::erad_f32{0}));
+
+// Without an initial output, the output stays at zero until the window is full
+// and then starts at its median, wherever a lone outlier falls in the window.
+consteval bool test_wait(std::array<float, 5> const& input)
+{
+  emb::median_filter<float, 5> filter;
+  if (filter.output() != 0.0f) return false;
+  for (auto i = 0uz; i + 1 < input.size(); ++i) {
+    filter.push(input[i]);
+    if (filter.output() != 0.0f) return false;
+  }
+  filter.push(input.back());
+  return filter.output() == 20.0f;
+}
+
+static_assert(test_wait({1000.0f, 20.0f, 20.0f, 20.0f, 20.0f}));
+static_assert(test_wait({20.0f, 20.0f, 1000.0f, 20.0f, 20.0f}));
+static_assert(test_wait({20.0f, 20.0f, 20.0f, 20.0f, 1000.0f}));
+
+// A window of one is full with the first value.
+consteval bool test_wait_of_one_value()
+{
+  emb::median_filter<float, 1> filter;
+  filter.push(8.0f);
+  return filter.output() == 8.0f;
+}
+
+static_assert(test_wait_of_one_value());
+
+// Zero as the initial output is not the same as none: its copies count as
+// values pushed, so the output moves away from it while the other still waits.
+consteval bool test_zero_is_not_none()
+{
+  emb::median_filter<float, 3> zero{0.0f};
+  emb::median_filter<float, 3> none;
+  for (auto input : std::array{10.0f, 20.0f}) {
+    zero.push(input);
+    none.push(input);
+  }
+  return zero.output() == 10.0f && none.output() == 0.0f;
+}
+
+static_assert(test_zero_is_not_none());
+
+// `reset` ends the wait: the value holds for the next push, and then the two
+// values pushed outnumber its copies.
+consteval bool test_reset_in_wait()
+{
+  emb::median_filter<float, 3> filter;
+  filter.push(1.0f);
+  filter.reset(5.0f);
+  if (filter.output() != 5.0f) return false;
+  filter.push(9.0f);
+  if (filter.output() != 5.0f) return false;
+  filter.push(9.0f);
+  return filter.output() == 9.0f;
+}
+
+static_assert(test_reset_in_wait());
 
 } // namespace

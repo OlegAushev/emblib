@@ -42,9 +42,9 @@ static_assert(emb::some_filter<median_into_average>);
 static_assert(has_reset<median_into_average>);
 static_assert(!has_reset<passthrough_into_median>);
 
-// Three stages, each output worked out by hand: the median gives 0 10 10 40
-// 70, the first average 0 5 10 25 55, and the second, rounding toward zero,
-// 0 2 7 17 40.
+// Three stages, each output worked out by hand: the median gives 0 0 10 40 70,
+// the first average 0 0 5 25 55, and the second, rounding toward zero,
+// 0 0 2 15 40.
 consteval bool test_three_stages()
 {
   emb::cascaded_filter<emb::median_filter<int, 3>,
@@ -52,7 +52,7 @@ consteval bool test_three_stages()
                        emb::moving_average_filter<int, 2>>
       cascade;
   std::array const input{10, 40, 10, 70, 70};
-  std::array const expected{0, 2, 7, 17, 40};
+  std::array const expected{0, 0, 2, 15, 40};
   for (auto i = 0uz; i < input.size(); ++i) {
     cascade.push(input[i]);
     if (cascade.output() != expected[i]) return false;
