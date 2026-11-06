@@ -1,8 +1,8 @@
 #pragma once
 
+#include <emb/algorithm.hpp>
 #include <emb/math.hpp>
 
-#include <algorithm>
 #include <array>
 #include <cstddef>
 
@@ -17,10 +17,8 @@ namespace emb {
 // the next `WindowSize / 2` pushes, and `reset(value)` ends the wait, if any.
 // Passing zero as the initial output is not the same as passing none.
 //
-// The values in the window must not be NaN: with a NaN and two unequal numbers
-// in it, `<` is not the strict weak ordering that `std::sort` requires, and the
-// behavior is undefined. Each `push` into a full window sorts a local copy of
-// it, which takes O(N log N) comparisons, where N is `WindowSize`.
+// Each `push` into a full window passes it to `emb::median`, and the contract
+// of that function applies: the values in the window must not be NaN.
 template<typename T, std::size_t WindowSize>
   requires(emb::isodd(WindowSize))
 class median_filter {
@@ -48,9 +46,7 @@ public:
       full_ = true;
     }
     if (!full_) return;
-    auto values = window_;
-    std::sort(values.begin(), values.end());
-    output_ = values[window_size / 2];
+    output_ = emb::median(window_);
   }
 
   constexpr value_type output() const
