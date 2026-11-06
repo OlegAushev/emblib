@@ -47,13 +47,35 @@ consteval bool test_median_of_five()
 
 static_assert(test_median_of_five());
 
-// An array of any odd size, also of a size with an overload of its own.
+// The median of seven values is that of a sort on every window of zeros and
+// ones. It is built of compare and exchange steps, `min` and `max` alone, so by
+// the 0-1 principle that holds for all values.
+consteval bool test_median_of_seven()
+{
+  for (auto code = 0; code < 128; ++code) {
+    std::array<int, 7> v{};
+    for (auto i = 0uz; i < v.size(); ++i) {
+      v[i] = (code >> i) & 1;
+    }
+    auto sorted = v;
+    std::ranges::sort(sorted);
+    if (emb::median(v[0], v[1], v[2], v[3], v[4], v[5], v[6]) != sorted[3]) {
+      return false;
+    }
+  }
+  return emb::median(-1.0f, 2.0f, 0.0f, 9.0f, -7.0f, 5.0f, -3.0f) == 0.0f;
+}
+
+static_assert(test_median_of_seven());
+
+// An array of any odd size, of a size with an overload of its own or not.
 consteval bool test_median_of_array()
 {
   return emb::median(std::array{7}) == 7
       && emb::median(std::array{3, 1, 2}) == 2
       && emb::median(std::array{5, 1, 4, 2, 3}) == 3
-      && emb::median(std::array{9, 1, 8, 2, 7, 3, 6}) == 6;
+      && emb::median(std::array{9, 1, 8, 2, 7, 3, 6}) == 6
+      && emb::median(std::array{9, 1, 8, 2, 7, 3, 6, 5, 4}) == 5;
 }
 
 static_assert(test_median_of_array());
