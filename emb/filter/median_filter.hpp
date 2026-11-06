@@ -11,11 +11,11 @@ namespace emb {
 // The class template `median_filter` is a filter whose output is the median of
 // the last `WindowSize` values pushed. Default construction leaves the window
 // empty, and the filter waits for it: the output is `T{}` until the values
-// pushed have filled the window. Construction with an initial output and
-// `reset(value)` fill the window with copies of the value, which count as
-// values pushed, so the output is that value and keeps it for the next
-// `WindowSize / 2` pushes, and `reset(value)` ends the wait, if any. Passing
-// zero as the initial output is not the same as passing none.
+// pushed have filled the window, which `full()` tells. Construction with an
+// initial output and `reset(value)` fill the window with copies of the value,
+// which count as values pushed, so the output is that value and keeps it for
+// the next `WindowSize / 2` pushes, and `reset(value)` ends the wait, if any.
+// Passing zero as the initial output is not the same as passing none.
 //
 // The values in the window must not be NaN: with a NaN and two unequal numbers
 // in it, `<` is not the strict weak ordering that `std::sort` requires, and the
@@ -56,6 +56,11 @@ public:
   constexpr value_type output() const
   {
     return output_;
+  }
+
+  constexpr bool full() const
+  {
+    return full_;
   }
 
   constexpr void reset(value_type value)

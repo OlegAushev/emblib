@@ -36,11 +36,10 @@ public:
 private:
   emb::median_filter<value_type, window_size> median_;
   emb::exponential_filter<value_type, duration_type> smoother_;
-  std::size_t taken_;
 public:
   constexpr median_exponential_filter(duration_type sampling_period,
                                       duration_type time_constant)
-      : smoother_(sampling_period, time_constant), taken_(0)
+      : smoother_(sampling_period, time_constant)
   {
   }
 
@@ -48,18 +47,18 @@ public:
                                       duration_type time_constant,
                                       value_type init_output)
       : median_(init_output),
-        smoother_(sampling_period, time_constant, init_output),
-        taken_(window_size)
+        smoother_(sampling_period, time_constant, init_output)
   {
   }
 
   constexpr void push(value_type input)
   {
+    bool const started = median_.full();
     median_.push(input);
-    if (taken_ == window_size) {
+    if (started) {
       smoother_.push(median_.output());
     }
-    else if (++taken_ == window_size) {
+    else if (median_.full()) {
       smoother_.reset(median_.output());
     }
   }
@@ -73,7 +72,6 @@ public:
   {
     median_.reset(value);
     smoother_.reset(value);
-    taken_ = window_size;
   }
 
   constexpr void set_smoothing(duration_type sampling_period,

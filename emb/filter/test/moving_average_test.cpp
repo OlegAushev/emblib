@@ -131,6 +131,27 @@ constexpr bool test_moving_average_start()
 
 static_assert(test_moving_average_start());
 
+// `full()` is false until `WindowSize` values are in, and true from the start
+// with an initial output and once `reset` has filled the window.
+constexpr bool test_moving_average_full()
+{
+  emb::moving_average_filter<float, 2> filter;
+  if (filter.full()) return false;
+  filter.push(1.0f);
+  if (filter.full()) return false;
+  filter.push(2.0f);
+  if (!filter.full()) return false;
+
+  emb::moving_average_filter<float, 2> settled{10.0f};
+  if (!settled.full()) return false;
+
+  emb::moving_average_filter<float, 2> after_reset;
+  after_reset.reset(10.0f);
+  return after_reset.full();
+}
+
+static_assert(test_moving_average_full());
+
 // A value much larger than the rest no longer affects the output
 // `WindowSize - 1` pushes after it has left the window, wherever it falls
 // among the pushes. An infinity or a NaN can't be tested here: constant

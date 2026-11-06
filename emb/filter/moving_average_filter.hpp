@@ -14,7 +14,8 @@ namespace emb {
 // `reset(value)` fill the window with copies of the value, which count as
 // values pushed, so the output is that value and moves away from it as the
 // copies leave the window; passing zero is thus not the same as passing
-// nothing. `data()` returns the window, oldest value first.
+// nothing. `full()` tells whether the window is full, and `data()` returns it,
+// oldest value first.
 //
 // For an integer `T`, the output is rounded toward zero, and `WindowSize` times
 // the largest magnitude of a value pushed must be representable in `T`. For a
@@ -70,6 +71,11 @@ public:
   constexpr value_type output() const
   {
     return output_;
+  }
+
+  constexpr bool full() const
+  {
+    return data_.full();
   }
 
   constexpr void reset(value_type value)
