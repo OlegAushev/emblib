@@ -1,10 +1,10 @@
 #pragma once
 
-#include <emb/container/circular_buffer.hpp>
 #include <emb/math.hpp>
 
 #include <algorithm>
 #include <array>
+#include <cstddef>
 
 namespace emb {
 
@@ -28,7 +28,9 @@ public:
   using value_type = T;
   static constexpr std::size_t window_size = WindowSize;
 private:
-  emb::circular_buffer<value_type, window_size> window_;
+  std::array<value_type, window_size> window_{};
+  std::size_t oldest_ = 0;
+  bool full_ = false;
   value_type output_{};
 public:
   constexpr median_filter() = default;
@@ -40,14 +42,15 @@ public:
 
   constexpr void push(value_type input)
   {
-    window_.push_back(input);
-    if (!window_.full()) return;
-    std::array<value_type, window_size> window_sorted = {};
-    for (auto i = 0uz; i < window_.size(); ++i) {
-      window_sorted[i] = window_[i];
+    window_[oldest_] = input;
+    if (++oldest_ == window_size) {
+      oldest_ = 0;
+      full_ = true;
     }
-    std::sort(window_sorted.begin(), window_sorted.end());
-    output_ = window_sorted[window_size / 2];
+    if (!full_) return;
+    auto values = window_;
+    std::sort(values.begin(), values.end());
+    output_ = values[window_size / 2];
   }
 
   constexpr value_type output() const
@@ -58,6 +61,7 @@ public:
   constexpr void reset(value_type value)
   {
     window_.fill(value);
+    full_ = true;
     output_ = value;
   }
 };
