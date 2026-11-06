@@ -57,10 +57,10 @@ constexpr T median(T a, T b, T c, T d, T e, T f, T g, T h, T i) noexcept
 
 // Returns the median of `values`, whose number must be odd: an even number of
 // values has no single median. Three, five, seven and nine values go to the
-// overloads above, and any other number is sorted in a copy, which takes
-// O(N log N) comparisons. The values must not be NaN: with a NaN and two
-// unequal numbers among them, `<` is not the strict weak ordering that
-// `std::sort` requires, and the behavior is undefined.
+// overloads above, and in any other number the median is selected in a copy,
+// which takes O(N) comparisons on average. The values must not be NaN: with a
+// NaN and two unequal numbers among them, `<` is not the strict weak ordering
+// that `std::nth_element` requires, and the behavior is undefined.
 template<class T, std::size_t N>
   requires(N % 2 == 1)
 constexpr T median(std::array<T, N> const& values)
@@ -92,9 +92,10 @@ constexpr T median(std::array<T, N> const& values)
                   values[8]);
   }
   else {
-    auto sorted = values;
-    std::sort(sorted.begin(), sorted.end());
-    return sorted[N / 2];
+    auto copy = values;
+    auto const middle = copy.begin() + N / 2;
+    std::nth_element(copy.begin(), middle, copy.end());
+    return *middle;
   }
 }
 
