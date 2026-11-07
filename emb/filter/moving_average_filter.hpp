@@ -24,6 +24,7 @@ namespace emb {
 // NaN can affect it for up to `WindowSize - 1` pushes after leaving the window.
 // The errors do not accumulate over time.
 template<typename T, std::size_t WindowSize>
+  requires(WindowSize > 0)
 class moving_average_filter {
 public:
   using value_type = T;

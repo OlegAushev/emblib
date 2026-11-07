@@ -176,4 +176,12 @@ constexpr bool test_moving_average_outlier(float outlier)
 static_assert(test_moving_average_outlier<4>(1e8f));
 static_assert(test_moving_average_outlier<16>(1e8f));
 
+// `WindowSize` must be positive.
+template<std::size_t WindowSize>
+concept window_accepted =
+    requires { typename emb::moving_average_filter<float, WindowSize>; };
+
+static_assert(!window_accepted<0>);
+static_assert(window_accepted<1>);
+
 } // namespace
