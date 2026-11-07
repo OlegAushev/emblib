@@ -1,8 +1,11 @@
 #include <emb/filter/moving_average_filter.hpp>
 #include <emb/units.hpp>
 
+#include <array>
 #include <cassert>
+#include <concepts>
 #include <cstddef>
+#include <cstdint>
 
 namespace {
 
@@ -183,5 +186,64 @@ concept window_accepted =
 
 static_assert(!window_accepted<0>);
 static_assert(window_accepted<1>);
+
+// By default the values are summed in the type of the sum of two `T`s: `int`
+// for an integer `T` narrower than `int`, `T` itself otherwise.
+static_assert(
+    std::same_as<emb::moving_average_filter<std::int16_t, 4>::sum_type, int>);
+static_assert(
+    std::same_as<emb::moving_average_filter<std::uint8_t, 4>::sum_type, int>);
+static_assert(std::same_as<emb::moving_average_filter<int, 4>::sum_type, int>);
+static_assert(
+    std::same_as<emb::moving_average_filter<float, 4>::sum_type, float>);
+static_assert(
+    std::same_as<emb::moving_average_filter<emb::units::erad_f32, 4>::sum_type,
+                 emb::units::erad_f32>);
+
+// So the sum of the window may exceed `T`: sixteen 12-bit codes, or the
+// extremes of `std::int16_t`. The output is still rounded toward zero.
+constexpr bool test_moving_average_narrow_type()
+{
+  using filter = emb::moving_average_filter<std::int16_t, 16>;
+  for (auto const value : std::array<std::int16_t, 3>{4095, 32767, -32768}) {
+    filter f;
+    for (auto i = 0uz; i < 2 * filter::window_size; ++i) {
+      f.push(value);
+    }
+    if (f.output() != value) return false;
+  }
+
+  filter settled{30000};
+  settled.push(0);
+  if (settled.output() != 28125) return false;
+
+  emb::moving_average_filter<std::int16_t, 4> mixed;
+  mixed.push(32767);
+  mixed.push(32767);
+  mixed.push(-32768);
+  mixed.push(1);
+  return mixed.output() == 8191;
+}
+
+static_assert(test_moving_average_narrow_type());
+
+// A floating-point `Sum` wider than `T`: once the outlier has left the window,
+// a `double` sum has kept the values pushed with it, a `float` sum has not.
+template<typename Sum>
+constexpr float moving_average_after_outlier()
+{
+  emb::moving_average_filter<float, 4, Sum> filter;
+  for (auto i = 0uz; i < 4; ++i) {
+    filter.push(1.0f);
+  }
+  filter.push(1e8f);
+  for (auto i = 0uz; i < 4; ++i) {
+    filter.push(1.0f);
+  }
+  return filter.output();
+}
+
+static_assert(moving_average_after_outlier<double>() == 1.0f);
+static_assert(moving_average_after_outlier<float>() == 0.25f);
 
 } // namespace
