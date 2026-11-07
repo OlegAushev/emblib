@@ -35,7 +35,7 @@ public:
   using sum_type = Sum;
   using size_type = std::size_t;
   using underlying_type = emb::circular_buffer<value_type, WindowSize>;
-  using divider_type =
+  using divisor_type =
       decltype(std::declval<sum_type>() / std::declval<sum_type>());
   static constexpr std::size_t window_size = WindowSize;
 private:
@@ -73,7 +73,7 @@ public:
       fresh_count_ = 0;
     }
     output_ =
-        static_cast<value_type>(sum_ / static_cast<divider_type>(data_.size()));
+        static_cast<value_type>(sum_ / static_cast<divisor_type>(data_.size()));
   }
 
   constexpr value_type output() const
@@ -90,7 +90,7 @@ public:
   {
     data_.fill(value);
     sum_ =
-        static_cast<divider_type>(window_size) * static_cast<sum_type>(value);
+        static_cast<divisor_type>(window_size) * static_cast<sum_type>(value);
     fresh_sum_ = sum_type{0};
     fresh_count_ = 0;
     output_ = value;

@@ -15,7 +15,7 @@ test_moving_average_filter(Filter filter,
                            typename Filter::value_type init_output)
 {
   using value_type = Filter::value_type;
-  using divider_type = Filter::divider_type;
+  using divisor_type = Filter::divisor_type;
 
   assert(filter.output() == init_output);
 
@@ -35,7 +35,7 @@ test_moving_average_filter(Filter filter,
     idx = (idx + 1) % input.size();
     sum += val;
     [[maybe_unused]] auto out =
-        sum / static_cast<divider_type>(filter.data().size());
+        sum / static_cast<divisor_type>(filter.data().size());
     assert(filter.output() == out);
   }
 
@@ -50,7 +50,7 @@ test_moving_average_filter(Filter filter,
   for (auto i = 0uz; i < filter.data().size(); ++i) {
     sum += filter.data()[i];
   }
-  assert(filter.output() == sum / static_cast<divider_type>(capacity));
+  assert(filter.output() == sum / static_cast<divisor_type>(capacity));
 
   filter.reset(value_type{-42});
   assert(filter.output() == value_type{-42});
