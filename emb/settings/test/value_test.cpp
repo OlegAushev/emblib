@@ -41,7 +41,6 @@ static_assert(!parameter_type<char const*>);
 static_assert(!parameter_type<scalar_variant>);
 
 struct wraps_a_double {
-  using value_type = double;
   constexpr explicit wraps_a_double(double) {}
   friend constexpr double scalar_of(wraps_a_double)
   {
@@ -50,25 +49,14 @@ struct wraps_a_double {
 };
 
 struct not_reconstructible {
-  using value_type = float;
   friend constexpr float scalar_of(not_reconstructible)
   {
     return 0.0f;
   }
 };
 
-struct value_type_disagrees {
-  using value_type = float;
-  constexpr explicit value_type_disagrees(float) {}
-  friend constexpr double scalar_of(value_type_disagrees)
-  {
-    return 0.0;
-  }
-};
-
 // A value() member without scalar_of does not make a wrapper.
 struct value_member_only {
-  using value_type = float;
   constexpr explicit value_member_only(float) {}
   constexpr float value() const
   {
@@ -78,13 +66,11 @@ struct value_member_only {
 
 static_assert(!parameter_type<wraps_a_double>);
 static_assert(!parameter_type<not_reconstructible>);
-static_assert(!parameter_type<value_type_disagrees>);
 static_assert(!parameter_type<value_member_only>);
 
 // Nor does a wrapper need a value() member: scalar_of may read a public
 // field, which is where a structural type keeps its number.
 struct public_field {
-  using value_type = float;
   float v;
   constexpr explicit public_field(float x) : v(x) {}
   friend constexpr float scalar_of(public_field w)

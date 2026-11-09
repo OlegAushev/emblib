@@ -38,6 +38,21 @@ static_assert(!scalable<float>);
 static_assert(!scalable<int>);
 static_assert(!scalable<emb::clamped<0, 100>>);
 
+// the scalar comes from scalar_of: a wrapper needs no value_type of its own
+struct no_value_type {
+  float v;
+  constexpr explicit no_value_type(float x) : v(x) {}
+  friend constexpr float scalar_of(no_value_type w)
+  {
+    return w.v;
+  }
+};
+
+static_assert(
+    std::is_same_v<
+        emb::scaled<std::int16_t, no_value_type, std::ratio<1, 10>>::value_type,
+        float>);
+
 static_assert(emb::some_ratio<std::ratio<1, 10>>);
 static_assert(!emb::some_ratio<int>);
 

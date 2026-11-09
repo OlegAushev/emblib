@@ -156,7 +156,6 @@ static_assert(std::is_same_v<typelist_concat_t<typelist<A, B>, typelist<C, A>>,
 
 // Wraps a float and lets scalar_of find it by argument-dependent lookup.
 struct meters {
-  using value_type = float;
   float value;
   constexpr explicit meters(float v) : value(v) {}
   friend constexpr float scalar_of(meters m)
@@ -165,15 +164,13 @@ struct meters {
   }
 };
 
-// Names a value type but cannot be unwrapped: it has no scalar_of.
+// Cannot be unwrapped: it has no scalar_of.
 struct no_scalar_of {
-  using value_type = int;
   int value;
 };
 
 // Unwraps to a reference rather than to a value.
 struct by_reference {
-  using value_type = int;
   int value;
   constexpr explicit by_reference(int v) : value(v) {}
   friend constexpr int const& scalar_of(by_reference const& r)
@@ -184,7 +181,6 @@ struct by_reference {
 
 // Wraps an array, which is not a scalar, though scalar_of returns it.
 struct coordinates {
-  using value_type = std::array<int, 2>;
   std::array<int, 2> value;
   constexpr explicit coordinates(std::array<int, 2> v) : value(v) {}
   friend constexpr std::array<int, 2> scalar_of(coordinates c)

@@ -102,7 +102,7 @@ struct scalar<T> {
 // Scalar type in which a parameter of type `T` is stored and transported:
 // `T` itself if `T` satisfies `parameter_scalar`, its carrier
 // (`emb::enum_carrier32_t`) if `T` satisfies `parameter_enum`, otherwise
-// `T::value_type`.
+// the scalar that `T` wraps.
 template<parameter_type T>
 using scalar_t = typename detail::scalar<T>::type;
 

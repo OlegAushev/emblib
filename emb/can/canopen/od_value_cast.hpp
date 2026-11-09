@@ -92,7 +92,7 @@ constexpr std::optional<T> from_od_value(od_value const& val)
     }
   }
   else if constexpr (wraps_od_scalar<T>) {
-    if (auto* p = std::get_if<typename T::value_type>(&val)) {
+    if (auto* p = std::get_if<unwrapped_t<T>>(&val)) {
       return T{*p};
     }
   }

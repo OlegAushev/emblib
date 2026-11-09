@@ -169,7 +169,7 @@ public:
   using raw_type = Raw;
   using quantity_type = Q;
   using step_type = Step;
-  using value_type = typename Q::value_type;
+  using value_type = unwrapped_t<Q>;
 private:
   static_assert(step_type::num > 0 && step_type::den > 0,
                 "Step must be a positive ratio");

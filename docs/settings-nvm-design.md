@@ -749,7 +749,7 @@ may write.
   would add a code path through every layer; a parameter that wants one is
   better modelled as `int32`. Widening the set later breaks nothing.
 - **Wrapper types are recognised by a `scalar_of` overload**, which
-  argument-dependent lookup finds, plus `value_type` + explicit constructor,
+  argument-dependent lookup finds, plus a constructor from what it returns,
   not by naming `units::quantity` and `emb::clamped`. `settings/value.hpp`
   therefore depends on neither header, and `emb::clamped` parameters come
   for free — which lets the application schema declare `unsigned_pu_f32`

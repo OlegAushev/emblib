@@ -2,27 +2,23 @@
 
 #include <concepts>
 #include <type_traits>
+#include <utility>
 
 namespace emb {
 
 // The concept `scalar_wrapper<T>` is satisfied if and only if `T` wraps one
-// scalar of type `T::value_type` and can be rebuilt from it: `T::value_type`
-// is a scalar type (`std::is_scalar_v`), `T` is constructible from it, and
-// `scalar_of` called unqualified with a `T const` lvalue returns
-// `T::value_type`, not a reference to one.
+// scalar and can be rebuilt from it: `scalar_of` called unqualified with a
+// `T const` lvalue returns a value of a scalar type (`std::is_scalar_v`), not
+// a reference to one, and `T` is constructible from that type.
 //
 // A wrapper, e.g. `emb::units::quantity` or `emb::clamped`, opts in by
 // declaring a `scalar_of` overload that argument-dependent lookup finds: in its
 // own namespace or as a friend defined in the class.
 template<typename T>
-concept scalar_wrapper = requires { typename T::value_type; }
-                      && std::is_scalar_v<typename T::value_type>
-                      && std::constructible_from<T, typename T::value_type>
-                      && requires(T const& v) {
-                           {
-                             scalar_of(v)
-                           } -> std::same_as<typename T::value_type>;
-                         };
+concept scalar_wrapper = requires(T const& v) {
+  requires std::is_scalar_v<decltype(scalar_of(v))>;
+  requires std::constructible_from<T, decltype(scalar_of(v))>;
+};
 
 namespace detail {
 
@@ -33,7 +29,7 @@ struct unwrapped {
 
 template<scalar_wrapper T>
 struct unwrapped<T> {
-  using type = typename T::value_type;
+  using type = decltype(scalar_of(std::declval<T const&>()));
 };
 
 } // namespace detail

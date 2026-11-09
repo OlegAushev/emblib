@@ -43,7 +43,6 @@ constexpr emb::units::hz_f32 read_freq(ctx const& c)
 
 // A wrapper with no value() member: scalar_of alone makes it one.
 struct public_field {
-  using value_type = float;
   float v;
   constexpr explicit public_field(float x) : v(x) {}
   friend constexpr float scalar_of(public_field w)
@@ -669,6 +668,15 @@ static_assert(std::same_as<od_carrier_t<gear>, std::uint32_t>);
 static_assert(std::same_as<od_carrier_t<tilt>, std::int32_t>);
 static_assert(std::same_as<od_carrier_t<std::int16_t>, std::int16_t>);
 static_assert(std::same_as<od_carrier_t<emb::units::hz_f32>, float>);
+static_assert(std::same_as<od_carrier_t<public_field>, float>);
+
+consteval bool test_wrapper_values()
+{
+  od_value const scalar{1.5f};
+  return from_od_value<public_field>(scalar)->v == 1.5f;
+}
+
+static_assert(test_wrapper_values());
 
 consteval bool test_enumeration_values()
 {
