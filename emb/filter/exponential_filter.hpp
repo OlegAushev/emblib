@@ -15,8 +15,9 @@ namespace emb {
 // `reset(value)` to `value`.
 //
 // The smoothing factor is the sampling period divided by the time constant,
-// clamped to [0, 1]; `set_smoothing` sets it. For a sampling period much
-// shorter than the time constant, the filter approximates a first-order
+// clamped to [0, 1]. `set_time_constant` replaces the time constant; the
+// sampling period stays the one given at construction. For a sampling period
+// much shorter than the time constant, the filter approximates a first-order
 // low-pass filter with a time constant about half a sampling period shorter;
 // if the sampling period is at least the time constant, `push(input)` sets the
 // output to `input`, up to rounding. The time constant must be positive; the
@@ -32,15 +33,16 @@ public:
   using factor_type =
       decltype(std::declval<Duration>() / std::declval<Duration>());
 private:
+  duration_type sampling_period_;
   factor_type smooth_factor_;
   value_type output_;
 public:
   constexpr exponential_filter(duration_type sampling_period,
                                duration_type time_constant,
                                value_type init_output = value_type{})
-      : output_(init_output)
+      : sampling_period_(sampling_period), output_(init_output)
   {
-    set_smoothing(sampling_period, time_constant);
+    set_time_constant(time_constant);
   }
 
   constexpr void push(value_type input)
@@ -58,12 +60,10 @@ public:
     output_ = value;
   }
 
-  constexpr void set_smoothing(duration_type sampling_period,
-                               duration_type time_constant)
+  constexpr void set_time_constant(duration_type value)
   {
-    smooth_factor_ = std::clamp(sampling_period / time_constant,
-                                factor_type(0),
-                                factor_type(1));
+    smooth_factor_ =
+        std::clamp(sampling_period_ / value, factor_type(0), factor_type(1));
   }
 
   constexpr factor_type smooth_factor() const

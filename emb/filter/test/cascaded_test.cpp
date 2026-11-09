@@ -79,8 +79,8 @@ consteval bool test_median_into_exponential()
   if (cascade.output() != smoother.output()) return false;
   for (auto i = 0uz; i < 40; ++i) {
     if (i == 20) {
-      smoother.set_smoothing(sec_f32{0.05f}, sec_f32{0.1f});
-      std::get<1>(cascade.stages).set_smoothing(sec_f32{0.05f}, sec_f32{0.1f});
+      smoother.set_time_constant(sec_f32{0.2f});
+      std::get<1>(cascade.stages).set_time_constant(sec_f32{0.2f});
     }
     median.push(input[i % input.size()]);
     smoother.push(median.output());

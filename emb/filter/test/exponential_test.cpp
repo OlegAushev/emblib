@@ -74,4 +74,18 @@ static_assert(test_exponential_filter(
         emb::units::sec_f32{0.1f}),
     emb::units::erad_f32{0}));
 
+// A new time constant keeps the sampling period given at construction.
+consteval bool test_set_time_constant()
+{
+  emb::units::sec_f32 const period{0.01f};
+  emb::exponential_filter<float, emb::units::sec_f32> filter{
+      period,
+      emb::units::sec_f32{0.1f}};
+  emb::units::sec_f32 const time_constant{0.02f};
+  filter.set_time_constant(time_constant);
+  return filter.smooth_factor() == period / time_constant;
+}
+
+static_assert(test_set_time_constant());
+
 } // namespace

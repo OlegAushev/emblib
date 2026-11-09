@@ -97,8 +97,8 @@ consteval bool test_initial_output()
                          eradps_f32{30}};
   for (auto i = 0uz; i < 40; ++i) {
     if (i == 30) {
-      smoother.set_smoothing(sec_f32{0.02f}, sec_f32{0.3f});
-      filter.set_smoothing(sec_f32{0.02f}, sec_f32{0.3f});
+      smoother.set_time_constant(sec_f32{0.3f});
+      filter.set_time_constant(sec_f32{0.3f});
     }
     median.push(input[i % input.size()]);
     smoother.push(median.output());
