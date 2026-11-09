@@ -9,19 +9,18 @@
 namespace emb {
 
 // The class template `exponential_filter` is a filter whose output is an
-// exponential moving average of the values pushed: `push(input)` moves the
-// output toward `input` by the smoothing factor times their difference.
-// Construction sets the output to the initial output, and `reset(value)` to
-// `value`.
+// exponential moving average of values pushed at a fixed sampling period:
+// `push(input)` moves the output toward `input` by the smoothing factor times
+// their difference. Construction sets the output to the initial output, and
+// `reset(value)` to `value`.
 //
 // The smoothing factor is the sampling period divided by the time constant,
-// clamped to [0, 1]; `set_smoothing` sets both durations and `set_timestep`
-// only the sampling period. For a sampling period much shorter than the time
-// constant, the filter approximates a first-order low-pass filter with a time
-// constant about half a sampling period shorter; if the sampling period is at
-// least the time constant, `push(input)` sets the output to `input`, up to
-// rounding. The time constant must be positive; the behavior is undefined if
-// the quotient is NaN.
+// clamped to [0, 1]; `set_smoothing` sets it. For a sampling period much
+// shorter than the time constant, the filter approximates a first-order
+// low-pass filter with a time constant about half a sampling period shorter;
+// if the sampling period is at least the time constant, `push(input)` sets the
+// output to `input`, up to rounding. The time constant must be positive; the
+// behavior is undefined if the quotient is NaN.
 template<typename T, typename Duration>
   requires(std::floating_point<T> || emb::units::quantity_specialization<T>)
        && std::floating_point<decltype(std::declval<Duration>()
@@ -33,8 +32,6 @@ public:
   using factor_type =
       decltype(std::declval<Duration>() / std::declval<Duration>());
 private:
-  duration_type sampling_period_;
-  duration_type time_constant_;
   factor_type smooth_factor_;
   value_type output_;
 public:
@@ -64,17 +61,7 @@ public:
   constexpr void set_smoothing(duration_type sampling_period,
                                duration_type time_constant)
   {
-    sampling_period_ = sampling_period;
-    time_constant_ = time_constant;
     smooth_factor_ = std::clamp(sampling_period / time_constant,
-                                factor_type(0),
-                                factor_type(1));
-  }
-
-  constexpr void set_timestep(duration_type ts)
-  {
-    sampling_period_ = ts;
-    smooth_factor_ = std::clamp(sampling_period_ / time_constant_,
                                 factor_type(0),
                                 factor_type(1));
   }

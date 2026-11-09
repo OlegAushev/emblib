@@ -13,9 +13,7 @@ namespace emb {
 // left. The stages are a `median_filter` and an `exponential_filter`, and their
 // constraints and contracts apply to it, e.g. an odd `WindowSize` and the rule
 // on NaN of the median, and the smoothing factor and the time constant of the
-// exponential stage. `set_smoothing` and `set_timestep` apply to that stage;
-// where values arrive at varying intervals, `set_timestep` can be called before
-// each `push`.
+// exponential stage. `set_smoothing` applies to that stage.
 //
 // The constructors are two ways to start, and which one to use depends on
 // whether the value at the start is known. With that value as the initial
@@ -78,11 +76,6 @@ public:
                                duration_type time_constant)
   {
     smoother_.set_smoothing(sampling_period, time_constant);
-  }
-
-  constexpr void set_timestep(duration_type ts)
-  {
-    smoother_.set_timestep(ts);
   }
 };
 

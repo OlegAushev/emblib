@@ -1,7 +1,8 @@
 #pragma once
 
 #include <emb/container/circular_buffer.hpp>
-#include <emb/filter/median_exponential_filter.hpp>
+#include <emb/filter/exponential_filter.hpp>
+#include <emb/filter/median_filter.hpp>
 #include <emb/gpio.hpp>
 #include <emb/hall/calibration.hpp>
 #include <emb/hall/error.hpp>
@@ -55,11 +56,6 @@ constexpr std::expected<void, error> validate(angle_sensor_config const& conf)
 template<some_capture_timer Timer>
 class angle_sensor {
 private:
-  using speed_filter_type =
-      emb::median_exponential_filter<emb::units::eradps_f32,
-                                     3,
-                                     emb::units::sec_f32>;
-
   angle_sensor_config conf_;
 
   emb::units::sec_f32 timestep_;
@@ -71,7 +67,9 @@ private:
   // sectors recognized in the last two pollings
   emb::circular_buffer<sector, 2> sector_history_{};
 
-  speed_filter_type speedfilter_;
+  emb::median_filter<emb::units::eradps_f32, 3> speedmedian_{
+      emb::units::eradps_f32{0}};
+  emb::units::eradps_f32 speed_{0};
 
   sector_span sector_span_{};
   emb::units::erad_f32 offset_{};
@@ -83,10 +81,7 @@ public:
                calibration_result const& calibration)
       : conf_(sensor_conf),
         timestep_(timebase.period()),
-        capture_timer_(capture_timer),
-        speedfilter_(timestep_,
-                     sensor_conf.speed_timeconstant,
-                     emb::units::eradps_f32{0})
+        capture_timer_(capture_timer)
   {
     geometry_ = make_geometry(calibration);
 
@@ -111,7 +106,7 @@ public:
       return on_new_transition();
     }
 
-    offset_ += speedfilter_.output() * timestep_;
+    offset_ += speed_ * timestep_;
     if (offset_.value >= 0) {
       offset_ = std::min(offset_, sector_span_.width);
     }
@@ -126,7 +121,8 @@ public:
   {
     offset_ = emb::units::erad_f32{0};
     angle_ = sector_span_.entry + sector_halfwidth;
-    speedfilter_.reset(emb::units::eradps_f32{0});
+    speedmedian_.reset(emb::units::eradps_f32{0});
+    speed_ = emb::units::eradps_f32{0};
 
     if (!capture_sector().has_value()) {
       return error::invalid_input;
@@ -141,7 +137,7 @@ public:
 
   emb::units::eradps_f32 speed() const
   {
-    return speedfilter_.output();
+    return speed_;
   };
 
   sector current_sector() const
@@ -177,7 +173,6 @@ public:
   void configure(angle_sensor_config const& conf)
   {
     conf_ = conf;
-    speedfilter_.set_smoothing(timestep_, conf.speed_timeconstant);
   }
 
   void apply_calibration(calibration_result const& data)
@@ -211,11 +206,16 @@ private:
 
     auto const raw_speed =
         sectors[sector_from].width / transition_period * sign;
-    speedfilter_.set_timestep(transition_period);
-    speedfilter_.push(raw_speed);
+    speedmedian_.push(raw_speed);
+    // each transition has its own step, so a filter lasts for one value
+    emb::exponential_filter smoother{transition_period,
+                                     conf_.speed_timeconstant,
+                                     speed_};
+    smoother.push(speedmedian_.output());
+    speed_ = smoother.output();
 
     sector_span_ = sectors[sector_to];
-    offset_ = speedfilter_.output() * time_since_transition;
+    offset_ = speed_ * time_since_transition;
     angle_ = sector_span_.entry + offset_;
 
     return std::nullopt;

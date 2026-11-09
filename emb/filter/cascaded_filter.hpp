@@ -17,7 +17,7 @@ namespace emb {
 // only if every stage has such a member function.
 //
 // The stage objects are kept in the public tuple `stages`, so that a stage can
-// be read and changed, e.g. by calling `set_timestep` on an
+// be read and changed, e.g. by calling `set_smoothing` on an
 // `exponential_filter` stage.
 template<some_filter... Stages>
   requires(sizeof...(Stages) > 0) && all_same<typename Stages::value_type...>

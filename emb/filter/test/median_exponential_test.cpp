@@ -80,7 +80,7 @@ static_assert(test_after_seed());
 
 // With an initial output, the filter starts settled at it: the output is that
 // of the same two stages driven by hand from the first push, also once it is
-// retuned, as for the speed of `hall::angle_sensor`.
+// retuned.
 consteval bool test_initial_output()
 {
   eradps_f32 const start{5};
@@ -96,10 +96,6 @@ consteval bool test_initial_output()
                          eradps_f32{-80},
                          eradps_f32{30}};
   for (auto i = 0uz; i < 40; ++i) {
-    if (i == 20) {
-      smoother.set_timestep(sec_f32{0.05f});
-      filter.set_timestep(sec_f32{0.05f});
-    }
     if (i == 30) {
       smoother.set_smoothing(sec_f32{0.02f}, sec_f32{0.3f});
       filter.set_smoothing(sec_f32{0.02f}, sec_f32{0.3f});
