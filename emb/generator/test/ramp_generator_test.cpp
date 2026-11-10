@@ -35,13 +35,13 @@ constexpr bool test_ramp_generator(Ramp ramp,
                             : std::max(unclamped, target);
     assert(fabs(ramp.output() - expected) < 1e-4f);
     if (ramp.at_target()) break;
-    ramp.update();
+    ramp.step();
   }
 
   assert(ramp.at_target());
   assert(ramp.output() == target);
 
-  ramp.update();
+  ramp.step();
   assert(ramp.output() == target);
   assert(ramp.at_target());
 
@@ -81,7 +81,7 @@ constexpr bool test_ramp_reset()
 
   ramp.set_target(10.0f);
   while (!ramp.at_target()) {
-    ramp.update();
+    ramp.step();
   }
   assert(ramp.output() == 10.0f);
 
@@ -98,8 +98,8 @@ constexpr bool test_ramp_reset_midway()
   emb::ramp_generator<float> ramp(emb::units::sec_f32{0.1f}, 1.0f, 0.0f);
 
   ramp.set_target(10.0f);
-  ramp.update();
-  ramp.update();
+  ramp.step();
+  ramp.step();
   assert(!ramp.at_target());
 
   ramp.reset(3.5f);
@@ -115,11 +115,11 @@ constexpr bool test_ramp_set_timestep()
   emb::ramp_generator<float> ramp(emb::units::sec_f32{0.1f}, 1.0f, 0.0f);
   ramp.set_target(1.0f);
 
-  ramp.update();
+  ramp.step();
   assert(fabs(ramp.output() - 0.1f) < 1e-4f);
 
   ramp.set_timestep(emb::units::sec_f32{0.2f});
-  ramp.update();
+  ramp.step();
   assert(fabs(ramp.output() - 0.3f) < 1e-4f);
 
   return true;
@@ -130,11 +130,11 @@ constexpr bool test_ramp_set_slope()
   emb::ramp_generator<float> ramp(emb::units::sec_f32{0.1f}, 1.0f, 0.0f);
   ramp.set_target(1.0f);
 
-  ramp.update();
+  ramp.step();
   assert(fabs(ramp.output() - 0.1f) < 1e-4f);
 
   ramp.set_slope(emb::units::sec_f32{0.1f}, 2.0f);
-  ramp.update();
+  ramp.step();
   assert(fabs(ramp.output() - 0.3f) < 1e-4f);
 
   return true;
@@ -146,13 +146,13 @@ constexpr bool test_ramp_change_target_midway()
 
   ramp.set_target(10.0f);
   for (int i{0}; i < 5; ++i) {
-    ramp.update();
+    ramp.step();
   }
   assert(fabs(ramp.output() - 0.5f) < 1e-4f);
 
   ramp.set_target(0.0f);
   while (!ramp.at_target()) {
-    ramp.update();
+    ramp.step();
   }
   assert(ramp.output() == 0.0f);
 

@@ -63,7 +63,7 @@ public:
     set_slope(ts, slope_);
   }
 
-  constexpr void update()
+  constexpr void step()
   {
     if (output_ < target_) {
       output_ = std::min(output_ + step_, target_);

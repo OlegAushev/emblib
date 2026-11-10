@@ -13,7 +13,7 @@ class sine_generator {
 public:
   using value_type = T;
 private:
-  units::sec_f32 update_period_;
+  units::sec_f32 timestep_;
   value_type ampl_;
   float wfreq_;
   emb::units::rad_f32 init_phase_;
@@ -23,18 +23,18 @@ private:
   value_type output_;
 public:
   constexpr sine_generator(
-      units::sec_f32 update_period,
+      units::sec_f32 timestep,
       value_type ampl,
       units::hz_f32 freq,
       emb::units::rad_f32 init_phase = emb::units::rad_f32(0),
       value_type bias = value_type{})
-      : update_period_(update_period),
+      : timestep_(timestep),
         ampl_(ampl),
         wfreq_(2 * std::numbers::pi_v<float> * freq.value),
         init_phase_(init_phase),
         bias_(bias)
   {
-    assert(update_period.value > 0);
+    assert(timestep.value > 0);
     reset();
   }
 
@@ -49,16 +49,16 @@ public:
     output_ = ampl_ * emb::sin(phase_.value) + bias_;
   }
 
-  constexpr void update()
+  constexpr void step()
   {
     phase_ = emb::units::rad_f32(
-        emb::norm2pi(phase_.value + wfreq_ * update_period_.value));
+        emb::norm2pi(phase_.value + wfreq_ * timestep_.value));
     output_ = ampl_ * emb::sin(phase_.value) + bias_;
   }
 
-  constexpr units::sec_f32 update_period() const
+  constexpr units::sec_f32 timestep() const
   {
-    return update_period_;
+    return timestep_;
   }
 
   constexpr value_type ampl() const
