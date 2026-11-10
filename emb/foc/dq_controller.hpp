@@ -55,16 +55,14 @@ public:
 
     // D-axis controller
     float const Vd_avail = Vdc_over_sqrt3 * Vd_limit_factor_.value();
-    d_.set_lower_limit(-Vd_avail - Vcomp.d);
-    d_.set_upper_limit(Vd_avail - Vcomp.d);
+    d_.set_limits(-Vd_avail - Vcomp.d, Vd_avail - Vcomp.d);
     d_.push(Iref.d, Imeas.d);
     float const Vd = d_.output() + Vcomp.d;
 
     // Q-axis controller
     float const Vq_avail =
         emb::sqrt(std::max(Vdc_over_sqrt3 * Vdc_over_sqrt3 - Vd * Vd, 0.0f));
-    q_.set_lower_limit(-Vq_avail - Vcomp.q);
-    q_.set_upper_limit(Vq_avail - Vcomp.q);
+    q_.set_limits(-Vq_avail - Vcomp.q, Vq_avail - Vcomp.q);
     q_.push(Iref.q, Imeas.q);
     float const Vq = q_.output() + Vcomp.q;
 

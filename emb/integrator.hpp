@@ -53,14 +53,10 @@ public:
     ts_ = value;
   }
 
-  constexpr void set_lower_limit(value_type value)
+  constexpr void set_limits(value_type lower, value_type upper)
   {
-    lower_limit_ = value;
-  }
-
-  constexpr void set_upper_limit(value_type value)
-  {
-    upper_limit_ = value;
+    lower_limit_ = lower;
+    upper_limit_ = upper;
   }
 
   constexpr value_type lower_limit() const

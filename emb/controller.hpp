@@ -54,6 +54,10 @@ private:
   value_type u_max_;
   value_type u_;
 public:
+  // Constructs a controller whose output is zero, with the proportional gain
+  // `kp`, the lower limit `lower_limit` and the upper limit `upper_limit`. The
+  // behavior is undefined if `lower_limit` is greater than `upper_limit`, or if
+  // either is NaN.
   constexpr p_controller(value_type kp,
                          value_type lower_limit,
                          value_type upper_limit)
@@ -63,8 +67,7 @@ public:
 
   // Sets the output to the product of the proportional gain and the error for
   // the reference `ref` and the measurement `meas`, clamped to
-  // [`lower_limit()`, `upper_limit()`]. The behavior is undefined if
-  // `lower_limit()` is greater than `upper_limit()`, or if either limit or the
+  // [`lower_limit()`, `upper_limit()`]. The behavior is undefined if the
   // product is NaN.
   constexpr void push(value_type ref, value_type meas)
   {
@@ -83,18 +86,13 @@ public:
     return u_;
   }
 
-  // Sets the lower limit to `value`. The output is not clamped to it until the
-  // next `push`.
-  constexpr void set_lower_limit(value_type value)
+  // Sets the lower limit to `lower` and the upper limit to `upper`. The output
+  // is not clamped to them until the next `push`. The behavior is undefined if
+  // `lower` is greater than `upper`, or if either is NaN.
+  constexpr void set_limits(value_type lower, value_type upper)
   {
-    u_min_ = value;
-  }
-
-  // Sets the upper limit to `value`. The output is not clamped to it until the
-  // next `push`.
-  constexpr void set_upper_limit(value_type value)
-  {
-    u_max_ = value;
+    u_min_ = lower;
+    u_max_ = upper;
   }
 
   constexpr value_type lower_limit() const
@@ -296,7 +294,8 @@ public:
   // `upper_limit` and the anti-windup scheme `aw`. The integral term is that of
   // `aw`. `aw` can be omitted only for a scheme that can be copy-initialized
   // from `{}`, e.g. `antiwindup::clamping` but not
-  // `antiwindup::backcalculation`.
+  // `antiwindup::backcalculation`. The behavior is undefined if `lower_limit`
+  // is greater than `upper_limit`, or if either is NaN.
   constexpr pi_controller(value_type kp,
                           value_type ki,
                           units::sec<value_type> timestep,
@@ -311,9 +310,8 @@ public:
   // Sets the output to the value that the anti-windup scheme computes from the
   // error for the reference `ref` and the measurement `meas`, clamped to
   // [`lower_limit()`, `upper_limit()`], and has the scheme update the integral
-  // term for one timestep. The behavior is undefined if `lower_limit()` is
-  // greater than `upper_limit()`, or in any other case in which the scheme's
-  // `step` has undefined behavior.
+  // term for one timestep. The behavior is undefined in any case in which the
+  // scheme's `step` has undefined behavior.
   constexpr void push(value_type ref, value_type meas)
   {
     u_ = aw_.step(params_, detail::error<Action>(ref, meas));
@@ -348,18 +346,13 @@ public:
     return aw_;
   }
 
-  // Sets the lower limit to `value`. The output is not clamped to it until the
-  // next `push`.
-  constexpr void set_lower_limit(value_type value)
+  // Sets the lower limit to `lower` and the upper limit to `upper`. The output
+  // is not clamped to them until the next `push`. The behavior is undefined if
+  // `lower` is greater than `upper`, or if either is NaN.
+  constexpr void set_limits(value_type lower, value_type upper)
   {
-    params_.u_min = value;
-  }
-
-  // Sets the upper limit to `value`. The output is not clamped to it until the
-  // next `push`.
-  constexpr void set_upper_limit(value_type value)
-  {
-    params_.u_max = value;
+    params_.u_min = lower;
+    params_.u_max = upper;
   }
 
   constexpr value_type lower_limit() const
