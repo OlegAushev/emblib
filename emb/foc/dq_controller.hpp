@@ -25,7 +25,7 @@ constexpr voltage_dq dq_compensation(current_dq const& Imeas,
 }
 
 // A PI controller per axis, with Vcomp added to their outputs. The output
-// limits are derived on every push from Vdc/√3, the linear range of svpwm:
+// limits are derived on every step from Vdc/√3, the linear range of svpwm:
 // the d axis may take Vd_limit_factor of it, the q axis what is left of the
 // circle. The gains start at zero and are set through d() and q().
 class dq_controller {
@@ -45,7 +45,7 @@ public:
   {
   }
 
-  constexpr void push(current_dq const& Iref,
+  constexpr void step(current_dq const& Iref,
                       current_dq const& Imeas,
                       voltage_dq const& Vcomp,
                       float Vdc)
@@ -56,14 +56,14 @@ public:
     // D-axis controller
     float const Vd_avail = Vdc_over_sqrt3 * Vd_limit_factor_.value();
     d_.set_limits(-Vd_avail - Vcomp.d, Vd_avail - Vcomp.d);
-    d_.push(Iref.d, Imeas.d);
+    d_.step(Iref.d, Imeas.d);
     float const Vd = d_.output() + Vcomp.d;
 
     // Q-axis controller
     float const Vq_avail =
         emb::sqrt(std::max(Vdc_over_sqrt3 * Vdc_over_sqrt3 - Vd * Vd, 0.0f));
     q_.set_limits(-Vq_avail - Vcomp.q, Vq_avail - Vcomp.q);
-    q_.push(Iref.q, Imeas.q);
+    q_.step(Iref.q, Imeas.q);
     float const Vq = q_.output() + Vcomp.q;
 
     out_ = {.d = Vd, .q = Vq};

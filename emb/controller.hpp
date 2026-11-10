@@ -40,7 +40,7 @@ constexpr T error(T ref, T meas)
 } // namespace detail
 
 // The class template `p_controller` is a proportional controller with the
-// action `Action`: `push(ref, meas)` sets the output to the product of the
+// action `Action`: `step(ref, meas)` sets the output to the product of the
 // proportional gain and the error for the reference `ref` and the measurement
 // `meas`, clamped to [`lower_limit()`, `upper_limit()`]. Construction and
 // `reset()` set the output to zero, even if zero lies outside the limits.
@@ -69,7 +69,7 @@ public:
   // the reference `ref` and the measurement `meas`, clamped to
   // [`lower_limit()`, `upper_limit()`]. The behavior is undefined if the
   // product is NaN.
-  constexpr void push(value_type ref, value_type meas)
+  constexpr void step(value_type ref, value_type meas)
   {
     value_type const e = detail::error<Action>(ref, meas);
     value_type const u_unsat = Kp_ * e;
@@ -87,7 +87,7 @@ public:
   }
 
   // Sets the lower limit to `lower` and the upper limit to `upper`. The output
-  // is not clamped to them until the next `push`. The behavior is undefined if
+  // is not clamped to them until the next `step`. The behavior is undefined if
   // `lower` is greater than `upper`, or if either is NaN.
   constexpr void set_limits(value_type lower, value_type upper)
   {
@@ -276,11 +276,11 @@ public:
 
 // The class template `pi_controller` is a proportional-integral controller
 // with the action `Action` and an anti-windup scheme of type `AntiWindup`,
-// which holds the integral term and computes the output: `push(ref, meas)`
+// which holds the integral term and computes the output: `step(ref, meas)`
 // sets the output to the value that the scheme computes from the error for
 // the reference `ref` and the measurement `meas`, clamped to
 // [`lower_limit()`, `upper_limit()`], and has the scheme update the integral
-// term for one timestep. The timestep is the period at which `push` is called.
+// term for one timestep. The timestep is the period at which `step` is called.
 // Construction and `reset()` set the output to zero, even if zero lies outside
 // the limits.
 //
@@ -321,7 +321,7 @@ public:
   // [`lower_limit()`, `upper_limit()`], and has the scheme update the integral
   // term for one timestep. The behavior is undefined in any case in which the
   // scheme's `step` has undefined behavior.
-  constexpr void push(value_type ref, value_type meas)
+  constexpr void step(value_type ref, value_type meas)
   {
     u_ = aw_.step(params_, detail::error<Action>(ref, meas));
   }
@@ -356,7 +356,7 @@ public:
   }
 
   // Sets the lower limit to `lower` and the upper limit to `upper`. The output
-  // is not clamped to them until the next `push`. The behavior is undefined if
+  // is not clamped to them until the next `step`. The behavior is undefined if
   // `lower` is greater than `upper`, or if either is NaN.
   constexpr void set_limits(value_type lower, value_type upper)
   {
