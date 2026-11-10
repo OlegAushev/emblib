@@ -159,10 +159,34 @@ constexpr bool test_ramp_change_target_midway()
   return true;
 }
 
+constexpr bool test_ramp_step_toward()
+{
+  emb::ramp_generator<float> ramp(emb::units::sec_f32{0.1f}, 1.0f, 0.0f);
+
+  ramp.step_toward(10.0f);
+  assert(ramp.target() == 10.0f);
+  assert(fabs(ramp.output() - 0.1f) < 1e-4f);
+
+  ramp.step_toward(10.0f);
+  assert(fabs(ramp.output() - 0.2f) < 1e-4f);
+
+  ramp.step_toward(0.25f);
+  assert(ramp.output() == 0.25f);
+  assert(ramp.at_target());
+
+  ramp.step_toward(-1.0f);
+  assert(ramp.target() == -1.0f);
+  assert(fabs(ramp.output() - 0.15f) < 1e-4f);
+  assert(!ramp.at_target());
+
+  return true;
+}
+
 static_assert(test_ramp_reset());
 static_assert(test_ramp_reset_midway());
 static_assert(test_ramp_set_timestep());
 static_assert(test_ramp_set_slope());
 static_assert(test_ramp_change_target_midway());
+static_assert(test_ramp_step_toward());
 
 } // namespace

@@ -73,6 +73,12 @@ public:
     }
   }
 
+  constexpr void step_toward(value_type target)
+  {
+    set_target(target);
+    step();
+  }
+
   constexpr bool at_target() const
   {
     return output_ == target_;
