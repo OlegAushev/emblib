@@ -26,6 +26,16 @@ public:
   {
     return value_;
   }
+
+  friend constexpr void filter_feed(passthrough_filter& f, value_type input)
+  {
+    f.push(input);
+  }
+
+  friend constexpr value_type filter_output(passthrough_filter const& f)
+  {
+    return f.output();
+  }
 };
 
 } // namespace emb

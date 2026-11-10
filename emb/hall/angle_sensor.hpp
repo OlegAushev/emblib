@@ -211,7 +211,7 @@ private:
     emb::exponential_filter smoother{transition_period,
                                      conf_.speed_timeconstant,
                                      speed_};
-    smoother.push(speedmedian_.output());
+    smoother.step(speedmedian_.output());
     speed_ = smoother.output();
 
     sector_span_ = sectors[sector_to];

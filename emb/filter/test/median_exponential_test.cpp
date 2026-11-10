@@ -30,10 +30,10 @@ consteval bool test_seed(std::array<float, 5> const& input)
                                                            sec_f32{1.0f}};
   if (filter.output() != 0.0f) return false;
   for (auto i = 0uz; i + 1 < input.size(); ++i) {
-    filter.push(input[i]);
+    filter.step(input[i]);
     if (filter.output() != 0.0f) return false;
   }
-  filter.push(input.back());
+  filter.step(input.back());
   return filter.output() == 20.0f;
 }
 
@@ -46,9 +46,9 @@ consteval bool test_seed_of_one_value()
 {
   emb::median_exponential_filter<float, 1, sec_f32> filter{sec_f32{0.5f},
                                                            sec_f32{1.0f}};
-  filter.push(8.0f);
+  filter.step(8.0f);
   if (filter.output() != 8.0f) return false;
-  filter.push(10.0f);
+  filter.step(10.0f);
   return filter.output() == 9.0f;
 }
 
@@ -68,9 +68,9 @@ consteval bool test_after_seed()
       smoother.reset(median.output());
     }
     else if (i > 2) {
-      smoother.push(median.output());
+      smoother.step(median.output());
     }
-    filter.push(input[i % input.size()]);
+    filter.step(input[i % input.size()]);
     if (filter.output() != smoother.output()) return false;
   }
   return true;
@@ -79,7 +79,7 @@ consteval bool test_after_seed()
 static_assert(test_after_seed());
 
 // With an initial output, the filter starts settled at it: the output is that
-// of the same two stages driven by hand from the first push, also once it is
+// of the same two stages driven by hand from the first step, also once it is
 // retuned.
 consteval bool test_initial_output()
 {
@@ -101,8 +101,8 @@ consteval bool test_initial_output()
       filter.set_time_constant(sec_f32{0.3f});
     }
     median.push(input[i % input.size()]);
-    smoother.push(median.output());
-    filter.push(input[i % input.size()]);
+    smoother.step(median.output());
+    filter.step(input[i % input.size()]);
     if (filter.output() != smoother.output()) return false;
   }
   return true;
@@ -111,18 +111,18 @@ consteval bool test_initial_output()
 static_assert(test_initial_output());
 
 // `reset` settles both stages on the value and ends the wait for the window:
-// the median holds the value for the next push, and the exponential stage takes
+// the median holds the value for the next step, and the exponential stage takes
 // the next one at once.
 consteval bool test_reset()
 {
   float_filter filter{sec_f32{0.5f}, sec_f32{1.0f}};
-  filter.push(100.0f);
+  filter.step(100.0f);
 
   filter.reset(10.0f);
   if (filter.output() != 10.0f) return false;
-  filter.push(30.0f);
+  filter.step(30.0f);
   if (filter.output() != 10.0f) return false;
-  filter.push(30.0f);
+  filter.step(30.0f);
   return filter.output() == 20.0f;
 }
 

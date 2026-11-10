@@ -60,12 +60,12 @@ public:
 
   constexpr value_type value() const
   {
-    return filter_.output();
+    return filter_output(filter_);
   }
 
   constexpr void submit(sample_type sample)
   {
-    filter_.push(converter_(sample));
+    filter_feed(filter_, converter_(sample));
   }
 };
 

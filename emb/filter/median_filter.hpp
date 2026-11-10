@@ -65,6 +65,16 @@ public:
     full_ = true;
     output_ = value;
   }
+
+  friend constexpr void filter_feed(median_filter& f, value_type input)
+  {
+    f.push(input);
+  }
+
+  friend constexpr value_type filter_output(median_filter const& f)
+  {
+    return f.output();
+  }
 };
 
 } // namespace emb

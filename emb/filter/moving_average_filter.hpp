@@ -100,6 +100,16 @@ public:
   {
     return data_;
   }
+
+  friend constexpr void filter_feed(moving_average_filter& f, value_type input)
+  {
+    f.push(input);
+  }
+
+  friend constexpr value_type filter_output(moving_average_filter const& f)
+  {
+    return f.output();
+  }
 };
 
 } // namespace emb

@@ -9,8 +9,8 @@
 namespace emb {
 
 // The class template `exponential_filter` is a filter whose output is an
-// exponential moving average of values pushed at a fixed sampling period:
-// `push(input)` moves the output toward `input` by the smoothing factor times
+// exponential moving average of its inputs, one per sampling period:
+// `step(input)` moves the output toward `input` by the smoothing factor times
 // their difference. Construction sets the output to the initial output, and
 // `reset(value)` to `value`.
 //
@@ -19,7 +19,7 @@ namespace emb {
 // sampling period stays the one given at construction. For a sampling period
 // much shorter than the time constant, the filter approximates a first-order
 // low-pass filter with a time constant about half a sampling period shorter;
-// if the sampling period is at least the time constant, `push(input)` sets the
+// if the sampling period is at least the time constant, `step(input)` sets the
 // output to `input`, up to rounding. The time constant must be positive; the
 // behavior is undefined if the quotient is NaN.
 template<typename T, typename Duration>
@@ -45,7 +45,7 @@ public:
     set_time_constant(time_constant);
   }
 
-  constexpr void push(value_type input)
+  constexpr void step(value_type input)
   {
     output_ = output_ + smooth_factor_ * (input - output_);
   }
@@ -69,6 +69,16 @@ public:
   constexpr factor_type smooth_factor() const
   {
     return smooth_factor_;
+  }
+
+  friend constexpr void filter_feed(exponential_filter& f, value_type input)
+  {
+    f.step(input);
+  }
+
+  friend constexpr value_type filter_output(exponential_filter const& f)
+  {
+    return f.output();
   }
 };
 
