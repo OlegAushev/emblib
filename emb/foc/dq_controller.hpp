@@ -39,8 +39,8 @@ private:
 public:
   constexpr dq_controller(units::sec_f32 timestep,
                           unsigned_pu_f32 Vd_limit_factor)
-      : d_(0.0f, 0.0f, timestep, 0.0f, 0.0f),
-        q_(0.0f, 0.0f, timestep, 0.0f, 0.0f),
+      : d_({}, timestep, 0.0f, 0.0f),
+        q_({}, timestep, 0.0f, 0.0f),
         Vd_limit_factor_(Vd_limit_factor)
   {
   }

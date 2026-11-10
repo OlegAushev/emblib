@@ -23,6 +23,7 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `controller_action`
   - [x] `detail::error`
   - [x] `p_controller`
+  - [x] `pi_gains`
   - [x] `pi_controller_params`
   - [x] `antiwindup::some_scheme`, `antiwindup::backcalculation`,
     `antiwindup::clamping`

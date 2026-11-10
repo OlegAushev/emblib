@@ -116,14 +116,23 @@ public:
   }
 };
 
-// The class template `pi_controller_params` holds the proportional gain, the
-// integral gain, the timestep and the limits of a proportional-integral
-// controller. `pi_controller` passes them, with the error, to its anti-windup
-// scheme, which computes the output.
+// The class template `pi_gains` holds the gains of a proportional-integral
+// controller: the proportional gain `Kp` and the integral gain `Ki`, in units
+// of the proportional gain per second.
 template<std::floating_point T>
-struct pi_controller_params {
+struct pi_gains {
   T Kp;
   T Ki;
+
+  friend constexpr bool operator==(pi_gains const&, pi_gains const&) = default;
+};
+
+// The class template `pi_controller_params` holds the gains, the timestep and
+// the limits of a proportional-integral controller. `pi_controller` passes
+// them, with the error, to its anti-windup scheme, which computes the output.
+template<std::floating_point T>
+struct pi_controller_params {
+  pi_gains<T> gains;
   T dt;
   T u_min;
   T u_max;
@@ -173,18 +182,19 @@ public:
   constexpr explicit backcalculation(value_type kb) : Kb_(kb) {}
 
   // Computes the output for the error `e` and the parameters `p`, i.e. the
-  // unclamped output `p.Kp * e + integral()` clamped to [`p.u_min`, `p.u_max`],
-  // then updates the integral term for one timestep and returns the output.
-  // The integral term is incremented by `p.Ki * e * p.dt` plus `kb() * p.dt`
-  // times the change that clamping makes to the output, i.e. the output minus
-  // the unclamped output. The behavior is undefined if `p.u_min` is greater
-  // than `p.u_max`, or if either limit or the unclamped output is NaN.
+  // unclamped output `p.gains.Kp * e + integral()` clamped to
+  // [`p.u_min`, `p.u_max`], then updates the integral term for one timestep
+  // and returns the output. The integral term is incremented by
+  // `p.gains.Ki * e * p.dt` plus `kb() * p.dt` times the change that clamping
+  // makes to the output, i.e. the output minus the unclamped output. The
+  // behavior is undefined if `p.u_min` is greater than `p.u_max`, or if either
+  // limit or the unclamped output is NaN.
   constexpr value_type step(pi_controller_params<value_type> const& p,
                             value_type e)
   {
-    value_type const u_unsat = p.Kp * e + I_;
+    value_type const u_unsat = p.gains.Kp * e + I_;
     value_type const u = std::clamp(u_unsat, p.u_min, p.u_max);
-    I_ += p.Ki * e * p.dt + Kb_ * (u - u_unsat) * p.dt;
+    I_ += p.gains.Ki * e * p.dt + Kb_ * (u - u_unsat) * p.dt;
     return u;
   }
 
@@ -229,22 +239,23 @@ private:
   value_type I_{0};
 public:
   // Computes the output for the error `e` and the parameters `p`, i.e. the
-  // unclamped output `p.Kp * e + integral()` clamped to [`p.u_min`, `p.u_max`],
-  // then updates the integral term for one timestep and returns the output.
-  // Unless the unclamped output is greater than `p.u_max` and `e` is positive,
-  // or less than `p.u_min` and `e` is negative, the integral term is
-  // incremented by `p.Ki * e * p.dt`. Whether incremented or not, the integral
-  // term is then clamped to [`p.u_min`, `p.u_max`]. The behavior is undefined
-  // if `p.u_min` is greater than `p.u_max`, or if either limit, the unclamped
-  // output or the incremented integral term is NaN.
+  // unclamped output `p.gains.Kp * e + integral()` clamped to
+  // [`p.u_min`, `p.u_max`], then updates the integral term for one timestep
+  // and returns the output. Unless the unclamped output is greater than
+  // `p.u_max` and `e` is positive, or less than `p.u_min` and `e` is negative,
+  // the integral term is incremented by `p.gains.Ki * e * p.dt`. Whether
+  // incremented or not, the integral term is then clamped to
+  // [`p.u_min`, `p.u_max`]. The behavior is undefined if `p.u_min` is greater
+  // than `p.u_max`, or if either limit, the unclamped output or the
+  // incremented integral term is NaN.
   constexpr value_type step(pi_controller_params<value_type> const& p,
                             value_type e)
   {
-    value_type const u_unsat = p.Kp * e + I_;
+    value_type const u_unsat = p.gains.Kp * e + I_;
     value_type const u = std::clamp(u_unsat, p.u_min, p.u_max);
     bool const winding_up = (e * (u_unsat - u)) > 0;
     if (!winding_up) {
-      I_ += p.Ki * e * p.dt;
+      I_ += p.gains.Ki * e * p.dt;
     }
     I_ = std::clamp(I_, p.u_min, p.u_max);
     return u;
@@ -288,21 +299,19 @@ private:
   antiwindup_type aw_;
   value_type u_{0};
 public:
-  // Constructs a controller whose output is zero, with the proportional gain
-  // `kp`, the integral gain `ki`, in units of the proportional gain per second,
-  // the timestep `timestep`, the lower limit `lower_limit`, the upper limit
+  // Constructs a controller whose output is zero, with the gains `gains`, the
+  // timestep `timestep`, the lower limit `lower_limit`, the upper limit
   // `upper_limit` and the anti-windup scheme `aw`. The integral term is that of
   // `aw`. `aw` can be omitted only for a scheme that can be copy-initialized
   // from `{}`, e.g. `antiwindup::clamping` but not
   // `antiwindup::backcalculation`. The behavior is undefined if `lower_limit`
   // is greater than `upper_limit`, or if either is NaN.
-  constexpr pi_controller(value_type kp,
-                          value_type ki,
+  constexpr pi_controller(pi_gains<value_type> gains,
                           units::sec<value_type> timestep,
                           value_type lower_limit,
                           value_type upper_limit,
                           antiwindup_type aw = {})
-      : params_{kp, ki, timestep.value, lower_limit, upper_limit},
+      : params_{gains, timestep.value, lower_limit, upper_limit},
         aw_{std::move(aw)}
   {
   }
@@ -365,26 +374,14 @@ public:
     return params_.u_max;
   }
 
-  constexpr void set_kp(value_type value)
+  constexpr void set_gains(pi_gains<value_type> value)
   {
-    params_.Kp = value;
+    params_.gains = value;
   }
 
-  // Sets the integral gain to `value`, in units of the proportional gain per
-  // second.
-  constexpr void set_ki(value_type value)
+  constexpr pi_gains<value_type> gains() const
   {
-    params_.Ki = value;
-  }
-
-  constexpr value_type kp() const
-  {
-    return params_.Kp;
-  }
-
-  constexpr value_type ki() const
-  {
-    return params_.Ki;
+    return params_.gains;
   }
 
   constexpr void set_timestep(units::sec<value_type> value)
