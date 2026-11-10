@@ -55,13 +55,13 @@ private:
   value_type u_;
 public:
   // Constructs a controller whose output is zero, with the proportional gain
-  // `kp`, the lower limit `lower_limit` and the upper limit `upper_limit`. The
-  // behavior is undefined if `lower_limit` is greater than `upper_limit`, or if
-  // either is NaN.
-  constexpr p_controller(value_type kp,
+  // `gain`, the lower limit `lower_limit` and the upper limit `upper_limit`.
+  // The behavior is undefined if `lower_limit` is greater than `upper_limit`,
+  // or if either is NaN.
+  constexpr p_controller(value_type gain,
                          value_type lower_limit,
                          value_type upper_limit)
-      : Kp_(kp), u_min_(lower_limit), u_max_(upper_limit), u_(0)
+      : Kp_(gain), u_min_(lower_limit), u_max_(upper_limit), u_(0)
   {
   }
 
@@ -105,12 +105,12 @@ public:
     return u_max_;
   }
 
-  constexpr void set_kp(value_type value)
+  constexpr void set_gain(value_type value)
   {
     Kp_ = value;
   }
 
-  constexpr value_type kp() const
+  constexpr value_type gain() const
   {
     return Kp_;
   }
