@@ -8,22 +8,22 @@
 namespace emb {
 
 // The class template `moving_average_filter` is a filter whose output is the
-// arithmetic mean of the last `WindowSize` values pushed. Default construction
-// leaves the window empty: the output is `T{}` until the next `push`, then the
-// mean of the values pushed since. Construction with an initial output and
-// `reset(value)` fill the window with copies of the value, which count as
-// values pushed, so the output is that value and moves away from it as the
-// copies leave the window; passing zero is thus not the same as passing
+// arithmetic mean of the last `WindowSize` inputs, one per call to `update`.
+// Default construction leaves the window empty: the output is `T{}` until the
+// next `update`, then the mean of the inputs since. Construction with an
+// initial output and `reset(value)` fill the window with copies of the value,
+// which count as inputs, so the output is that value and moves away from it as
+// the copies leave the window; passing zero is thus not the same as passing
 // nothing. `full()` tells whether the window is full, and `data()` returns it,
 // oldest value first.
 //
 // The values are summed in `Sum`, by default the type of the sum of two `T`s,
 // so that an integer `T` narrower than `int` is summed in `int`. For an
 // integer `Sum`, the output is rounded toward zero, and `WindowSize` times any
-// value pushed must be representable in `Sum`. For a floating-point `Sum` or a
+// input must be representable in `Sum`. For a floating-point `Sum` or a
 // `units::quantity`, the output carries the rounding errors of the sum, and a
 // value much larger than the rest, an infinity or a NaN can affect it for up
-// to `WindowSize - 1` pushes after leaving the window. The errors do not
+// to `WindowSize - 1` updates after leaving the window. The errors do not
 // accumulate over time.
 template<typename T,
          std::size_t WindowSize,
@@ -52,7 +52,7 @@ public:
     reset(init_output);
   }
 
-  constexpr void push(value_type input)
+  constexpr void update(value_type input)
   {
     auto const addend = static_cast<sum_type>(input);
     if (!data_.full()) {
@@ -64,7 +64,7 @@ public:
       data_.push_back(input);
     }
 
-    // Every `window_size` pushes, the last `window_size` values summed from
+    // Every `window_size` updates, the last `window_size` inputs summed from
     // zero replace `sum_`, so that its rounding errors do not accumulate.
     fresh_sum_ += addend;
     if (++fresh_count_ == window_size) {
@@ -99,16 +99,6 @@ public:
   constexpr underlying_type const& data() const
   {
     return data_;
-  }
-
-  friend constexpr void filter_feed(moving_average_filter& f, value_type input)
-  {
-    f.push(input);
-  }
-
-  friend constexpr value_type filter_output(moving_average_filter const& f)
-  {
-    return f.output();
   }
 };
 

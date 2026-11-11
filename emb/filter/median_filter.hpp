@@ -9,16 +9,16 @@
 namespace emb {
 
 // The class template `median_filter` is a filter whose output is the median of
-// the last `WindowSize` values pushed. Default construction leaves the window
-// empty, and the filter waits for it: the output is `T{}` until the values
-// pushed have filled the window, which `full()` tells. Construction with an
-// initial output and `reset(value)` fill the window with copies of the value,
-// which count as values pushed, so the output is that value and keeps it for
-// the next `WindowSize / 2` pushes, and `reset(value)` ends the wait, if any.
+// the last `WindowSize` inputs, one per call to `update`. Default construction
+// leaves the window empty, and the filter waits for it: the output is `T{}`
+// until the inputs have filled the window, which `full()` tells. Construction
+// with an initial output and `reset(value)` fill the window with copies of the
+// value, which count as inputs, so the output is that value and keeps it for
+// the next `WindowSize / 2` updates, and `reset(value)` ends the wait, if any.
 // Passing zero as the initial output is not the same as passing none.
 //
-// Each `push` into a full window passes it to `emb::median`, and the contract
-// of that function applies: the values in the window must not be NaN.
+// Once the window is full, each `update` passes it to `emb::median`, and the
+// contract of that function applies: the values in the window must not be NaN.
 template<typename T, std::size_t WindowSize>
   requires(emb::isodd(WindowSize))
 class median_filter {
@@ -38,7 +38,7 @@ public:
     reset(init_output);
   }
 
-  constexpr void push(value_type input)
+  constexpr void update(value_type input)
   {
     window_[oldest_] = input;
     if (++oldest_ == window_size) {
@@ -64,16 +64,6 @@ public:
     window_.fill(value);
     full_ = true;
     output_ = value;
-  }
-
-  friend constexpr void filter_feed(median_filter& f, value_type input)
-  {
-    f.push(input);
-  }
-
-  friend constexpr value_type filter_output(median_filter const& f)
-  {
-    return f.output();
   }
 };
 

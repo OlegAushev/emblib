@@ -31,7 +31,7 @@ test_moving_average_filter(Filter filter,
 
   while (!filter.data().full()) {
     auto val = input[idx];
-    filter.push(val);
+    filter.update(val);
     idx = (idx + 1) % input.size();
     sum += val;
     [[maybe_unused]] auto out =
@@ -42,7 +42,7 @@ test_moving_average_filter(Filter filter,
   auto const capacity = filter.data().capacity();
   for (auto i{0uz}; i < 2 * capacity + capacity / 2; ++i) {
     auto val = input[idx];
-    filter.push(val);
+    filter.update(val);
     idx = (idx + 1) % input.size();
   }
 
@@ -86,15 +86,15 @@ static_assert(test_moving_average_filter(
 constexpr bool test_moving_average_reset()
 {
   emb::moving_average_filter<float, 4> filter;
-  filter.push(1.0f);
-  filter.push(2.0f);
+  filter.update(1.0f);
+  filter.update(2.0f);
 
   filter.reset(10.0f);
   if (filter.output() != 10.0f || !filter.data().full()) return false;
 
   std::array const expected{7.5f, 5.0f, 2.5f, 0.0f, 0.0f};
   for (auto const output : expected) {
-    filter.push(0.0f);
+    filter.update(0.0f);
     if (filter.output() != output) return false;
   }
   return true;
@@ -103,32 +103,32 @@ constexpr bool test_moving_average_reset()
 static_assert(test_moving_average_reset());
 
 // For an integer type the output after `reset` is rounded toward zero, as after
-// any push.
+// any update.
 constexpr bool test_moving_average_reset_int()
 {
   emb::moving_average_filter<int, 2> filter;
   filter.reset(7);
   if (filter.output() != 7) return false;
-  filter.push(0);
+  filter.update(0);
   if (filter.output() != 3) return false;
-  filter.push(0);
+  filter.update(0);
   return filter.output() == 0;
 }
 
 static_assert(test_moving_average_reset_int());
 
 // An initial output starts the filter settled on the value, as after `reset`;
-// without one the window is empty, and the first value pushed is the mean.
+// without one the window is empty, and the first input is the mean.
 constexpr bool test_moving_average_start()
 {
   emb::moving_average_filter<float, 4> settled{10.0f};
   if (settled.output() != 10.0f || !settled.data().full()) return false;
-  settled.push(0.0f);
+  settled.update(0.0f);
   if (settled.output() != 7.5f) return false;
 
   emb::moving_average_filter<float, 4> empty;
   if (empty.output() != 0.0f || !empty.data().empty()) return false;
-  empty.push(8.0f);
+  empty.update(8.0f);
   return empty.output() == 8.0f;
 }
 
@@ -140,9 +140,9 @@ constexpr bool test_moving_average_full()
 {
   emb::moving_average_filter<float, 2> filter;
   if (filter.full()) return false;
-  filter.push(1.0f);
+  filter.update(1.0f);
   if (filter.full()) return false;
-  filter.push(2.0f);
+  filter.update(2.0f);
   if (!filter.full()) return false;
 
   emb::moving_average_filter<float, 2> settled{10.0f};
@@ -156,8 +156,8 @@ constexpr bool test_moving_average_full()
 static_assert(test_moving_average_full());
 
 // A value much larger than the rest no longer affects the output
-// `WindowSize - 1` pushes after it has left the window, wherever it falls
-// among the pushes. An infinity or a NaN can't be tested here: constant
+// `WindowSize - 1` updates after it has left the window, wherever it falls
+// among the inputs. An infinity or a NaN can't be tested here: constant
 // evaluation rejects arithmetic that produces a NaN.
 template<std::size_t WindowSize>
 constexpr bool test_moving_average_outlier(float outlier)
@@ -165,11 +165,11 @@ constexpr bool test_moving_average_outlier(float outlier)
   for (auto offset = 0uz; offset < WindowSize; ++offset) {
     emb::moving_average_filter<float, WindowSize> filter;
     for (auto i = 0uz; i < WindowSize + offset; ++i) {
-      filter.push(1.0f);
+      filter.update(1.0f);
     }
-    filter.push(outlier);
+    filter.update(outlier);
     for (auto i = 0uz; i < 2 * WindowSize - 1; ++i) {
-      filter.push(1.0f);
+      filter.update(1.0f);
     }
     assert(filter.output() == 1.0f);
   }
@@ -208,37 +208,37 @@ constexpr bool test_moving_average_narrow_type()
   for (auto const value : std::array<std::int16_t, 3>{4095, 32767, -32768}) {
     filter f;
     for (auto i = 0uz; i < 2 * filter::window_size; ++i) {
-      f.push(value);
+      f.update(value);
     }
     if (f.output() != value) return false;
   }
 
   filter settled{30000};
-  settled.push(0);
+  settled.update(0);
   if (settled.output() != 28125) return false;
 
   emb::moving_average_filter<std::int16_t, 4> mixed;
-  mixed.push(32767);
-  mixed.push(32767);
-  mixed.push(-32768);
-  mixed.push(1);
+  mixed.update(32767);
+  mixed.update(32767);
+  mixed.update(-32768);
+  mixed.update(1);
   return mixed.output() == 8191;
 }
 
 static_assert(test_moving_average_narrow_type());
 
 // A floating-point `Sum` wider than `T`: once the outlier has left the window,
-// a `double` sum has kept the values pushed with it, a `float` sum has not.
+// a `double` sum has kept the inputs that came with it, a `float` sum has not.
 template<typename Sum>
 constexpr float moving_average_after_outlier()
 {
   emb::moving_average_filter<float, 4, Sum> filter;
   for (auto i = 0uz; i < 4; ++i) {
-    filter.push(1.0f);
+    filter.update(1.0f);
   }
-  filter.push(1e8f);
+  filter.update(1e8f);
   for (auto i = 0uz; i < 4; ++i) {
-    filter.push(1.0f);
+    filter.update(1.0f);
   }
   return filter.output();
 }

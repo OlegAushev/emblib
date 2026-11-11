@@ -18,13 +18,13 @@ namespace emb {
 // The constructors are two ways to start, and which one to use depends on
 // whether the value at the start is known. With that value as the initial
 // output, the filter starts settled at it: both stages hold it, and the output
-// keeps it for the next `WindowSize / 2` steps. Without an initial output, the
-// filter waits for the window: the output stays at zero until the inputs have
-// filled it and then starts at their median rather than climbing from zero, so
-// a quantity already far from zero reads as itself after `WindowSize` values,
-// not after several time constants. Passing zero as the initial output is not
-// the same as passing none. `reset(value)` settles both stages on `value` in
-// the same way, and ends the wait for the window, if any.
+// keeps it for the next `WindowSize / 2` updates. Without an initial output,
+// the filter waits for the window: the output stays at zero until the inputs
+// have filled it and then starts at their median rather than climbing from
+// zero, so a quantity already far from zero reads as itself after `WindowSize`
+// values, not after several time constants. Passing zero as the initial output
+// is not the same as passing none. `reset(value)` settles both stages on
+// `value` in the same way, and ends the wait for the window, if any.
 template<typename T, std::size_t WindowSize, typename Duration>
 class median_exponential_filter {
 public:
@@ -49,12 +49,12 @@ public:
   {
   }
 
-  constexpr void step(value_type input)
+  constexpr void update(value_type input)
   {
     bool const started = median_.full();
-    median_.push(input);
+    median_.update(input);
     if (started) {
-      smoother_.step(median_.output());
+      smoother_.update(median_.output());
     }
     else if (median_.full()) {
       smoother_.reset(median_.output());
@@ -75,17 +75,6 @@ public:
   constexpr void set_time_constant(duration_type value)
   {
     smoother_.set_time_constant(value);
-  }
-
-  friend constexpr void filter_feed(median_exponential_filter& f,
-                                    value_type input)
-  {
-    f.step(input);
-  }
-
-  friend constexpr value_type filter_output(median_exponential_filter const& f)
-  {
-    return f.output();
   }
 };
 

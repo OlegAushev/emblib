@@ -32,13 +32,13 @@ constexpr bool test_median_filter(Filter filter,
 
   // Replace the window contents with the first value
   for (auto i = 0uz; i < window_size; ++i) {
-    filter.push(input[0]);
+    filter.update(input[0]);
   }
   assert(filter.output() == input[0]);
 
-  // Push varying values
+  // Update with varying values
   for (auto i = 0uz; i < input.size(); ++i) {
-    filter.push(input[i]);
+    filter.update(input[i]);
   }
 
   // Output should be within the range of input values
@@ -83,10 +83,10 @@ consteval bool test_wait(std::array<float, 5> const& input)
   emb::median_filter<float, 5> filter;
   if (filter.output() != 0.0f || filter.full()) return false;
   for (auto i = 0uz; i + 1 < input.size(); ++i) {
-    filter.push(input[i]);
+    filter.update(input[i]);
     if (filter.output() != 0.0f || filter.full()) return false;
   }
-  filter.push(input.back());
+  filter.update(input.back());
   return filter.output() == 20.0f && filter.full();
 }
 
@@ -99,39 +99,39 @@ consteval bool test_wait_of_one_value()
 {
   emb::median_filter<float, 1> filter;
   if (filter.full()) return false;
-  filter.push(8.0f);
+  filter.update(8.0f);
   return filter.output() == 8.0f && filter.full();
 }
 
 static_assert(test_wait_of_one_value());
 
 // Zero as the initial output is not the same as none: its copies count as
-// values pushed, so the output moves away from it while the other still waits.
+// inputs, so the output moves away from it while the other still waits.
 consteval bool test_zero_is_not_none()
 {
   emb::median_filter<float, 3> zero{0.0f};
   emb::median_filter<float, 3> none;
   if (!zero.full() || none.full()) return false;
   for (auto input : std::array{10.0f, 20.0f}) {
-    zero.push(input);
-    none.push(input);
+    zero.update(input);
+    none.update(input);
   }
   return zero.output() == 10.0f && none.output() == 0.0f;
 }
 
 static_assert(test_zero_is_not_none());
 
-// `reset` ends the wait: the value holds for the next push, and then the two
-// values pushed outnumber its copies.
+// `reset` ends the wait: the value holds for the next update, and then the two
+// inputs outnumber its copies.
 consteval bool test_reset_in_wait()
 {
   emb::median_filter<float, 3> filter;
-  filter.push(1.0f);
+  filter.update(1.0f);
   filter.reset(5.0f);
   if (filter.output() != 5.0f || !filter.full()) return false;
-  filter.push(9.0f);
+  filter.update(9.0f);
   if (filter.output() != 5.0f) return false;
-  filter.push(9.0f);
+  filter.update(9.0f);
   return filter.output() == 9.0f;
 }
 

@@ -60,12 +60,12 @@ public:
 
   constexpr value_type value() const
   {
-    return filter_output(filter_);
+    return filter_.output();
   }
 
   constexpr void update(sample_type sample)
   {
-    filter_feed(filter_, converter_(sample));
+    filter_.update(converter_(sample));
   }
 };
 

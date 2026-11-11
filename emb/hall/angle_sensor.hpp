@@ -206,12 +206,12 @@ private:
 
     auto const raw_speed =
         sectors[sector_from].width / transition_period * sign;
-    speedmedian_.push(raw_speed);
+    speedmedian_.update(raw_speed);
     // each transition has its own step, so a filter lasts for one value
     emb::exponential_filter smoother{transition_period,
                                      conf_.speed_timeconstant,
                                      speed_};
-    smoother.step(speedmedian_.output());
+    smoother.update(speedmedian_.output());
     speed_ = smoother.output();
 
     sector_span_ = sectors[sector_to];

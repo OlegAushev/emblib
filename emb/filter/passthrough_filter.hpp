@@ -2,8 +2,8 @@
 
 namespace emb {
 
-// The class template `passthrough_filter` is a filter whose output is the last
-// value pushed. Before the first `push`, the output is the value passed to the
+// The class template `passthrough_filter` is a filter whose output is its last
+// input. Before the first `update`, the output is the value passed to the
 // constructor, or `T{}` if none was passed. Where no filtering is wanted, it
 // serves as the filter that `sensor::singlechannel` requires.
 template<typename T>
@@ -17,7 +17,7 @@ public:
 
   constexpr explicit passthrough_filter(value_type init) : value_(init) {}
 
-  constexpr void push(value_type input)
+  constexpr void update(value_type input)
   {
     value_ = input;
   }
@@ -25,16 +25,6 @@ public:
   constexpr value_type output() const
   {
     return value_;
-  }
-
-  friend constexpr void filter_feed(passthrough_filter& f, value_type input)
-  {
-    f.push(input);
-  }
-
-  friend constexpr value_type filter_output(passthrough_filter const& f)
-  {
-    return f.output();
   }
 };
 

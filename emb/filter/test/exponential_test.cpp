@@ -23,9 +23,9 @@ constexpr bool test_exponential_filter(Filter filter,
   value_type const input_value{50};
   value_type prev_output = filter.output();
 
-  // Step with the same value multiple times
+  // Update with the same value multiple times
   for (int i = 0; i < 20; ++i) {
-    filter.step(input_value);
+    filter.update(input_value);
     value_type const curr_output = filter.output();
 
     // Output should monotonically approach input
