@@ -20,33 +20,41 @@ concept some_converter = requires(C c, Input in) {
 };
 
 // Sensor categories, on one axis: when conversion completes. An immediate
-// sensor converts and filters inside submit(), in the caller's context; a
-// deferred sensor parks the sample in submit() and converts later, in a
-// consumer-side process(). The category is declared by the type's author.
+// sensor converts and filters inside update(sample), in the caller's context;
+// a deferred sensor parks the sample in push(sample) and converts later, in a
+// consumer-side update(). The category is declared by the type's author.
 struct immediate_tag {};
 struct deferred_tag {};
 
-// Any sensor surface: typed raw/sample/value, a declared category, and a
-// one-argument submit. sample_type is what a producer submits and what a
-// buffered queue stores -- one scalar value for singlechannel, one aligned
-// frame of values for multichannel. raw_type is the per-channel scalar value
-// (equal to sample_type for singlechannel).
+// Any sensor surface: typed raw/sample/value and a declared category, which
+// sets the verbs that take samples. sample_type is what a producer hands over
+// and what a buffered queue stores -- one scalar value for singlechannel, one
+// aligned frame of values for multichannel. raw_type is the per-channel scalar
+// value (equal to sample_type for singlechannel).
 template<typename S>
-concept some_sensor = requires(S s, typename S::sample_type const& sample) {
+concept some_sensor = requires {
   typename S::raw_type;
   typename S::sample_type;
   typename S::value_type;
   typename S::sensor_category;
-  s.submit(sample);
 };
 
 template<typename S>
 concept some_immediate_sensor =
-    some_sensor<S> && std::same_as<typename S::sensor_category, immediate_tag>;
+    some_sensor<S>
+    && std::same_as<typename S::sensor_category, immediate_tag>
+    && requires(S s, typename S::sample_type const& sample) {
+         s.update(sample);
+       };
 
 template<typename S>
 concept some_deferred_sensor =
-    some_sensor<S> && std::same_as<typename S::sensor_category, deferred_tag>;
+    some_sensor<S>
+    && std::same_as<typename S::sensor_category, deferred_tag>
+    && requires(S s, typename S::sample_type const& sample) {
+         s.push(sample);
+         s.update();
+       };
 
 template<typename S>
 concept some_singlechannel_sensor =

@@ -79,7 +79,7 @@ constexpr bool test_drives_a_channel()
       channel;
 
   constexpr auto code = channel_path{}.forward(amp_f32{300.f});
-  channel.submit(code);
+  channel.update(code);
   assert(emb::approx(channel.value(), amp_f32{300.f}, amp_f32{0.5f}));
 
   return true;

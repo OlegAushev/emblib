@@ -31,11 +31,11 @@ namespace emb::sensor {
 //     is available; otherwise values() is a tuple and sources are read
 //     through value<I>().
 //
-// Deliberately not a some_sensor: submit needs the source alongside the
-// sample, so multiplexed cannot sit inside a buffered decorator. Decorate the
-// per-source sensor instead: multiplexed<buffered<...>...> queues per source
-// and drains them all through process(). A single source is a path wired
-// straight to it.
+// Deliberately neither an immediate nor a deferred sensor: update and push
+// need the source alongside the sample, so multiplexed cannot sit inside a
+// buffered decorator. Decorate the per-source sensor instead:
+// multiplexed<buffered<...>...> queues per source and drains them all through
+// update(). A single source is a path wired straight to it.
 template<typename... Sensors>
   requires(sizeof...(Sensors) > 0)
        && (some_singlechannel_sensor<Sensors> && ...)
@@ -55,8 +55,8 @@ public:
 
   using raw_type = typename first_type::raw_type;
   using sample_type = typename first_type::sample_type;
-  // Forwarded for introspection; multiplexed itself is not a some_sensor
-  // (see above).
+  // Forwarded for introspection; multiplexed itself is neither an immediate
+  // nor a deferred sensor (see above).
   using sensor_category = typename first_type::sensor_category;
   using sensors_type = std::conditional_t<uniform_sensors,
                                           std::array<first_type, source_count>,
@@ -124,29 +124,39 @@ public:
     return sensors_[source];
   }
 
-  // Producer-side: the sample taken while `source` was selected. Uniform
-  // sources are indexed directly, otherwise selected through visit_at's
-  // compare chain; `source` must be below source_count.
-  constexpr void submit(std::size_t source, sample_type sample)
+  // Producer-side: the sample taken while `source` was selected, converted at
+  // once by immediate sources (update) and parked by deferred ones (push).
+  // Uniform sources are indexed directly, otherwise selected through
+  // visit_at's compare chain; `source` must be below source_count.
+  constexpr void update(std::size_t source, sample_type sample)
+    requires(some_immediate_sensor<Sensors> && ...)
   {
     visit_at(sensors_, source, [&](auto& sensor) {
-      sensor.submit(std::move(sample));
+      sensor.update(std::move(sample));
     });
   }
 
-  // Consumer-side, present when the per-source sensors defer work to a
-  // process() step (buffered): drains every source.
-  constexpr void process()
-    requires(requires(Sensors& s) { s.process(); } && ...)
+  constexpr void push(std::size_t source, sample_type sample)
+    requires(some_deferred_sensor<Sensors> && ...)
+  {
+    visit_at(sensors_, source, [&](auto& sensor) {
+      sensor.push(std::move(sample));
+    });
+  }
+
+  // Consumer-side, present when the per-source sensors are deferred
+  // (buffered): drains every source.
+  constexpr void update()
+    requires(some_deferred_sensor<Sensors> && ...)
   {
     if constexpr (uniform_sensors) {
       for (auto& sensor : sensors_) {
-        sensor.process();
+        sensor.update();
       }
     }
     else {
       unroll<source_count>(
-          [&]<std::size_t I>() { std::get<I>(sensors_).process(); });
+          [&]<std::size_t I>() { std::get<I>(sensors_).update(); });
     }
   }
 

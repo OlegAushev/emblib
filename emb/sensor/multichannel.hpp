@@ -13,7 +13,7 @@
 namespace emb::sensor {
 
 // N-channel sensor core: an aggregate of N independent singlechannel cores
-// driven by one acquisition frame. Adds only frame-synchronous submission, so
+// driven by one acquisition frame. Adds only frame-synchronous updates, so
 // the N filtered outputs read back from value()/values() belong to the same
 // acquisition frame.
 //
@@ -106,10 +106,10 @@ public:
     return cores_[channel];
   }
 
-  constexpr void submit(sample_type const& sample)
+  constexpr void update(sample_type const& sample)
   {
     unroll<channel_count>(
-        [&]<std::size_t I>() { std::get<I>(cores_).submit(sample[I]); });
+        [&]<std::size_t I>() { std::get<I>(cores_).update(sample[I]); });
   }
 
   // `channel` must be below channel_count.
