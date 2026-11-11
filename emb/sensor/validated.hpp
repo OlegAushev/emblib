@@ -13,8 +13,8 @@ namespace emb::sensor {
 
 // The enumeration `fault` names why a `validated` sensor has no output to
 // give: `no_sample` before its first sample, and `below` or `above` when its
-// last sample lies below or above the raw values that its measurement chain
-// gives while healthy, e.g. the value of a shorted or of an open thermistor. A
+// last sample lies below or above the samples that its measurement chain
+// gives while healthy, e.g. the sample of a shorted or of an open thermistor. A
 // validator finds `below` or `above`; `no_sample` is the state of the sensor
 // alone.
 enum class fault : std::uint8_t {
@@ -104,7 +104,7 @@ public:
   {
   }
 
-  // Takes the validator, e.g. one that holds its range, and the core by
+  // Takes the validator, e.g. one that holds its bounds, and the core by
   // value, as `singlechannel` takes its stages.
   constexpr validated(Validator validator, Core core)
       : validator_(std::move(validator)), core_(std::move(core))

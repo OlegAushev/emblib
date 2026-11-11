@@ -8,67 +8,67 @@
 
 namespace emb::sensor {
 
-// The class template `raw_range` is the range of raw values from `min` to
-// `max`, both included, that a measurement chain gives while it is healthy.
-// It is a structural type, so a `raw_range` can be the template argument of
-// `within`; `raw_range_of` computes one from the quantities at its ends.
-template<std::totally_ordered Raw>
-struct raw_range {
-  Raw min;
-  Raw max;
+// The class template `bounds` holds two bounds, `min` and `max`, both
+// included: those of the samples that a measurement chain gives while it is
+// healthy. It is a structural type, so a `bounds` can be the template
+// argument of `within`; `bounds_of` computes one from the quantities at the
+// ends.
+template<std::totally_ordered T>
+struct bounds {
+  T min;
+  T max;
 
-  friend constexpr bool operator==(raw_range const&,
-                                   raw_range const&) = default;
+  friend constexpr bool operator==(bounds const&, bounds const&) = default;
 };
 
-// Returns the range of the raw values that the path `path` gives for the
+// Returns the bounds of the values that the path `path` gives for the
 // quantities from `a` to `b`: `path.forward(a)` and `path.forward(b)`, the
 // lower of the two as `min`. The order of `a` and `b` does not matter, and a
-// path whose raw value falls as the quantity rises, such as a thermistor at
-// the bottom of a divider, gives its range the same way. The range holds the
-// raw values of exactly the quantities between `a` and `b` if the path is
+// path whose value falls as the quantity rises, such as a thermistor at the
+// bottom of a divider, gives its bounds the same way. The bounds hold the
+// values of exactly the quantities between `a` and `b` if the path is
 // monotonic over them, as a path of affine stages, thermistors and resistance
-// thermometers is. Each end is as accurate as the rounding of the last stage,
-// and a stage that saturates, such as an ADC, puts an end beyond its scale on
-// its rail, which the range then holds too.
+// thermometers is. Each bound is as accurate as the rounding of the last
+// stage, and a stage that saturates, such as an ADC, puts a bound beyond its
+// scale on its rail, which the bounds then hold too.
 //
 // A limit known at a node inside a path, such as the current of a 4-20 mA
-// loop, is passed with the part of the path from that node on. `raw_range_of`
-// is `constexpr`, so a range can be computed at compile time as the argument
-// of `within`, or at run time for a validator that holds its range, e.g. from
+// loop, is passed with the part of the path from that node on. `bounds_of` is
+// `constexpr`, so bounds can be computed at compile time as the argument of
+// `within`, or at run time for a validator that holds its bounds, e.g. from
 // settings.
 template<typename Path, typename Quantity>
   requires requires(Path const& path, Quantity q) {
     { path.forward(q) } -> std::totally_ordered;
   }
-constexpr auto raw_range_of(Path const& path, Quantity a, Quantity b)
+constexpr auto bounds_of(Path const& path, Quantity a, Quantity b)
 {
-  using raw_type = decltype(path.forward(a));
-  raw_type const raw_a = path.forward(a);
-  raw_type const raw_b = path.forward(b);
-  return raw_range<raw_type>{std::min(raw_a, raw_b), std::max(raw_a, raw_b)};
+  using value_type = decltype(path.forward(a));
+  value_type const at_a = path.forward(a);
+  value_type const at_b = path.forward(b);
+  return bounds<value_type>{std::min(at_a, at_b), std::max(at_a, at_b)};
 }
 
-// The class template `within` is a validator that accepts the raw values of
-// the range `Range`, its ends included, and refuses a value below `Range.min`
-// with `fault::below` and a value above `Range.max` with `fault::above`. It
-// takes values of the type of the range alone, so a range computed for one
-// raw type does not judge the samples of another, and a range whose `min`
-// exceeds its `max` does not compile. `Range` is fixed at compile time, so a
-// `within` is empty and takes no storage in a `validated`; a range set at run
-// time, e.g. from settings, needs a validator that holds it.
-template<raw_range Range>
-  requires(!(Range.max < Range.min))
+// The class template `within` is a validator that accepts the samples within
+// the bounds `Bounds`, both included, and refuses a sample below `Bounds.min`
+// with `fault::below` and a sample above `Bounds.max` with `fault::above`. It
+// takes samples of the type of the bounds alone, so bounds computed for one
+// type do not judge the samples of another, and bounds whose `min` exceeds
+// their `max` do not compile. `Bounds` is fixed at compile time, so a
+// `within` is empty and takes no storage in a `validated`; bounds set at run
+// time, e.g. from settings, need a validator that holds them.
+template<bounds Bounds>
+  requires(!(Bounds.max < Bounds.min))
 struct within {
-  using sample_type = decltype(Range.min);
+  using sample_type = decltype(Bounds.min);
 
   constexpr std::optional<fault>
   operator()(std::same_as<sample_type> auto sample) const
   {
-    if (sample < Range.min) {
+    if (sample < Bounds.min) {
       return fault::below;
     }
-    if (Range.max < sample) {
+    if (Bounds.max < sample) {
       return fault::above;
     }
     return std::nullopt;

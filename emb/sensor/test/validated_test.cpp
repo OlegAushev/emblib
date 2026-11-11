@@ -49,7 +49,7 @@ constexpr volt_f32 reading(std::uint16_t code)
 
 // the codes of a healthy chain: a shorted or an open sensor drives the pin
 // towards a rail, out of them
-inline constexpr emb::sensor::raw_range<std::uint16_t> healthy{100, 3900};
+inline constexpr emb::sensor::bounds<std::uint16_t> healthy{100, 3900};
 using guard = emb::sensor::within<healthy>;
 using channel = emb::sensor::validated<guard, core>;
 
@@ -105,7 +105,7 @@ constexpr bool test_refused_sample_stops_short_of_the_core()
   if (c.output() != std::unexpected(fault::above)) return false;
   if (c.core().output() != reading(healthy_code)) return false;
 
-  // and the first sample back in the range is read again
+  // and the first sample back within the bounds is read again
   c.update(std::uint16_t{1500});
   return c.output() == reading(1500);
 }
@@ -136,26 +136,26 @@ constexpr bool test_filter_sees_accepted_samples_alone()
   return true;
 }
 
-// a validator with a range of its own, which can change at run time
+// a validator with bounds of its own, which can change at run time
 struct adjustable {
-  emb::sensor::raw_range<std::uint16_t> range;
+  emb::sensor::bounds<std::uint16_t> bounds;
 
   constexpr std::optional<fault> operator()(std::uint16_t code) const
   {
-    if (code < range.min) return fault::below;
-    if (range.max < code) return fault::above;
+    if (code < bounds.min) return fault::below;
+    if (bounds.max < code) return fault::above;
     return std::nullopt;
   }
 };
 
-constexpr bool test_range_held_by_the_validator()
+constexpr bool test_bounds_held_by_the_validator()
 {
   emb::sensor::validated<adjustable, core> c{adjustable{{100, 200}}, core{}};
 
   c.update(std::uint16_t{300});
   if (c.output() != std::unexpected(fault::above)) return false;
 
-  c.validator().range.max = 400;
+  c.validator().bounds.max = 400;
   c.update(std::uint16_t{300});
   return c.output() == reading(300);
 }
@@ -257,7 +257,7 @@ constexpr bool test_sources_of_a_multiplexer()
 static_assert(test_no_output_before_the_first_sample());
 static_assert(test_refused_sample_stops_short_of_the_core());
 static_assert(test_filter_sees_accepted_samples_alone());
-static_assert(test_range_held_by_the_validator());
+static_assert(test_bounds_held_by_the_validator());
 static_assert(test_stages_of_the_core());
 static_assert(test_core_counts_accepted_samples());
 static_assert(test_channels_of_a_frame());
