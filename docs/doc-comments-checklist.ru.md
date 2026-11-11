@@ -347,6 +347,9 @@ emblib не попал. Такие файлы помечены «песочни�
 - [ ] `emb/sensor/multiplexed.hpp`
 - [ ] `emb/sensor/signalpath.hpp`
 - [ ] `emb/sensor/singlechannel.hpp`
+- [ ] `emb/sensor/validated.hpp` — вручную 2026-11-11: `fault`, `validated`
+- [ ] `emb/sensor/within.hpp` — вручную 2026-11-11: `raw_range`,
+  `raw_range_of`, `within`
 - [ ] `emb/spi.hpp`
 - [ ] `emb/three_phase.hpp`
 - [ ] `emb/trouble.hpp`

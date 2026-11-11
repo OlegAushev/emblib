@@ -6,3 +6,5 @@
 #include <emb/sensor/multiplexed.hpp>
 #include <emb/sensor/signalpath.hpp>
 #include <emb/sensor/singlechannel.hpp>
+#include <emb/sensor/validated.hpp>
+#include <emb/sensor/within.hpp>

@@ -15,7 +15,9 @@ namespace emb::sensor {
 // N-channel sensor core: an aggregate of N independent singlechannel cores
 // driven by one acquisition frame. Adds only frame-synchronous updates, so
 // the N filtered outputs read back from output()/outputs() belong to the same
-// acquisition frame.
+// acquisition frame. A channel that judges its samples, as a validated one
+// does, reads back the fault of its sample of that frame rather than an
+// output of an earlier one.
 //
 // The channels may be different core types -- inputs with different
 // transducer models behind one ADC scan -- but they share the frame, so they
