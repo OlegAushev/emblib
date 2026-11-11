@@ -19,9 +19,9 @@ namespace emb::sensor {
 //
 // The channels may be different core types -- inputs with different
 // transducer models behind one ADC scan -- but they share the frame, so they
-// share sample_type and raw_type, and they make up one sensor, so they share
-// output_type: the frame reads back as one std::array whatever the channels
-// are. Identical channel types (multichannel_n) live in an array and are
+// share sample_type, and they make up one sensor, so they share output_type:
+// the frame reads back as one std::array whatever the channels are.
+// Identical channel types (multichannel_n) live in an array and are
 // addressed by index directly, with core(channel) available; otherwise
 // channels live in a tuple, reached through core<I>(), and output(channel)
 // selects through a compare chain.
@@ -29,7 +29,6 @@ template<typename... Cores>
   requires(sizeof...(Cores) > 0)
        && (some_singlechannel_sensor<Cores> && ...)
        && (some_immediate_sensor<Cores> && ...)
-       && all_same<typename Cores::raw_type...>
        && all_same<typename Cores::sample_type...>
        && all_same<typename Cores::output_type...>
 class multichannel {
@@ -41,7 +40,6 @@ public:
   template<std::size_t I>
   using core_type = nth_type_t<I, Cores...>;
 
-  using raw_type = typename first_type::raw_type;
   using sample_type =
       std::array<typename first_type::sample_type, channel_count>;
   using output_type = typename first_type::output_type;

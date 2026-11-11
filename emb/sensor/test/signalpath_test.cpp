@@ -2,13 +2,15 @@
 
 #include <emb/filter/passthrough_filter.hpp>
 #include <emb/math.hpp>
-#include <emb/sensor/concepts.hpp>
 #include <emb/sensor/singlechannel.hpp>
 #include <emb/signal/bind.hpp>
+#include <emb/signal/path.hpp>
 #include <emb/signal/proportional.hpp>
 
 #include <cassert>
+#include <concepts>
 #include <cstdint>
+#include <type_traits>
 
 namespace {
 
@@ -49,9 +51,23 @@ struct zero_trim {
 using channel_path =
     emb::sensor::signalpath<emb::signal::bind<transducer>, adc>;
 
-// a sensor takes it as it is, with nothing wrapped around it
+// a sensor takes it as it is, with nothing wrapped around it: calling it gives
+// the quantity at the head of the path
+static_assert(std::invocable<channel_path&, std::uint16_t&>);
 static_assert(
-    emb::sensor::some_converter<channel_path, std::uint16_t, amp_f32>);
+    std::same_as<std::invoke_result_t<channel_path&, std::uint16_t&>, amp_f32>);
+
+// where a sensor refuses the path underneath, which is not callable, and a
+// filter of another quantity
+template<typename Converter, typename Filter>
+constexpr bool channels = requires {
+  typename emb::sensor::singlechannel<std::uint16_t, Converter, Filter>;
+};
+
+static_assert(channels<channel_path, emb::passthrough_filter<amp_f32>>);
+static_assert(!channels<emb::signal::path<emb::signal::bind<transducer>, adc>,
+                        emb::passthrough_filter<amp_f32>>);
+static_assert(!channels<channel_path, emb::passthrough_filter<volt_f32>>);
 
 constexpr bool test_call_is_the_measuring_direction()
 {

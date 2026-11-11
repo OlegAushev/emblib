@@ -21,8 +21,8 @@ namespace emb::sensor {
 // and how long it settles, is the producer's business.
 //
 // The sources may be different sensor types but they share the path, so they
-// share sample_type and raw_type, and they share the producer and consumer,
-// so they share sensor_category.
+// share sample_type, and they share the producer and consumer, so they share
+// sensor_category.
 // Two independent kinds of uniformity are detected and exploited:
 //   - uniform_sensors: every source is the same type. Sources live in an
 //     array and are addressed by index directly; sensor(source) is available.
@@ -39,7 +39,6 @@ namespace emb::sensor {
 template<typename... Sensors>
   requires(sizeof...(Sensors) > 0)
        && (some_singlechannel_sensor<Sensors> && ...)
-       && all_same<typename Sensors::raw_type...>
        && all_same<typename Sensors::sample_type...>
        && all_same<typename Sensors::sensor_category...>
 class multiplexed {
@@ -53,7 +52,6 @@ public:
   template<std::size_t I>
   using sensor_type = nth_type_t<I, Sensors...>;
 
-  using raw_type = typename first_type::raw_type;
   using sample_type = typename first_type::sample_type;
   // Forwarded for introspection; multiplexed itself is neither an immediate
   // nor a deferred sensor (see above).

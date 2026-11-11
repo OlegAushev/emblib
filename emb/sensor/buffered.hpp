@@ -23,7 +23,6 @@ template<typename Queue, typename Core>
 class buffered {
 public:
   using core_type = Core;
-  using raw_type = typename Core::raw_type;
   using sample_type = typename Core::sample_type;
   using output_type = typename Core::output_type;
   using sensor_category = deferred_tag;
@@ -78,8 +77,8 @@ public:
   // Consumer-side (main loop). Drains the queue through the core pipeline.
   void update()
   {
-    while (auto const raw = queue_.try_pop()) {
-      core_.update(*raw);
+    while (auto const sample = queue_.try_pop()) {
+      core_.update(*sample);
     }
   }
 };

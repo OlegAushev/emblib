@@ -2,6 +2,8 @@
 
 #include <emb/sensor/concepts.hpp>
 
+#include <concepts>
+#include <type_traits>
 #include <utility>
 
 namespace emb::sensor {
@@ -18,13 +20,14 @@ namespace emb::sensor {
 // consumer-side update() once wrapped in buffered), or to a sensor that is
 // quiescent. multichannel, buffered and multiplexed expose their parts under
 // the same rule.
-template<typename Raw, typename Converter, typename Filter>
+template<typename Sample, typename Converter, typename Filter>
   requires some_filter<Filter>
-        && some_converter<Converter, Raw, typename Filter::value_type>
+        && std::invocable<Converter&, Sample&>
+        && std::convertible_to<std::invoke_result_t<Converter&, Sample&>,
+                               typename Filter::value_type>
 class singlechannel {
 public:
-  using raw_type = Raw;
-  using sample_type = Raw;
+  using sample_type = Sample;
   using output_type = typename Filter::value_type;
   using sensor_category = immediate_tag;
 private:

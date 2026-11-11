@@ -14,11 +14,6 @@ concept some_spsc_queue = requires(Q q, typename Q::value_type v) {
   { q.try_pop() } -> std::same_as<std::optional<typename Q::value_type>>;
 };
 
-template<typename C, typename Input, typename Output>
-concept some_converter = requires(C c, Input in) {
-  { c(in) } -> std::convertible_to<Output>;
-};
-
 // Sensor categories, on one axis: when conversion completes. An immediate
 // sensor converts and filters inside update(sample), in the caller's context;
 // a deferred sensor parks the sample in push(sample) and converts later, in a
@@ -26,14 +21,12 @@ concept some_converter = requires(C c, Input in) {
 struct immediate_tag {};
 struct deferred_tag {};
 
-// Any sensor surface: typed raw/sample/output and a declared category, which
-// sets the verbs that take samples. sample_type is what a producer hands over
-// and what a buffered queue stores -- one scalar value for singlechannel, one
-// aligned frame of values for multichannel. raw_type is the per-channel scalar
-// value (equal to sample_type for singlechannel).
+// Any sensor surface: typed sample/output and a declared category, which sets
+// the verbs that take samples. sample_type is what a producer hands over and
+// what a buffered queue stores -- one scalar value for singlechannel, one
+// aligned frame of values for multichannel.
 template<typename S>
 concept some_sensor = requires {
-  typename S::raw_type;
   typename S::sample_type;
   typename S::output_type;
   typename S::sensor_category;
