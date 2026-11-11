@@ -13,6 +13,7 @@
 #include <emb/sensor/within.hpp>
 #include <emb/units.hpp>
 
+#include <array>
 #include <concepts>
 #include <cstdint>
 #include <expected>
@@ -211,6 +212,14 @@ constexpr bool test_core_counts_accepted_samples()
   return c.output() == 2;
 }
 
+// a frame takes a frame of samples and gives a frame of outputs
+using frame_of_four = emb::sensor::multichannel_n<channel, 4>;
+
+static_assert(
+    std::same_as<frame_of_four::input_type, std::array<std::uint16_t, 4>>);
+static_assert(std::same_as<frame_of_four::output_type,
+                           std::array<std::expected<volt_f32, fault>, 4>>);
+
 // in a frame, each channel judges its own sample of it
 constexpr bool test_channels_of_a_frame()
 {
@@ -224,6 +233,13 @@ constexpr bool test_channels_of_a_frame()
       && outputs[3] == reading(1500)
       && frame.output(2uz) == std::unexpected(fault::above);
 }
+
+// a multiplexer takes the sample of one source and gives the outputs of all
+using three_sources = emb::sensor::multiplexed_n<channel, 3>;
+
+static_assert(std::same_as<three_sources::input_type, std::uint16_t>);
+static_assert(std::same_as<three_sources::output_type,
+                           std::array<std::expected<volt_f32, fault>, 3>>);
 
 // behind a multiplexer, each source judges its own samples, and one not
 // selected yet has read nothing

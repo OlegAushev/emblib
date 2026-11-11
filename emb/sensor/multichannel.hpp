@@ -43,8 +43,8 @@ public:
   using core_type = nth_type_t<I, Cores...>;
 
   using input_type = std::array<typename first_type::input_type, channel_count>;
-  using output_type = typename first_type::output_type;
-  using outputs_type = std::array<output_type, channel_count>;
+  using output_type =
+      std::array<typename first_type::output_type, channel_count>;
   using sensor_category = immediate_tag;
   using cores_type = std::conditional_t<uniform_cores,
                                         std::array<first_type, channel_count>,
@@ -112,17 +112,17 @@ public:
   }
 
   // `channel` must be below channel_count.
-  constexpr output_type output(std::size_t channel) const
+  constexpr typename output_type::value_type output(std::size_t channel) const
   {
     return visit_at(cores_, channel, [](auto const& core) {
       return core.output();
     });
   }
 
-  constexpr outputs_type outputs() const
+  constexpr output_type outputs() const
   {
     return [&]<std::size_t... I>(std::index_sequence<I...>) {
-      return outputs_type{std::get<I>(cores_).output()...};
+      return output_type{std::get<I>(cores_).output()...};
     }(std::make_index_sequence<channel_count>{});
   }
 

@@ -59,7 +59,7 @@ public:
   using sensors_type = std::conditional_t<uniform_sensors,
                                           std::array<first_type, source_count>,
                                           std::tuple<Sensors...>>;
-  using outputs_type = std::conditional_t<
+  using output_type = std::conditional_t<
       uniform_outputs,
       std::array<typename first_type::output_type, source_count>,
       std::tuple<typename Sensors::output_type...>>;
@@ -172,10 +172,10 @@ public:
     });
   }
 
-  constexpr outputs_type outputs() const
+  constexpr output_type outputs() const
   {
     return [&]<std::size_t... I>(std::index_sequence<I...>) {
-      return outputs_type{std::get<I>(sensors_).output()...};
+      return output_type{std::get<I>(sensors_).output()...};
     }(std::make_index_sequence<source_count>{});
   }
 };
