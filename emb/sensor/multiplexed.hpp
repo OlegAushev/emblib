@@ -26,10 +26,10 @@ namespace emb::sensor {
 // Two independent kinds of uniformity are detected and exploited:
 //   - uniform_sensors: every source is the same type. Sources live in an
 //     array and are addressed by index directly; sensor(source) is available.
-//   - uniform_values: every source yields the same value_type, whether or not
-//     the sensors are the same type. values() is an array and value(source)
-//     is available; otherwise values() is a tuple and sources are read
-//     through value<I>().
+//   - uniform_outputs: every source yields the same output_type, whether or not
+//     the sensors are the same type. outputs() is an array and output(source)
+//     is available; otherwise outputs() is a tuple and sources are read
+//     through output<I>().
 //
 // Deliberately neither an immediate nor a deferred sensor: update and push
 // need the source alongside the sample, so multiplexed cannot sit inside a
@@ -47,8 +47,8 @@ class multiplexed {
 public:
   static constexpr std::size_t source_count = sizeof...(Sensors);
   static constexpr bool uniform_sensors = all_same<Sensors...>;
-  static constexpr bool uniform_values =
-      all_same<typename Sensors::value_type...>;
+  static constexpr bool uniform_outputs =
+      all_same<typename Sensors::output_type...>;
 
   template<std::size_t I>
   using sensor_type = nth_type_t<I, Sensors...>;
@@ -61,10 +61,10 @@ public:
   using sensors_type = std::conditional_t<uniform_sensors,
                                           std::array<first_type, source_count>,
                                           std::tuple<Sensors...>>;
-  using values_type = std::conditional_t<
-      uniform_values,
-      std::array<typename first_type::value_type, source_count>,
-      std::tuple<typename Sensors::value_type...>>;
+  using outputs_type = std::conditional_t<
+      uniform_outputs,
+      std::array<typename first_type::output_type, source_count>,
+      std::tuple<typename Sensors::output_type...>>;
 private:
   sensors_type sensors_;
 
@@ -161,23 +161,23 @@ public:
   }
 
   template<std::size_t I>
-  constexpr typename sensor_type<I>::value_type value() const
+  constexpr typename sensor_type<I>::output_type output() const
   {
-    return std::get<I>(sensors_).value();
+    return std::get<I>(sensors_).output();
   }
 
-  constexpr typename first_type::value_type value(std::size_t source) const
-    requires uniform_values
+  constexpr typename first_type::output_type output(std::size_t source) const
+    requires uniform_outputs
   {
     return visit_at(sensors_, source, [](auto const& sensor) {
-      return sensor.value();
+      return sensor.output();
     });
   }
 
-  constexpr values_type values() const
+  constexpr outputs_type outputs() const
   {
     return [&]<std::size_t... I>(std::index_sequence<I...>) {
-      return values_type{std::get<I>(sensors_).value()...};
+      return outputs_type{std::get<I>(sensors_).output()...};
     }(std::make_index_sequence<source_count>{});
   }
 };

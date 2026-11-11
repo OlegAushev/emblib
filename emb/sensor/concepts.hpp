@@ -26,7 +26,7 @@ concept some_converter = requires(C c, Input in) {
 struct immediate_tag {};
 struct deferred_tag {};
 
-// Any sensor surface: typed raw/sample/value and a declared category, which
+// Any sensor surface: typed raw/sample/output and a declared category, which
 // sets the verbs that take samples. sample_type is what a producer hands over
 // and what a buffered queue stores -- one scalar value for singlechannel, one
 // aligned frame of values for multichannel. raw_type is the per-channel scalar
@@ -35,7 +35,7 @@ template<typename S>
 concept some_sensor = requires {
   typename S::raw_type;
   typename S::sample_type;
-  typename S::value_type;
+  typename S::output_type;
   typename S::sensor_category;
 };
 
@@ -58,10 +58,10 @@ concept some_deferred_sensor =
 
 template<typename S>
 concept some_singlechannel_sensor =
-    some_sensor<S> && requires(S const& s) { s.value(); };
+    some_sensor<S> && requires(S const& s) { s.output(); };
 
 template<typename S>
 concept some_multichannel_sensor =
-    some_sensor<S> && requires(S const& s) { s.values(); };
+    some_sensor<S> && requires(S const& s) { s.outputs(); };
 
 } // namespace emb::sensor

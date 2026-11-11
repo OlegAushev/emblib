@@ -25,7 +25,7 @@ class singlechannel {
 public:
   using raw_type = Raw;
   using sample_type = Raw;
-  using value_type = typename Filter::value_type;
+  using output_type = typename Filter::value_type;
   using sensor_category = immediate_tag;
 private:
   Converter converter_;
@@ -58,7 +58,7 @@ public:
     return filter_;
   }
 
-  constexpr value_type value() const
+  constexpr output_type output() const
   {
     return filter_.output();
   }

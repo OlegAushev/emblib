@@ -25,7 +25,7 @@ public:
   using core_type = Core;
   using raw_type = typename Core::raw_type;
   using sample_type = typename Core::sample_type;
-  using value_type = typename Core::value_type;
+  using output_type = typename Core::output_type;
   using sensor_category = deferred_tag;
 private:
   Queue queue_;
@@ -48,25 +48,25 @@ public:
   }
 
   // Convenience forwarder for singlechannel cores; absent for multichannel,
-  // which is read through values() / value(channel) below.
-  value_type value() const
-    requires requires(Core const& c) { c.value(); }
+  // which is read through outputs() / output(channel) below.
+  output_type output() const
+    requires requires(Core const& c) { c.output(); }
   {
-    return core_.value();
+    return core_.output();
   }
 
   // Convenience forwarders for multichannel cores; absent for singlechannel
   // cores.
-  auto values() const
-    requires requires(Core const& c) { c.values(); }
+  auto outputs() const
+    requires requires(Core const& c) { c.outputs(); }
   {
-    return core_.values();
+    return core_.outputs();
   }
 
-  auto value(std::size_t channel) const
-    requires requires(Core const& c) { c.value(channel); }
+  auto output(std::size_t channel) const
+    requires requires(Core const& c) { c.output(channel); }
   {
-    return core_.value(channel);
+    return core_.output(channel);
   }
 
   // Producer-side (ISR). On overflow the newest sample is dropped.

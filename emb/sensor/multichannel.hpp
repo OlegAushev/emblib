@@ -14,16 +14,16 @@ namespace emb::sensor {
 
 // N-channel sensor core: an aggregate of N independent singlechannel cores
 // driven by one acquisition frame. Adds only frame-synchronous updates, so
-// the N filtered outputs read back from value()/values() belong to the same
+// the N filtered outputs read back from output()/outputs() belong to the same
 // acquisition frame.
 //
 // The channels may be different core types -- inputs with different
 // transducer models behind one ADC scan -- but they share the frame, so they
 // share sample_type and raw_type, and they make up one sensor, so they share
-// value_type: the frame reads back as one std::array whatever the channels
+// output_type: the frame reads back as one std::array whatever the channels
 // are. Identical channel types (multichannel_n) live in an array and are
 // addressed by index directly, with core(channel) available; otherwise
-// channels live in a tuple, reached through core<I>(), and value(channel)
+// channels live in a tuple, reached through core<I>(), and output(channel)
 // selects through a compare chain.
 template<typename... Cores>
   requires(sizeof...(Cores) > 0)
@@ -31,7 +31,7 @@ template<typename... Cores>
        && (some_immediate_sensor<Cores> && ...)
        && all_same<typename Cores::raw_type...>
        && all_same<typename Cores::sample_type...>
-       && all_same<typename Cores::value_type...>
+       && all_same<typename Cores::output_type...>
 class multichannel {
   using first_type = nth_type_t<0, Cores...>;
 public:
@@ -44,8 +44,8 @@ public:
   using raw_type = typename first_type::raw_type;
   using sample_type =
       std::array<typename first_type::sample_type, channel_count>;
-  using value_type = typename first_type::value_type;
-  using values_type = std::array<value_type, channel_count>;
+  using output_type = typename first_type::output_type;
+  using outputs_type = std::array<output_type, channel_count>;
   using sensor_category = immediate_tag;
   using cores_type = std::conditional_t<uniform_cores,
                                         std::array<first_type, channel_count>,
@@ -113,25 +113,25 @@ public:
   }
 
   // `channel` must be below channel_count.
-  constexpr value_type value(std::size_t channel) const
+  constexpr output_type output(std::size_t channel) const
   {
     return visit_at(cores_, channel, [](auto const& core) {
-      return core.value();
+      return core.output();
     });
   }
 
-  constexpr values_type values() const
+  constexpr outputs_type outputs() const
   {
     return [&]<std::size_t... I>(std::index_sequence<I...>) {
-      return values_type{std::get<I>(cores_).value()...};
+      return outputs_type{std::get<I>(cores_).output()...};
     }(std::make_index_sequence<channel_count>{});
   }
 
   template<typename V>
-  constexpr V values() const
+  constexpr V outputs() const
   {
     return [&]<std::size_t... I>(std::index_sequence<I...>) {
-      return V{std::get<I>(cores_).value()...};
+      return V{std::get<I>(cores_).output()...};
     }(std::make_index_sequence<channel_count>{});
   }
 };
