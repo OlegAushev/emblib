@@ -5,9 +5,9 @@
 #include <cstddef>
 #include <utility>
 
-namespace emb {
+namespace emb::filters {
 
-// The class template `moving_average_filter` is a filter whose output is the
+// The class template `moving_average` is a filter whose output is the
 // arithmetic mean of the last `WindowSize` inputs, one per call to `update`.
 // Default construction leaves the window empty: the output is `T{}` until the
 // next `update`, then the mean of the inputs since. Construction with an
@@ -29,7 +29,7 @@ template<typename T,
          std::size_t WindowSize,
          typename Sum = decltype(std::declval<T>() + std::declval<T>())>
   requires(WindowSize > 0)
-class moving_average_filter {
+class moving_average {
 public:
   using value_type = T;
   using sum_type = Sum;
@@ -45,9 +45,9 @@ private:
   size_type fresh_count_ = 0;
   value_type output_{};
 public:
-  constexpr moving_average_filter() = default;
+  constexpr moving_average() = default;
 
-  constexpr explicit moving_average_filter(value_type init_output)
+  constexpr explicit moving_average(value_type init_output)
   {
     reset(init_output);
   }
@@ -102,4 +102,4 @@ public:
   }
 };
 
-} // namespace emb
+} // namespace emb::filters

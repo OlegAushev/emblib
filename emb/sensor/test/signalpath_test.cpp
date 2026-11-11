@@ -1,6 +1,6 @@
 #include <emb/sensor/signalpath.hpp>
 
-#include <emb/filter/passthrough_filter.hpp>
+#include <emb/filters/passthrough.hpp>
 #include <emb/math.hpp>
 #include <emb/sensor/singlechannel.hpp>
 #include <emb/signal/bind.hpp>
@@ -64,10 +64,10 @@ constexpr bool channels = requires {
   typename emb::sensor::singlechannel<std::uint16_t, Converter, Filter>;
 };
 
-static_assert(channels<channel_path, emb::passthrough_filter<amp_f32>>);
+static_assert(channels<channel_path, emb::filters::passthrough<amp_f32>>);
 static_assert(!channels<emb::signal::path<emb::signal::bind<transducer>, adc>,
-                        emb::passthrough_filter<amp_f32>>);
-static_assert(!channels<channel_path, emb::passthrough_filter<volt_f32>>);
+                        emb::filters::passthrough<amp_f32>>);
+static_assert(!channels<channel_path, emb::filters::passthrough<volt_f32>>);
 
 constexpr bool test_call_is_the_measuring_direction()
 {
@@ -91,7 +91,7 @@ constexpr bool test_drives_a_channel()
 {
   emb::sensor::singlechannel<std::uint16_t,
                              channel_path,
-                             emb::passthrough_filter<amp_f32>>
+                             emb::filters::passthrough<amp_f32>>
       channel;
 
   constexpr auto code = channel_path{}.forward(amp_f32{300.f});

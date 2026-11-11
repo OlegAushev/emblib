@@ -2,9 +2,9 @@
 
 #include <concepts>
 
-namespace emb {
+namespace emb::filters {
 
-// The concept `some_filter<F>` specifies that `F` is a filter, i.e. a type
+// The concept `filter<F>` specifies that `F` is a filter, i.e. a type
 // whose objects take input values of type `F::value_type`, one per call to
 // `update`, and provide an output of the same type, which `output()` returns.
 // It is satisfied if and only if `F::value_type` names a type, `update` can be
@@ -16,11 +16,10 @@ namespace emb {
 // output is a quantity other than its input: `integrator` takes a rate through
 // `step`, outputs its integral and does not satisfy the concept.
 template<typename F>
-concept some_filter =
-    requires(F f, F const cf, typename F::value_type const v) {
-      typename F::value_type;
-      { cf.output() } -> std::convertible_to<typename F::value_type>;
-      f.update(v);
-    };
+concept filter = requires(F f, F const cf, typename F::value_type const v) {
+  typename F::value_type;
+  { cf.output() } -> std::convertible_to<typename F::value_type>;
+  f.update(v);
+};
 
-} // namespace emb
+} // namespace emb::filters

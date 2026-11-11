@@ -1,4 +1,4 @@
-#include <emb/filter/moving_average_filter.hpp>
+#include <emb/filters/moving_average.hpp>
 #include <emb/units.hpp>
 
 #include <array>
@@ -59,33 +59,33 @@ test_moving_average_filter(Filter filter,
   return true;
 }
 
-static_assert(test_moving_average_filter(emb::moving_average_filter<int, 1>{},
+static_assert(test_moving_average_filter(emb::filters::moving_average<int, 1>{},
                                          0));
-static_assert(test_moving_average_filter(emb::moving_average_filter<int, 2>{},
+static_assert(test_moving_average_filter(emb::filters::moving_average<int, 2>{},
                                          0));
-static_assert(test_moving_average_filter(emb::moving_average_filter<int, 5>{},
+static_assert(test_moving_average_filter(emb::filters::moving_average<int, 5>{},
                                          0));
-static_assert(test_moving_average_filter(emb::moving_average_filter<int, 10>{},
-                                         0));
-
-static_assert(test_moving_average_filter(emb::moving_average_filter<int, 1>{42},
-                                         42));
-static_assert(test_moving_average_filter(emb::moving_average_filter<int, 2>{42},
-                                         42));
-static_assert(test_moving_average_filter(emb::moving_average_filter<int, 5>{42},
-                                         42));
 static_assert(
-    test_moving_average_filter(emb::moving_average_filter<int, 10>{42}, 42));
+    test_moving_average_filter(emb::filters::moving_average<int, 10>{}, 0));
+
+static_assert(
+    test_moving_average_filter(emb::filters::moving_average<int, 1>{42}, 42));
+static_assert(
+    test_moving_average_filter(emb::filters::moving_average<int, 2>{42}, 42));
+static_assert(
+    test_moving_average_filter(emb::filters::moving_average<int, 5>{42}, 42));
+static_assert(
+    test_moving_average_filter(emb::filters::moving_average<int, 10>{42}, 42));
 
 static_assert(test_moving_average_filter(
-    emb::moving_average_filter<emb::units::erad_f32, 4>{},
+    emb::filters::moving_average<emb::units::erad_f32, 4>{},
     emb::units::erad_f32{0}));
 
 // `reset` fills the window, whatever it held: the output moves away from the
 // value as the copies leave the window, and the sum is exact once they have.
 constexpr bool test_moving_average_reset()
 {
-  emb::moving_average_filter<float, 4> filter;
+  emb::filters::moving_average<float, 4> filter;
   filter.update(1.0f);
   filter.update(2.0f);
 
@@ -106,7 +106,7 @@ static_assert(test_moving_average_reset());
 // any update.
 constexpr bool test_moving_average_reset_int()
 {
-  emb::moving_average_filter<int, 2> filter;
+  emb::filters::moving_average<int, 2> filter;
   filter.reset(7);
   if (filter.output() != 7) return false;
   filter.update(0);
@@ -121,12 +121,12 @@ static_assert(test_moving_average_reset_int());
 // without one the window is empty, and the first input is the mean.
 constexpr bool test_moving_average_start()
 {
-  emb::moving_average_filter<float, 4> settled{10.0f};
+  emb::filters::moving_average<float, 4> settled{10.0f};
   if (settled.output() != 10.0f || !settled.data().full()) return false;
   settled.update(0.0f);
   if (settled.output() != 7.5f) return false;
 
-  emb::moving_average_filter<float, 4> empty;
+  emb::filters::moving_average<float, 4> empty;
   if (empty.output() != 0.0f || !empty.data().empty()) return false;
   empty.update(8.0f);
   return empty.output() == 8.0f;
@@ -138,17 +138,17 @@ static_assert(test_moving_average_start());
 // with an initial output and once `reset` has filled the window.
 constexpr bool test_moving_average_full()
 {
-  emb::moving_average_filter<float, 2> filter;
+  emb::filters::moving_average<float, 2> filter;
   if (filter.full()) return false;
   filter.update(1.0f);
   if (filter.full()) return false;
   filter.update(2.0f);
   if (!filter.full()) return false;
 
-  emb::moving_average_filter<float, 2> settled{10.0f};
+  emb::filters::moving_average<float, 2> settled{10.0f};
   if (!settled.full()) return false;
 
-  emb::moving_average_filter<float, 2> after_reset;
+  emb::filters::moving_average<float, 2> after_reset;
   after_reset.reset(10.0f);
   return after_reset.full();
 }
@@ -163,7 +163,7 @@ template<std::size_t WindowSize>
 constexpr bool test_moving_average_outlier(float outlier)
 {
   for (auto offset = 0uz; offset < WindowSize; ++offset) {
-    emb::moving_average_filter<float, WindowSize> filter;
+    emb::filters::moving_average<float, WindowSize> filter;
     for (auto i = 0uz; i < WindowSize + offset; ++i) {
       filter.update(1.0f);
     }
@@ -182,7 +182,7 @@ static_assert(test_moving_average_outlier<16>(1e8f));
 // `WindowSize` must be positive.
 template<std::size_t WindowSize>
 concept window_accepted =
-    requires { typename emb::moving_average_filter<float, WindowSize>; };
+    requires { typename emb::filters::moving_average<float, WindowSize>; };
 
 static_assert(!window_accepted<0>);
 static_assert(window_accepted<1>);
@@ -190,21 +190,22 @@ static_assert(window_accepted<1>);
 // By default the values are summed in the type of the sum of two `T`s: `int`
 // for an integer `T` narrower than `int`, `T` itself otherwise.
 static_assert(
-    std::same_as<emb::moving_average_filter<std::int16_t, 4>::sum_type, int>);
+    std::same_as<emb::filters::moving_average<std::int16_t, 4>::sum_type, int>);
 static_assert(
-    std::same_as<emb::moving_average_filter<std::uint8_t, 4>::sum_type, int>);
-static_assert(std::same_as<emb::moving_average_filter<int, 4>::sum_type, int>);
+    std::same_as<emb::filters::moving_average<std::uint8_t, 4>::sum_type, int>);
 static_assert(
-    std::same_as<emb::moving_average_filter<float, 4>::sum_type, float>);
+    std::same_as<emb::filters::moving_average<int, 4>::sum_type, int>);
 static_assert(
-    std::same_as<emb::moving_average_filter<emb::units::erad_f32, 4>::sum_type,
-                 emb::units::erad_f32>);
+    std::same_as<emb::filters::moving_average<float, 4>::sum_type, float>);
+static_assert(std::same_as<
+              emb::filters::moving_average<emb::units::erad_f32, 4>::sum_type,
+              emb::units::erad_f32>);
 
 // So the sum of the window may exceed `T`: sixteen 12-bit codes, or the
 // extremes of `std::int16_t`. The output is still rounded toward zero.
 constexpr bool test_moving_average_narrow_type()
 {
-  using filter = emb::moving_average_filter<std::int16_t, 16>;
+  using filter = emb::filters::moving_average<std::int16_t, 16>;
   for (auto const value : std::array<std::int16_t, 3>{4095, 32767, -32768}) {
     filter f;
     for (auto i = 0uz; i < 2 * filter::window_size; ++i) {
@@ -217,7 +218,7 @@ constexpr bool test_moving_average_narrow_type()
   settled.update(0);
   if (settled.output() != 28125) return false;
 
-  emb::moving_average_filter<std::int16_t, 4> mixed;
+  emb::filters::moving_average<std::int16_t, 4> mixed;
   mixed.update(32767);
   mixed.update(32767);
   mixed.update(-32768);
@@ -232,7 +233,7 @@ static_assert(test_moving_average_narrow_type());
 template<typename Sum>
 constexpr float moving_average_after_outlier()
 {
-  emb::moving_average_filter<float, 4, Sum> filter;
+  emb::filters::moving_average<float, 4, Sum> filter;
   for (auto i = 0uz; i < 4; ++i) {
     filter.update(1.0f);
   }

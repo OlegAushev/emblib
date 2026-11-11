@@ -21,7 +21,7 @@ namespace emb::sensor {
 // quiescent. multichannel, buffered and multiplexed expose their parts under
 // the same rule.
 template<typename Sample, typename Converter, typename Filter>
-  requires some_filter<Filter>
+  requires filters::filter<Filter>
         && std::invocable<Converter&, Sample&>
         && std::convertible_to<std::invoke_result_t<Converter&, Sample&>,
                                typename Filter::value_type>

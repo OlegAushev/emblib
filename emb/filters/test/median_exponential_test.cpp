@@ -1,7 +1,7 @@
-#include <emb/filter/concepts.hpp>
-#include <emb/filter/exponential_filter.hpp>
-#include <emb/filter/median_exponential_filter.hpp>
-#include <emb/filter/median_filter.hpp>
+#include <emb/filters/concepts.hpp>
+#include <emb/filters/exponential.hpp>
+#include <emb/filters/median.hpp>
+#include <emb/filters/median_exponential.hpp>
 #include <emb/units.hpp>
 
 #include <array>
@@ -12,11 +12,11 @@ namespace {
 using emb::units::eradps_f32;
 using emb::units::sec_f32;
 
-using float_filter = emb::median_exponential_filter<float, 3, sec_f32>;
-using speed_filter = emb::median_exponential_filter<eradps_f32, 3, sec_f32>;
+using float_filter = emb::filters::median_exponential<float, 3, sec_f32>;
+using speed_filter = emb::filters::median_exponential<eradps_f32, 3, sec_f32>;
 
-static_assert(emb::some_filter<float_filter>);
-static_assert(emb::some_filter<speed_filter>);
+static_assert(emb::filters::filter<float_filter>);
+static_assert(emb::filters::filter<speed_filter>);
 static_assert(std::same_as<speed_filter::value_type, eradps_f32>);
 static_assert(std::same_as<speed_filter::duration_type, sec_f32>);
 static_assert(speed_filter::window_size == 3);
@@ -26,8 +26,8 @@ static_assert(speed_filter::window_size == 3);
 // outlier falls in the window.
 consteval bool test_seed(std::array<float, 5> const& input)
 {
-  emb::median_exponential_filter<float, 5, sec_f32> filter{sec_f32{0.01f},
-                                                           sec_f32{1.0f}};
+  emb::filters::median_exponential<float, 5, sec_f32> filter{sec_f32{0.01f},
+                                                             sec_f32{1.0f}};
   if (filter.output() != 0.0f) return false;
   for (auto i = 0uz; i + 1 < input.size(); ++i) {
     filter.update(input[i]);
@@ -44,8 +44,8 @@ static_assert(test_seed({20.0f, 20.0f, 20.0f, 20.0f, 1000.0f}));
 // A window of one takes the first value as the seed.
 consteval bool test_seed_of_one_value()
 {
-  emb::median_exponential_filter<float, 1, sec_f32> filter{sec_f32{0.5f},
-                                                           sec_f32{1.0f}};
+  emb::filters::median_exponential<float, 1, sec_f32> filter{sec_f32{0.5f},
+                                                             sec_f32{1.0f}};
   filter.update(8.0f);
   if (filter.output() != 8.0f) return false;
   filter.update(10.0f);
@@ -57,9 +57,9 @@ static_assert(test_seed_of_one_value());
 // Past the seed, the output is that of the same two stages driven by hand.
 consteval bool test_after_seed()
 {
-  emb::median_filter<float, 3> median;
-  emb::exponential_filter<float, sec_f32> smoother{sec_f32{0.01f},
-                                                   sec_f32{0.1f}};
+  emb::filters::median<float, 3> median;
+  emb::filters::exponential<float, sec_f32> smoother{sec_f32{0.01f},
+                                                     sec_f32{0.1f}};
   float_filter filter{sec_f32{0.01f}, sec_f32{0.1f}};
   std::array const input{10.0f, 20.0f, 90.0f, -80.0f, 30.0f};
   for (auto i = 0uz; i < 40; ++i) {
@@ -84,10 +84,10 @@ static_assert(test_after_seed());
 consteval bool test_initial_output()
 {
   eradps_f32 const start{5};
-  emb::median_filter<eradps_f32, 3> median{start};
-  emb::exponential_filter<eradps_f32, sec_f32> smoother{sec_f32{0.01f},
-                                                        sec_f32{0.1f},
-                                                        start};
+  emb::filters::median<eradps_f32, 3> median{start};
+  emb::filters::exponential<eradps_f32, sec_f32> smoother{sec_f32{0.01f},
+                                                          sec_f32{0.1f},
+                                                          start};
   speed_filter filter{sec_f32{0.01f}, sec_f32{0.1f}, start};
   if (filter.output() != start) return false;
   std::array const input{eradps_f32{10},

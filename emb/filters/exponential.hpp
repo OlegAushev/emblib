@@ -6,9 +6,9 @@
 #include <concepts>
 #include <utility>
 
-namespace emb {
+namespace emb::filters {
 
-// The class template `exponential_filter` is a filter whose output is an
+// The class template `exponential` is a filter whose output is an
 // exponential moving average of its inputs, one per sampling period:
 // `update(input)` moves the output toward `input` by the smoothing factor
 // times their difference. Construction sets the output to the initial output,
@@ -26,7 +26,7 @@ template<typename T, typename Duration>
   requires(std::floating_point<T> || emb::units::quantity_specialization<T>)
        && std::floating_point<decltype(std::declval<Duration>()
                                        / std::declval<Duration>())>
-class exponential_filter {
+class exponential {
 public:
   using value_type = T;
   using duration_type = Duration;
@@ -37,9 +37,9 @@ private:
   factor_type smooth_factor_;
   value_type output_;
 public:
-  constexpr exponential_filter(duration_type sampling_period,
-                               duration_type time_constant,
-                               value_type init_output = value_type{})
+  constexpr exponential(duration_type sampling_period,
+                        duration_type time_constant,
+                        value_type init_output = value_type{})
       : sampling_period_(sampling_period), output_(init_output)
   {
     set_time_constant(time_constant);
@@ -72,4 +72,4 @@ public:
   }
 };
 
-} // namespace emb
+} // namespace emb::filters

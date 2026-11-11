@@ -1,4 +1,4 @@
-#include <emb/filter/exponential_filter.hpp>
+#include <emb/filters/exponential.hpp>
 #include <emb/units.hpp>
 
 #include <cassert>
@@ -54,22 +54,22 @@ constexpr bool test_exponential_filter(Filter filter,
 }
 
 // Test with float
-static_assert(
-    test_exponential_filter(emb::exponential_filter<float, emb::units::sec_f32>(
-                                emb::units::sec_f32{0.01f},
-                                emb::units::sec_f32{0.1f}),
-                            0.0f));
+static_assert(test_exponential_filter(
+    emb::filters::exponential<float, emb::units::sec_f32>(
+        emb::units::sec_f32{0.01f},
+        emb::units::sec_f32{0.1f}),
+    0.0f));
 
-static_assert(
-    test_exponential_filter(emb::exponential_filter<float, emb::units::sec_f32>(
-                                emb::units::sec_f32{0.01f},
-                                emb::units::sec_f32{0.1f},
-                                3.14f),
-                            3.14f));
+static_assert(test_exponential_filter(
+    emb::filters::exponential<float, emb::units::sec_f32>(
+        emb::units::sec_f32{0.01f},
+        emb::units::sec_f32{0.1f},
+        3.14f),
+    3.14f));
 
 // Test with units
 static_assert(test_exponential_filter(
-    emb::exponential_filter<emb::units::erad_f32, emb::units::sec_f32>(
+    emb::filters::exponential<emb::units::erad_f32, emb::units::sec_f32>(
         emb::units::sec_f32{0.01f},
         emb::units::sec_f32{0.1f}),
     emb::units::erad_f32{0}));
@@ -78,7 +78,7 @@ static_assert(test_exponential_filter(
 consteval bool test_set_time_constant()
 {
   emb::units::sec_f32 const period{0.01f};
-  emb::exponential_filter<float, emb::units::sec_f32> filter{
+  emb::filters::exponential<float, emb::units::sec_f32> filter{
       period,
       emb::units::sec_f32{0.1f}};
   emb::units::sec_f32 const time_constant{0.02f};

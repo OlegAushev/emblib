@@ -1,4 +1,4 @@
-#include <emb/filter/median_filter.hpp>
+#include <emb/filters/median.hpp>
 #include <emb/units.hpp>
 
 #include <array>
@@ -58,29 +58,30 @@ constexpr bool test_median_filter(Filter filter,
 }
 
 // Test with int and various odd window sizes
-static_assert(test_median_filter(emb::median_filter<int, 1>{}, 0));
-static_assert(test_median_filter(emb::median_filter<int, 3>{}, 0));
-static_assert(test_median_filter(emb::median_filter<int, 5>{}, 0));
-static_assert(test_median_filter(emb::median_filter<int, 7>{}, 0));
+static_assert(test_median_filter(emb::filters::median<int, 1>{}, 0));
+static_assert(test_median_filter(emb::filters::median<int, 3>{}, 0));
+static_assert(test_median_filter(emb::filters::median<int, 5>{}, 0));
+static_assert(test_median_filter(emb::filters::median<int, 7>{}, 0));
 
-static_assert(test_median_filter(emb::median_filter<int, 1>{42}, 42));
-static_assert(test_median_filter(emb::median_filter<int, 3>{42}, 42));
-static_assert(test_median_filter(emb::median_filter<int, 5>{42}, 42));
+static_assert(test_median_filter(emb::filters::median<int, 1>{42}, 42));
+static_assert(test_median_filter(emb::filters::median<int, 3>{42}, 42));
+static_assert(test_median_filter(emb::filters::median<int, 5>{42}, 42));
 
 // Test with float
-static_assert(test_median_filter(emb::median_filter<float, 3>{}, 0.0f));
-static_assert(test_median_filter(emb::median_filter<float, 5>{}, 0.0f));
-static_assert(test_median_filter(emb::median_filter<float, 3>{3.14f}, 3.14f));
+static_assert(test_median_filter(emb::filters::median<float, 3>{}, 0.0f));
+static_assert(test_median_filter(emb::filters::median<float, 5>{}, 0.0f));
+static_assert(test_median_filter(emb::filters::median<float, 3>{3.14f}, 3.14f));
 
 // Test with units
-static_assert(test_median_filter(emb::median_filter<emb::units::erad_f32, 3>{},
-                                 emb::units::erad_f32{0}));
+static_assert(
+    test_median_filter(emb::filters::median<emb::units::erad_f32, 3>{},
+                       emb::units::erad_f32{0}));
 
 // Without an initial output, the output stays at zero until the window is full
 // and then starts at its median, wherever a lone outlier falls in the window.
 consteval bool test_wait(std::array<float, 5> const& input)
 {
-  emb::median_filter<float, 5> filter;
+  emb::filters::median<float, 5> filter;
   if (filter.output() != 0.0f || filter.full()) return false;
   for (auto i = 0uz; i + 1 < input.size(); ++i) {
     filter.update(input[i]);
@@ -97,7 +98,7 @@ static_assert(test_wait({20.0f, 20.0f, 20.0f, 20.0f, 1000.0f}));
 // A window of one is full with the first value.
 consteval bool test_wait_of_one_value()
 {
-  emb::median_filter<float, 1> filter;
+  emb::filters::median<float, 1> filter;
   if (filter.full()) return false;
   filter.update(8.0f);
   return filter.output() == 8.0f && filter.full();
@@ -109,8 +110,8 @@ static_assert(test_wait_of_one_value());
 // inputs, so the output moves away from it while the other still waits.
 consteval bool test_zero_is_not_none()
 {
-  emb::median_filter<float, 3> zero{0.0f};
-  emb::median_filter<float, 3> none;
+  emb::filters::median<float, 3> zero{0.0f};
+  emb::filters::median<float, 3> none;
   if (!zero.full() || none.full()) return false;
   for (auto input : std::array{10.0f, 20.0f}) {
     zero.update(input);
@@ -125,7 +126,7 @@ static_assert(test_zero_is_not_none());
 // inputs outnumber its copies.
 consteval bool test_reset_in_wait()
 {
-  emb::median_filter<float, 3> filter;
+  emb::filters::median<float, 3> filter;
   filter.update(1.0f);
   filter.reset(5.0f);
   if (filter.output() != 5.0f || !filter.full()) return false;

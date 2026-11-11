@@ -44,8 +44,8 @@ enum class fault : std::uint8_t {
 // a fault in every sample, and does not compile.
 //
 // To the filter of `Core`, a refused sample is one that was never taken: the
-// filter keeps its output over a run of refused samples, and an
-// `exponential_filter`, whose smoothing factor assumes its sampling period,
+// filter keeps its output over a run of refused samples, and a
+// `filters::exponential`, whose smoothing factor assumes its sampling period,
 // moves on from that output by one step per accepted sample. The verdict is
 // that of the last sample alone, and `validated` has no notion of time: a
 // policy over time, such as a run of faults long enough to report or a fault

@@ -1,16 +1,16 @@
 #pragma once
 
-#include <emb/filter/exponential_filter.hpp>
-#include <emb/filter/median_filter.hpp>
+#include <emb/filters/exponential.hpp>
+#include <emb/filters/median.hpp>
 
 #include <cstddef>
 
-namespace emb {
+namespace emb::filters {
 
-// The class template `median_exponential_filter` is a filter that connects a
+// The class template `median_exponential` is a filter that connects a
 // median of the last `WindowSize` values, which takes out a lone outlier if
 // `WindowSize` is at least 3, to an exponential stage, which smooths what is
-// left. The stages are a `median_filter` and an `exponential_filter`, and their
+// left. The stages are the filters `median` and `exponential`, and their
 // constraints and contracts apply to it, e.g. an odd `WindowSize` and the rule
 // on NaN of the median, and the smoothing factor and the time constant of the
 // exponential stage. `set_time_constant` applies to that stage.
@@ -26,24 +26,24 @@ namespace emb {
 // is not the same as passing none. `reset(value)` settles both stages on
 // `value` in the same way, and ends the wait for the window, if any.
 template<typename T, std::size_t WindowSize, typename Duration>
-class median_exponential_filter {
+class median_exponential {
 public:
   using value_type = T;
   using duration_type = Duration;
   static constexpr std::size_t window_size = WindowSize;
 private:
-  emb::median_filter<value_type, window_size> median_;
-  emb::exponential_filter<value_type, duration_type> smoother_;
+  median<value_type, window_size> median_;
+  exponential<value_type, duration_type> smoother_;
 public:
-  constexpr median_exponential_filter(duration_type sampling_period,
-                                      duration_type time_constant)
+  constexpr median_exponential(duration_type sampling_period,
+                               duration_type time_constant)
       : smoother_(sampling_period, time_constant)
   {
   }
 
-  constexpr median_exponential_filter(duration_type sampling_period,
-                                      duration_type time_constant,
-                                      value_type init_output)
+  constexpr median_exponential(duration_type sampling_period,
+                               duration_type time_constant,
+                               value_type init_output)
       : median_(init_output),
         smoother_(sampling_period, time_constant, init_output)
   {
@@ -78,4 +78,4 @@ public:
   }
 };
 
-} // namespace emb
+} // namespace emb::filters

@@ -1,8 +1,8 @@
 #pragma once
 
 #include <emb/container/circular_buffer.hpp>
-#include <emb/filter/exponential_filter.hpp>
-#include <emb/filter/median_filter.hpp>
+#include <emb/filters/exponential.hpp>
+#include <emb/filters/median.hpp>
 #include <emb/gpio.hpp>
 #include <emb/hall/calibration.hpp>
 #include <emb/hall/error.hpp>
@@ -67,7 +67,7 @@ private:
   // sectors recognized in the last two pollings
   emb::circular_buffer<sector, 2> sector_history_{};
 
-  emb::median_filter<emb::units::eradps_f32, 3> speedmedian_{
+  emb::filters::median<emb::units::eradps_f32, 3> speedmedian_{
       emb::units::eradps_f32{0}};
   emb::units::eradps_f32 speed_{0};
 
@@ -208,9 +208,9 @@ private:
         sectors[sector_from].width / transition_period * sign;
     speedmedian_.update(raw_speed);
     // each transition has its own step, so a filter lasts for one value
-    emb::exponential_filter smoother{transition_period,
-                                     conf_.speed_timeconstant,
-                                     speed_};
+    emb::filters::exponential smoother{transition_period,
+                                       conf_.speed_timeconstant,
+                                       speed_};
     smoother.update(speedmedian_.output());
     speed_ = smoother.output();
 

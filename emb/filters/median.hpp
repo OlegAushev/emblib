@@ -6,9 +6,9 @@
 #include <array>
 #include <cstddef>
 
-namespace emb {
+namespace emb::filters {
 
-// The class template `median_filter` is a filter whose output is the median of
+// The class template `median` is a filter whose output is the median of
 // the last `WindowSize` inputs, one per call to `update`. Default construction
 // leaves the window empty, and the filter waits for it: the output is `T{}`
 // until the inputs have filled the window, which `full()` tells. Construction
@@ -21,7 +21,7 @@ namespace emb {
 // contract of that function applies: the values in the window must not be NaN.
 template<typename T, std::size_t WindowSize>
   requires(emb::isodd(WindowSize))
-class median_filter {
+class median {
 public:
   using value_type = T;
   static constexpr std::size_t window_size = WindowSize;
@@ -31,9 +31,9 @@ private:
   bool full_ = false;
   value_type output_{};
 public:
-  constexpr median_filter() = default;
+  constexpr median() = default;
 
-  constexpr explicit median_filter(value_type init_output)
+  constexpr explicit median(value_type init_output)
   {
     reset(init_output);
   }
@@ -67,4 +67,4 @@ public:
   }
 };
 
-} // namespace emb
+} // namespace emb::filters

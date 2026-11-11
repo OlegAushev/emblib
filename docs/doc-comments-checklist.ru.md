@@ -31,18 +31,18 @@ emblib не попал. Такие файлы помечены «песочни�
   - [x] `backcalculation_pi_controller`, `clamping_pi_controller`
 - [x] `emb/expected.hpp`
   - [x] `EMB_TRY`
-- [x] `emb/filter/concepts.hpp`
-  - [x] `some_filter`
-- [x] `emb/filter/exponential_filter.hpp`
-  - [x] `exponential_filter`
-- [x] `emb/filter/median_exponential_filter.hpp`
-  - [x] `median_exponential_filter`
-- [x] `emb/filter/median_filter.hpp`
-  - [x] `median_filter`
-- [x] `emb/filter/moving_average_filter.hpp`
-  - [x] `moving_average_filter`
-- [x] `emb/filter/passthrough_filter.hpp`
-  - [x] `passthrough_filter`
+- [x] `emb/filters/concepts.hpp`
+  - [x] `filter`
+- [x] `emb/filters/exponential.hpp`
+  - [x] `exponential`
+- [x] `emb/filters/median.hpp`
+  - [x] `median`
+- [x] `emb/filters/median_exponential.hpp`
+  - [x] `median_exponential`
+- [x] `emb/filters/moving_average.hpp`
+  - [x] `moving_average`
+- [x] `emb/filters/passthrough.hpp`
+  - [x] `passthrough`
 - [x] `emb/foc/clarke.hpp`
   - [x] `clarke_inputs`
   - [x] `clarke_transform`

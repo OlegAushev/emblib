@@ -1,9 +1,9 @@
 #include <emb/sensor/validated.hpp>
 
 #include <emb/concurrent/spsc_queue.hpp>
-#include <emb/filter/concepts.hpp>
-#include <emb/filter/exponential_filter.hpp>
-#include <emb/filter/passthrough_filter.hpp>
+#include <emb/filters/concepts.hpp>
+#include <emb/filters/exponential.hpp>
+#include <emb/filters/passthrough.hpp>
 #include <emb/sensor/buffered.hpp>
 #include <emb/sensor/concepts.hpp>
 #include <emb/sensor/multichannel.hpp>
@@ -40,7 +40,7 @@ struct adc {
 using path = emb::sensor::signalpath<adc>;
 using core = emb::sensor::singlechannel<std::uint16_t,
                                         path,
-                                        emb::passthrough_filter<volt_f32>>;
+                                        emb::filters::passthrough<volt_f32>>;
 
 constexpr volt_f32 reading(std::uint16_t code)
 {
@@ -65,7 +65,7 @@ static_assert(
     std::same_as<channel::output_type, std::expected<volt_f32, fault>>);
 
 // like the sensor it wraps, it is no filter
-static_assert(!emb::some_filter<channel>);
+static_assert(!emb::filters::filter<channel>);
 
 // an output has no order, so a check against a threshold takes the value out
 // first, where an optional would answer the check without a value
@@ -78,7 +78,7 @@ static_assert(orders_against<std::optional<volt_f32>, volt_f32>);
 
 constexpr bool test_no_output_before_the_first_sample()
 {
-  using smoothing = emb::exponential_filter<volt_f32, sec_f32>;
+  using smoothing = emb::filters::exponential<volt_f32, sec_f32>;
   using smoothed = emb::sensor::singlechannel<std::uint16_t, path, smoothing>;
 
   // even a filter that starts at an initial output has read nothing yet
@@ -114,7 +114,7 @@ constexpr bool test_refused_sample_stops_short_of_the_core()
 // the same filter fed the accepted samples alone.
 constexpr bool test_filter_sees_accepted_samples_alone()
 {
-  using smoothing = emb::exponential_filter<volt_f32, sec_f32>;
+  using smoothing = emb::filters::exponential<volt_f32, sec_f32>;
   using smoothed = emb::sensor::singlechannel<std::uint16_t, path, smoothing>;
 
   smoothing const start{sec_f32{0.25f}, sec_f32{1.f}};
