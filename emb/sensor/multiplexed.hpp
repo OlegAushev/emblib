@@ -21,7 +21,7 @@ namespace emb::sensor {
 // and how long it settles, is the producer's business.
 //
 // The sources may be different sensor types but they share the path, so they
-// share sample_type, and they share the producer and consumer, so they share
+// share input_type, and they share the producer and consumer, so they share
 // sensor_category.
 // Two independent kinds of uniformity are detected and exploited:
 //   - uniform_sensors: every source is the same type. Sources live in an
@@ -39,7 +39,7 @@ namespace emb::sensor {
 template<typename... Sensors>
   requires(sizeof...(Sensors) > 0)
        && (some_singlechannel_sensor<Sensors> && ...)
-       && all_same<typename Sensors::sample_type...>
+       && all_same<typename Sensors::input_type...>
        && all_same<typename Sensors::sensor_category...>
 class multiplexed {
   using first_type = nth_type_t<0, Sensors...>;
@@ -52,7 +52,7 @@ public:
   template<std::size_t I>
   using sensor_type = nth_type_t<I, Sensors...>;
 
-  using sample_type = typename first_type::sample_type;
+  using input_type = typename first_type::input_type;
   // Forwarded for introspection; multiplexed itself is neither an immediate
   // nor a deferred sensor (see above).
   using sensor_category = typename first_type::sensor_category;
@@ -126,7 +126,7 @@ public:
   // once by immediate sources (update) and parked by deferred ones (push).
   // Uniform sources are indexed directly, otherwise selected through
   // visit_at's compare chain; `source` must be below source_count.
-  constexpr void update(std::size_t source, sample_type sample)
+  constexpr void update(std::size_t source, input_type sample)
     requires(some_immediate_sensor<Sensors> && ...)
   {
     visit_at(sensors_, source, [&](auto& sensor) {
@@ -134,7 +134,7 @@ public:
     });
   }
 
-  constexpr void push(std::size_t source, sample_type sample)
+  constexpr void push(std::size_t source, input_type sample)
     requires(some_deferred_sensor<Sensors> && ...)
   {
     visit_at(sensors_, source, [&](auto& sensor) {

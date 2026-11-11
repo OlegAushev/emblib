@@ -15,19 +15,19 @@ concept some_spsc_queue = requires(Q q, typename Q::value_type v) {
 };
 
 // Sensor categories, on one axis: when conversion completes. An immediate
-// sensor converts and filters inside update(sample), in the caller's context;
-// a deferred sensor parks the sample in push(sample) and converts later, in a
+// sensor converts and filters inside update(input), in the caller's context;
+// a deferred sensor parks the input in push(input) and converts later, in a
 // consumer-side update(). The category is declared by the type's author.
 struct immediate_tag {};
 struct deferred_tag {};
 
-// Any sensor surface: typed sample/output and a declared category, which sets
-// the verbs that take samples. sample_type is what a producer hands over and
-// what a buffered queue stores -- one scalar value for singlechannel, one
-// aligned frame of values for multichannel.
+// Any sensor surface: typed input/output and a declared category, which sets
+// the verbs that take the input. input_type is what a producer hands over and
+// what a buffered queue stores -- one sample for singlechannel, one aligned
+// frame of samples for multichannel.
 template<typename S>
 concept some_sensor = requires {
-  typename S::sample_type;
+  typename S::input_type;
   typename S::output_type;
   typename S::sensor_category;
 };
@@ -36,16 +36,14 @@ template<typename S>
 concept some_immediate_sensor =
     some_sensor<S>
     && std::same_as<typename S::sensor_category, immediate_tag>
-    && requires(S s, typename S::sample_type const& sample) {
-         s.update(sample);
-       };
+    && requires(S s, typename S::input_type const& input) { s.update(input); };
 
 template<typename S>
 concept some_deferred_sensor =
     some_sensor<S>
     && std::same_as<typename S::sensor_category, deferred_tag>
-    && requires(S s, typename S::sample_type const& sample) {
-         s.push(sample);
+    && requires(S s, typename S::input_type const& input) {
+         s.push(input);
          s.update();
        };
 

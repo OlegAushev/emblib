@@ -21,7 +21,7 @@ namespace emb::sensor {
 //
 // The channels may be different core types -- inputs with different
 // transducer models behind one ADC scan -- but they share the frame, so they
-// share sample_type, and they make up one sensor, so they share output_type:
+// share input_type, and they make up one sensor, so they share output_type:
 // the frame reads back as one std::array whatever the channels are.
 // Identical channel types (multichannel_n) live in an array and are
 // addressed by index directly, with core(channel) available; otherwise
@@ -31,7 +31,7 @@ template<typename... Cores>
   requires(sizeof...(Cores) > 0)
        && (some_singlechannel_sensor<Cores> && ...)
        && (some_immediate_sensor<Cores> && ...)
-       && all_same<typename Cores::sample_type...>
+       && all_same<typename Cores::input_type...>
        && all_same<typename Cores::output_type...>
 class multichannel {
   using first_type = nth_type_t<0, Cores...>;
@@ -42,8 +42,7 @@ public:
   template<std::size_t I>
   using core_type = nth_type_t<I, Cores...>;
 
-  using sample_type =
-      std::array<typename first_type::sample_type, channel_count>;
+  using input_type = std::array<typename first_type::input_type, channel_count>;
   using output_type = typename first_type::output_type;
   using outputs_type = std::array<output_type, channel_count>;
   using sensor_category = immediate_tag;
@@ -106,10 +105,10 @@ public:
     return cores_[channel];
   }
 
-  constexpr void update(sample_type const& sample)
+  constexpr void update(input_type const& frame)
   {
     unroll<channel_count>(
-        [&]<std::size_t I>() { std::get<I>(cores_).update(sample[I]); });
+        [&]<std::size_t I>() { std::get<I>(cores_).update(frame[I]); });
   }
 
   // `channel` must be below channel_count.

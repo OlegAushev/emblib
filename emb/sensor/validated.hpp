@@ -35,7 +35,7 @@ enum class fault : std::uint8_t {
 // sample, even if the filter of `Core` starts at an initial output, which
 // `core().output()` still returns.
 //
-// `Validator` is called as const with a const lvalue of `sample_type` and
+// `Validator` is called as const with a const lvalue of `input_type` and
 // returns `std::optional<fault>`, the verdict on the sample: empty if the
 // measurement chain gives such a sample while healthy, and otherwise the
 // fault that the sample shows. The call is const, so a validator judges each
@@ -75,14 +75,14 @@ enum class fault : std::uint8_t {
 template<typename Validator, typename Core>
   requires some_immediate_sensor<Core>
         && some_singlechannel_sensor<Core>
-        && std::invocable<Validator const&, typename Core::sample_type const&>
+        && std::invocable<Validator const&, typename Core::input_type const&>
         && std::same_as<std::invoke_result_t<Validator const&,
-                                             typename Core::sample_type const&>,
+                                             typename Core::input_type const&>,
                         std::optional<fault>>
 class validated {
 public:
   using core_type = Core;
-  using sample_type = typename Core::sample_type;
+  using input_type = typename Core::input_type;
   using output_type = std::expected<typename Core::output_type, fault>;
   using sensor_category = immediate_tag;
 private:
@@ -163,7 +163,7 @@ public:
     return core_.output();
   }
 
-  constexpr void update(sample_type sample)
+  constexpr void update(input_type sample)
   {
     fault_ = validator_(sample);
     if (!fault_) {

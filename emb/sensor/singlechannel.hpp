@@ -27,7 +27,7 @@ template<typename Sample, typename Converter, typename Filter>
                                typename Filter::value_type>
 class singlechannel {
 public:
-  using sample_type = Sample;
+  using input_type = Sample;
   using output_type = typename Filter::value_type;
   using sensor_category = immediate_tag;
 private:
@@ -66,7 +66,7 @@ public:
     return filter_.output();
   }
 
-  constexpr void update(sample_type sample)
+  constexpr void update(input_type sample)
   {
     filter_.update(converter_(sample));
   }

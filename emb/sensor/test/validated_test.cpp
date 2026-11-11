@@ -59,7 +59,7 @@ inline constexpr std::uint16_t open_code{4000};
 static_assert(emb::sensor::some_immediate_sensor<channel>);
 static_assert(emb::sensor::some_singlechannel_sensor<channel>);
 static_assert(std::same_as<channel::core_type, core>);
-static_assert(std::same_as<channel::sample_type, std::uint16_t>);
+static_assert(std::same_as<channel::input_type, std::uint16_t>);
 static_assert(
     std::same_as<channel::output_type, std::expected<volt_f32, fault>>);
 
@@ -181,13 +181,13 @@ constexpr bool test_stages_of_the_core()
 // any immediate single-channel sensor serves as a core, and one without
 // stages to reach leaves validated without them too
 struct counter {
-  using sample_type = std::uint16_t;
+  using input_type = std::uint16_t;
   using output_type = int;
   using sensor_category = emb::sensor::immediate_tag;
 
   int count = 0;
 
-  constexpr void update(sample_type)
+  constexpr void update(input_type)
   {
     ++count;
   }

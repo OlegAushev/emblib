@@ -13,17 +13,17 @@ namespace emb::sensor {
 // from the consuming context. update() drains the queue through a sensor core.
 // The core is any immediate sensor -- singlechannel for one channel,
 // multichannel for an aligned N-channel frame -- and the queue's element
-// type must match the core's sample_type (a scalar value, or a whole frame).
+// type must match the core's input_type (a sample, or a whole frame).
 // buffered takes an immediate sensor and makes it deferred, so it cannot
 // nest: the outer update() would never drive the inner one.
 template<typename Queue, typename Core>
   requires some_spsc_queue<Queue>
         && some_immediate_sensor<Core>
-        && std::same_as<typename Queue::value_type, typename Core::sample_type>
+        && std::same_as<typename Queue::value_type, typename Core::input_type>
 class buffered {
 public:
   using core_type = Core;
-  using sample_type = typename Core::sample_type;
+  using input_type = typename Core::input_type;
   using output_type = typename Core::output_type;
   using sensor_category = deferred_tag;
 private:
@@ -69,7 +69,7 @@ public:
   }
 
   // Producer-side (ISR). On overflow the newest sample is dropped.
-  void push(sample_type sample)
+  void push(input_type sample)
   {
     auto _ = queue_.try_push(std::move(sample));
   }
