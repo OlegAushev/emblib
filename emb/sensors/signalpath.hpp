@@ -2,7 +2,7 @@
 
 #include <emb/signal/path.hpp>
 
-namespace emb::sensor {
+namespace emb::sensors {
 
 // A signal path read the measuring way: calling one turns a raw code into the
 // quantity at the head of the path, which is the plain call that singlechannel
@@ -17,4 +17,4 @@ struct signalpath : signal::path<Stages...> {
   }
 };
 
-} // namespace emb::sensor
+} // namespace emb::sensors

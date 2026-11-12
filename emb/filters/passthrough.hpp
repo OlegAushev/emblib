@@ -5,7 +5,7 @@ namespace emb::filters {
 // The class template `passthrough` is a filter whose output is its last
 // input. Before the first `update`, the output is the value passed to the
 // constructor, or `T{}` if none was passed. Where no filtering is wanted, it
-// serves as the filter that `sensor::singlechannel` requires.
+// serves as the filter that `sensors::singlechannel` requires.
 template<typename T>
 class passthrough {
 public:

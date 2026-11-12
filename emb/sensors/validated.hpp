@@ -1,6 +1,6 @@
 #pragma once
 
-#include <emb/sensor/concepts.hpp>
+#include <emb/sensors/concepts.hpp>
 
 #include <concepts>
 #include <cstdint>
@@ -9,7 +9,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace emb::sensor {
+namespace emb::sensors {
 
 // The enumeration `fault` names why a `validated` sensor has no output to
 // give: `no_sample` before its first sample, and `below` or `above` when its
@@ -73,8 +73,8 @@ enum class fault : std::uint8_t {
 // belongs to the context that runs `update(sample)`, or to a quiescent
 // sensor.
 template<typename Validator, typename Core>
-  requires some_immediate_sensor<Core>
-        && some_singlechannel_sensor<Core>
+  requires immediate_sensor<Core>
+        && singlechannel_sensor<Core>
         && std::invocable<Validator const&, typename Core::input_type const&>
         && std::same_as<std::invoke_result_t<Validator const&,
                                              typename Core::input_type const&>,
@@ -172,4 +172,4 @@ public:
   }
 };
 
-} // namespace emb::sensor
+} // namespace emb::sensors

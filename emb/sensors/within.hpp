@@ -1,12 +1,12 @@
 #pragma once
 
-#include <emb/sensor/validated.hpp>
+#include <emb/sensors/validated.hpp>
 
 #include <algorithm>
 #include <concepts>
 #include <optional>
 
-namespace emb::sensor {
+namespace emb::sensors {
 
 // The class template `bounds` holds two bounds, `min` and `max`, both
 // included: those of the samples that a measurement chain gives while it is
@@ -75,4 +75,4 @@ struct within {
   }
 };
 
-} // namespace emb::sensor
+} // namespace emb::sensors

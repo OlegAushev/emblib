@@ -1,12 +1,12 @@
 #pragma once
 
-#include <emb/sensor/concepts.hpp>
+#include <emb/sensors/concepts.hpp>
 
 #include <concepts>
 #include <type_traits>
 #include <utility>
 
-namespace emb::sensor {
+namespace emb::sensors {
 
 // Single-channel transport-free sensor core: conversion and filtering run
 // immediately in the caller's context (e.g. the same ISR that produces the
@@ -72,4 +72,4 @@ public:
   }
 };
 
-} // namespace emb::sensor
+} // namespace emb::sensors

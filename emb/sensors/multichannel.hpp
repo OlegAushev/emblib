@@ -1,7 +1,7 @@
 #pragma once
 
 #include <emb/meta.hpp>
-#include <emb/sensor/concepts.hpp>
+#include <emb/sensors/concepts.hpp>
 
 #include <array>
 #include <concepts>
@@ -10,7 +10,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace emb::sensor {
+namespace emb::sensors {
 
 // N-channel sensor core: an aggregate of N independent singlechannel cores
 // driven by one acquisition frame. Adds only frame-synchronous updates, so
@@ -29,8 +29,8 @@ namespace emb::sensor {
 // selects through a compare chain.
 template<typename... Cores>
   requires(sizeof...(Cores) > 0)
-       && (some_singlechannel_sensor<Cores> && ...)
-       && (some_immediate_sensor<Cores> && ...)
+       && (singlechannel_sensor<Cores> && ...)
+       && (immediate_sensor<Cores> && ...)
        && all_same<typename Cores::input_type...>
        && all_same<typename Cores::output_type...>
 class multichannel {
@@ -141,4 +141,4 @@ template<typename Core, std::size_t N>
   requires(N > 0)
 using multichannel_n = replicate_t<multichannel, Core, N>;
 
-} // namespace emb::sensor
+} // namespace emb::sensors

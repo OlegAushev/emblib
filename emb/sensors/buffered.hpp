@@ -1,13 +1,13 @@
 #pragma once
 
-#include <emb/sensor/concepts.hpp>
-#include <emb/sensor/singlechannel.hpp>
+#include <emb/sensors/concepts.hpp>
+#include <emb/sensors/singlechannel.hpp>
 
 #include <concepts>
 #include <cstddef>
 #include <utility>
 
-namespace emb::sensor {
+namespace emb::sensors {
 
 // Buffered sensor: an SPSC queue decouples the producing context
 // from the consuming context. update() drains the queue through a sensor core.
@@ -18,7 +18,7 @@ namespace emb::sensor {
 // nest: the outer update() would never drive the inner one.
 template<typename Queue, typename Core>
   requires some_spsc_queue<Queue>
-        && some_immediate_sensor<Core>
+        && immediate_sensor<Core>
         && std::same_as<typename Queue::value_type, typename Core::input_type>
 class buffered {
 public:
@@ -83,4 +83,4 @@ public:
   }
 };
 
-} // namespace emb::sensor
+} // namespace emb::sensors

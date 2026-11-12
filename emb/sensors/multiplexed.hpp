@@ -1,7 +1,7 @@
 #pragma once
 
 #include <emb/meta.hpp>
-#include <emb/sensor/concepts.hpp>
+#include <emb/sensors/concepts.hpp>
 
 #include <array>
 #include <concepts>
@@ -10,7 +10,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace emb::sensor {
+namespace emb::sensors {
 
 // N-source sensor over one time-shared acquisition path, e.g. an analog
 // multiplexer in front of a single ADC channel: an aggregate of N
@@ -38,7 +38,7 @@ namespace emb::sensor {
 // update(). A single source is a path wired straight to it.
 template<typename... Sensors>
   requires(sizeof...(Sensors) > 0)
-       && (some_singlechannel_sensor<Sensors> && ...)
+       && (singlechannel_sensor<Sensors> && ...)
        && all_same<typename Sensors::input_type...>
        && all_same<typename Sensors::sensor_category...>
 class multiplexed {
@@ -127,7 +127,7 @@ public:
   // Uniform sources are indexed directly, otherwise selected through
   // visit_at's compare chain; `source` must be below source_count.
   constexpr void update(std::size_t source, input_type sample)
-    requires(some_immediate_sensor<Sensors> && ...)
+    requires(immediate_sensor<Sensors> && ...)
   {
     visit_at(sensors_, source, [&](auto& sensor) {
       sensor.update(std::move(sample));
@@ -135,7 +135,7 @@ public:
   }
 
   constexpr void push(std::size_t source, input_type sample)
-    requires(some_deferred_sensor<Sensors> && ...)
+    requires(deferred_sensor<Sensors> && ...)
   {
     visit_at(sensors_, source, [&](auto& sensor) {
       sensor.push(std::move(sample));
@@ -145,7 +145,7 @@ public:
   // Consumer-side, present when the per-source sensors are deferred
   // (buffered): drains every source.
   constexpr void update()
-    requires(some_deferred_sensor<Sensors> && ...)
+    requires(deferred_sensor<Sensors> && ...)
   {
     if constexpr (uniform_sensors) {
       for (auto& sensor : sensors_) {
@@ -187,4 +187,4 @@ template<typename Sensor, std::size_t N>
   requires(N > 0)
 using multiplexed_n = replicate_t<multiplexed, Sensor, N>;
 
-} // namespace emb::sensor
+} // namespace emb::sensors

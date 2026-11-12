@@ -340,15 +340,15 @@ emblib не попал. Такие файлы помечены «песочни�
 - [ ] `emb/pipe.hpp`
 - [ ] `emb/scheduler/basic_scheduler.hpp`
 - [ ] `emb/scope.hpp`
-- [ ] `emb/sensor.hpp`
-- [ ] `emb/sensor/buffered.hpp`
-- [ ] `emb/sensor/concepts.hpp`
-- [ ] `emb/sensor/multichannel.hpp`
-- [ ] `emb/sensor/multiplexed.hpp`
-- [ ] `emb/sensor/signalpath.hpp`
-- [ ] `emb/sensor/singlechannel.hpp`
-- [ ] `emb/sensor/validated.hpp` — вручную 2026-11-11: `fault`, `validated`
-- [ ] `emb/sensor/within.hpp` — вручную 2026-11-11: `bounds`, `bounds_of`,
+- [ ] `emb/sensors.hpp`
+- [ ] `emb/sensors/buffered.hpp`
+- [ ] `emb/sensors/concepts.hpp`
+- [ ] `emb/sensors/multichannel.hpp`
+- [ ] `emb/sensors/multiplexed.hpp`
+- [ ] `emb/sensors/signalpath.hpp`
+- [ ] `emb/sensors/singlechannel.hpp`
+- [ ] `emb/sensors/validated.hpp` — вручную 2026-11-11: `fault`, `validated`
+- [ ] `emb/sensors/within.hpp` — вручную 2026-11-11: `bounds`, `bounds_of`,
   `within`
 - [ ] `emb/spi.hpp`
 - [ ] `emb/three_phase.hpp`

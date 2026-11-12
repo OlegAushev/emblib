@@ -1,8 +1,8 @@
-#include <emb/sensor/signalpath.hpp>
+#include <emb/sensors/signalpath.hpp>
 
 #include <emb/filters/passthrough.hpp>
 #include <emb/math.hpp>
-#include <emb/sensor/singlechannel.hpp>
+#include <emb/sensors/singlechannel.hpp>
 #include <emb/signal/bind.hpp>
 #include <emb/signal/path.hpp>
 #include <emb/signal/proportional.hpp>
@@ -49,7 +49,7 @@ struct zero_trim {
 };
 
 using channel_path =
-    emb::sensor::signalpath<emb::signal::bind<transducer>, adc>;
+    emb::sensors::signalpath<emb::signal::bind<transducer>, adc>;
 
 // a sensor takes it as it is, with nothing wrapped around it: calling it gives
 // the quantity at the head of the path
@@ -61,7 +61,7 @@ static_assert(
 // filter of another quantity
 template<typename Converter, typename Filter>
 constexpr bool channels = requires {
-  typename emb::sensor::singlechannel<std::uint16_t, Converter, Filter>;
+  typename emb::sensors::singlechannel<std::uint16_t, Converter, Filter>;
 };
 
 static_assert(channels<channel_path, emb::filters::passthrough<amp_f32>>);
@@ -89,9 +89,9 @@ constexpr bool test_call_is_the_measuring_direction()
 
 constexpr bool test_drives_a_channel()
 {
-  emb::sensor::singlechannel<std::uint16_t,
-                             channel_path,
-                             emb::filters::passthrough<amp_f32>>
+  emb::sensors::singlechannel<std::uint16_t,
+                              channel_path,
+                              emb::filters::passthrough<amp_f32>>
       channel;
 
   constexpr auto code = channel_path{}.forward(amp_f32{300.f});
@@ -104,12 +104,12 @@ constexpr bool test_drives_a_channel()
 constexpr bool test_stateful_head()
 {
   // stages are handed in by value, exactly as the path underneath takes them
-  emb::sensor::signalpath<zero_trim, emb::signal::bind<transducer>, adc> const
+  emb::sensors::signalpath<zero_trim, emb::signal::bind<transducer>, adc> const
       trimmed{zero_trim{amp_f32{5.f}}, {}, {}};
 
-  constexpr emb::sensor::signalpath<zero_trim,
-                                    emb::signal::bind<transducer>,
-                                    adc>
+  constexpr emb::sensors::signalpath<zero_trim,
+                                     emb::signal::bind<transducer>,
+                                     adc>
       untrimmed;
 
   assert(trimmed.forward(amp_f32{0.f}) == untrimmed.forward(amp_f32{5.f}));

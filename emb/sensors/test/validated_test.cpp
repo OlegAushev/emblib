@@ -1,16 +1,16 @@
-#include <emb/sensor/validated.hpp>
+#include <emb/sensors/validated.hpp>
 
 #include <emb/concurrent/spsc_queue.hpp>
 #include <emb/filters/concepts.hpp>
 #include <emb/filters/exponential.hpp>
 #include <emb/filters/passthrough.hpp>
-#include <emb/sensor/buffered.hpp>
-#include <emb/sensor/concepts.hpp>
-#include <emb/sensor/multichannel.hpp>
-#include <emb/sensor/multiplexed.hpp>
-#include <emb/sensor/signalpath.hpp>
-#include <emb/sensor/singlechannel.hpp>
-#include <emb/sensor/within.hpp>
+#include <emb/sensors/buffered.hpp>
+#include <emb/sensors/concepts.hpp>
+#include <emb/sensors/multichannel.hpp>
+#include <emb/sensors/multiplexed.hpp>
+#include <emb/sensors/signalpath.hpp>
+#include <emb/sensors/singlechannel.hpp>
+#include <emb/sensors/within.hpp>
 #include <emb/units.hpp>
 
 #include <array>
@@ -22,7 +22,7 @@
 namespace {
 
 using namespace emb::units;
-using emb::sensor::fault;
+using emb::sensors::fault;
 
 // a 12-bit converter over a 3.3 V reference, read as the pin voltage
 struct adc {
@@ -37,10 +37,10 @@ struct adc {
   }
 };
 
-using path = emb::sensor::signalpath<adc>;
-using core = emb::sensor::singlechannel<std::uint16_t,
-                                        path,
-                                        emb::filters::passthrough<volt_f32>>;
+using path = emb::sensors::signalpath<adc>;
+using core = emb::sensors::singlechannel<std::uint16_t,
+                                         path,
+                                         emb::filters::passthrough<volt_f32>>;
 
 constexpr volt_f32 reading(std::uint16_t code)
 {
@@ -49,16 +49,16 @@ constexpr volt_f32 reading(std::uint16_t code)
 
 // the codes of a healthy chain: a shorted or an open sensor drives the pin
 // towards a rail, out of them
-inline constexpr emb::sensor::bounds<std::uint16_t> healthy{100, 3900};
-using guard = emb::sensor::within<healthy>;
-using channel = emb::sensor::validated<guard, core>;
+inline constexpr emb::sensors::bounds<std::uint16_t> healthy{100, 3900};
+using guard = emb::sensors::within<healthy>;
+using channel = emb::sensors::validated<guard, core>;
 
 inline constexpr std::uint16_t healthy_code{2000};
 inline constexpr std::uint16_t shorted_code{50};
 inline constexpr std::uint16_t open_code{4000};
 
-static_assert(emb::sensor::some_immediate_sensor<channel>);
-static_assert(emb::sensor::some_singlechannel_sensor<channel>);
+static_assert(emb::sensors::immediate_sensor<channel>);
+static_assert(emb::sensors::singlechannel_sensor<channel>);
 static_assert(std::same_as<channel::core_type, core>);
 static_assert(std::same_as<channel::input_type, std::uint16_t>);
 static_assert(
@@ -79,10 +79,10 @@ static_assert(orders_against<std::optional<volt_f32>, volt_f32>);
 constexpr bool test_no_output_before_the_first_sample()
 {
   using smoothing = emb::filters::exponential<volt_f32, sec_f32>;
-  using smoothed = emb::sensor::singlechannel<std::uint16_t, path, smoothing>;
+  using smoothed = emb::sensors::singlechannel<std::uint16_t, path, smoothing>;
 
   // even a filter that starts at an initial output has read nothing yet
-  emb::sensor::validated<guard, smoothed> const c{
+  emb::sensors::validated<guard, smoothed> const c{
       path{},
       smoothing{sec_f32{0.001f}, sec_f32{0.01f}, volt_f32{1.f}}};
   return c.output() == std::unexpected(fault::no_sample)
@@ -115,10 +115,10 @@ constexpr bool test_refused_sample_stops_short_of_the_core()
 constexpr bool test_filter_sees_accepted_samples_alone()
 {
   using smoothing = emb::filters::exponential<volt_f32, sec_f32>;
-  using smoothed = emb::sensor::singlechannel<std::uint16_t, path, smoothing>;
+  using smoothed = emb::sensors::singlechannel<std::uint16_t, path, smoothing>;
 
   smoothing const start{sec_f32{0.25f}, sec_f32{1.f}};
-  emb::sensor::validated<guard, smoothed> c{path{}, start};
+  emb::sensors::validated<guard, smoothed> c{path{}, start};
   smoothing alone = start;
 
   for (std::uint16_t const code : {std::uint16_t{1000},
@@ -138,7 +138,7 @@ constexpr bool test_filter_sees_accepted_samples_alone()
 
 // a validator with bounds of its own, which can change at run time
 struct adjustable {
-  emb::sensor::bounds<std::uint16_t> bounds;
+  emb::sensors::bounds<std::uint16_t> bounds;
 
   constexpr std::optional<fault> operator()(std::uint16_t code) const
   {
@@ -150,7 +150,7 @@ struct adjustable {
 
 constexpr bool test_bounds_held_by_the_validator()
 {
-  emb::sensor::validated<adjustable, core> c{adjustable{{100, 200}}, core{}};
+  emb::sensors::validated<adjustable, core> c{adjustable{{100, 200}}, core{}};
 
   c.update(std::uint16_t{300});
   if (c.output() != std::unexpected(fault::above)) return false;
@@ -184,7 +184,7 @@ constexpr bool test_stages_of_the_core()
 struct counter {
   using input_type = std::uint16_t;
   using output_type = int;
-  using sensor_category = emb::sensor::immediate_tag;
+  using sensor_category = emb::sensors::immediate_tag;
 
   int count = 0;
 
@@ -199,12 +199,12 @@ struct counter {
   }
 };
 
-static_assert(!has_converter<emb::sensor::validated<guard, counter>>);
-static_assert(!has_filter<emb::sensor::validated<guard, counter>>);
+static_assert(!has_converter<emb::sensors::validated<guard, counter>>);
+static_assert(!has_filter<emb::sensors::validated<guard, counter>>);
 
 constexpr bool test_core_counts_accepted_samples()
 {
-  emb::sensor::validated<guard, counter> c;
+  emb::sensors::validated<guard, counter> c;
   for (std::uint16_t const code :
        {shorted_code, healthy_code, open_code, std::uint16_t{1500}}) {
     c.update(code);
@@ -213,7 +213,7 @@ constexpr bool test_core_counts_accepted_samples()
 }
 
 // a frame takes a frame of samples and gives a frame of outputs
-using frame_of_four = emb::sensor::multichannel_n<channel, 4>;
+using frame_of_four = emb::sensors::multichannel_n<channel, 4>;
 
 static_assert(
     std::same_as<frame_of_four::input_type, std::array<std::uint16_t, 4>>);
@@ -223,7 +223,7 @@ static_assert(std::same_as<frame_of_four::output_type,
 // in a frame, each channel judges its own sample of it
 constexpr bool test_channels_of_a_frame()
 {
-  emb::sensor::multichannel_n<channel, 4> frame;
+  emb::sensors::multichannel_n<channel, 4> frame;
   frame.update({shorted_code, healthy_code, open_code, std::uint16_t{1500}});
 
   auto const outputs = frame.outputs();
@@ -235,7 +235,7 @@ constexpr bool test_channels_of_a_frame()
 }
 
 // a multiplexer takes the sample of one source and gives the outputs of all
-using three_sources = emb::sensor::multiplexed_n<channel, 3>;
+using three_sources = emb::sensors::multiplexed_n<channel, 3>;
 
 static_assert(std::same_as<three_sources::input_type, std::uint16_t>);
 static_assert(std::same_as<three_sources::output_type,
@@ -245,7 +245,7 @@ static_assert(std::same_as<three_sources::output_type,
 // selected yet has read nothing
 constexpr bool test_sources_of_a_multiplexer()
 {
-  emb::sensor::multiplexed_n<channel, 3> sources;
+  emb::sensors::multiplexed_n<channel, 3> sources;
   sources.update(0uz, healthy_code);
   sources.update(1uz, open_code);
   return sources.output(0uz) == reading(healthy_code)
@@ -266,24 +266,24 @@ static_assert(test_sources_of_a_multiplexer());
 // queued, the samples are judged as update() drains them, where they are
 // converted
 using queue = emb::spsc_queue<std::uint16_t, 4>;
-using queued = emb::sensor::buffered<queue, channel>;
+using queued = emb::sensors::buffered<queue, channel>;
 
-static_assert(emb::sensor::some_deferred_sensor<queued>);
+static_assert(emb::sensors::deferred_sensor<queued>);
 static_assert(
     std::same_as<queued::output_type, std::expected<volt_f32, fault>>);
-static_assert(emb::sensor::some_deferred_sensor<
-              emb::sensor::multiplexed_n<queued, 3>::sensor_type<0>>);
+static_assert(emb::sensors::deferred_sensor<
+              emb::sensors::multiplexed_n<queued, 3>::sensor_type<0>>);
 
 // It wraps the sensor that converts and nothing around it: a buffered one
 // would have it judge a sample when it is parked, and neither a frame nor a
 // multiplexer is a single channel.
 template<typename V, typename C>
-constexpr bool wraps = requires { typename emb::sensor::validated<V, C>; };
+constexpr bool wraps = requires { typename emb::sensors::validated<V, C>; };
 
 static_assert(wraps<guard, core>);
-static_assert(!wraps<guard, emb::sensor::buffered<queue, core>>);
-static_assert(!wraps<guard, emb::sensor::multichannel_n<core, 2>>);
-static_assert(!wraps<guard, emb::sensor::multiplexed_n<core, 2>>);
+static_assert(!wraps<guard, emb::sensors::buffered<queue, core>>);
+static_assert(!wraps<guard, emb::sensors::multichannel_n<core, 2>>);
+static_assert(!wraps<guard, emb::sensors::multiplexed_n<core, 2>>);
 
 // A validator returns std::optional<fault> itself: one returning a bare fault,
 // which converts to one, would find a fault in every sample. It is called as
@@ -313,7 +313,7 @@ static_assert(!wraps<with_history, core>);
 // that judge their samples with channels that do not
 template<typename... Cores>
 constexpr bool frames =
-    requires { typename emb::sensor::multichannel<Cores...>; };
+    requires { typename emb::sensors::multichannel<Cores...>; };
 
 static_assert(frames<channel, channel>);
 static_assert(!frames<channel, core>);

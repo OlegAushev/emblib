@@ -5,7 +5,7 @@
 #include <concepts>
 #include <optional>
 
-namespace emb::sensor {
+namespace emb::sensors {
 
 template<typename Q>
 concept some_spsc_queue = requires(Q q, typename Q::value_type v) {
@@ -26,21 +26,21 @@ struct deferred_tag {};
 // what a buffered queue stores -- one sample for singlechannel, one aligned
 // frame of samples for multichannel.
 template<typename S>
-concept some_sensor = requires {
+concept sensor = requires {
   typename S::input_type;
   typename S::output_type;
   typename S::sensor_category;
 };
 
 template<typename S>
-concept some_immediate_sensor =
-    some_sensor<S>
+concept immediate_sensor =
+    sensor<S>
     && std::same_as<typename S::sensor_category, immediate_tag>
     && requires(S s, typename S::input_type const& input) { s.update(input); };
 
 template<typename S>
-concept some_deferred_sensor =
-    some_sensor<S>
+concept deferred_sensor =
+    sensor<S>
     && std::same_as<typename S::sensor_category, deferred_tag>
     && requires(S s, typename S::input_type const& input) {
          s.push(input);
@@ -48,11 +48,11 @@ concept some_deferred_sensor =
        };
 
 template<typename S>
-concept some_singlechannel_sensor =
-    some_sensor<S> && requires(S const& s) { s.output(); };
+concept singlechannel_sensor =
+    sensor<S> && requires(S const& s) { s.output(); };
 
 template<typename S>
-concept some_multichannel_sensor =
-    some_sensor<S> && requires(S const& s) { s.outputs(); };
+concept multichannel_sensor =
+    sensor<S> && requires(S const& s) { s.outputs(); };
 
-} // namespace emb::sensor
+} // namespace emb::sensors

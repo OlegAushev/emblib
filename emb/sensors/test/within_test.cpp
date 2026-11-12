@@ -1,7 +1,7 @@
-#include <emb/sensor/within.hpp>
+#include <emb/sensors/within.hpp>
 
-#include <emb/sensor/signalpath.hpp>
-#include <emb/sensor/validated.hpp>
+#include <emb/sensors/signalpath.hpp>
+#include <emb/sensors/validated.hpp>
 #include <emb/signal/affine.hpp>
 #include <emb/signal/bind.hpp>
 #include <emb/units.hpp>
@@ -15,10 +15,10 @@
 namespace {
 
 using namespace emb::units;
-using emb::sensor::bounds;
-using emb::sensor::bounds_of;
-using emb::sensor::fault;
-using emb::sensor::within;
+using emb::sensors::bounds;
+using emb::sensors::bounds_of;
+using emb::sensors::fault;
+using emb::sensors::within;
 
 // a 12-bit converter over a 3.3 V reference that saturates at its rails, as
 // an ADC does
@@ -41,9 +41,9 @@ inline constexpr emb::signal::affine thermistor{degree_celsius_f32{-40.f},
                                                 volt_f32{3.0f},
                                                 volt_f32{0.3f}};
 
-using pin = emb::sensor::signalpath<adc>;
+using pin = emb::sensors::signalpath<adc>;
 using thermistor_path =
-    emb::sensor::signalpath<emb::signal::bind<thermistor>, adc>;
+    emb::sensors::signalpath<emb::signal::bind<thermistor>, adc>;
 
 inline constexpr bounds<std::uint16_t> healthy{100, 3900};
 using guard = within<healthy>;
