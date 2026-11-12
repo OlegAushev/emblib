@@ -322,8 +322,8 @@ emblib не попал. Такие файлы помечены «песочни�
 - [ ] `emb/fsm/fsm_v2.hpp`
 - [ ] `emb/fsm/fsm_v3.hpp`
 - [ ] `emb/functional.hpp`
-- [ ] `emb/generator/ramp_generator.hpp`
-- [ ] `emb/generator/sine_generator.hpp`
+- [ ] `emb/generators/ramp.hpp`
+- [ ] `emb/generators/sine.hpp`
 - [ ] `emb/gpio.hpp`
 - [ ] `emb/hall.hpp`
 - [ ] `emb/hall/angle_sensor.hpp`

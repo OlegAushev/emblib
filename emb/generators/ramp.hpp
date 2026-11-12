@@ -6,10 +6,10 @@
 #include <algorithm>
 #include <cassert>
 
-namespace emb {
+namespace emb::generators {
 
 template<typename T>
-class ramp_generator {
+class ramp {
 public:
   using value_type = T;
 private:
@@ -20,9 +20,9 @@ private:
   value_type target_;
   value_type output_;
 public:
-  constexpr ramp_generator(units::sec_f32 timestep,
-                           value_type slope,
-                           value_type init_output = value_type{})
+  constexpr ramp(units::sec_f32 timestep,
+                 value_type slope,
+                 value_type init_output = value_type{})
   {
     set_slope(timestep, slope);
     reset(init_output);
@@ -85,4 +85,4 @@ public:
   }
 };
 
-} // namespace emb
+} // namespace emb::generators

@@ -6,10 +6,10 @@
 #include <emb/math.hpp>
 #include <emb/units.hpp>
 
-namespace emb {
+namespace emb::generators {
 
 template<typename T>
-class sine_generator {
+class sine {
 public:
   using value_type = T;
 private:
@@ -22,12 +22,11 @@ private:
   emb::units::rad_f32 phase_;
   value_type output_;
 public:
-  constexpr sine_generator(
-      units::sec_f32 timestep,
-      value_type ampl,
-      units::hz_f32 freq,
-      emb::units::rad_f32 init_phase = emb::units::rad_f32(0),
-      value_type bias = value_type{})
+  constexpr sine(units::sec_f32 timestep,
+                 value_type ampl,
+                 units::hz_f32 freq,
+                 emb::units::rad_f32 init_phase = emb::units::rad_f32(0),
+                 value_type bias = value_type{})
       : timestep_(timestep),
         ampl_(ampl),
         wfreq_(2 * std::numbers::pi_v<float> * freq.value),
@@ -82,4 +81,4 @@ public:
   }
 };
 
-} // namespace emb
+} // namespace emb::generators
