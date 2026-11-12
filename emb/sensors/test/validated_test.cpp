@@ -4,12 +4,12 @@
 #include <emb/filters/concepts.hpp>
 #include <emb/filters/exponential.hpp>
 #include <emb/filters/passthrough.hpp>
+#include <emb/sensors/basic.hpp>
 #include <emb/sensors/buffered.hpp>
 #include <emb/sensors/concepts.hpp>
 #include <emb/sensors/multichannel.hpp>
 #include <emb/sensors/multiplexed.hpp>
 #include <emb/sensors/signalpath.hpp>
-#include <emb/sensors/singlechannel.hpp>
 #include <emb/sensors/within.hpp>
 #include <emb/units.hpp>
 
@@ -38,9 +38,9 @@ struct adc {
 };
 
 using path = emb::sensors::signalpath<adc>;
-using core = emb::sensors::singlechannel<std::uint16_t,
-                                         path,
-                                         emb::filters::passthrough<volt_f32>>;
+using core = emb::sensors::basic<std::uint16_t,
+                                 path,
+                                 emb::filters::passthrough<volt_f32>>;
 
 constexpr volt_f32 reading(std::uint16_t code)
 {
@@ -79,7 +79,7 @@ static_assert(orders_against<std::optional<volt_f32>, volt_f32>);
 constexpr bool test_no_output_before_the_first_sample()
 {
   using smoothing = emb::filters::exponential<volt_f32, sec_f32>;
-  using smoothed = emb::sensors::singlechannel<std::uint16_t, path, smoothing>;
+  using smoothed = emb::sensors::basic<std::uint16_t, path, smoothing>;
 
   // even a filter that starts at an initial output has read nothing yet
   emb::sensors::validated<guard, smoothed> const c{
@@ -115,7 +115,7 @@ constexpr bool test_refused_sample_stops_short_of_the_core()
 constexpr bool test_filter_sees_accepted_samples_alone()
 {
   using smoothing = emb::filters::exponential<volt_f32, sec_f32>;
-  using smoothed = emb::sensors::singlechannel<std::uint16_t, path, smoothing>;
+  using smoothed = emb::sensors::basic<std::uint16_t, path, smoothing>;
 
   smoothing const start{sec_f32{0.25f}, sec_f32{1.f}};
   emb::sensors::validated<guard, smoothed> c{path{}, start};

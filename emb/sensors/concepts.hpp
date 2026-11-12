@@ -23,7 +23,7 @@ struct deferred_tag {};
 
 // Any sensor surface: typed input/output and a declared category, which sets
 // the verbs that take the input. input_type is what a producer hands over and
-// what a buffered queue stores -- one sample for singlechannel, one aligned
+// what a buffered queue stores -- one sample for basic, one aligned
 // frame of samples for multichannel.
 template<typename S>
 concept sensor = requires {

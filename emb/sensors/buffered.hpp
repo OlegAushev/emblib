@@ -1,7 +1,7 @@
 #pragma once
 
+#include <emb/sensors/basic.hpp>
 #include <emb/sensors/concepts.hpp>
-#include <emb/sensors/singlechannel.hpp>
 
 #include <concepts>
 #include <cstddef>
@@ -11,7 +11,7 @@ namespace emb::sensors {
 
 // Buffered sensor: an SPSC queue decouples the producing context
 // from the consuming context. update() drains the queue through a sensor core.
-// The core is any immediate sensor -- singlechannel for one channel,
+// The core is any immediate sensor -- basic for one channel,
 // multichannel for an aligned N-channel frame -- and the queue's element
 // type must match the core's input_type (a sample, or a whole frame).
 // buffered takes an immediate sensor and makes it deferred, so it cannot
@@ -46,7 +46,7 @@ public:
     return core_;
   }
 
-  // Convenience forwarder for singlechannel cores; absent for multichannel,
+  // Convenience forwarder for basic cores; absent for multichannel,
   // which is read through outputs() / output(channel) below.
   output_type output() const
     requires requires(Core const& c) { c.output(); }
@@ -54,7 +54,7 @@ public:
     return core_.output();
   }
 
-  // Convenience forwarders for multichannel cores; absent for singlechannel
+  // Convenience forwarders for multichannel cores; absent for basic
   // cores.
   auto outputs() const
     requires requires(Core const& c) { c.outputs(); }

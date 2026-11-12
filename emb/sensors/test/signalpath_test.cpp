@@ -2,7 +2,7 @@
 
 #include <emb/filters/passthrough.hpp>
 #include <emb/math.hpp>
-#include <emb/sensors/singlechannel.hpp>
+#include <emb/sensors/basic.hpp>
 #include <emb/signal/bind.hpp>
 #include <emb/signal/path.hpp>
 #include <emb/signal/proportional.hpp>
@@ -61,7 +61,7 @@ static_assert(
 // filter of another quantity
 template<typename Converter, typename Filter>
 constexpr bool channels = requires {
-  typename emb::sensors::singlechannel<std::uint16_t, Converter, Filter>;
+  typename emb::sensors::basic<std::uint16_t, Converter, Filter>;
 };
 
 static_assert(channels<channel_path, emb::filters::passthrough<amp_f32>>);
@@ -89,9 +89,9 @@ constexpr bool test_call_is_the_measuring_direction()
 
 constexpr bool test_drives_a_channel()
 {
-  emb::sensors::singlechannel<std::uint16_t,
-                              channel_path,
-                              emb::filters::passthrough<amp_f32>>
+  emb::sensors::basic<std::uint16_t,
+                      channel_path,
+                      emb::filters::passthrough<amp_f32>>
       channel;
 
   constexpr auto code = channel_path{}.forward(amp_f32{300.f});

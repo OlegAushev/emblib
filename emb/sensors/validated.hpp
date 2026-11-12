@@ -25,7 +25,7 @@ enum class fault : std::uint8_t {
 
 // The class template `validated` is a sensor that judges each sample with the
 // validator `Validator` before the sample reaches `Core`, an immediate
-// single-channel sensor such as a `singlechannel`. `update(sample)` calls the
+// single-channel sensor such as a `basic`. `update(sample)` calls the
 // validator on `sample` and passes `sample` on to the `update` of `Core` if
 // the verdict is empty; a sample that the validator refuses does not reach
 // `Core`, so the conversion and the filter of `Core` run on accepted samples
@@ -66,7 +66,7 @@ enum class fault : std::uint8_t {
 // converted, and neither `multichannel` nor `multiplexed` is a single-channel
 // sensor, so none of them is a `Core`.
 //
-// The parts are reachable as those of `singlechannel` are, under its rule:
+// The parts are reachable as those of `basic` are, under its rule:
 // `validator()` and `core()`, and `converter()` and `filter()` if `Core` has
 // them, so code that calibrates or retunes a sensor reaches its stages
 // through `validated` as it would through `Core`. Mutation through them
@@ -105,7 +105,7 @@ public:
   }
 
   // Takes the validator, e.g. one that holds its bounds, and the core by
-  // value, as `singlechannel` takes its stages.
+  // value, as `basic` takes its stages.
   constexpr validated(Validator validator, Core core)
       : validator_(std::move(validator)), core_(std::move(core))
   {

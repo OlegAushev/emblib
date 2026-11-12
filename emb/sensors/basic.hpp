@@ -25,7 +25,7 @@ template<typename Sample, typename Converter, typename Filter>
         && std::invocable<Converter&, Sample&>
         && std::convertible_to<std::invoke_result_t<Converter&, Sample&>,
                                typename Filter::value_type>
-class singlechannel {
+class basic {
 public:
   using input_type = Sample;
   using output_type = typename Filter::value_type;
@@ -34,9 +34,9 @@ private:
   Converter converter_;
   Filter filter_;
 public:
-  constexpr singlechannel() = default;
+  constexpr basic() = default;
 
-  constexpr singlechannel(Converter converter, Filter filter)
+  constexpr basic(Converter converter, Filter filter)
       : converter_(std::move(converter)), filter_(std::move(filter))
   {
   }
