@@ -6,8 +6,8 @@
 #include <expected>
 #include <utility>
 
-#include <emb/can.hpp>
 #include <emb/can/bus.hpp>
+#include <emb/can/frame.hpp>
 #include <emb/containers/inplace_queue.hpp>
 
 #include "../od.hpp"

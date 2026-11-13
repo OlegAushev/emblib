@@ -14,7 +14,7 @@
 #include "od.hpp"
 #include "types.hpp"
 
-#include <emb/can.hpp>
+#include <emb/can/frame.hpp>
 #include <emb/i18n.hpp>
 
 namespace emb {

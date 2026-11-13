@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <utility>
 
-#include <emb/can.hpp>
+#include <emb/can/frame.hpp>
 
 namespace emb {
 namespace can {

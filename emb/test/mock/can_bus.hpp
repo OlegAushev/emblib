@@ -4,7 +4,7 @@
 
 #include <cstddef>
 
-#include <emb/can.hpp>
+#include <emb/can/frame.hpp>
 #include <emb/delegate.hpp>
 
 namespace emb {

@@ -268,7 +268,7 @@ emblib не попал. Такие файлы помечены «песочни�
 - [ ] `emb/actuators/unmonitored.hpp`
 - [x] `emb/algorithm.hpp`
   - [x] `median`
-- [ ] `emb/can.hpp`
+- [ ] `emb/can/frame.hpp`
 - [ ] `emb/can/bus.hpp`
 - [ ] `emb/can/canopen/detail/emcy_producer.hpp`
 - [ ] `emb/can/canopen/detail/hb_consumer.cpp`

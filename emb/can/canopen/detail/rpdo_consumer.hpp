@@ -7,8 +7,8 @@
 #include <expected>
 #include <optional>
 
-#include <emb/can.hpp>
 #include <emb/can/bus.hpp>
+#include <emb/can/frame.hpp>
 #include <emb/delegate.hpp>
 
 #include "../types.hpp"

@@ -13,7 +13,7 @@
 #include <string_view>
 #include <utility>
 
-#include <emb/can.hpp>
+#include <emb/can/frame.hpp>
 #include <emb/can/rolling_counter.hpp>
 #include <emb/math/clamped.hpp>
 #include <emb/math/scaled.hpp>

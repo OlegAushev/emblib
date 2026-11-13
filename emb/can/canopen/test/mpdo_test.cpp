@@ -21,7 +21,7 @@
 #include <string_view>
 #include <utility>
 
-#include <emb/can.hpp>
+#include <emb/can/frame.hpp>
 #include <emb/meta/fixed_string.hpp>
 #include <emb/test/mock/can_bus.hpp>
 

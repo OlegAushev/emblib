@@ -9,7 +9,7 @@
 #include <expected>
 #include <type_traits>
 
-#include <emb/can.hpp>
+#include <emb/can/frame.hpp>
 #include <emb/delegate.hpp>
 #include <emb/test/mock/can_bus.hpp>
 

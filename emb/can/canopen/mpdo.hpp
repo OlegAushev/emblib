@@ -13,7 +13,7 @@
 #include "sdo.hpp"
 #include "types.hpp"
 
-#include <emb/can.hpp>
+#include <emb/can/frame.hpp>
 #include <emb/panic.hpp>
 
 namespace emb {

@@ -19,7 +19,7 @@
 #include "od_value_cast.hpp"
 #include "types.hpp"
 
-#include <emb/can.hpp>
+#include <emb/can/frame.hpp>
 #include <emb/i18n.hpp>
 #include <emb/math/scaled.hpp>
 #include <emb/meta/enum_carrier32.hpp>

@@ -4,7 +4,7 @@
 #include <optional>
 #include <utility>
 
-#include <emb/can.hpp>
+#include <emb/can/frame.hpp>
 
 #include "../types.hpp"
 
