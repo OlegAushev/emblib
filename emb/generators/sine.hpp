@@ -48,7 +48,7 @@ public:
     output_ = ampl_ * emb::sin(phase_.value) + bias_;
   }
 
-  constexpr void step()
+  constexpr void update()
   {
     phase_ = emb::units::rad_f32(
         emb::norm2pi(phase_.value + wfreq_ * timestep_.value));
