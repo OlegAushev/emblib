@@ -33,11 +33,6 @@ public:
     output_ = clamp(output_ + rate * ts_.value);
   }
 
-  constexpr void add(value_type increment)
-  {
-    output_ = clamp(output_ + increment);
-  }
-
   constexpr value_type output() const
   {
     return output_;
