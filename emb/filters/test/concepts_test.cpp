@@ -4,7 +4,7 @@
 #include <emb/filters/median_exponential.hpp>
 #include <emb/filters/moving_average.hpp>
 #include <emb/filters/passthrough.hpp>
-#include <emb/integrator.hpp>
+#include <emb/math/integrator.hpp>
 #include <emb/units.hpp>
 
 namespace {

@@ -332,7 +332,7 @@ emblib не попал. Такие файлы помечены «песочни�
 - [ ] `emb/hall/emulator.hpp`
 - [ ] `emb/hall/error.hpp`
 - [ ] `emb/hall/sector.hpp`
-- [ ] `emb/integrator.hpp` — песочница: `integrator`
+- [ ] `emb/math/integrator.hpp` — песочница: `integrator`
 - [ ] `emb/math/saturation.hpp`
 - [ ] `emb/noncopyable.hpp`
 - [ ] `emb/nvm/storage.hpp`

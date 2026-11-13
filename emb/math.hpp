@@ -2,6 +2,7 @@
 
 #include <emb/math/angle.hpp>
 #include <emb/math/clamped.hpp>
+#include <emb/math/integrator.hpp>
 #include <emb/math/numeric.hpp>
 #include <emb/math/saturation.hpp>
 #include <emb/math/scaled.hpp>
