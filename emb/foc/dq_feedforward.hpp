@@ -7,7 +7,7 @@ namespace emb {
 namespace foc {
 
 constexpr voltage_dq dq_feedforward_voltage(current_dq const& Imeas,
-                                           some_motor auto const& motor,
+                                           motor_parameters auto const& motor,
                                            emb::units::eradps_f32 speed)
 {
   float const Ld = motor.Ld;

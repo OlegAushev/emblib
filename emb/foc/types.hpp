@@ -62,7 +62,7 @@ constexpr sin_cos to_sin_cos(units::erad_f32 theta)
 }
 
 template<typename T>
-concept some_motor = requires(T m) {
+concept motor_parameters = requires(T m) {
   { m.p } -> std::convertible_to<int>;
   { m.R } -> std::convertible_to<float>;
   { m.Ld } -> std::convertible_to<float>;
