@@ -100,7 +100,7 @@ public:
     new_transition_period_ = capture_timer_.captured_time();
   }
 
-  [[nodiscard]] std::optional<error> step()
+  [[nodiscard]] std::optional<error> update_estimates()
   {
     if (new_transition_period_) {
       return on_new_transition();
