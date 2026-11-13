@@ -1,7 +1,6 @@
 #pragma once
 
 #include <emb/gpio.hpp>
-#include <emb/hall/angle_sensor.hpp>
 #include <emb/hall/sector.hpp>
 #include <emb/units.hpp>
 
@@ -146,11 +145,11 @@ private:
 public:
   template<typename Config>
   emulator(std::array<Config, 3> const& outputs_conf,
-           some_timebase auto const& timebase)
+           emb::units::sec_f32 update_period)
       : outputs_{Pin(outputs_conf[0]),
                  Pin(outputs_conf[1]),
                  Pin(outputs_conf[2])},
-        update_period_(timebase.period())
+        update_period_(update_period)
   {
   }
 

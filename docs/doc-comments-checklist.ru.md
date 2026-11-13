@@ -324,7 +324,6 @@ emblib не попал. Такие файлы помечены «песочни�
 - [ ] `emb/generators/ramp.hpp`
 - [ ] `emb/generators/sine.hpp`
 - [ ] `emb/gpio.hpp`
-- [ ] `emb/hall.hpp`
 - [ ] `emb/hall/angle_sensor.hpp`
 - [ ] `emb/hall/calibration.cpp`
 - [ ] `emb/hall/calibration.hpp`

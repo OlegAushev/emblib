@@ -19,12 +19,7 @@
 namespace emb::hall {
 
 template<typename T>
-concept some_timebase = requires(T const t) {
-  { t.period() } -> std::same_as<emb::units::sec_f32>;
-};
-
-template<typename T>
-concept some_capture_timer = requires(T const t) {
+concept capture_timer = requires(T const t) {
   { t.input_state() } -> std::convertible_to<std::uint8_t>;
   { t.input_levels() } -> std::convertible_to<std::array<emb::gpio::level, 3>>;
   { t.captured_time() } -> std::same_as<emb::units::sec_f32>;
@@ -53,7 +48,7 @@ constexpr std::expected<void, error> validate(angle_sensor_config const& conf)
 // does not check the config and the calibration it is given: the behavior is
 // undefined if one passed to the constructor, to `configure` or to
 // `apply_calibration` fails `validate`.
-template<some_capture_timer Timer>
+template<capture_timer Timer>
 class angle_sensor {
 private:
   angle_sensor_config conf_;
@@ -75,12 +70,12 @@ private:
   emb::units::erad_f32 offset_{};
   emb::units::erad_f32 angle_{};
 public:
-  angle_sensor(some_timebase auto const& timebase,
+  angle_sensor(emb::units::sec_f32 timestep,
                Timer& capture_timer,
                angle_sensor_config const& sensor_conf,
                calibration_result const& calibration)
       : conf_(sensor_conf),
-        timestep_(timebase.period()),
+        timestep_(timestep),
         capture_timer_(capture_timer)
   {
     geometry_ = make_geometry(calibration);
