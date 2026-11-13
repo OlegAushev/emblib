@@ -311,7 +311,7 @@ emblib не попал. Такие файлы помечены «песочни�
 - [ ] `emb/delegate.hpp`
 - [ ] `emb/foc.hpp`
 - [ ] `emb/foc/deadtime_compensation.hpp`
-- [ ] `emb/foc/dq_controller.hpp`
+- [ ] `emb/foc/dq_current_controller.hpp`
 - [ ] `emb/foc/park.hpp`
 - [ ] `emb/foc/pwm.hpp`
 - [ ] `emb/foc/to_polar.hpp`

@@ -10,35 +10,22 @@
 namespace emb {
 namespace foc {
 
-constexpr voltage_dq dq_compensation(current_dq const& Imeas,
-                                     some_motor auto const& motor,
-                                     emb::units::eradps_f32 speed)
-{
-  float const Ld = motor.Ld;
-  float const Lq = motor.Lq;
-  float const Psi = motor.Psi;
-  float const omega = speed.value;
-  return {
-      .d = -omega * Lq * Imeas.q,
-      .q = omega * (Ld * Imeas.d + Psi),
-  };
-}
-
 // A PI controller per axis, with Vcomp added to their outputs. The output
 // limits are derived on every update from Vdc/√3, the linear range of svpwm:
 // the d axis may take Vd_limit_factor of it, the q axis what is left of the
 // circle. The gains start at zero and are set through d() and q().
-class dq_controller {
+class dq_current_controller {
 public:
-  using axis_type = clamping_pi_controller<float, controller_action::reverse>;
+  using current_controller =
+      clamping_pi_controller<float, controller_action::reverse>;
 private:
-  axis_type d_;
-  axis_type q_;
+  current_controller d_;
+  current_controller q_;
   unsigned_pu_f32 Vd_limit_factor_;
   voltage_dq out_{};
 public:
-  constexpr dq_controller(units::sec_f32 timestep,
-                          unsigned_pu_f32 Vd_limit_factor)
+  constexpr dq_current_controller(units::sec_f32 timestep,
+                                  unsigned_pu_f32 Vd_limit_factor)
       : d_({}, timestep, 0.0f, 0.0f),
         q_({}, timestep, 0.0f, 0.0f),
         Vd_limit_factor_(Vd_limit_factor)
@@ -87,22 +74,22 @@ public:
     q_.set_timestep(value);
   }
 
-  constexpr axis_type& d()
+  constexpr current_controller& d()
   {
     return d_;
   }
 
-  constexpr axis_type const& d() const
+  constexpr current_controller const& d() const
   {
     return d_;
   }
 
-  constexpr axis_type& q()
+  constexpr current_controller& q()
   {
     return q_;
   }
 
-  constexpr axis_type const& q() const
+  constexpr current_controller const& q() const
   {
     return q_;
   }
