@@ -1,4 +1,4 @@
-#include <emb/container/inplace_stack.hpp>
+#include <emb/containers/inplace_stack.hpp>
 
 #include <cassert>
 

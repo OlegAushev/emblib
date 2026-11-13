@@ -1,6 +1,6 @@
 #pragma once
 
-#include <emb/container/circular_buffer.hpp>
+#include <emb/containers/circular_buffer.hpp>
 
 #include <cstddef>
 #include <utility>

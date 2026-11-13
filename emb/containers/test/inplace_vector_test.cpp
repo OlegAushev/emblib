@@ -1,4 +1,4 @@
-#include <emb/container/inplace_vector.hpp>
+#include <emb/containers/inplace_vector.hpp>
 
 #include <algorithm>
 #include <cassert>

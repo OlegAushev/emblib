@@ -1,6 +1,6 @@
 #pragma once
 
-#include <emb/container/circular_buffer.hpp>
+#include <emb/containers/circular_buffer.hpp>
 #include <emb/filters/exponential.hpp>
 #include <emb/filters/median.hpp>
 #include <emb/gpio.hpp>

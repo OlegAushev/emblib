@@ -1,4 +1,4 @@
-#include <emb/container/inplace_queue.hpp>
+#include <emb/containers/inplace_queue.hpp>
 
 #include <cassert>
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <emb/container/inplace_vector.hpp>
+#include <emb/containers/inplace_vector.hpp>
 #include <emb/delegate.hpp>
 
 #include <chrono>

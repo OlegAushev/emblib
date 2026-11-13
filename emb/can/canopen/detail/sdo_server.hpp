@@ -8,7 +8,7 @@
 
 #include <emb/can.hpp>
 #include <emb/can/bus.hpp>
-#include <emb/container/inplace_queue.hpp>
+#include <emb/containers/inplace_queue.hpp>
 
 #include "../od.hpp"
 #include "../od_dictionary.hpp"

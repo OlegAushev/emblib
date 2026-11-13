@@ -11,13 +11,13 @@ emblib не попал. Такие файлы помечены «песочни�
 
 - [x] `emb/concurrent/double_buffer.hpp`
   - [x] `double_buffer`
-- [x] `emb/container/circular_buffer.hpp`
+- [x] `emb/containers/circular_buffer.hpp`
   - [x] `circular_buffer`
-- [x] `emb/container/inplace_queue.hpp`
+- [x] `emb/containers/inplace_queue.hpp`
   - [x] `inplace_queue`
-- [x] `emb/container/inplace_stack.hpp`
+- [x] `emb/containers/inplace_stack.hpp`
   - [x] `inplace_stack`
-- [x] `emb/container/inplace_vector.hpp`
+- [x] `emb/containers/inplace_vector.hpp`
   - [x] `inplace_vector`
 - [x] `emb/controller.hpp`
   - [x] `controller_action`

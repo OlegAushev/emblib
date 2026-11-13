@@ -6,7 +6,7 @@
 #include <emb/can.hpp>
 #include <emb/can/bus.hpp>
 #include <emb/concurrent/spsc_queue.hpp>
-#include <emb/container/inplace_vector.hpp>
+#include <emb/containers/inplace_vector.hpp>
 #include <emb/delegate.hpp>
 #include <emb/panic.hpp>
 
