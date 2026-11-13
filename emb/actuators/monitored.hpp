@@ -4,7 +4,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace emb::actuator {
+namespace emb::actuators {
 
 // A closed-loop actuator: an open-loop actuator paired with a feedback channel
 // that reports its actual state. Provides only the comparison primitives
@@ -52,4 +52,4 @@ public:
   }
 };
 
-} // namespace emb::actuator
+} // namespace emb::actuators

@@ -4,7 +4,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace emb::actuator {
+namespace emb::actuators {
 
 // A feedback channel: reads a low-level measurement through a sensor and
 // decodes it into the actual actuator state. The mirror image of the command
@@ -34,4 +34,4 @@ public:
   }
 };
 
-} // namespace emb::actuator
+} // namespace emb::actuators

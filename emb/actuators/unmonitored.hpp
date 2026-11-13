@@ -4,7 +4,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace emb::actuator {
+namespace emb::actuators {
 
 // A commandable actuator with no feedback: holds a desired state, encodes it to
 // a command, and applies it through a driver. state() reports the last command,
@@ -41,4 +41,4 @@ public:
   }
 };
 
-} // namespace emb::actuator
+} // namespace emb::actuators

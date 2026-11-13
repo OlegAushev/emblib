@@ -1,8 +1,8 @@
 #pragma once
 
-#include <emb/actuator/feedback.hpp>
-#include <emb/actuator/monitored.hpp>
-#include <emb/actuator/unmonitored.hpp>
+#include <emb/actuators/feedback.hpp>
+#include <emb/actuators/monitored.hpp>
+#include <emb/actuators/unmonitored.hpp>
 
 #include <emb/gpio.hpp>
 
@@ -10,7 +10,7 @@
 #include <cstdint>
 #include <type_traits>
 
-namespace emb::actuator::discrete {
+namespace emb::actuators::discrete {
 
 // Logical drive/feedback signal of a discrete actuator, independent of the
 // medium that carries it: encoders emit it, decoders consume it. A concrete
@@ -111,4 +111,4 @@ template<typename Encoder, typename Decoder, typename CtrlPin, typename FbPin>
 using gpio_monitored_actuator =
     monitored<gpio_actuator<Encoder, CtrlPin>, gpio_feedback<Decoder, FbPin>>;
 
-} // namespace emb::actuator::discrete
+} // namespace emb::actuators::discrete
