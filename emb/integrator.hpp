@@ -28,9 +28,9 @@ public:
     reset(init_output);
   }
 
-  constexpr void step(value_type rate)
+  constexpr void push(value_type value)
   {
-    output_ = clamp(output_ + rate * ts_.value);
+    output_ = clamp(output_ + value * ts_.value);
   }
 
   constexpr value_type output() const

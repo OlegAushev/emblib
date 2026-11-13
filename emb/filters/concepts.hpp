@@ -14,7 +14,7 @@ namespace emb::filters {
 //
 // Only the name `update` sets a filter apart from a type otherwise alike whose
 // output is a quantity other than its input: `integrator` takes a rate through
-// `step`, outputs its integral and does not satisfy the concept.
+// `push`, outputs its integral and does not satisfy the concept.
 template<typename F>
 concept filter = requires(F f, F const cf, typename F::value_type const v) {
   typename F::value_type;

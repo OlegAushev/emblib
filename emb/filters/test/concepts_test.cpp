@@ -18,7 +18,7 @@ static_assert(emb::filters::filter<emb::filters::exponential<float, sec_f32>>);
 static_assert(
     emb::filters::filter<emb::filters::median_exponential<float, 3, sec_f32>>);
 
-// `integrator` has a `value_type`, an `output` and a `step` that takes a
+// `integrator` has a `value_type`, an `output` and a `push` that takes a
 // `value_type`, and is not a filter: only the name `update` sets one apart.
 static_assert(!emb::filters::filter<emb::integrator<float>>);
 static_assert(!emb::filters::filter<emb::filters::median<float, 3>&>);
