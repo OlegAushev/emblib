@@ -262,10 +262,6 @@ emblib не попал. Такие файлы помечены «песочни�
 
 ## Остальные
 
-- [ ] `emb/actuators/discrete.hpp`
-- [ ] `emb/actuators/feedback.hpp`
-- [ ] `emb/actuators/monitored.hpp`
-- [ ] `emb/actuators/unmonitored.hpp`
 - [x] `emb/algorithm.hpp`
   - [x] `median`
 - [ ] `emb/can/frame.hpp`
