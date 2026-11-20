@@ -1,88 +1,192 @@
 #pragma once
 
-#include <emb/algorithm.hpp>
-#include <emb/units.hpp>
+#include <emb/meta/scalar_wrapper.hpp>
+#include <emb/units/chrono.hpp>
 
 #include <algorithm>
 #include <cassert>
+#include <cmath>
+#include <concepts>
+#include <cstdint>
 
 namespace emb::generators {
 
-template<typename T>
-class ramp {
-public:
-  using value_type = T;
-private:
-  units::sec_f32 ts_;
-  value_type slope_;
-  value_type step_;
+namespace detail {
 
-  value_type target_;
-  value_type output_;
+class ramp_f32 {
 public:
-  constexpr ramp(units::sec_f32 timestep,
-                 value_type slope,
-                 value_type init_output = value_type{})
+  constexpr explicit ramp_f32(float step, float initial = 0.0f)
+      : step_(step), base_(initial), target_(initial), output_(initial)
   {
-    set_slope(timestep, slope);
-    reset(init_output);
+    assert(step > 0.0f && std::isfinite(step));
   }
 
-  constexpr value_type target() const
-  {
-    return target_;
-  }
-
-  constexpr value_type output() const
+  constexpr float output() const
   {
     return output_;
   }
 
-  constexpr void set_target(value_type value)
+  constexpr float target() const
   {
-    target_ = value;
-  }
-
-  constexpr void reset(value_type value)
-  {
-    target_ = value;
-    output_ = value;
-  }
-
-  constexpr void set_slope(units::sec_f32 timestep, value_type slope)
-  {
-    assert(timestep.value > 0);
-    assert(slope > T(0));
-    ts_ = timestep;
-    slope_ = slope;
-    step_ = timestep.value * slope;
-  }
-
-  constexpr void set_timestep(units::sec_f32 ts)
-  {
-    set_slope(ts, slope_);
-  }
-
-  constexpr void update()
-  {
-    if (output_ < target_) {
-      output_ = std::min(output_ + step_, target_);
-    }
-    else {
-      output_ = std::max(output_ - step_, target_);
-    }
-  }
-
-  constexpr void update_toward(value_type target)
-  {
-    set_target(target);
-    update();
+    return target_;
   }
 
   constexpr bool at_target() const
   {
     return output_ == target_;
   }
+
+  constexpr void reset(float value)
+  {
+    output_ = target_ = value;
+    rebase();
+  }
+
+  constexpr void set_step(float step)
+  {
+    assert(step > 0.0f && std::isfinite(step));
+    if (step != step_) {
+      step_ = step;
+      rebase();
+    }
+  }
+
+  constexpr void set_target(float value)
+  {
+    if (value == target_) return;
+
+    bool const was_rising = target_ > output_;
+    bool const will_rise = value > output_;
+    if (at_target() || was_rising != will_rise) rebase();
+    target_ = value;
+  }
+
+  constexpr void update()
+  {
+    if (at_target()) return;
+
+    bool const rising = target_ > output_;
+    ++tick_;
+    float const next =
+        std::fma(rising ? step_ : -step_, static_cast<float>(tick_), base_);
+    output_ = rising ? std::min(next, target_) : std::max(next, target_);
+
+    if (tick_ == max_exact_tick) rebase();
+  }
+
+  constexpr void update_toward(float value)
+  {
+    set_target(value);
+    update();
+  }
+
+private:
+  constexpr void rebase()
+  {
+    base_ = output_;
+    tick_ = 0;
+  }
+
+  static constexpr std::uint32_t max_exact_tick = 1u << 24;
+  float step_;
+  float base_;
+  float target_;
+  float output_;
+  std::uint32_t tick_{0};
+};
+
+} // namespace detail
+
+// Generates a linear ramp in float and returns its output and target as T.
+// T may be float or a scalar wrapper of float. For a wrapper, every finite
+// float x between the start and target of a segment, including both endpoints,
+// must satisfy scalar_of(T{x}) == x. If T defines equality, it must agree
+// with equality of the wrapped values on this interval.
+//
+// The ramp constructs T from the product of the timestep and the scalar slope,
+// then uses its scalar value as the step. A bounded wrapper can therefore
+// saturate the step. For signed_pu_f32, a product of 2 gives a step of 1.
+//
+// at_target() compares the stored float output and target. A wrapper that
+// quantizes intermediate values can present the target before this comparison
+// becomes true.
+template<typename T>
+  requires std::same_as<emb::unwrapped_t<T>, float>
+class ramp {
+public:
+  using value_type = T;
+
+  constexpr ramp(units::sec_f32 timestep, T slope, T initial = T{})
+      : slope_(slope), core_(make_step(timestep, slope), as_float(initial))
+  {
+  }
+
+  constexpr T output() const
+  {
+    return T{core_.output()};
+  }
+
+  constexpr T target() const
+  {
+    return T{core_.target()};
+  }
+
+  constexpr bool at_target() const
+  {
+    return core_.at_target();
+  }
+
+  constexpr void reset(T value)
+  {
+    core_.reset(as_float(value));
+  }
+
+  constexpr void set_target(T value)
+  {
+    core_.set_target(as_float(value));
+  }
+
+  constexpr void update()
+  {
+    core_.update();
+  }
+
+  constexpr void update_toward(T value)
+  {
+    core_.update_toward(as_float(value));
+  }
+
+  constexpr void set_slope(units::sec_f32 timestep, T slope)
+  {
+    core_.set_step(make_step(timestep, slope));
+    slope_ = slope;
+  }
+
+  constexpr void set_timestep(units::sec_f32 timestep)
+  {
+    set_slope(timestep, slope_);
+  }
+
+private:
+  static constexpr float as_float(T const& v)
+  {
+    if constexpr (emb::scalar_wrapper<T>) {
+      return scalar_of(v);
+    }
+    else {
+      return v;
+    }
+  }
+
+  static constexpr float make_step(units::sec_f32 timestep, T slope)
+  {
+    float const s = as_float(slope);
+    assert(timestep.value > 0.0f && s > 0.0f);
+    return as_float(T{timestep.value * s});
+  }
+
+  T slope_;
+  detail::ramp_f32 core_;
 };
 
 } // namespace emb::generators

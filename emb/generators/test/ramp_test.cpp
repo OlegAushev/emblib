@@ -1,4 +1,5 @@
 #include <emb/generators/ramp.hpp>
+#include <emb/math/clamped.hpp>
 #include <emb/units.hpp>
 
 #include <algorithm>
@@ -188,5 +189,39 @@ static_assert(test_ramp_set_timestep());
 static_assert(test_ramp_set_slope());
 static_assert(test_ramp_change_target_midway());
 static_assert(test_ramp_update_toward());
+
+constexpr bool test_sub_ulp_step_with_changing_target()
+{
+  using angle = emb::units::erad_f32;
+  constexpr angle initial{1.0f};
+  constexpr angle next_angle{1.0f + 0x1p-23f};
+  emb::generators::ramp<angle> ramp(
+      emb::units::sec_f32{1.0f}, angle{0x1p-25f}, initial);
+
+  // A single step is one quarter of the spacing above 1.0f.
+  ramp.update_toward(angle{3.0f});
+  ramp.update_toward(angle{2.0f});
+  if (ramp.output() != initial) return false;
+  ramp.update_toward(angle{4.0f});
+  if (ramp.output() != next_angle) return false;
+
+  ramp.update_toward(angle{0.0f});
+  if (ramp.output() != next_angle) return false;
+  ramp.update();
+  return ramp.output() == initial;
+}
+
+constexpr bool test_saturated_step()
+{
+  using pu = emb::signed_pu_f32;
+  emb::generators::ramp<pu> ramp(emb::units::sec_f32{2.0f}, pu{1.0f}, pu{-1.0f});
+  ramp.update_toward(pu{1.0f});
+  if (ramp.output() != pu{0.0f}) return false;
+  ramp.update();
+  return ramp.output() == pu{1.0f} && ramp.at_target();
+}
+
+static_assert(test_sub_ulp_step_with_changing_target());
+static_assert(test_saturated_step());
 
 } // namespace
