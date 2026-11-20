@@ -117,7 +117,7 @@ public:
   using value_type = T;
 
   constexpr ramp(units::sec_f32 timestep, T slope, T initial = T{})
-      : slope_(slope), core_(make_step(timestep, slope), as_float(initial))
+      : slope_(slope), core_(make_step(timestep, slope), scalar_of(initial))
   {
   }
 
@@ -138,12 +138,12 @@ public:
 
   constexpr void reset(T value)
   {
-    core_.reset(as_float(value));
+    core_.reset(scalar_of(value));
   }
 
   constexpr void set_target(T value)
   {
-    core_.set_target(as_float(value));
+    core_.set_target(scalar_of(value));
   }
 
   constexpr void update()
@@ -153,7 +153,7 @@ public:
 
   constexpr void update_toward(T value)
   {
-    core_.update_toward(as_float(value));
+    core_.update_toward(scalar_of(value));
   }
 
   constexpr void set_slope(units::sec_f32 timestep, T slope)
@@ -168,21 +168,11 @@ public:
   }
 
 private:
-  static constexpr float as_float(T const& v)
-  {
-    if constexpr (emb::scalar_wrapper<T>) {
-      return scalar_of(v);
-    }
-    else {
-      return v;
-    }
-  }
-
   static constexpr float make_step(units::sec_f32 timestep, T slope)
   {
-    float const s = as_float(slope);
+    float const s = scalar_of(slope);
     assert(timestep.value > 0.0f && s > 0.0f);
-    return as_float(T{timestep.value * s});
+    return scalar_of(T{timestep.value * s});
   }
 
   T slope_;

@@ -194,6 +194,13 @@ static_assert(!scalar_wrapper<no_scalar_of>);
 static_assert(!scalar_wrapper<by_reference>);
 static_assert(!scalar_wrapper<coordinates>);
 static_assert(!scalar_wrapper<float>);
+static_assert(!scalar_wrapper<float const&>);
+
+constexpr float scalar_value = 1.25f;
+static_assert(std::same_as<decltype(emb::scalar_of(scalar_value)), float>);
+static_assert(emb::scalar_of(scalar_value) == scalar_value);
+static_assert(emb::scalar_of(&scalar_value) == &scalar_value);
+static_assert(scalar_of(meters{2.5f}) == 2.5f);
 
 static_assert(std::is_same_v<unwrapped_t<meters>, float>);
 static_assert(std::is_same_v<unwrapped_t<float>, float>);
