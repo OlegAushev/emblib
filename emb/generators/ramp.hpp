@@ -116,19 +116,21 @@ class ramp {
 public:
   using value_type = T;
 
-  constexpr ramp(units::sec_f32 timestep, T slope, T initial = T{})
+  constexpr ramp(units::sec_f32 timestep,
+                 value_type slope,
+                 value_type initial = value_type{})
       : slope_(slope), core_(make_step(timestep, slope), scalar_of(initial))
   {
   }
 
-  constexpr T output() const
+  constexpr value_type output() const
   {
-    return T{core_.output()};
+    return value_type{core_.output()};
   }
 
-  constexpr T target() const
+  constexpr value_type target() const
   {
-    return T{core_.target()};
+    return value_type{core_.target()};
   }
 
   constexpr bool at_target() const
@@ -136,12 +138,12 @@ public:
     return core_.at_target();
   }
 
-  constexpr void reset(T value)
+  constexpr void reset(value_type value)
   {
     core_.reset(scalar_of(value));
   }
 
-  constexpr void set_target(T value)
+  constexpr void set_target(value_type value)
   {
     core_.set_target(scalar_of(value));
   }
@@ -151,12 +153,12 @@ public:
     core_.update();
   }
 
-  constexpr void update_toward(T value)
+  constexpr void update_toward(value_type value)
   {
     core_.update_toward(scalar_of(value));
   }
 
-  constexpr void set_slope(units::sec_f32 timestep, T slope)
+  constexpr void set_slope(units::sec_f32 timestep, value_type slope)
   {
     core_.set_step(make_step(timestep, slope));
     slope_ = slope;
@@ -168,14 +170,14 @@ public:
   }
 
 private:
-  static constexpr float make_step(units::sec_f32 timestep, T slope)
+  static constexpr float make_step(units::sec_f32 timestep, value_type slope)
   {
     float const s = scalar_of(slope);
     assert(timestep.value > 0.0f && s > 0.0f);
-    return scalar_of(T{timestep.value * s});
+    return scalar_of(value_type{timestep.value * s});
   }
 
-  T slope_;
+  value_type slope_;
   detail::ramp_f32 core_;
 };
 
