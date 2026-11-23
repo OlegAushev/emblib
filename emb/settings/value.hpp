@@ -66,7 +66,7 @@ static_assert(std::to_underlying(scalar_kind::float32) == 3);
 // object, so the layout of a wrapper does not matter.
 template<typename T>
 concept wraps_parameter_scalar =
-    scalar_wrapper<T> && parameter_scalar<unwrapped_t<T>>;
+    scalar_wrapper<T> && parameter_scalar<unwrap_scalar_t<T>>;
 
 // The concept `parameter_enum<T>` is satisfied if and only if `T` is a
 // scoped enumeration that labels its values (`emb::enum_with_info`) and
@@ -89,7 +89,7 @@ namespace detail {
 
 template<typename T>
 struct scalar {
-  using type = unwrapped_t<T>;
+  using type = unwrap_scalar_t<T>;
 };
 
 template<parameter_enum T>

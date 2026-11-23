@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <span>
 #include <string_view>
@@ -179,17 +180,25 @@ struct by_reference {
   }
 };
 
-// Wraps an array, which is not a scalar, though scalar_of returns it.
-struct coordinates {
-  std::array<int, 2> value;
-  constexpr explicit coordinates(std::array<int, 2> v) : value(v) {}
-  friend constexpr std::array<int, 2> scalar_of(coordinates c)
+template<typename T>
+struct wrapped_value {
+  T value;
+  friend constexpr T scalar_of(wrapped_value v)
   {
-    return c.value;
+    return v.value;
   }
 };
 
+using coordinates = wrapped_value<std::array<int, 2>>;
+
+template<typename T>
+concept has_builtin_scalar_of = requires(T v) { emb::scalar_of(v); };
+
 static_assert(scalar_wrapper<meters>);
+static_assert(scalar_wrapper<wrapped_value<int>>);
+static_assert(scalar_wrapper<wrapped_value<bool>>);
+static_assert(!scalar_wrapper<wrapped_value<int*>>);
+static_assert(!scalar_wrapper<wrapped_value<std::byte>>);
 static_assert(!scalar_wrapper<no_scalar_of>);
 static_assert(!scalar_wrapper<by_reference>);
 static_assert(!scalar_wrapper<coordinates>);
@@ -199,13 +208,16 @@ static_assert(!scalar_wrapper<float const&>);
 constexpr float scalar_value = 1.25f;
 static_assert(std::same_as<decltype(emb::scalar_of(scalar_value)), float>);
 static_assert(emb::scalar_of(scalar_value) == scalar_value);
-static_assert(emb::scalar_of(&scalar_value) == &scalar_value);
+static_assert(emb::scalar_of(3) == 3);
+static_assert(emb::scalar_of(true));
+static_assert(!has_builtin_scalar_of<int*>);
+static_assert(!has_builtin_scalar_of<std::byte>);
 static_assert(scalar_of(meters{2.5f}) == 2.5f);
 
-static_assert(std::is_same_v<unwrapped_t<meters>, float>);
-static_assert(std::is_same_v<unwrapped_t<float>, float>);
-static_assert(std::is_same_v<unwrapped_t<no_scalar_of>, no_scalar_of>);
-static_assert(std::is_same_v<unwrapped_t<coordinates>, coordinates>);
+static_assert(std::is_same_v<unwrap_scalar_t<meters>, float>);
+static_assert(std::is_same_v<unwrap_scalar_t<float>, float>);
+static_assert(std::is_same_v<unwrap_scalar_t<no_scalar_of>, no_scalar_of>);
+static_assert(std::is_same_v<unwrap_scalar_t<coordinates>, coordinates>);
 
 // -- unit symbol tests --
 

@@ -20,7 +20,7 @@ namespace canopen {
 // `emb::units::quantity` or `emb::clamped` of a `float`. A new wrapper needs
 // no change here.
 template<typename T>
-concept wraps_od_scalar = scalar_wrapper<T> && od_scalar<unwrapped_t<T>>;
+concept wraps_od_scalar = scalar_wrapper<T> && od_scalar<unwrap_scalar_t<T>>;
 
 // The concept `od_enumeration<T>` is satisfied if and only if `T` is an
 // enumeration whose values travel as their carrier, `emb::enum_carrier32_t`:
@@ -35,7 +35,7 @@ namespace detail {
 
 template<typename T>
 struct od_carrier {
-  using type = unwrapped_t<T>;
+  using type = unwrap_scalar_t<T>;
 };
 
 template<od_enumeration T>
@@ -92,7 +92,7 @@ constexpr std::optional<T> from_od_value(od_value const& val)
     }
   }
   else if constexpr (wraps_od_scalar<T>) {
-    if (auto* p = std::get_if<unwrapped_t<T>>(&val)) {
+    if (auto* p = std::get_if<unwrap_scalar_t<T>>(&val)) {
       return T{*p};
     }
   }

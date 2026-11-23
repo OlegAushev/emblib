@@ -163,13 +163,13 @@ namespace detail {
 // or unsigned integer type, or if it is an unsigned type at least as wide as
 // `long long`, such as `std::uint64_t`.
 template<std::integral Raw, scalar_wrapper Q, some_ratio Step>
-  requires std::floating_point<unwrapped_t<Q>>
+  requires std::floating_point<unwrap_scalar_t<Q>>
 class scaled {
 public:
   using raw_type = Raw;
   using quantity_type = Q;
   using step_type = Step;
-  using value_type = unwrapped_t<Q>;
+  using value_type = unwrap_scalar_t<Q>;
 private:
   static_assert(step_type::num > 0 && step_type::den > 0,
                 "Step must be a positive ratio");
@@ -211,7 +211,7 @@ private:
 // e.g. `std::ratio<3, 30>` and `std::ratio<1, 10>`. For any other `Step`, this
 // holds only if `Step::type` is in lowest terms.
 template<std::integral Raw, scalar_wrapper Q, some_ratio Step>
-  requires std::floating_point<unwrapped_t<Q>>
+  requires std::floating_point<unwrap_scalar_t<Q>>
 using scaled = detail::scaled<Raw, Q, typename Step::type>;
 
 } // namespace emb

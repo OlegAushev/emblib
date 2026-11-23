@@ -111,7 +111,7 @@ private:
 // quantizes intermediate values can present the target before this comparison
 // becomes true.
 template<typename T>
-  requires std::same_as<emb::unwrapped_t<T>, float>
+  requires std::same_as<emb::unwrap_scalar_t<T>, float>
 class ramp {
 public:
   using value_type = T;
