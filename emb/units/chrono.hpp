@@ -1,6 +1,6 @@
 #pragma once
 
-#include <emb/chrono.hpp>
+#include <emb/chrono/concepts.hpp>
 #include <emb/i18n.hpp>
 #include <emb/units/quantity.hpp>
 
