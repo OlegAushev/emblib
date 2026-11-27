@@ -1,5 +1,7 @@
 #pragma once
 
+#include <emb/math/numeric.hpp>
+
 #include <tuple>
 
 namespace emb::signal {
@@ -73,6 +75,12 @@ public:
     return std::apply(
         [&](auto const&... s) { return detail::path_inverse(out, s...); },
         stages);
+  }
+
+  template<typename T>
+  constexpr bool round_trips(T x, T eps) const
+  {
+    return emb::approx(inverse(forward(x)), x, eps);
   }
 };
 

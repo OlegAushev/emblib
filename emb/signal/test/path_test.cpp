@@ -73,12 +73,8 @@ constexpr bool test_round_trip()
   assert(channel.forward(amp_f32{0.f}) == adc::forward(volt_f32{1.65f}));
 
   // and what the path adds, the inverse takes back out
-  assert(emb::approx(channel.inverse(channel.forward(amp_f32{300.f})),
-                     amp_f32{300.f},
-                     amp_f32{0.5f}));
-  assert(emb::approx(channel.inverse(channel.forward(amp_f32{-450.f})),
-                     amp_f32{-450.f},
-                     amp_f32{0.5f}));
+  assert(channel.round_trips(amp_f32{300.f}, amp_f32{0.5f}));
+  assert(channel.round_trips(amp_f32{-450.f}, amp_f32{0.5f}));
 
   // the tolerance above is the quantization referred to the input: one code
   // is 3.3 V / 4095 at the pin, which the board and transducer refer back to
